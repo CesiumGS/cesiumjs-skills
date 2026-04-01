@@ -48,23 +48,6 @@ Self-contained, domain-level skills that passively activate when developers ask 
 
 The domain mapping and class ownership rules are documented in **[cesiumjs/DOMAINS.md](./cesiumjs/DOMAINS.md)**.
 
-### Live Documentation Skill
-
-- **[cesium-context7](./cesium-context7/)**: Fetches up-to-date Cesium documentation via Context7 MCP tools. Covers CesiumJS, Cesium for Unreal, Cesium for Unity, and the 3D Tiles specification.
-
-### How the Two Skill Types Work Together
-
-The baked-in `cesiumjs-*` skills and the live `cesium-context7` skill are **independent and complementary**:
-
-| | Baked-in Skills (`cesiumjs-*`) | Context7 (`cesium-context7`) |
-|---|---|---|
-| **Latency** | Instant | Requires MCP round-trip |
-| **Availability** | Always works, no MCP required | Requires Context7 MCP server |
-| **Content** | Curated patterns, examples, best practices | Full official docs, version-specific |
-| **Best for** | Common patterns, Quick Starts, "how do I..." | Version-pinned API signatures, cutting-edge features |
-
-Both can activate simultaneously. Use baked-in skills for patterns and recipes; use Context7 to validate against a specific CesiumJS version or query Unreal/Unity/3D Tiles spec docs.
-
 ## 🚀 Using These Skills
 
 If you're using an AI assistant that supports Agent Skills (like GitHub Copilot in VS Code), these skills will be automatically discovered and used when working on Cesium-related tasks in this workspace.

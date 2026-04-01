@@ -6,22 +6,6 @@
 
 This document is the definitive source of truth for the CesiumJS skill decomposition. Every public class, function, and enum in CesiumJS is assigned to exactly one domain. Other domains may cross-reference a symbol, but only one domain **owns** it.
 
-## Relationship to cesium-context7
-
-These baked-in skills and `cesium-context7` are **independent and complementary**:
-
-| | Baked-in Skills (`cesiumjs-*`) | Context7 (`cesium-context7`) |
-|---|---|---|
-| **Latency** | Instant — no network call | Requires MCP round-trip |
-| **Availability** | Always — no MCP required | Requires Context7 MCP server |
-| **Content** | Curated patterns, examples, best practices | Full official docs, version-specific |
-| **Best for** | Common patterns, Quick Starts, "how do I..." | Version-pinned API signatures, cutting-edge features |
-| **Activation** | Passive via description matching | Explicit via `query-docs` tool call |
-
-Both can activate simultaneously. Use baked-in skills for patterns and recipes; use Context7 to validate against a specific CesiumJS version.
-
----
-
 ## Domain Summary
 
 | # | Skill Name | Entries | Description (passive activation) |
