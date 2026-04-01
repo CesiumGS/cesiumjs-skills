@@ -1,0 +1,5 @@
+{
+  "name": "cesiumjs-skills",
+  "description": "Claude Code plugin for CesiumJS domain skills, live Cesium docs via Context7, and browser-based iteration via Chrome DevTools.",
+  "version": "0.1.0"
+}
