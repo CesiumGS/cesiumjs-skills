@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# SessionStart hook for cesiumjs-skills plugin
+
+set -euo pipefail
+
+# Determine plugin root directory
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Read using-cesiumjs-skills content
+skill_content=$(cat "${PLUGIN_ROOT}/skills/using-cesiumjs-skills/SKILL.md" 2>&1 || echo "Error reading using-cesiumjs-skills skill")
+
+# Escape string for JSON embedding using bash parameter substitution.
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+skill_escaped=$(escape_for_json "$skill_content")
+session_context="You have CesiumJS domain skills available.\n\n**Below is the orientation for the cesiumjs-skills plugin. Skills activate passively — no explicit invocation is required.**\n\n${skill_escaped}"
+
+# Output context injection as JSON.
+# Claude Code expects hookSpecificOutput.additionalContext (nested).
+# Cursor expects additional_context (snake_case).
+# Copilot CLI and others expect additionalContext (top-level, SDK standard).
+# Uses printf instead of heredoc to work around bash 5.3+ heredoc hang.
+if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+  printf '{\n  "additional_context": "%s"\n}\n' "$session_context"
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$session_context"
+else
+  printf '{\n  "additionalContext": "%s"\n}\n' "$session_context"
+fi
+
+exit 0
