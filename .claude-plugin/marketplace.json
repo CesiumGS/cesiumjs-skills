@@ -1,0 +1,22 @@
+{
+  "name": "cesiumjs-skills",
+  "owner": {
+    "name": "CesiumGS"
+  },
+  "metadata": {
+    "description": "CesiumJS domain skills covering ~535 public symbols across the CesiumJS v1.139 API surface"
+  },
+  "plugins": [
+    {
+      "name": "cesiumjs-skills",
+      "source": "./",
+      "description": "13 domain skills for CesiumJS development with SessionStart hook and Chrome DevTools MCP integration",
+      "version": "0.1.0",
+      "category": "development",
+      "tags": ["cesium", "cesiumjs", "3d", "geospatial", "gis", "maps"],
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/CesiumGS/cesiumjs-skills",
+      "repository": "https://github.com/CesiumGS/cesiumjs-skills"
+    }
+  ]
+}
