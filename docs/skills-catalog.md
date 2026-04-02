@@ -46,7 +46,7 @@ Self-contained, domain-level skills that passively activate when developers ask 
 | 12 | **[cesiumjs-interaction](./cesiumjs-interaction/)** | ScreenSpaceEventHandler, Scene.pick/drillPick, hover, drag interactions |
 | 13 | **[cesiumjs-models-particles](./cesiumjs-models-particles/)** | Model/glTF loading, animation, ParticleSystem, emitters |
 
-The domain mapping and class ownership rules are documented in **[cesiumjs/DOMAINS.md](./cesiumjs/DOMAINS.md)**.
+The domain mapping and class ownership rules are documented in **[DOMAINS.md](./DOMAINS.md)**.
 
 ## 🚀 Using These Skills
 

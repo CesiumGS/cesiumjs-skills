@@ -33,7 +33,7 @@ Curated agent skills for CesiumJS development — 13 domain skills covering ~535
 
 ## Domain Mapping
 
-Every public class, function, and enum in CesiumJS is assigned to exactly one skill. Cross-domain ownership rules and the full symbol map are documented in `[skills/cesiumjs/DOMAINS.md](skills/cesiumjs/DOMAINS.md)`.
+Every public class, function, and enum in CesiumJS is assigned to exactly one skill. Cross-domain ownership rules and the full symbol map are documented in [`docs/DOMAINS.md`](docs/DOMAINS.md).
 
 ## Compatibility
 
@@ -72,9 +72,10 @@ These skills follow the [Agent Skills](https://agentskills.io/) open standard. C
 cesiumjs-skills/
 ├── skills/                          # The product
 │   ├── cesiumjs-*/SKILL.md          # 13 domain skills (CesiumJS v1.139)
-│   ├── using-cesiumjs-skills/       # Bootstrap orientation skill
-│   ├── cesiumjs/DOMAINS.md          # Symbol ownership map
-│   └── README.md                    # Skills catalog
+│   └── using-cesiumjs-skills/       # Bootstrap orientation skill
+├── docs/
+│   ├── DOMAINS.md                   # Symbol ownership map
+│   └── skills-catalog.md            # Skills catalog
 ├── .claude-plugin/
 │   ├── plugin.json                  # Claude Code plugin manifest
 │   └── marketplace.json             # Plugin marketplace catalog

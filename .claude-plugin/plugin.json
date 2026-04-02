@@ -1,5 +1,13 @@
 {
   "name": "cesiumjs-skills",
   "description": "Claude Code plugin for CesiumJS domain skills and browser-based iteration via Chrome DevTools.",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "author": {
+    "name": "CesiumGS",
+    "url": "https://github.com/CesiumGS"
+  },
+  "homepage": "https://github.com/CesiumGS/cesiumjs-skills",
+  "repository": "https://github.com/CesiumGS/cesiumjs-skills",
+  "license": "Apache-2.0",
+  "keywords": ["cesium", "cesiumjs", "3d", "geospatial", "gis", "maps"]
 }

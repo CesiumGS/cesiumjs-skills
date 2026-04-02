@@ -27,7 +27,7 @@ This plugin provides 13 domain skills covering CesiumJS v1.139 (~535 public symb
 
 ## Cross-Domain Questions
 
-When a question spans multiple domains, consult `skills/cesiumjs/DOMAINS.md` — the definitive ownership map assigning every public CesiumJS class, function, and enum to exactly one skill.
+When a question spans multiple domains, consult `docs/DOMAINS.md` — the definitive ownership map assigning every public CesiumJS class, function, and enum to exactly one skill.
 
 ## Runtime Verification
 
