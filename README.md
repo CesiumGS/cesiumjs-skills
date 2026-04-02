@@ -35,7 +35,7 @@ Every public class, function, and enum in CesiumJS is assigned to exactly one sk
 
 ## Compatibility
 
-These skills follow the [Agent Skills](https://agentskills.io/) open standard and work with any tool that supports it — Claude Code, GitHub Copilot, Cursor, Android Studio with Gemini, and others.
+The [Agent Skills](https://agentskills.io/) format is an open standard originally developed by Anthropic and adopted by leading AI development tools including Claude Code, GitHub Copilot, and many others.
 
 By popular demand, this repository also ships as a **Claude Code plugin** with a SessionStart hook and Chrome DevTools MCP integration for browser-based verification.
 
