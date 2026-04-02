@@ -13,25 +13,27 @@ Curated agent skills for CesiumJS development — 13 domain skills covering ~535
 
 ## Skills Catalog
 
-| Skill | Activates when... |
-|---|---|
-| **cesiumjs-viewer-setup** | Initializing a CesiumJS app, configuring widgets, setting Ion tokens, bootstrapping a globe |
-| **cesiumjs-camera** | Positioning the camera, flyTo animations, constraining navigation, entity tracking |
-| **cesiumjs-entities** | Adding points/labels/models/polygons, loading GeoJSON/KML/CZML/GPX data |
-| **cesiumjs-3d-tiles** | Loading tilesets, styling features, querying metadata, voxels, point clouds, clipping |
-| **cesiumjs-imagery** | Adding/swapping base map layers, configuring imagery providers, split-screen comparisons |
-| **cesiumjs-terrain-environment** | Configuring terrain, querying heights, atmosphere/sky/fog/lighting/shadows, panoramas |
-| **cesiumjs-primitives** | Performance-critical static geometry, custom shapes, batching, billboard/label/point collections |
-| **cesiumjs-materials-shaders** | Custom materials, GLSL shaders, post-processing effects, bloom, tonemapping |
-| **cesiumjs-time-properties** | Time-dynamic entity attributes, simulation clock, interpolation, sampled/callback properties |
-| **cesiumjs-spatial-math** | Coordinate conversions, ellipsoid geometry, model matrices, intersection tests, projections |
-| **cesiumjs-interaction** | User clicks on the globe, entity/feature selection, hover effects, drag interactions |
-| **cesiumjs-models-particles** | glTF/GLB model loading, animations, particle effects (fire, smoke) |
-| **cesiumjs-core-utilities** | HTTP requests via Resource, Color, Event, error handling, helper functions |
+
+| Skill                            | Activates when...                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **cesiumjs-viewer-setup**        | Initializing a CesiumJS app, configuring widgets, setting Ion tokens, bootstrapping a globe      |
+| **cesiumjs-camera**              | Positioning the camera, flyTo animations, constraining navigation, entity tracking               |
+| **cesiumjs-entities**            | Adding points/labels/models/polygons, loading GeoJSON/KML/CZML/GPX data                          |
+| **cesiumjs-3d-tiles**            | Loading tilesets, styling features, querying metadata, voxels, point clouds, clipping            |
+| **cesiumjs-imagery**             | Adding/swapping base map layers, configuring imagery providers, split-screen comparisons         |
+| **cesiumjs-terrain-environment** | Configuring terrain, querying heights, atmosphere/sky/fog/lighting/shadows, panoramas            |
+| **cesiumjs-primitives**          | Performance-critical static geometry, custom shapes, batching, billboard/label/point collections |
+| **cesiumjs-materials-shaders**   | Custom materials, GLSL shaders, post-processing effects, bloom, tonemapping                      |
+| **cesiumjs-time-properties**     | Time-dynamic entity attributes, simulation clock, interpolation, sampled/callback properties     |
+| **cesiumjs-spatial-math**        | Coordinate conversions, ellipsoid geometry, model matrices, intersection tests, projections      |
+| **cesiumjs-interaction**         | User clicks on the globe, entity/feature selection, hover effects, drag interactions             |
+| **cesiumjs-models-particles**    | glTF/GLB model loading, animations, particle effects (fire, smoke)                               |
+| **cesiumjs-core-utilities**      | HTTP requests via Resource, Color, Event, error handling, helper functions                       |
+
 
 ## Domain Mapping
 
-Every public class, function, and enum in CesiumJS is assigned to exactly one skill. Cross-domain ownership rules and the full symbol map are documented in [`skills/cesiumjs/DOMAINS.md`](skills/cesiumjs/DOMAINS.md).
+Every public class, function, and enum in CesiumJS is assigned to exactly one skill. Cross-domain ownership rules and the full symbol map are documented in `[skills/cesiumjs/DOMAINS.md](skills/cesiumjs/DOMAINS.md)`.
 
 ## Compatibility
 
