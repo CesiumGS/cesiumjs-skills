@@ -41,21 +41,29 @@ By popular demand, this repository also ships as a **Claude Code plugin** with a
 
 ## Getting Started
 
-### Any Agent Skills-Compatible Tool
-
-Copy or symlink the `skills/` directory into your workspace. Skills are discovered automatically from `skills/<name>/SKILL.md`.
-
 ### Claude Code
 
-```bash
-claude plugin add --from https://github.com/CesiumGS/cesiumjs-skills
-```
-
-Or for local development:
+**From the terminal:**
 
 ```bash
-claude --plugin-dir /path/to/cesiumjs-skills
+claude plugin marketplace add CesiumGS/cesiumjs-skills
+claude plugin install cesiumjs-skills@cesiumjs-skills
 ```
+
+**From inside Claude Code:**
+
+1. Type `/plugin` and press Enter
+2. Select **Add Marketplace**
+3. Enter `CesiumGS/cesiumjs-skills`
+4. Once the marketplace is added, type `/plugin` again
+5. Select **Install Plugin**
+6. Choose **cesiumjs-skills** from the list
+
+After installing, run `/reload-plugins` to activate the skills in your current session.
+
+### Any Agent Skills-Compatible Tool
+
+These skills follow the [Agent Skills](https://agentskills.io/) open standard. Copy or symlink the `skills/` directory into your workspace — skills are discovered automatically from `skills/<name>/SKILL.md`.
 
 ## Repository Layout
 
@@ -66,7 +74,9 @@ cesiumjs-skills/
 │   ├── using-cesiumjs-skills/       # Bootstrap orientation skill
 │   ├── cesiumjs/DOMAINS.md          # Symbol ownership map
 │   └── README.md                    # Skills catalog
-├── .claude-plugin/plugin.json       # Claude Code plugin manifest
+├── .claude-plugin/
+│   ├── plugin.json                  # Claude Code plugin manifest
+│   └── marketplace.json             # Plugin marketplace catalog
 ├── .mcp.json                        # Chrome DevTools MCP server
 ├── hooks/                           # SessionStart hook + runner
 └── LICENSE
