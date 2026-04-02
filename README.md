@@ -2,12 +2,38 @@
 
 Curated agent skills for CesiumJS development — 13 domain skills covering ~535 public symbols across the CesiumJS v1.139 API surface.
 
+## Quick Start
+
+### Claude Code
+
+**One-Liner from the terminal (recommended):**
+
+```bash
+claude plugin marketplace add CesiumGS/cesiumjs-skills
+```
+
+**From inside Claude Code:**
+
+1. Type `/plugin` and press Enter
+2. Select **Add Marketplace**
+3. Enter `CesiumGS/cesiumjs-skills`
+4. Once the marketplace is added, type `/plugin` again
+5. Select **Install Plugin**
+6. Choose **cesiumjs-skills** from the list
+
+After installing, run `/reload-plugins` to activate the skills in your current session.
+
+### Any Agent Skills-Compatible Tool
+
+These skills follow the [Agent Skills](https://agentskills.io/) open standard. Copy or symlink the `skills/` directory into your workspace — skills are discovered automatically from `skills/<name>/SKILL.md`.
+
+---
+
 ## Table of Contents
 
 - [Skills Catalog](#skills-catalog)
 - [Domain Mapping](#domain-mapping)
 - [Compatibility](#compatibility)
-- [Getting Started](#getting-started)
 - [Repository Layout](#repository-layout)
 - [License](#license)
 
@@ -40,31 +66,6 @@ Every public class, function, and enum in CesiumJS is assigned to exactly one sk
 The [Agent Skills](https://agentskills.io/) format is an open standard originally developed by Anthropic and adopted by leading AI development tools including Claude Code, GitHub Copilot, and many others.
 
 By popular demand, this repository also ships as a **Claude Code plugin** with a SessionStart hook and Chrome DevTools MCP integration for browser-based verification.
-
-## Getting Started
-
-### Claude Code
-
-**One-Liner from the terminal (recommended):**
-
-```bash
-claude plugin marketplace add CesiumGS/cesiumjs-skills
-```
-
-**From inside Claude Code:**
-
-1. Type `/plugin` and press Enter
-2. Select **Add Marketplace**
-3. Enter `CesiumGS/cesiumjs-skills`
-4. Once the marketplace is added, type `/plugin` again
-5. Select **Install Plugin**
-6. Choose **cesiumjs-skills** from the list
-
-After installing, run `/reload-plugins` to activate the skills in your current session.
-
-### Any Agent Skills-Compatible Tool
-
-These skills follow the [Agent Skills](https://agentskills.io/) open standard. Copy or symlink the `skills/` directory into your workspace — skills are discovered automatically from `skills/<name>/SKILL.md`.
 
 ## Repository Layout
 
