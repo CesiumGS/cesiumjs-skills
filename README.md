@@ -45,11 +45,10 @@ By popular demand, this repository also ships as a **Claude Code plugin** with a
 
 ### Claude Code
 
-**From the terminal:**
+**One-Liner from the terminal (recommended):**
 
 ```bash
 claude plugin marketplace add CesiumGS/cesiumjs-skills
-claude plugin install cesiumjs-skills@cesiumjs-skills
 ```
 
 **From inside Claude Code:**
