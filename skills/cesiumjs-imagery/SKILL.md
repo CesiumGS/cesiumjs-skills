@@ -21,13 +21,33 @@ the globe even if its rectangle does not cover the entire world.
 
 ## Quick Start and ImageryLayer Factories
 
+When creating a viewer for imagery work, disable unneeded widgets so the imagery
+is the visual focus. Use `camera.setView` (not `flyTo`) when you need the camera
+in position immediately — `flyTo` animates and may not finish before your code
+continues.
+
 ```js
-import { Viewer, ImageryLayer, IonImageryProvider, IonWorldImageryStyle } from "cesium";
+import { Viewer, ImageryLayer, IonImageryProvider, IonWorldImageryStyle, Math as CesiumMath } from "cesium";
 
-// Simplest setup -- Cesium ion default Bing Maps aerial
-const viewer = new Viewer("cesiumContainer");
+// Clean viewer -- disable widgets that distract from imagery
+const viewer = new Viewer("cesiumContainer", {
+  animation: false,
+  timeline: false,
+  navigationHelpButton: false,
+  navigationInstructionsInitiallyVisible: false,
+});
 
-// Explicit equivalent
+// Position camera immediately (no animation)
+viewer.camera.setView({
+  destination: Cesium.Cartesian3.fromDegrees(-73.0, 41.0, 1500000),
+  orientation: {
+    heading: 0.0,
+    pitch: CesiumMath.toRadians(-90), // look straight down
+    roll: 0.0,
+  },
+});
+
+// Explicit base layer choice
 const viewer2 = new Viewer("cesiumContainer", {
   baseLayer: ImageryLayer.fromWorldImagery(),
 });
@@ -46,6 +66,21 @@ const roadLayer = ImageryLayer.fromWorldImagery({
 });
 viewer.imageryLayers.add(roadLayer);
 ```
+
+### Camera Height Reference for Imagery Scenes
+
+Use `camera.setView` with these approximate heights:
+
+| Scale | Height (m) | Example |
+|---|---|---|
+| Street / block | 500–2,000 | Downtown intersection |
+| City | 5,000–25,000 | Washington DC, Paris |
+| Metro area | 50,000–200,000 | Greater London |
+| Region / state | 300,000–1,500,000 | Florida, Japan |
+| Continent | 3,000,000–8,000,000 | Europe, North America |
+
+For top-down (map-style) views set `pitch: CesiumMath.toRadians(-90)`.
+For oblique 3D views set `pitch: CesiumMath.toRadians(-35)` to `CesiumMath.toRadians(-60)`.
 
 ## ImageryLayerCollection API
 
@@ -107,12 +142,22 @@ layer.gamma = 1.2;
 
 ## Swapping the Base Layer
 
+Remove the default base layer and replace it at index 0. The replacement becomes
+the new base layer, stretched to fill the globe.
+
 ```js
 import { ImageryLayer, OpenStreetMapImageryProvider } from "cesium";
 
+// Remove default Bing aerial
 viewer.imageryLayers.remove(viewer.imageryLayers.get(0));
+
+// Add OSM as new base layer at index 0
 const osmLayer = new ImageryLayer(
-  new OpenStreetMapImageryProvider({ url: "https://tile.openstreetmap.org/" }),
+  new OpenStreetMapImageryProvider({
+    url: "https://tile.openstreetmap.org/",
+    maximumLevel: 19,
+    credit: "OpenStreetMap contributors",
+  }),
 );
 viewer.imageryLayers.add(osmLayer, 0);
 ```
