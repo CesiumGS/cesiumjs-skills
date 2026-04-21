@@ -19,32 +19,88 @@ Read-only computed properties: `positionWC`, `positionCartographic`,
 Events: `moveStart` / `moveEnd` fire when movement begins/ends. `changed`
 fires when the camera moves by more than `percentageChanged` (default 0.5).
 
+> **City views need 3D buildings.** For skyline, street-level, or urban panorama
+> views, add `Cesium.createOsmBuildingsAsync()` (or Google Photorealistic 3D
+> Tiles). Without 3D Tiles, cities render as flat satellite imagery -- no
+> buildings, no skyline silhouette. Include a code comment to load buildings.
+
+### Altitude & Orientation Guidelines
+
+Choose altitude and pitch to match the **scale of the feature** you want to show:
+
+| View type | Altitude (m) | Pitch (deg) | Notes |
+|---|---|---|---|
+| **Landmark close-up** | 500 -- 1,500 | -25 to -35 | Individual buildings/structures fill the frame. Use `lookAt` with appropriate range. |
+| **City panoramic / skyline** | 800 -- 1,500 | -10 to -20 | For viewing a skyline from across a river or bay. Position camera to the side, face the city. **Requires OSM Buildings or 3D Tiles** for 3D silhouette. |
+| **City overview** | 2,000 -- 5,000 | -35 to -50 | Urban grid, rivers, and parks clearly visible |
+| **Metro / regional** | 8,000 -- 20,000 | -60 to -90 | Entire metro area or geographic feature |
+| **Canyon / cliff rim** | 50 -- 300 above rim | -15 to -25 | Use steeper pitch to reveal depth below. Near-horizontal (-5) looks flat across terrain. |
+| **Country / continent** | 500,000 -- 5,000,000 | -90 | Political boundaries, coastlines |
+
+**When the prompt says "looking at [city]" or "start at [city]"**, default to **city overview** range (2,000-5,000 m) with pitch around **-45** to **-60** degrees and heading **0** (north). This produces a clear, recognizable view where the urban layout, rivers, and landmarks are identifiable.
+
+**Top-down views** (`pitch: -90`) are best for geographic features (canyons, coastlines, rivers) where overhead perspective reveals the distinctive shape. For cities, prefer an angled view that shows the 3D skyline.
+
+> **Gimbal lock:** Never use `pitch: -Math.PI/2` exactly. Use
+> `-(Math.PI / 2 - 0.0001)` for straight-down views to avoid singularity.
+
+> **Ground-level views (altitude < 200 m)** require 3D Tiles. Without them,
+> CesiumJS shows only sky and flat ground. Suggest a higher-altitude fallback.
+
+> **Skyline panoramics** (across a river/bay): 800-1,500 m, pitch -10 to -20.
+> **Add `Cesium.createOsmBuildingsAsync()` for 3D silhouette.** Pitch too
+> horizontal (-5) at moderate altitude shows a flat grid, not a skyline.
+
+> **Canyon / cliff rim views**: pitch -15 to -25. Near-horizontal pitch (-5 to
+> -8) looks flat across terrain and misses the vertical drop.
+
 ---
 
 ## setView -- Instant Placement
 
-Teleports the camera. `destination` is a `Cartesian3` or `Rectangle`.
-`orientation` accepts `{ heading, pitch, roll }` or `{ direction, up }`.
+Teleports the camera in a single frame -- no animation. Use for initial view,
+mode resets, constraint setup. `destination`: `Cartesian3` or `Rectangle`.
+`orientation`: `{ heading, pitch, roll }` or `{ direction, up }`.
 
 ```js
 import { Cartesian3, Math as CesiumMath } from "cesium";
 
+// City overview: 3000 m altitude, angled view facing north
 viewer.camera.setView({
-  destination: Cartesian3.fromDegrees(-117.16, 32.71, 15000.0),
+  destination: Cartesian3.fromDegrees(-0.1276, 51.5074, 3000.0),
   orientation: {
     heading: CesiumMath.toRadians(0.0),   // north
-    pitch: CesiumMath.toRadians(-90.0),    // straight down
+    pitch: CesiumMath.toRadians(-50.0),    // angled down -- shows city layout clearly
     roll: 0.0,
   },
 });
 ```
 
 ```js
-import { Rectangle } from "cesium";
+import { Cartesian3, Math as CesiumMath } from "cesium";
 
-// View a geographic rectangle (top-down, orientation defaults to north/down)
+// Canyon rim perspective: slightly above rim, looking down into the canyon
+// Pitch of -20 reveals depth; near-horizontal (-5) would look flat across
 viewer.camera.setView({
-  destination: Rectangle.fromDegrees(-77.0, 38.0, -72.0, 42.0),
+  destination: Cartesian3.fromDegrees(-112.14, 36.06, 2400.0),
+  orientation: {
+    heading: CesiumMath.toRadians(0.0),
+    pitch: CesiumMath.toRadians(-20.0),    // steeper pitch to show canyon depth
+    roll: 0.0,
+  },
+});
+```
+
+```js
+// Top-down geographic view -- use safe pitch to avoid gimbal lock
+viewer.camera.setView({
+  destination: Cesium.Cartesian3.fromDegrees(-112.14, 36.06, 50000.0),
+  orientation: { heading: 0.0, pitch: -(Math.PI / 2 - 0.0001), roll: 0.0 },
+});
+
+// Rectangle form (top-down, orientation defaults to north/down)
+viewer.camera.setView({
+  destination: Cesium.Rectangle.fromDegrees(-77.0, 38.0, -72.0, 42.0),
 });
 ```
 
@@ -52,18 +108,18 @@ viewer.camera.setView({
 
 ## flyTo -- Animated Flight
 
-Smoothly animates the camera. Key options: `destination` (required),
-`orientation`, `duration` (seconds, auto if omitted), `complete` / `cancel`
-callbacks, `maximumHeight`, `pitchAdjustHeight`, `flyOverLongitude`,
-`flyOverLongitudeWeight`, `easingFunction`, `endTransform`.
+Smoothly animates the camera. Returns nothing (not a Promise); use `complete`
+callback. Options: `destination`, `orientation`, `duration` (seconds),
+`complete`/`cancel`, `maximumHeight`, `pitchAdjustHeight`, `flyOverLongitude`.
 
 ```js
 import { Cartesian3, Math as CesiumMath } from "cesium";
 
+// Fly to a landmark: 1500 m gives a clear view of the surrounding area
 viewer.camera.flyTo({
-  destination: Cartesian3.fromDegrees(-122.22, 46.12, 5000.0),
+  destination: Cartesian3.fromDegrees(2.2945, 48.8584, 1500.0),
   orientation: {
-    heading: CesiumMath.toRadians(20.0),
+    heading: CesiumMath.toRadians(0.0),
     pitch: CesiumMath.toRadians(-35.0),
     roll: 0.0,
   },
@@ -72,23 +128,33 @@ viewer.camera.flyTo({
 ```
 
 ```js
-import { Cartesian3, Math as CesiumMath, EasingFunction } from "cesium";
+import { Cartesian3, Math as CesiumMath } from "cesium";
 
-// Chain flights using the complete callback
+// Chain flights using the complete callback (flyTo does NOT return a Promise)
 viewer.camera.flyTo({
-  destination: Cartesian3.fromDegrees(-73.986, 40.748, 363.0),
+  destination: Cartesian3.fromDegrees(-74.0445, 40.6892, 800.0),
+  orientation: {
+    heading: CesiumMath.toRadians(0.0),
+    pitch: CesiumMath.toRadians(-35.0),
+    roll: 0.0,
+  },
+  duration: 3,
   complete() {
     viewer.camera.flyTo({
-      destination: Cartesian3.fromDegrees(-73.986, 40.758, 187.0),
+      destination: Cartesian3.fromDegrees(-73.9857, 40.758, 600.0),
       orientation: {
-        heading: CesiumMath.toRadians(200.0),
-        pitch: CesiumMath.toRadians(-50.0),
+        heading: CesiumMath.toRadians(0.0),
+        pitch: CesiumMath.toRadians(-40.0),
+        roll: 0.0,
       },
-      easingFunction: EasingFunction.LINEAR_NONE,
+      duration: 2,
     });
   },
 });
 ```
+
+> **Altitude tip for tours**: keep each stop at **600 m+** so tiles and imagery
+> load. Below 400 m, expect blurry tiles on fast successive flights.
 
 ```js
 // Long-distance flight: LA to Tokyo via Europe
@@ -116,34 +182,68 @@ Camera.DEFAULT_VIEW_RECTANGLE = Rectangle.fromDegrees(-10.0, 35.0, 40.0, 60.0);
 viewer.camera.flyHome(2.0); // duration in seconds; omit for auto
 ```
 
+> **Limitation:** `flyHome()` always produces a top-down, north-up view --
+> no orientation control. Workaround: intercept `viewer.homeButton.viewModel
+> .command.beforeExecute`, cancel it, and call `flyTo` with custom orientation.
+
 ---
 
 ## lookAt -- Lock Camera to Target
 
-Positions the camera to look at a world-coordinate target from an offset
-(`HeadingPitchRange` or `Cartesian3` in the local ENU frame). The camera is
-locked until you call `lookAtTransform(Matrix4.IDENTITY)`.
+Positions camera to look at a target from an offset (`HeadingPitchRange` or
+`Cartesian3`). **Locks the camera until `lookAtTransform(Matrix4.IDENTITY)`.**
 
 ```js
 import { Cartesian3, Math as CesiumMath, HeadingPitchRange } from "cesium";
 
-const target = Cartesian3.fromDegrees(-72.0, 40.0);
+// View from the south, looking north (heading 0 = facing north = camera is south)
+const target = Cartesian3.fromDegrees(2.2945, 48.8584, 300.0);
 viewer.camera.lookAt(
   target,
   new HeadingPitchRange(
-    CesiumMath.toRadians(50.0), // heading
-    CesiumMath.toRadians(-20.0), // pitch
-    5000.0, // range in meters
+    CesiumMath.toRadians(0.0),   // heading 0 = north-facing
+    CesiumMath.toRadians(-20.0), // pitch -- 20 deg down
+    1500.0,                      // range in meters
   ),
 );
 ```
 
 ```js
+import { Cartesian3, Math as CesiumMath, HeadingPitchRange } from "cesium";
+
+// View from the east, looking west (heading 270 = facing west = camera is east)
+const target = Cartesian3.fromDegrees(-73.9857, 40.7484, 200.0);
+viewer.camera.lookAt(
+  target,
+  new HeadingPitchRange(
+    CesiumMath.toRadians(270.0), // heading -- west
+    CesiumMath.toRadians(-25.0), // pitch -- 25 deg down
+    800.0,                       // range in meters
+  ),
+);
+```
+
+**Cardinal direction reference for `lookAt` heading:**
+
+| To view from... | Camera faces... | Heading (deg) | Heading (rad) |
+|---|---|---|---|
+| **South** | North | 0 | `0` |
+| **West** | East | 90 | `Math.PI / 2` |
+| **North** | South | 180 | `Math.PI` |
+| **East** | West | 270 | `3 * Math.PI / 2` |
+
+Heading = direction camera **faces**. Camera is **opposite** that direction from the target.
+
+```js
 import { Matrix4 } from "cesium";
 
-// Release the lookAt lock to restore free navigation
+// ALWAYS release the lookAt lock when done to restore free navigation
 viewer.camera.lookAtTransform(Matrix4.IDENTITY);
 ```
+
+> **Trap:** Every `lookAt` call MUST have a matching `lookAtTransform(Matrix4.IDENTITY)`.
+> Without the release, mouse/touch/keyboard navigation is permanently disabled.
+> Use `setTimeout`, `complete` callback, or an event to trigger the release.
 
 ---
 
@@ -163,23 +263,8 @@ viewer.camera.lookAtTransform(
 );
 ```
 
-```js
-import { Transforms, Matrix4, Cartesian3, defined } from "cesium";
-
-// View Earth in the ICRF (inertial) frame -- stars stay fixed
-function icrf(scene, time) {
-  if (scene.mode !== Cesium.SceneMode.SCENE3D) return;
-  const icrfToFixed = Transforms.computeIcrfToFixedMatrix(time);
-  if (defined(icrfToFixed)) {
-    const offset = Cartesian3.clone(viewer.camera.position);
-    viewer.camera.lookAtTransform(
-      Matrix4.fromRotationTranslation(icrfToFixed),
-      offset,
-    );
-  }
-}
-viewer.scene.postUpdate.addEventListener(icrf);
-```
+For ICRF (inertial) frame: use `Transforms.computeIcrfToFixedMatrix(time)` in a
+`postUpdate` listener, apply via `lookAtTransform(Matrix4.fromRotationTranslation(icrfToFixed), offset)`.
 
 ---
 
@@ -238,7 +323,11 @@ Handles default mouse/touch input. Access via
 
 ### Constraining Navigation
 
+When setting up constraints, **also call `setView`** so the initial view respects them.
+
 ```js
+import { Cartesian3, Math as CesiumMath } from "cesium";
+
 const ctrl = viewer.scene.screenSpaceCameraController;
 
 ctrl.minimumZoomDistance = 500;       // meters from surface
@@ -253,14 +342,23 @@ ctrl.enableTranslate = false; // 2D / Columbus only
 ctrl.enableLook = false;
 ctrl.enableInputs = false;    // disable everything at once
 
-// Inertia (0 = none, 0.9 = default)
-ctrl.inertiaSpin = 0.5;
-ctrl.inertiaZoom = 0.5;
-ctrl.inertiaTranslate = 0.5;
-
-// Allow camera underground
-ctrl.enableCollisionDetection = false;
+// Set initial view at city-overview altitude for a clear starting point
+viewer.camera.setView({
+  destination: Cartesian3.fromDegrees(-0.1276, 51.5074, 3000.0),
+  orientation: {
+    heading: CesiumMath.toRadians(0.0),
+    pitch: CesiumMath.toRadians(-50.0),
+    roll: 0.0,
+  },
+});
 ```
+
+> **Gotcha:** `maximumZoomDistance` is silently ignored when
+> `enableCollisionDetection = false`. Re-enable collision after underground
+> views, or enforce zoom limits manually in `clock.onTick`.
+
+Other properties: `inertiaSpin`, `inertiaZoom`, `inertiaTranslate` (0 = none,
+0.9 = default), `enableCollisionDetection` (set `false` to allow camera underground).
 
 ### Remapping Input Events
 
@@ -283,17 +381,17 @@ ctrl.zoomEventTypes = CameraEventType.WHEEL;
 
 ## Custom First-Person Controls
 
+Disable default controller, use `ScreenSpaceEventHandler` for mouse-look and
+`keydown`/`keyup` for WASD. Apply in `clock.onTick`. Scale speed to altitude.
+
 ```js
 import { ScreenSpaceEventHandler, ScreenSpaceEventType, Cartesian3 } from "cesium";
-
 const ctrl = viewer.scene.screenSpaceCameraController;
-// Disable defaults
 ctrl.enableRotate = ctrl.enableTranslate = ctrl.enableZoom = false;
 ctrl.enableTilt = ctrl.enableLook = false;
 
 const canvas = viewer.canvas;
 canvas.setAttribute("tabindex", "0");
-
 let looking = false, startPos, mousePos;
 const handler = new ScreenSpaceEventHandler(canvas);
 handler.setInputAction((m) => { looking = true; startPos = mousePos = Cartesian3.clone(m.position); }, ScreenSpaceEventType.LEFT_DOWN);
@@ -301,24 +399,18 @@ handler.setInputAction((m) => { mousePos = m.endPosition; }, ScreenSpaceEventTyp
 handler.setInputAction(() => { looking = false; }, ScreenSpaceEventType.LEFT_UP);
 
 const flags = {};
-const keyMap = { KeyW: "fwd", KeyS: "back", KeyA: "left", KeyD: "right", KeyQ: "up", KeyE: "down" };
-document.addEventListener("keydown", (e) => { if (keyMap[e.code]) flags[keyMap[e.code]] = true; });
-document.addEventListener("keyup", (e) => { if (keyMap[e.code]) flags[keyMap[e.code]] = false; });
-
+document.addEventListener("keydown", (e) => { flags[e.code] = true; });
+document.addEventListener("keyup", (e) => { flags[e.code] = false; });
 viewer.clock.onTick.addEventListener(() => {
   const cam = viewer.camera;
   if (looking) {
     cam.lookRight((mousePos.x - startPos.x) / canvas.clientWidth * 0.05);
     cam.lookUp(-(mousePos.y - startPos.y) / canvas.clientHeight * 0.05);
   }
-  const spd = viewer.scene.globe.ellipsoid
-    .cartesianToCartographic(cam.position).height / 100;
-  if (flags.fwd) cam.moveForward(spd);
-  if (flags.back) cam.moveBackward(spd);
-  if (flags.left) cam.moveLeft(spd);
-  if (flags.right) cam.moveRight(spd);
-  if (flags.up) cam.moveUp(spd);
-  if (flags.down) cam.moveDown(spd);
+  const spd = viewer.scene.globe.ellipsoid.cartesianToCartographic(cam.position).height / 100;
+  if (flags.KeyW) cam.moveForward(spd);  if (flags.KeyS) cam.moveBackward(spd);
+  if (flags.KeyA) cam.moveLeft(spd);     if (flags.KeyD) cam.moveRight(spd);
+  if (flags.KeyQ) cam.moveUp(spd);       if (flags.KeyE) cam.moveDown(spd);
 });
 ```
 
@@ -327,16 +419,12 @@ viewer.clock.onTick.addEventListener(() => {
 ## Camera Events
 
 ```js
-// Movement start/end
-const offStart = viewer.camera.moveStart.addEventListener(() => console.log("moving"));
-const offEnd = viewer.camera.moveEnd.addEventListener(() => console.log("stopped"));
-// offStart(); offEnd(); // call return values to unsubscribe
+const off = viewer.camera.moveStart.addEventListener(() => console.log("moving"));
+viewer.camera.moveEnd.addEventListener(() => console.log("stopped"));
+// off(); // call return value to unsubscribe
 
-// Significant change detection
-viewer.camera.percentageChanged = 0.1;
-viewer.camera.changed.addEventListener((pct) => {
-  console.log(`Camera changed ${(pct * 100).toFixed(1)}%`);
-});
+viewer.camera.percentageChanged = 0.1; // threshold for change detection
+viewer.camera.changed.addEventListener((pct) => console.log(`Changed ${(pct*100).toFixed(1)}%`));
 ```
 
 ---
@@ -371,41 +459,37 @@ Camera.DEFAULT_OFFSET = new HeadingPitchRange(
 viewer.trackedEntity = undefined; // stop tracking
 ```
 
-`EntityView` is the internal class that implements tracking. It computes a
-VVLH (velocity-based) or ENU reference frame depending on entity speed.
-
----
-
-## DebugCameraPrimitive
-
-Visualize a camera frustum for debugging or multi-camera setups.
-
-```js
-viewer.scene.primitives.add(new Cesium.DebugCameraPrimitive({
-  camera: viewer.camera,
-  color: Cesium.Color.YELLOW,
-  updateOnChange: true,
-}));
-```
+Debug: `viewer.scene.primitives.add(new Cesium.DebugCameraPrimitive({ camera: viewer.camera, color: Cesium.Color.YELLOW, updateOnChange: true }));`
 
 ---
 
 ## Performance Tips
 
-1. **Prefer `setView` over `flyTo` with `duration: 0`** -- direct assignment
-   avoids tween overhead.
+1. **Prefer `setView` over `flyTo` with `duration: 0`** -- avoids tween overhead.
 2. **Avoid reading `heading`/`pitch`/`roll` every frame** -- each computes an
-   ENU transform. Cache or use `direction`/`up` vectors instead.
-3. **Throttle `changed` events** -- raise `percentageChanged` (e.g., 0.5) to
-   reduce listener frequency.
-4. **Always release `lookAt` locks** -- call
-   `lookAtTransform(Matrix4.IDENTITY)` or user interaction stays disabled.
-5. **Set `maximumHeight` for short flights** -- prevents the camera from
-   zooming to space on nearby targets.
-6. **Scale movement to altitude** -- divide camera height for natural speed
-   in per-frame move loops.
-7. **Re-enable collision after underground views** -- set
-   `enableCollisionDetection` back to `true` once done.
+   ENU transform. Cache or use `direction`/`up` vectors.
+3. **Throttle `changed` events** -- raise `percentageChanged` (e.g., 0.5).
+4. **Always release `lookAt` locks** -- `lookAtTransform(Matrix4.IDENTITY)`.
+5. **Set `maximumHeight` for short flights** -- prevents zooming to space.
+6. **Scale movement to altitude** -- divide camera height for natural speed.
+7. **Re-enable collision after underground views** -- `enableCollisionDetection = true`.
+8. **Use 600 m+ altitude for tour stops** -- avoids blurry tiles on successive flights.
+
+---
+
+## Common Patterns Quick Reference
+
+| Task | Method | Key detail |
+|---|---|---|
+| Jump to a city | `setView` | 2,000-5,000 m, pitch -50, heading 0 |
+| Animate to a landmark | `flyTo` | 1,000-2,000 m, pitch -30 to -40, set `duration` |
+| City skyline / panoramic | `setView` or `flyTo` | 800-1,500 m, pitch -10 to -20. Position camera across river/bay, face the city. **Load OSM Buildings.** |
+| Overhead / map view | `setView` or `flyTo` | pitch `-(Math.PI/2 - 0.0001)`, altitude matches feature size |
+| Canyon / cliff rim | `setView` or `flyTo` | 50-300 m above rim, pitch -15 to -25 for depth |
+| Lock on a target | `lookAt` | **Must** release with `lookAtTransform(Matrix4.IDENTITY)` |
+| Camera tour (multi-stop) | `flyTo` chain | Use `complete` callback, keep altitude 600 m+ |
+| Ground-level / street view | `setView` | **Requires 3D Tiles** (OSM Buildings or Google Photorealistic). Without them, only sky and flat ground visible. |
+| Constrain user nav | `screenSpaceCameraController` | Set min/max zoom, tilt angle; also call `setView` for initial position |
 
 ---
 
