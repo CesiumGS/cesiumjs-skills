@@ -5,7 +5,7 @@ description: Use when starting any conversation involving CesiumJS development -
 
 # CesiumJS Skills Orientation
 
-This plugin provides 13 domain skills covering CesiumJS v1.139 (~535 public symbols). Skills activate passively via description matching — no explicit invocation is required.
+This plugin provides 14 domain skills covering CesiumJS v1.139 (~535 public symbols). Skills activate passively via description matching — no explicit invocation is required.
 
 ## Available Skills
 
@@ -18,7 +18,8 @@ This plugin provides 13 domain skills covering CesiumJS v1.139 (~535 public symb
 | `cesiumjs-imagery` | Adding/swapping base map layers, configuring imagery providers, split-screen comparisons |
 | `cesiumjs-terrain-environment` | Configuring terrain, querying heights, atmosphere/sky/fog/lighting/shadows, panoramas |
 | `cesiumjs-primitives` | Performance-critical static geometry, custom shapes, batching, billboard/label/point collections |
-| `cesiumjs-materials-shaders` | Custom materials, GLSL shaders, post-processing effects, bloom, tonemapping |
+| `cesiumjs-materials-shaders` | Fabric materials, ImageBasedLighting, post-processing effects, bloom, tonemapping |
+| `cesiumjs-custom-shader` | Writing GLSL shader bodies for Model/Cesium3DTileset/VoxelPrimitive; reading feature IDs or structural metadata inside a shader |
 | `cesiumjs-time-properties` | Time-dynamic entity attributes, simulation clock, interpolation, sampled/callback properties |
 | `cesiumjs-spatial-math` | Coordinate conversions, ellipsoid geometry, model matrices, intersection tests, projections |
 | `cesiumjs-interaction` | User clicks on the globe, entity/feature selection, hover effects, drag interactions |
