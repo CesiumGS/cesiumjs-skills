@@ -1,7 +1,7 @@
 # CesiumJS Skills Domain Mapping
 
 > **Version baseline:** CesiumJS v1.139.1 (2026-03-05)
-> **Last updated:** 2026-03-24
+> **Last updated:** 2026-04-21
 > **Total public symbols assigned:** ~535
 
 This document is the definitive source of truth for the CesiumJS skill decomposition. Every public class, function, and enum in CesiumJS is assigned to exactly one domain. Other domains may cross-reference a symbol, but only one domain **owns** it.
@@ -17,7 +17,8 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 | 5 | `cesiumjs-imagery` | ~30 | CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLayerCollection, WMS, WMTS, Bing, OpenStreetMap, ArcGIS, Mapbox, tile discard policies. Use when adding or swapping base map layers, configuring imagery providers, layering multiple map sources, or creating split-screen imagery comparisons. |
 | 6 | `cesiumjs-terrain-environment` | ~35 | CesiumJS terrain, globe, and environment - TerrainProvider, Globe, sampleTerrain, atmosphere, sky, fog, lighting, shadows, panoramas. Use when configuring terrain providers, querying terrain heights, customizing atmosphere or sky rendering, adding panoramas, or adjusting scene lighting and shadows. |
 | 7 | `cesiumjs-primitives` | ~72 | CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static geometry, creating custom shapes, batching draw calls, or using low-level billboard, label, and point collections. |
-| 8 | `cesiumjs-materials-shaders` | ~27 | CesiumJS materials, shaders, and post-processing - Material, Fabric JSON, CustomShader, GLSL, PostProcessStage, PostProcessStageLibrary, bloom, depth of field, tonemapping. Use when defining custom materials, writing GLSL shaders for models or tilesets, adding screen-space post-processing effects, or configuring the visual rendering pipeline. |
+| 8 | `cesiumjs-materials-shaders` | ~20 | CesiumJS materials and post-processing — Material, Fabric JSON, MaterialAppearance, ImageBasedLighting, PostProcessStage, PostProcessStageLibrary, bloom, depth of field, ambient occlusion, FXAA, tonemapping, BlendingState. Use when defining Fabric materials for entities or primitives, configuring PBR image-based lighting, or adding screen-space post-processing effects. |
+| 14 | `cesiumjs-custom-shader` | ~7 | CustomShader authoring — vertexShaderText and fragmentShaderText against VertexInput, FragmentInput, FeatureIds, Metadata, czm_modelMaterial. Use when reading EXT_mesh_features or EXT_structural_metadata property textures/tables, vertex displacement, or shading VoxelPrimitive. |
 | 9 | `cesiumjs-time-properties` | ~57 | CesiumJS time, properties, and animation - Clock, JulianDate, TimeInterval, Property, SampledProperty, CallbackProperty, interpolation, splines, CZML temporal data. Use when making entity attributes time-dynamic, configuring the simulation clock, interpolating positions over time, or working with sampled or callback properties. |
 | 10 | `cesiumjs-spatial-math` | ~55 | CesiumJS spatial math - Cartesian3, Cartographic, Matrix4, Quaternion, Transforms, Ellipsoid, BoundingSphere, projections, coordinate conversions. Use when converting between coordinate systems, computing positions on the ellipsoid, performing spatial intersection tests, building model matrices, or working with geographic projections. |
 | 11 | `cesiumjs-interaction` | ~8 | CesiumJS interaction and picking - ScreenSpaceEventHandler, Scene.pick, Scene.drillPick, Scene.pickPosition, mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, implementing hover effects, or building drag-based interactions. |
@@ -508,15 +509,13 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ---
 
-## Domain 8: cesiumjs-materials-shaders (~27 entries)
+## Domain 8: cesiumjs-materials-shaders (~20 entries)
 
 ### Material System
 - Material
 - MaterialSupport
 
-### Custom Shaders
-- CustomShader
-- TextureUniform
+### Image-Based Lighting
 - ImageBasedLighting
 
 ### Post-Processing
@@ -525,14 +524,14 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - PostProcessStageComposite
 - PostProcessStageLibrary
 
-### Shader/Render Enums
-- CustomShaderMode
-- CustomShaderTranslucencyMode
-- LightingModel
-- UniformType
-- VaryingType
+### Post-Processing Enums
 - PostProcessStageSampleMode
 - Tonemapper
+
+### Rendering State
+- BlendingState
+
+### Render State Enums
 - BlendEquation
 - BlendFunction
 - BlendOption
@@ -540,9 +539,6 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - DepthFunction
 - StencilFunction
 - StencilOperation
-
-### Rendering State
-- BlendingState
 
 ### Texture Config
 - CompressedTextureBuffer
@@ -554,8 +550,10 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - srgbToLinear
 
 ### Ownership Rules
-> **CustomShader:** Primary home. Applied to `Model.customShader` and `Cesium3DTileset.customShader`, but shader authoring is a distinct skill.
+> **Material (Fabric):** Primary home. Consumed by `MaterialAppearance` on Primitives and by Entity `*Graphics` via `Material*Property` (Domain 9).
 > **ImageBasedLighting:** Primary home. Used by `Model.imageBasedLighting` and `Cesium3DTileset.imageBasedLighting`.
+> **PostProcessStage/Library:** Primary home. Applied to `Scene.postProcessStages`.
+> **CustomShader, TextureUniform, and shader enums:** moved to Domain 14 (cesiumjs-custom-shader). Cross-reference only.
 
 ---
 
@@ -872,6 +870,32 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ---
 
+## Domain 14: cesiumjs-custom-shader (~7 entries)
+
+### CustomShader Core
+- CustomShader
+- TextureUniform
+
+### CustomShader Enums
+- CustomShaderMode
+- CustomShaderTranslucencyMode
+- LightingModel
+- UniformType
+- VaryingType
+
+### Ownership Rules
+> **CustomShader:** Primary home. Applied to `Model.customShader`, `Cesium3DTileset.customShader`, and `VoxelPrimitive.customShader` (fragment-only subset). Model/tileset/voxel **setup** lives in Domains 12 / 4 / 4 respectively; **shader authoring** lives here.
+> **TextureUniform:** Primary home. Sole consumer is `CustomShader` uniforms of `UniformType.SAMPLER_2D`.
+> **UniformType, VaryingType, LightingModel, CustomShaderMode, CustomShaderTranslucencyMode:** Primary home. All five are consumed exclusively by `CustomShader`.
+> **Cesium3DTileStyle + CustomShader:** undefined behavior per upstream JSDoc. Choose one per tileset.
+
+### Notes
+- 1.139 breaking change (#13135): UINT metadata no longer cast to signed int in shaders.
+- 1.130 breaking change (#12636): `VoxelPrimitive` `FragmentInput` restructured — `fsInput.voxel.*` replaced by `fsInput.attributes.positionEC`/`normalEC`.
+- `Cesium3DTileset.customShader` is marked `@experimental` — may change without standard deprecation policy.
+
+---
+
 ## Cross-Cutting Ownership Rules
 
 These rules prevent activation collisions (multiple skills triggering for the same prompt):
@@ -880,7 +904,7 @@ These rules prevent activation collisions (multiple skills triggering for the sa
 |---------|---------------|--------------------|----|
 | `*Graphics` classes | 3 (entities) | 7 (primitives) | Entity API = `*Graphics`; Primitive API = `*Geometry` |
 | `*Geometry` classes | 7 (primitives) | 3 (entities) | Same boundary, other direction |
-| CustomShader | 8 (materials-shaders) | 4 (3d-tiles), 12 (models) | Shader authoring is distinct from model/tileset loading |
+| CustomShader | 14 (custom-shader) | 4 (3d-tiles), 8 (materials-shaders), 12 (models) | Shader authoring is a distinct skill from model/tileset loading or material/post-processing |
 | ImageBasedLighting | 8 (materials-shaders) | 4 (3d-tiles), 12 (models) | PBR lighting is a rendering concept |
 | ClippingPlane/Polygon | 4 (3d-tiles) | 6 (terrain-env), 12 (models) | Most common use is 3D Tiles clipping |
 | Material (Fabric) | 8 (materials-shaders) | 7 (primitives) | Primitives consume Materials via Appearances |
@@ -921,13 +945,14 @@ These rules prevent activation collisions (multiple skills triggering for the sa
 | cesiumjs-viewer-setup | camera, entities, imagery, terrain-environment |
 | cesiumjs-camera | spatial-math, interaction, entities |
 | cesiumjs-entities | time-properties, primitives, interaction |
-| cesiumjs-3d-tiles | materials-shaders, interaction, terrain-environment |
+| cesiumjs-3d-tiles | custom-shader, interaction, terrain-environment |
 | cesiumjs-imagery | viewer-setup, terrain-environment |
 | cesiumjs-terrain-environment | viewer-setup, imagery, spatial-math |
 | cesiumjs-primitives | entities, materials-shaders, spatial-math |
-| cesiumjs-materials-shaders | primitives, 3d-tiles, models-particles |
+| cesiumjs-materials-shaders | custom-shader, primitives, 3d-tiles, models-particles |
 | cesiumjs-time-properties | entities, viewer-setup, models-particles |
 | cesiumjs-spatial-math | camera, primitives, terrain-environment |
 | cesiumjs-interaction | entities, 3d-tiles, camera |
-| cesiumjs-models-particles | materials-shaders, entities, 3d-tiles |
+| cesiumjs-models-particles | custom-shader, materials-shaders, entities, 3d-tiles |
 | cesiumjs-core-utilities | viewer-setup, imagery, entities |
+| cesiumjs-custom-shader | materials-shaders, 3d-tiles, models-particles |

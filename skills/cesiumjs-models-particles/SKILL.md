@@ -394,6 +394,7 @@ CesiumJS experimentally supports the NGA Geospatial Positioning Metadata glTF ex
 
 ## See Also
 
-- **cesiumjs-materials-shaders** -- CustomShader, ImageBasedLighting, GLSL for models
+- **cesiumjs-custom-shader** -- GLSL authoring for `Model.customShader` (struct reference, feature IDs, metadata, vertex displacement)
+- **cesiumjs-materials-shaders** -- ImageBasedLighting, post-processing stages for models
 - **cesiumjs-entities** -- Entity API ModelGraphics, data sources, time-dynamic properties
 - **cesiumjs-3d-tiles** -- Cesium3DTileset (uses Model internally), clipping, styling

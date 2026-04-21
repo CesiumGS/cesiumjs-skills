@@ -417,5 +417,5 @@ scene.primitives.add(new Primitive({
 ## See Also
 
 - **cesiumjs-entities** -- High-level Entity API wrapping primitives with time-dynamic properties.
-- **cesiumjs-materials-shaders** -- Material (Fabric) system consumed by Appearances, custom GLSL, post-processing.
+- **cesiumjs-materials-shaders** -- Material (Fabric) system consumed by Appearances, post-processing.
 - **cesiumjs-spatial-math** -- Cartesian3, Matrix4, Transforms, coordinate conversions for positioning geometry.

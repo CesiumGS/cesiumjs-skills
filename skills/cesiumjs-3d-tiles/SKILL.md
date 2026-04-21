@@ -298,6 +298,9 @@ viewer.scene.primitives.add(voxelPrimitive);
 voxelPrimitive.nearestSampling = true;
 viewer.camera.flyToBoundingSphere(voxelPrimitive.boundingSphere, { duration: 0 });
 
+// For voxel shader authoring — struct availability, raymarching semantics, metadata
+// access — see the cesiumjs-custom-shader skill. This skill covers VoxelPrimitive setup.
+
 // Optional inspector widget
 viewer.extend(Cesium.viewerVoxelInspectorMixin);
 viewer.voxelInspector.viewModel.voxelPrimitive = voxelPrimitive;
@@ -376,6 +379,7 @@ tileset.modelMatrix = Matrix4.fromTranslation(translation);
 
 ## See Also
 
-- **cesiumjs-materials-shaders** -- CustomShader, ImageBasedLighting, post-processing for tilesets
+- **cesiumjs-custom-shader** -- GLSL authoring for `Cesium3DTileset.customShader` and `VoxelPrimitive.customShader` (struct reference, feature IDs, metadata)
+- **cesiumjs-materials-shaders** -- ImageBasedLighting, post-processing stages for tilesets
 - **cesiumjs-interaction** -- Scene.pick, drillPick, ScreenSpaceEventHandler for feature selection
 - **cesiumjs-terrain-environment** -- Globe, terrain providers, atmosphere, lighting, shadows

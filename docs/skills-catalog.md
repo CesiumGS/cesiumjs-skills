@@ -38,13 +38,14 @@ Self-contained, domain-level skills that passively activate when developers ask 
 | 4 | **[cesiumjs-viewer-setup](./cesiumjs-viewer-setup/)** | Viewer, CesiumWidget, widgets, Ion token, Scene configuration, factory helpers, geocoders |
 | 5 | **[cesiumjs-imagery](./cesiumjs-imagery/)** | ImageryProvider types, layers, WMS/WMTS, split-screen comparisons |
 | 6 | **[cesiumjs-terrain-environment](./cesiumjs-terrain-environment/)** | TerrainProvider, Globe, atmosphere, sky, fog, lighting, shadows, panoramas |
-| 7 | **[cesiumjs-materials-shaders](./cesiumjs-materials-shaders/)** | Material/Fabric, CustomShader, GLSL, PostProcessStage, bloom, tonemapping |
-| 8 | **[cesiumjs-entities](./cesiumjs-entities/)** | Entity API, Graphics types, DataSources (GeoJSON/KML/CZML/GPX), Visualizers |
-| 9 | **[cesiumjs-primitives](./cesiumjs-primitives/)** | Primitive API, GeometryInstance, Appearances, Billboard/Label/Point collections |
-| 10 | **[cesiumjs-3d-tiles](./cesiumjs-3d-tiles/)** | Cesium3DTileset, styling, metadata, voxels, point clouds, I3S, clipping |
-| 11 | **[cesiumjs-camera](./cesiumjs-camera/)** | Camera flyTo/lookAt/setView, ScreenSpaceCameraController, flight animation |
-| 12 | **[cesiumjs-interaction](./cesiumjs-interaction/)** | ScreenSpaceEventHandler, Scene.pick/drillPick, hover, drag interactions |
-| 13 | **[cesiumjs-models-particles](./cesiumjs-models-particles/)** | Model/glTF loading, animation, ParticleSystem, emitters |
+| 7 | **[cesiumjs-materials-shaders](./cesiumjs-materials-shaders/)** | Material/Fabric, ImageBasedLighting, PostProcessStage, bloom, tonemapping |
+| 8 | **[cesiumjs-custom-shader](./cesiumjs-custom-shader/)** | CustomShader authoring — GLSL for Model/Cesium3DTileset/VoxelPrimitive, feature IDs, EXT_structural_metadata |
+| 9 | **[cesiumjs-entities](./cesiumjs-entities/)** | Entity API, Graphics types, DataSources (GeoJSON/KML/CZML/GPX), Visualizers |
+| 10 | **[cesiumjs-primitives](./cesiumjs-primitives/)** | Primitive API, GeometryInstance, Appearances, Billboard/Label/Point collections |
+| 11 | **[cesiumjs-3d-tiles](./cesiumjs-3d-tiles/)** | Cesium3DTileset, styling, metadata, voxels, point clouds, I3S, clipping |
+| 12 | **[cesiumjs-camera](./cesiumjs-camera/)** | Camera flyTo/lookAt/setView, ScreenSpaceCameraController, flight animation |
+| 13 | **[cesiumjs-interaction](./cesiumjs-interaction/)** | ScreenSpaceEventHandler, Scene.pick/drillPick, hover, drag interactions |
+| 14 | **[cesiumjs-models-particles](./cesiumjs-models-particles/)** | Model/glTF loading, animation, ParticleSystem, emitters |
 
 The domain mapping and class ownership rules are documented in **[DOMAINS.md](./DOMAINS.md)**.
 

@@ -1,6 +1,6 @@
 ---
 name: cesiumjs-materials-shaders
-description: "CesiumJS materials, shaders, and post-processing - Material, Fabric JSON, CustomShader, GLSL, PostProcessStage, PostProcessStageLibrary, bloom, depth of field, tonemapping. Use when defining custom materials, writing GLSL shaders for models or tilesets, adding screen-space post-processing effects, or configuring the visual rendering pipeline."
+description: "CesiumJS materials and post-processing — Material, Fabric JSON, MaterialAppearance, ImageBasedLighting, PostProcessStage, PostProcessStageLibrary, bloom, depth of field, ambient occlusion, FXAA, tonemapping, BlendingState. Use when defining Fabric materials for entities or primitives, configuring PBR image-based lighting, or adding screen-space post-processing effects."
 ---
 # CesiumJS Materials, Shaders & Post-Processing
 
@@ -99,110 +99,26 @@ const compositeMat = new Material({ fabric: {
 }});
 ```
 
-## CustomShader (Models and 3D Tiles)
+## CustomShader
 
-`CustomShader` injects user GLSL into `Model` and `Cesium3DTileset` rendering. It provides access to vertex attributes, feature IDs, and metadata.
+`CustomShader` injects user GLSL into `Model`, `Cesium3DTileset`, and `VoxelPrimitive` rendering, with access to vertex attributes, feature IDs, and `EXT_structural_metadata`.
 
-### Enums
+**For shader authoring — struct reference, metadata access, feature IDs, voxel subset, 1.139 breaking changes, and seven worked examples — see the `cesiumjs-custom-shader` skill.** This skill owns the `CustomShader` integration surface; the authoring depth lives there.
 
-- **CustomShaderMode:** `MODIFY_MATERIAL` (default -- modifies before lighting), `REPLACE_MATERIAL` (replaces material stage)
-- **LightingModel:** `UNLIT` (skip lighting), `PBR` (physically-based with IBL)
-- **CustomShaderTranslucencyMode:** `INHERIT` (default), `OPAQUE`, `TRANSLUCENT`
-- **UniformType:** `FLOAT`, `VEC2`, `VEC3`, `VEC4`, `INT`, `INT_VEC2`..`INT_VEC4`, `BOOL`, `MAT2`, `MAT3`, `MAT4`, `SAMPLER_2D`
-- **VaryingType:** `FLOAT`, `VEC2`, `VEC3`, `VEC4`, `MAT2`, `MAT3`, `MAT4`
-
-### Shader Signatures
-
-Vertex: `void vertexMain(VertexInput vsInput, inout czm_modelVertexOutput vsOutput)`
-Fragment: `void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material)`
-
-Available struct fields:
-- `vsInput.attributes` / `fsInput.attributes`: `positionMC`, `normalMC`, `texCoord_0`, `color_0`
-- `vsOutput.positionMC`: writable model-space position
-- `fsInput.featureIds.featureId_0`, `fsInput.metadata.*` (3D Tiles metadata)
-- `material.diffuse` (vec3), `.alpha`, `.normal` (vec3), `.specular`, `.roughness`, `.emissive` (vec3), `.occlusion`
-
-### Basic CustomShader on a Model
+Minimal example:
 
 ```js
-import { CustomShader, CustomShaderMode, LightingModel, UniformType, Cartesian3 } from "cesium";
+import { CustomShader, Model } from "cesium";
 
 const shader = new CustomShader({
-  mode: CustomShaderMode.MODIFY_MATERIAL,
-  lightingModel: LightingModel.PBR,
-  uniforms: {
-    u_highlightColor: { type: UniformType.VEC3, value: new Cartesian3(1.0, 0.843, 0.0) },
-  },
   fragmentShaderText: `
     void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
-      material.diffuse = mix(material.diffuse, u_highlightColor, 0.3);
+      material.diffuse = vec3(1.0, 0.5, 0.0);
     }
   `,
 });
-
-const model = await Cesium.Model.fromGltfAsync({ url: "./building.glb", customShader: shader });
+const model = await Model.fromGltfAsync({ url: "./building.glb", customShader: shader });
 viewer.scene.primitives.add(model);
-```
-
-### CustomShader with TextureUniform
-
-```js
-import { CustomShader, UniformType, TextureUniform, LightingModel } from "cesium";
-
-const detailShader = new CustomShader({
-  lightingModel: LightingModel.PBR,
-  uniforms: {
-    u_detailTex: {
-      type: UniformType.SAMPLER_2D,
-      value: new TextureUniform({ url: "./detail_normal.png", repeat: true }),
-    },
-    u_strength: { type: UniformType.FLOAT, value: 0.5 },
-  },
-  fragmentShaderText: `void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
-    vec3 dn = texture(u_detailTex, fsInput.attributes.texCoord_0 * 10.0).rgb * 2.0 - 1.0;
-    material.normal = normalize(material.normal + dn * u_strength);
-  }`,
-});
-```
-
-### Vertex Displacement with Varyings
-
-```js
-import { CustomShader, UniformType, VaryingType } from "cesium";
-
-const waveShader = new CustomShader({
-  uniforms: { u_amp: { type: UniformType.FLOAT, value: 5.0 } },
-  varyings: { v_disp: VaryingType.FLOAT },
-  vertexShaderText: `void vertexMain(VertexInput vsInput, inout czm_modelVertexOutput vsOutput) {
-    float d = sin(vsInput.attributes.positionMC.x * 0.1 + czm_frameNumber * 0.05) * u_amp;
-    vsOutput.positionMC += vsInput.attributes.normalMC * d;
-    v_disp = d;
-  }`,
-  fragmentShaderText: `void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
-    float t = clamp(v_disp / u_amp, 0.0, 1.0);
-    material.diffuse = mix(vec3(0.0, 0.3, 1.0), vec3(1.0, 0.2, 0.0), t);
-  }`,
-});
-```
-
-### CustomShader on a 3D Tileset
-
-```js
-import { Cesium3DTileset, CustomShader, CustomShaderMode } from "cesium";
-
-const tileset = await Cesium3DTileset.fromIonAssetId(96188);
-viewer.scene.primitives.add(tileset);
-
-tileset.customShader = new CustomShader({
-  mode: CustomShaderMode.REPLACE_MATERIAL,
-  fragmentShaderText: `
-    void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
-      float height = fsInput.attributes.positionWC.z;
-      float t = clamp(height / 200.0, 0.0, 1.0);
-      material.diffuse = mix(vec3(0.2, 0.4, 0.8), vec3(1.0, 0.8, 0.2), t);
-    }
-  `,
-});
 ```
 
 ## ImageBasedLighting
@@ -363,17 +279,14 @@ const appearance = new MaterialAppearance({
 
 1. Prefer `Material.fromType()` for built-in types -- cached shader programs avoid recompilation.
 2. Use `Material.fromTypeAsync()` for texture materials to prevent default-texture flicker.
-3. Set `CustomShaderMode.REPLACE_MATERIAL` when the original PBR material is not needed -- skips material processing.
-4. Use `LightingModel.UNLIT` for flat-colored visualizations to skip PBR calculations.
-5. Set `PostProcessStage.textureScale` below 1.0 (e.g., 0.5) to reduce pixels processed in expensive stages.
-6. Disable unused built-in stages (`bloom.enabled = false`) -- enabled stages consume GPU resources.
-7. Combine effects in a `PostProcessStageComposite` to reduce intermediate texture allocations.
-8. Set `repeat: false` on `TextureUniform` when tiling is unnecessary for `CLAMP_TO_EDGE` wrapping.
-9. Minimize `PostProcessStage` count -- each requires a full-screen draw call and framebuffer.
-10. Call `customShader.destroy()` when done to release GPU texture resources.
+3. Set `PostProcessStage.textureScale` below 1.0 (e.g., 0.5) to reduce pixels processed in expensive stages.
+4. Disable unused built-in stages (`bloom.enabled = false`) -- enabled stages consume GPU resources.
+5. Combine effects in a `PostProcessStageComposite` to reduce intermediate texture allocations.
+6. Minimize `PostProcessStage` count -- each requires a full-screen draw call and framebuffer.
 
 ## See Also
 
+- **cesiumjs-custom-shader** -- GLSL authoring for `Model.customShader`, `Cesium3DTileset.customShader`, `VoxelPrimitive.customShader` (struct reference, metadata, feature IDs)
 - **cesiumjs-primitives** -- Geometry, Appearances, and Material application on Primitive API objects
-- **cesiumjs-3d-tiles** -- Cesium3DTileset loading and styling (`tileset.customShader`)
-- **cesiumjs-models-particles** -- Model loading and glTF (`model.customShader`)
+- **cesiumjs-3d-tiles** -- Cesium3DTileset loading and styling
+- **cesiumjs-models-particles** -- Model loading and glTF
