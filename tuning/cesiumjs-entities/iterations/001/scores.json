@@ -1,0 +1,18 @@
+{
+  "iteration": "001",
+  "timestamp": "2026-04-08T21:45:00Z",
+  "programmatic_pass_rate": 1.0,
+  "programmatic_detail": "33/33 checks pass (identical to baseline)",
+  "pairwise_results": {
+    "eval-001": {"winner": "ITERATION_001", "rationale": "All 3 landmarks visible with labels vs baseline's poor camera positioning"},
+    "eval-002": {"winner": "BASELINE", "rationale": "Baseline shows 3D extruded column; iteration 001 lost extrusion (flat polygon only)"},
+    "eval-003": {"winner": "TIE", "rationale": "Both show colorful states; neither has prominent white outlines"},
+    "eval-004": {"winner": "TIE", "rationale": "Visually near-identical"},
+    "eval-005": {"winner": "ITERATION_001", "rationale": "Iteration 001 adds labels for better identifiability"}
+  },
+  "pairwise_tally": {
+    "iteration_001_wins": 2,
+    "baseline_wins": 1,
+    "ties": 2
+  }
+}

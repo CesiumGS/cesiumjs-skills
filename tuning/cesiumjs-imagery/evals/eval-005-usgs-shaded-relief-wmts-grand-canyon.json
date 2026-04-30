@@ -1,0 +1,31 @@
+{
+  "id": "eval-005",
+  "name": "usgs-shaded-relief-wmts-grand-canyon",
+  "landmark": "Grand Canyon, USA",
+  "perspective": "regional shaded relief base map",
+  "section_coverage": [
+    "WebMapTileServiceImageryProvider (WMTS)"
+  ],
+  "difficulty": "medium",
+  "description": "Use a public WMTS service for shaded relief and center the map on the Grand Canyon. Tests required WMTS fields.",
+  "prompt": "Create a CesiumJS viewer using the public USGS shaded relief WMTS imagery as the main visible layer, then position the camera over the Grand Canyon. The result should look like a terrain-style shaded relief map rather than satellite photography.",
+  "expected_behaviors": [
+    "Creates a WebMapTileServiceImageryProvider",
+    "Sets url, layer, style, format, and tileMatrixSetID",
+    "Adds the provider to the viewer imagery layers",
+    "Frames the Grand Canyon"
+  ],
+  "visual_expectations": "A shaded-relief style map over the Grand Canyon region with clear terrain texture and canyon form visible from above.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "WebMapTileServiceImageryProvider", "description": "Uses WMTS provider" },
+    { "type": "pattern_present", "pattern": "tileMatrixSetID", "description": "Sets tileMatrixSetID" },
+    { "type": "pattern_present", "pattern": "USGSShadedReliefOnly|WMTS", "description": "Targets USGS WMTS service" },
+    { "type": "pattern_present", "pattern": "-112|36\\.", "description": "Targets Grand Canyon region" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 7000, "description": "WMTS shaded relief over Grand Canyon" }
+  ],
+  "regression_critical": false
+}

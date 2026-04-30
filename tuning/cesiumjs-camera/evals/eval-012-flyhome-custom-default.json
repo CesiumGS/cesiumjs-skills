@@ -1,0 +1,28 @@
+{
+  "id": "eval-012",
+  "name": "flyhome-custom-default-europe",
+  "landmark": "Europe",
+  "perspective": "custom home view",
+  "section_coverage": ["flyHome"],
+  "difficulty": "medium",
+  "description": "Override the default home view with Camera.DEFAULT_VIEW_RECTANGLE and call flyHome. Tests the flyHome section of the skill.",
+  "prompt": "Set the default CesiumJS home view to show Europe (from 35N to 60N, 10W to 40E) instead of the default global view. Then fly the camera home to this view with a 2-second animation. Start with the camera somewhere else first so the flyHome animation is visible.",
+  "expected_behaviors": [
+    "Sets Camera.DEFAULT_VIEW_RECTANGLE to a Rectangle covering Europe",
+    "Uses Rectangle.fromDegrees with correct Europe bounds",
+    "Calls camera.flyHome(2.0) with duration",
+    "Starts camera at a different position first"
+  ],
+  "visual_expectations": "After the flyHome animation, the view should show Europe — the Mediterranean, UK, Scandinavia, and Eastern Europe should be visible in a roughly rectangular framing.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "DEFAULT_VIEW_RECTANGLE", "description": "Sets custom home rectangle"},
+    {"type": "pattern_present", "pattern": "Rectangle\\.fromDegrees|fromDegrees", "description": "Creates rectangle from degrees"},
+    {"type": "pattern_present", "pattern": "flyHome", "description": "Calls flyHome"}
+  ],
+  "screenshots": [
+    {"timing": "after_animation", "delay_ms": 5000, "description": "Europe framed as the home view after flyHome"}
+  ],
+  "regression_critical": false
+}

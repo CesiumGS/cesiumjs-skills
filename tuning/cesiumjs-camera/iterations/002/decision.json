@@ -1,0 +1,26 @@
+{
+  "status": "keep",
+  "compared_to": "000-baseline",
+  "eval_suite": "v2-iconic-landmarks (8 evals)",
+  "pairwise_results": {
+    "eval-001-eiffel-ground": {"winner": "TIE", "note": "Both fail — sky only, no 3D tiles"},
+    "eval-002-eiffel-aerial": {"winner": "TIE", "note": "Identical top-down views"},
+    "eval-003-eiffel-south": {"winner": "BASELINE", "note": "Baseline has slightly better south-to-north framing"},
+    "eval-004-empire-east": {"winner": "TIE", "note": "Nearly identical"},
+    "eval-005-nyc-skyline": {"winner": "ITERATION_002", "note": "3D OSM buildings create actual skyline vs flat grid"},
+    "eval-006-grand-canyon-rim": {"winner": "ITERATION_002", "note": "Steeper pitch shows canyon depth"},
+    "eval-007-grand-canyon-aerial": {"winner": "TIE", "note": "Comparable top-down views"},
+    "eval-008-empire-north": {"winner": "ITERATION_002", "note": "3D skyscrapers vs flat overhead imagery"}
+  },
+  "tally": {
+    "iteration_002_wins": 3,
+    "baseline_wins": 1,
+    "ties": 4
+  },
+  "rationale": "Iteration 002 produces dramatically better results on the most challenging evals (NYC skyline with 3D buildings, Grand Canyon depth, Manhattan skyscrapers). The skill's new guidance about loading OSM Buildings for city views and using steeper pitch for canyon perspectives directly caused these improvements. The one baseline win (eval-003 framing) is minor. The 4 ties confirm no regressions on aerial/top-down views.",
+  "key_improvements": [
+    "eval-005: Flat satellite grid → 3D Manhattan skyline with OSM buildings",
+    "eval-006: Flat horizon → visible canyon depth with steeper pitch",
+    "eval-008: Flat overhead imagery → 3D skyscraper cityscape"
+  ]
+}

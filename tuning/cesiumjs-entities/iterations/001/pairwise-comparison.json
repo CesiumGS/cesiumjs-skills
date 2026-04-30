@@ -1,0 +1,31 @@
+{
+  "comparison_type": "pairwise",
+  "judgments": {
+    "eval-001": {
+      "winner": "ITERATION_001",
+      "rationale": "Iteration 001 shows all three colored points (red, blue, green) with readable labels on a single Atlantic-centered view, while the baseline orients toward Asia making the Statue of Liberty point barely visible on the globe edge."
+    },
+    "eval-002": {
+      "winner": "BASELINE",
+      "rationale": "The baseline renders a clearly visible 3D extruded blue column with height and semi-transparent sides over Colorado, while iteration 001 shows only a flat 2D polygon with no extrusion."
+    },
+    "eval-003": {
+      "winner": "TIE",
+      "rationale": "Both show a colorful US states map with random colors per state; the baseline has slightly more vibrant colors but neither displays prominent white outlines, making them roughly equivalent overall."
+    },
+    "eval-004": {
+      "winner": "TIE",
+      "rationale": "Both screenshots are visually near-identical, showing a red polyline connecting LA, Denver, Chicago, and New York with labeled city points at each stop."
+    },
+    "eval-005": {
+      "winner": "ITERATION_001",
+      "rationale": "Both correctly show only three airport markers with JFK in magenta and LHR/NRT hidden, but iteration 001 includes a visible label on ORD improving identifiability of the points."
+    }
+  },
+  "summary": {
+    "iteration_001_wins": 2,
+    "baseline_wins": 1,
+    "ties": 2,
+    "recommendation": "KEEP"
+  }
+}

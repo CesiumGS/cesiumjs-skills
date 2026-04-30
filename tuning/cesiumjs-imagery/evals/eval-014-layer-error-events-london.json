@@ -1,0 +1,31 @@
+{
+  "id": "eval-014",
+  "name": "layer-error-events-london",
+  "landmark": "London, UK",
+  "perspective": "working map with event wiring",
+  "section_coverage": [
+    "Error Handling"
+  ],
+  "difficulty": "medium",
+  "description": "Wire readyEvent and errorEvent listeners on a working imagery layer while still rendering a visible map over London.",
+  "prompt": "Create a CesiumJS viewer centered on London using a working imagery layer, and explicitly wire both layer.errorEvent and provider.errorEvent listeners using the readyEvent pattern described in the skill. The final scene should still render a normal visible map over London, but the code must clearly show the error-handling wiring.",
+  "expected_behaviors": [
+    "Creates an imagery layer from an async provider",
+    "Attaches layer.errorEvent listener",
+    "Attaches readyEvent listener",
+    "Inside readyEvent, attaches provider.errorEvent listener",
+    "Frames London"
+  ],
+  "visual_expectations": "A normal visible map over London. The event listeners are not directly visible, so the visual test mainly confirms the scene still renders correctly.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "errorEvent\\.addEventListener", "description": "Wires errorEvent listeners" },
+    { "type": "pattern_present", "pattern": "readyEvent\\.addEventListener", "description": "Wires readyEvent listener" },
+    { "type": "pattern_present", "pattern": "-0\\.12|51\\.50", "description": "Targets London coordinates" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 6000, "description": "London map with event wiring in code" }
+  ],
+  "regression_critical": false
+}

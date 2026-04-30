@@ -1,0 +1,19 @@
+{
+  "status": "keep",
+  "compared_to": "000-baseline",
+  "timestamp": "2026-04-09T10:55:00Z",
+  "rationale": "Iteration 001 wins 2 of 4 judged evals (003-London zoom, 009-DC detail), ties 1 (010-Florida), loses 1 (002-Paris). The London zoom improvement is decisive — baseline showed all of England at 800km, iter-001 correctly shows Greater London metro. The Paris regression is due to a navigation help tooltip appearing, not a skill quality issue. No critical regressions. Net improvement.",
+  "judge_methodology": "pairwise-3-independent-judges",
+  "per_eval_results": {
+    "eval-002": {"majority": "baseline_wins", "votes": ["A", "A", "Tie"], "note": "Help tooltip visible in candidate, zoom slightly wider"},
+    "eval-003": {"majority": "candidate_wins", "votes": ["B", "B", "B"], "note": "Unanimous. Baseline 800km altitude showed all England; candidate correctly zoomed to London metro"},
+    "eval-009": {"majority": "candidate_wins", "votes": ["Tie", "B", "B"], "note": "Better street detail, cleaner UI without timeline"},
+    "eval-010": {"majority": "tie", "votes": ["Tie", "Tie", "Tie"], "note": "Unanimous tie. Alert overlay identical quality"}
+  },
+  "hypotheses_validated": {
+    "H1_widget_cleanup": "Partially validated. Timeline/animation removed successfully. But navigation help tooltip appeared as unintended side effect.",
+    "H2_setView_vs_flyTo": "Validated. Camera positions consistent and immediate.",
+    "H3_altitude_guidance": "Strongly validated. Eval-003 London zoom dramatically improved from 800km to metro scale."
+  },
+  "next_iteration_notes": "Suppress the navigation help tooltip (navigationInstructionsInitiallyVisible: false). Consider tightening Paris zoom guidance."
+}

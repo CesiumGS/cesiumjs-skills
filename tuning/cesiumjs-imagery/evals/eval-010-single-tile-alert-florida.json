@@ -1,0 +1,30 @@
+{
+  "id": "eval-010",
+  "name": "single-tile-alert-florida",
+  "landmark": "Florida, USA",
+  "perspective": "regional generated image overlay",
+  "section_coverage": [
+    "SingleTileImageryProvider"
+  ],
+  "difficulty": "medium",
+  "description": "Create a generated single-image overlay and drape it over Florida. Tests the single-tile provider without depending on a local asset file.",
+  "prompt": "Create a CesiumJS viewer centered on Florida. Programmatically generate a simple semi-transparent alert overlay image using an HTML canvas, convert it to a data URL, and use SingleTileImageryProvider.fromUrl to drape that single image over a rectangle covering most of the Florida peninsula. The screenshot should clearly show the red or orange tinted alert overlay stretched over Florida.",
+  "expected_behaviors": [
+    "Creates a canvas-generated image or other in-memory image URL",
+    "Uses SingleTileImageryProvider.fromUrl",
+    "Sets a Rectangle.fromDegrees extent over Florida",
+    "Adds the single-tile imagery layer to the viewer"
+  ],
+  "visual_expectations": "Florida should show a visible tinted overlay region stretched across the peninsula, making the single-tile overlay obvious against the normal base imagery.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "SingleTileImageryProvider", "description": "Uses single-tile provider" },
+    { "type": "pattern_present", "pattern": "Rectangle\\.fromDegrees", "description": "Sets overlay rectangle" },
+    { "type": "pattern_present", "pattern": "toDataURL|data:image", "description": "Generates or uses in-memory image data" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 5000, "description": "Single-tile alert overlay over Florida" }
+  ],
+  "regression_critical": false
+}

@@ -1,0 +1,19 @@
+{
+  "status": "keep",
+  "compared_to": "000-baseline",
+  "methodology": "3-parallel-independent-judges, majority vote per eval",
+  "tally": {
+    "iter003_wins": 3,
+    "baseline_wins": 0,
+    "ties": 11
+  },
+  "rationale": "Iteration 003 wins 3 evals by majority vote (2 unanimously), loses 0, ties 11. No regressions on any eval. The 3 wins are substantial visual improvements: (1) eval-001 ground-level now shows OSM buildings instead of blank sky, (2) eval-005 NYC skyline shows dramatic 3D cityscape instead of flat grid, (3) eval-011 chained flyTo successfully completes both stops. The 11 ties confirm no regressions on existing well-performing evals.",
+  "hypotheses_validated": {
+    "H1_heading_convention_table": "TIE on directional evals (003,004,008,013,014) — heading was already correct, table is defensive improvement",
+    "H2_gimbal_lock_warning": "TIE on top-down evals (002,007) — safe pitch value produces identical visual output",
+    "H3_osm_buildings_guidance": "WIN on eval-001, eval-005 — dramatic visual improvement from 3D building guidance",
+    "H4_zoom_collision_gotcha": "TIE on eval-009 — constraint not visually verifiable, defensive improvement",
+    "H5_flyhome_limitation": "TIE on eval-012 — flyHome behavior unchanged, documentation improvement"
+  },
+  "key_insight": "H3 (OSM Buildings guidance) was the highest-impact hypothesis. Adding a single callout about loading 3D buildings for city views caused the LLM to produce fundamentally different code (loading createOsmBuildingsAsync) which transformed flat imagery into recognizable 3D cityscapes."
+}

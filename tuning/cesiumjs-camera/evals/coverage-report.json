@@ -1,0 +1,2376 @@
+{
+  "skill_path": "./tuning/cesiumjs-camera/iterations/000-baseline/SKILL.md",
+  "evals_dir": "./tuning/cesiumjs-camera/evals/",
+  "total_sections": 19,
+  "covered_sections": 18,
+  "uncovered_sections": 1,
+  "coverage_percentage": 94.7,
+  "sections": [
+    {
+      "section": "CesiumJS Camera & Navigation",
+      "level": 1,
+      "line_count": 3,
+      "code_block_count": 0,
+      "api_count": 0,
+      "apis": [],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "cesiumjs",
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "cesiumjs",
+            "camera",
+            "navigation"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "cesiumjs",
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "cesiumjs",
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "camera"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Camera Fundamentals",
+      "level": 2,
+      "line_count": 14,
+      "code_block_count": 0,
+      "api_count": 5,
+      "apis": [
+        "camera",
+        "changed",
+        "moveEnd",
+        "moveStart",
+        "percentageChanged"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "setView -- Instant Placement",
+      "level": 2,
+      "line_count": 28,
+      "code_block_count": 2,
+      "api_count": 6,
+      "apis": [
+        "CesiumMath.toRadians",
+        "Degrees",
+        "Rectangle.fromDegrees",
+        "View",
+        "camera",
+        "setView"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "setView",
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "setview"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "setView",
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "setview"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "setView",
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "setview"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "setView",
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "setview"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "grand-canyon-aerial-overview",
+          "api_overlap": [
+            "setView",
+            "View"
+          ],
+          "keyword_overlap": [
+            "setview",
+            "instant"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "camera",
+            "View"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "camera",
+            "View"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera",
+            "Rectangle.fromDegrees",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "camera",
+            "View",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "flyTo -- Animated Flight",
+      "level": 2,
+      "line_count": 54,
+      "code_block_count": 3,
+      "api_count": 10,
+      "apis": [
+        "CesiumMath.toRadians",
+        "Degrees",
+        "EasingFunction",
+        "Flight",
+        "Math.toRadians",
+        "To",
+        "camera",
+        "cancelFlight",
+        "completeFlight",
+        "flyTo"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "To",
+            "flyTo",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "flyto"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "To",
+            "flyTo",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "flyto"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "To",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "To",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "To",
+            "flyTo",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "flyto"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "To",
+            "flyTo",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "flyto"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "grand-canyon-aerial-overview",
+          "api_overlap": [
+            "To",
+            "flyTo"
+          ],
+          "keyword_overlap": [
+            "flyto"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "To",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "To",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "To",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "To",
+            "flyTo",
+            "camera",
+            "EasingFunction",
+            "Flight"
+          ],
+          "keyword_overlap": [
+            "animated",
+            "flyto",
+            "flight"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "To",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "To",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "To",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "flyHome",
+      "level": 2,
+      "line_count": 12,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "DEFAULT_VIEW_RECTANGLE",
+        "Home",
+        "Rectangle.fromDegrees",
+        "camera",
+        "flyHome"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera",
+            "flyHome",
+            "Rectangle.fromDegrees",
+            "Home",
+            "DEFAULT_VIEW_RECTANGLE"
+          ],
+          "keyword_overlap": [
+            "flyhome"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "lookAt -- Lock Camera to Target",
+      "level": 2,
+      "line_count": 28,
+      "code_block_count": 2,
+      "api_count": 7,
+      "apis": [
+        "At",
+        "AtTransform",
+        "CesiumMath.toRadians",
+        "Degrees",
+        "HeadingPitchRange",
+        "camera",
+        "lookAt"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "At",
+            "camera",
+            "lookAt",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera",
+            "target"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "At",
+            "camera",
+            "lookAt",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera",
+            "lock"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "At",
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera",
+            "lock",
+            "target"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "At",
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera",
+            "lock",
+            "target"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "At",
+            "camera",
+            "lookAt",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera",
+            "lock",
+            "target"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "At",
+            "camera",
+            "lookAt",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "grand-canyon-aerial-overview",
+          "api_overlap": [
+            "At"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "At",
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera",
+            "target"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "At",
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "At",
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "At",
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "At",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "At",
+            "AtTransform",
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera",
+            "lock",
+            "target"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "At",
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookat",
+            "camera",
+            "lock",
+            "target"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "lookAtTransform -- Custom Reference Frames",
+      "level": 2,
+      "line_count": 35,
+      "code_block_count": 2,
+      "api_count": 13,
+      "apis": [
+        "AtTransform",
+        "CesiumMath.toRadians",
+        "Degrees",
+        "HeadingPitchRange",
+        "ICRF",
+        "RotationTranslation",
+        "Transforms.computeIcrfToFixedMatrix",
+        "Transforms.eastNorthUpToFixedFrame",
+        "Update.addEventListener",
+        "camera"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "camera",
+            "lookAt",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "camera",
+            "lookAt",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "mode",
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "camera",
+            "lookAt",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "camera",
+            "lookAt",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "camera",
+            "scene"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "custom"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "mode",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "custom"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "AtTransform",
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": [
+            "lookattransform"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "camera",
+            "lookAt",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "flyToBoundingSphere / viewBoundingSphere",
+      "level": 2,
+      "line_count": 20,
+      "code_block_count": 1,
+      "api_count": 8,
+      "apis": [
+        "BoundingSphere",
+        "CesiumMath.toRadians",
+        "Degrees",
+        "HeadingPitchRange",
+        "ToBoundingSphere",
+        "camera",
+        "flyTo",
+        "viewBoundingSphere"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "flyTo",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "flyTo",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "camera",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "camera",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "flyTo",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "flyTo",
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "grand-canyon-aerial-overview",
+          "api_overlap": [
+            "flyTo"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "camera",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "flyTo",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "camera",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "camera",
+            "HeadingPitchRange",
+            "Degrees"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Movement, Rotation, Look, and Zoom Methods",
+      "level": 2,
+      "line_count": 26,
+      "code_block_count": 1,
+      "api_count": 24,
+      "apis": [
+        "Forward",
+        "In",
+        "Out",
+        "ToCartographic",
+        "camera",
+        "lookDown",
+        "lookLeft",
+        "lookRight",
+        "lookUp",
+        "moveBackward"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "In",
+            "camera"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "grand-canyon-aerial-overview",
+          "api_overlap": [
+            "In",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "In",
+            "scene",
+            "camera"
+          ],
+          "keyword_overlap": [
+            "zoom",
+            "rotation",
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "In",
+            "camera"
+          ],
+          "keyword_overlap": [
+            "zoom",
+            "rotation",
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "In",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "In",
+            "camera",
+            "Out"
+          ],
+          "keyword_overlap": [
+            "look"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "ScreenSpaceCameraController",
+      "level": 2,
+      "line_count": 4,
+      "code_block_count": 0,
+      "api_count": 1,
+      "apis": [
+        "scene"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "screenspacecameracontroller"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screenspacecameracontroller"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Constraining Navigation",
+      "level": 3,
+      "line_count": 25,
+      "code_block_count": 1,
+      "api_count": 15,
+      "apis": [
+        "Inertia",
+        "enableCollisionDetection",
+        "enableInputs",
+        "enableLook",
+        "enableRotate",
+        "enableTilt",
+        "enableTranslate",
+        "enableZoom",
+        "inertiaSpin",
+        "inertiaTranslate"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "enableInputs",
+            "minimumZoomDistance",
+            "enableRotate",
+            "maximumTiltAngle",
+            "scene",
+            "enableTilt",
+            "maximumZoomDistance",
+            "enableZoom"
+          ],
+          "keyword_overlap": [
+            "constraining",
+            "navigation"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Remapping Input Events",
+      "level": 3,
+      "line_count": 18,
+      "code_block_count": 1,
+      "api_count": 6,
+      "apis": [
+        "CameraEventType",
+        "KeyboardEventModifier",
+        "rotateEventTypes",
+        "scene",
+        "tiltEventTypes",
+        "zoomEventTypes"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "input"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "CameraEventType",
+            "tiltEventTypes",
+            "zoomEventTypes",
+            "rotateEventTypes",
+            "KeyboardEventModifier"
+          ],
+          "keyword_overlap": [
+            "events",
+            "input",
+            "remapping"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Custom First-Person Controls",
+      "level": 2,
+      "line_count": 42,
+      "code_block_count": 1,
+      "api_count": 29,
+      "apis": [
+        "Attribute",
+        "Backward",
+        "Down",
+        "EventListener",
+        "Forward",
+        "InputAction",
+        "Left",
+        "Right",
+        "ScreenSpaceEventHandler",
+        "Tick.addEventListener"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "Up",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "Down",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "Down",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "Down",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "Down",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "grand-canyon-aerial-overview",
+          "api_overlap": [
+            "Down"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "Down",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "enableRotate",
+            "scene",
+            "enableTilt",
+            "Up",
+            "camera",
+            "enableZoom"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "Left",
+            "Up",
+            "camera",
+            "Right"
+          ],
+          "keyword_overlap": [
+            "controls",
+            "custom"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "Down",
+            "camera"
+          ],
+          "keyword_overlap": [
+            "first"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "first",
+            "custom"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "Down",
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "Down",
+            "camera"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Camera Events",
+      "level": 2,
+      "line_count": 16,
+      "code_block_count": 1,
+      "api_count": 11,
+      "apis": [
+        "End",
+        "End.addEventListener",
+        "EventListener",
+        "Fixed",
+        "Start",
+        "Start.addEventListener",
+        "camera",
+        "changed",
+        "moveEnd",
+        "moveStart"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera",
+            "events"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera",
+            "Start"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "End",
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "camera"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "pickEllipsoid -- Screen to Globe",
+      "level": 2,
+      "line_count": 14,
+      "code_block_count": 1,
+      "api_count": 6,
+      "apis": [
+        "Ellipsoid",
+        "Math.toDegrees",
+        "ToCartographic",
+        "camera",
+        "pickEllipsoid",
+        "scene"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "grand-canyon-aerial-overview",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "camera",
+            "scene"
+          ],
+          "keyword_overlap": [
+            "screen",
+            "globe"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen",
+            "globe"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Entity Tracking",
+      "level": 2,
+      "line_count": 19,
+      "code_block_count": 1,
+      "api_count": 7,
+      "apis": [
+        "ById",
+        "CesiumMath.toRadians",
+        "DEFAULT_OFFSET",
+        "HeadingPitchRange",
+        "VVLH",
+        "entities",
+        "trackedEntity"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "HeadingPitchRange"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "HeadingPitchRange"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "HeadingPitchRange"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "HeadingPitchRange"
+          ],
+          "keyword_overlap": [
+            "entity"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "HeadingPitchRange"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "DebugCameraPrimitive",
+      "level": 2,
+      "line_count": 13,
+      "code_block_count": 1,
+      "api_count": 3,
+      "apis": [
+        "DebugCameraPrimitive",
+        "camera",
+        "scene"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "constrain-zoom-tilt-london",
+          "api_overlap": [
+            "camera",
+            "scene"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "remap-input-right-drag-rotate",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "flyhome-custom-default-europe",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "camera"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Performance Tips",
+      "level": 2,
+      "line_count": 18,
+      "code_block_count": 0,
+      "api_count": 7,
+      "apis": [
+        "AtTransform",
+        "changed",
+        "enableCollisionDetection",
+        "flyTo",
+        "lookAt",
+        "percentageChanged",
+        "setView"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "eiffel-tower-ground-level",
+          "api_overlap": [
+            "flyTo",
+            "setView",
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "eiffel-tower-aerial",
+          "api_overlap": [
+            "flyTo",
+            "setView",
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "eiffel-tower-from-south",
+          "api_overlap": [
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "empire-state-building-from-east",
+          "api_overlap": [
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "nyc-skyline-from-hudson",
+          "api_overlap": [
+            "flyTo",
+            "setView",
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "grand-canyon-south-rim",
+          "api_overlap": [
+            "flyTo",
+            "setView",
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "grand-canyon-aerial-overview",
+          "api_overlap": [
+            "flyTo",
+            "setView"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "empire-state-building-from-north",
+          "api_overlap": [
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "chained-flyto-tour-nyc",
+          "api_overlap": [
+            "flyTo"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "eiffel-tower-from-east",
+          "api_overlap": [
+            "AtTransform",
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "eiffel-tower-from-north",
+          "api_overlap": [
+            "lookAt"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "See Also",
+      "level": 2,
+      "line_count": 4,
+      "code_block_count": 0,
+      "api_count": 1,
+      "apis": [
+        "trackedEntity"
+      ],
+      "covered_by": [],
+      "is_covered": false
+    }
+  ],
+  "uncovered_list": [
+    {
+      "section": "See Also",
+      "level": 2,
+      "line_count": 4,
+      "code_blocks": 0,
+      "apis": [
+        "trackedEntity"
+      ]
+    }
+  ]
+}

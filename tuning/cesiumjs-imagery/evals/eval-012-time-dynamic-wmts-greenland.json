@@ -1,0 +1,31 @@
+{
+  "id": "eval-012",
+  "name": "time-dynamic-wmts-greenland",
+  "landmark": "Greenland and North Atlantic",
+  "perspective": "regional time-dynamic snow map",
+  "section_coverage": [
+    "Time-Dynamic WMTS"
+  ],
+  "difficulty": "hard",
+  "description": "Configure a time-dynamic WMTS layer and show a broad northern view where the snow overlay is visible.",
+  "prompt": "Create a CesiumJS viewer centered on Greenland and the North Atlantic, then add a time-dynamic WMTS imagery layer using the NASA GIBS snow-water-equivalent example pattern with a TimeIntervalCollection and the viewer clock. The final screenshot should show the northern hemisphere region with the WMTS overlay active.",
+  "expected_behaviors": [
+    "Uses WebMapTileServiceImageryProvider",
+    "Creates a TimeIntervalCollection",
+    "Connects clock and times to the provider",
+    "Frames Greenland or the far North Atlantic"
+  ],
+  "visual_expectations": "A northern regional view with a visible raster overlay over Greenland or surrounding high-latitude region. The exact overlay coloring may vary but it should look like a thematic raster, not plain base imagery.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "TimeIntervalCollection", "description": "Uses time interval collection" },
+    { "type": "pattern_present", "pattern": "clock", "description": "Connects provider to viewer clock" },
+    { "type": "pattern_present", "pattern": "times", "description": "Sets provider times" },
+    { "type": "pattern_present", "pattern": "WebMapTileServiceImageryProvider", "description": "Uses WMTS provider" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 9000, "description": "Time-dynamic WMTS overlay over Greenland region" }
+  ],
+  "regression_critical": false
+}

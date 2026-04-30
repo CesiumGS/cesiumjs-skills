@@ -1,0 +1,16 @@
+{
+  "iteration": "000-baseline",
+  "timestamp": "2026-04-08T22:30:00Z",
+  "eval_suite": "v2-iconic-landmarks",
+  "visual_observations": {
+    "eval-001-eiffel-ground": "POOR — camera looking up at sky, no terrain/buildings visible. Ground-level views need 3D Tiles to be meaningful.",
+    "eval-002-eiffel-aerial": "Needs visual judge evaluation",
+    "eval-003-eiffel-south": "GOOD — clear Paris view with Seine, Champ de Mars, Trocadéro. lookAt worked well.",
+    "eval-004-empire-east": "Needs visual judge evaluation",
+    "eval-005-nyc-skyline": "WEAK — too flat/low, shows sprawling grid not dramatic skyline. Pitch too horizontal at this altitude.",
+    "eval-006-grand-canyon-rim": "DECENT — rim terrain visible but canyon depth not dramatic. Needs steeper look angle.",
+    "eval-007-grand-canyon-aerial": "Needs visual judge evaluation",
+    "eval-008-empire-north": "GOOD — clear urban view looking south down Manhattan with Hudson visible."
+  },
+  "notes": "New v2 eval suite with 8 iconic landmark scenarios. Key finding: eval-001 (ground-level) reveals that ground-level camera views are essentially useless without 3D Tiles loaded — the skill should note this. eval-005 (NYC skyline) needs better altitude/pitch guidance for panoramic cityscape views."
+}

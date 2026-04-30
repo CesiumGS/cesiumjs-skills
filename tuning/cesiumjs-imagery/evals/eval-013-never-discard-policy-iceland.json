@@ -1,0 +1,30 @@
+{
+  "id": "eval-013",
+  "name": "never-discard-policy-iceland",
+  "landmark": "Iceland",
+  "perspective": "regional public tile layer with explicit discard policy",
+  "section_coverage": [
+    "Tile Discard Policies",
+    "UrlTemplateImageryProvider"
+  ],
+  "difficulty": "medium",
+  "description": "Use a UrlTemplate provider with an explicit NeverTileDiscardPolicy and frame Iceland. This mainly verifies the policy wiring while still producing a visible scene.",
+  "prompt": "Create a CesiumJS viewer centered on Iceland using a public tile URL template for the visible imagery, and explicitly configure a NeverTileDiscardPolicy on the UrlTemplateImageryProvider. The final viewer should show Iceland with a normal map image while the code demonstrates the discard-policy configuration.",
+  "expected_behaviors": [
+    "Uses UrlTemplateImageryProvider",
+    "Uses NeverTileDiscardPolicy",
+    "Frames Iceland"
+  ],
+  "visual_expectations": "A visible map of Iceland. The discard policy is not directly visible, but the imagery should render successfully.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "NeverTileDiscardPolicy", "description": "Uses explicit tile discard policy" },
+    { "type": "pattern_present", "pattern": "UrlTemplateImageryProvider", "description": "Uses URL template provider" },
+    { "type": "pattern_present", "pattern": "-19|64\\.", "description": "Targets Iceland" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 6000, "description": "Iceland imagery with explicit discard policy configuration" }
+  ],
+  "regression_critical": false
+}

@@ -1,0 +1,23 @@
+{
+  "iteration": "000-baseline",
+  "timestamp": "2026-04-08T21:00:00Z",
+  "eval_results": {
+    "eval-001": {"programmatic_pass_rate": 1.0, "visual_score": 0.675},
+    "eval-002": {"programmatic_pass_rate": 1.0, "visual_score": 0.92},
+    "eval-003": {"programmatic_pass_rate": 1.0, "visual_score": 0.88},
+    "eval-004": {"programmatic_pass_rate": 1.0, "visual_score": 0.97},
+    "eval-005": {"programmatic_pass_rate": 1.0, "visual_score": 0.84}
+  },
+  "criteria_scores": {
+    "code_executes": 1.0,
+    "no_console_errors": 1.0,
+    "api_accuracy": 1.0,
+    "visual_correctness": 0.857,
+    "completeness": 1.0,
+    "structural_integrity": 1.0,
+    "conciseness": 1.0,
+    "triggering_accuracy": 1.0
+  },
+  "aggregate_score": 0.964,
+  "notes": "Perfect programmatic (34/34). Visual weakness: eval-001 (0.675) — zoomTo on global landmarks resulted in poor camera framing (centered on Asia, not all 3 visible). eval-004 (polyline route) is the best at 0.97."
+}

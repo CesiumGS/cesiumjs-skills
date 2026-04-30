@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+# CesiumJS Skill Optimization Judge
+#
+# A Stop hook that evaluates whether the optimization run has completed its
+# current phase properly before allowing Claude to stop.
+#
+# Based on the double-shot-latte pattern (github.com/obra/double-shot-latte).
+# Uses a separate Claude Opus instance as an independent judge.
+
+set -euo pipefail
+
+# --- Recursion guard ---
+if [ "${CLAUDE_HOOK_JUDGE_MODE:-}" = "true" ]; then
+    echo '{"decision": "approve", "reason": "Judge instance — recursion guard"}'
+    exit 0
+fi
+
+# --- Read hook event from stdin ---
+HOOK_EVENT=$(cat)
+
+# --- Extract transcript path ---
+TRANSCRIPT_PATH=$(echo "$HOOK_EVENT" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print(data.get('transcript_path', ''))
+except:
+    print('')
+" 2>/dev/null)
+
+if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
+    echo '{"decision": "approve", "reason": "No transcript available — allowing stop"}'
+    exit 0
+fi
+
+# --- Extract session ID for throttling ---
+SESSION_ID=$(echo "$HOOK_EVENT" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print(data.get('session_id', 'unknown'))
+except:
+    print('unknown')
+" 2>/dev/null)
+
+# --- Throttle: max 5 continuations per 10-minute window ---
+THROTTLE_FILE="/tmp/.cesiumjs-optimizer-throttle-${SESSION_ID}"
+THROTTLE_MAX=5
+THROTTLE_WINDOW=600
+
+if [ -f "$THROTTLE_FILE" ]; then
+    FILE_AGE=$(( $(date +%s) - $(stat -f %m "$THROTTLE_FILE" 2>/dev/null || stat -c %Y "$THROTTLE_FILE" 2>/dev/null || echo 0) ))
+    if [ "$FILE_AGE" -gt "$THROTTLE_WINDOW" ]; then
+        echo "0" > "$THROTTLE_FILE"
+    fi
+    CONTINUATION_COUNT=$(cat "$THROTTLE_FILE" 2>/dev/null || echo 0)
+    if [ "$CONTINUATION_COUNT" -ge "$THROTTLE_MAX" ]; then
+        echo '{"decision": "approve", "reason": "Throttle limit reached — allowing stop after '"$THROTTLE_MAX"' continuations"}'
+        exit 0
+    fi
+else
+    echo "0" > "$THROTTLE_FILE"
+fi
+
+# --- Get recent transcript context (last 6 entries, max 48KB) ---
+RECENT_CONTEXT=$(tail -n 6 "$TRANSCRIPT_PATH" | head -c 49152)
+
+# --- Model selection: default Opus for quality ---
+JUDGE_MODEL="${CESIUMJS_OPTIMIZER_JUDGE_MODEL:-opus}"
+
+# --- Timeout ---
+JUDGE_TIMEOUT="${CESIUMJS_OPTIMIZER_JUDGE_TIMEOUT:-45}"
+
+# --- System prompt ---
+SYSTEM_PROMPT='You are an optimization phase evaluator for a CesiumJS skill optimization pipeline. Your job is to analyze whether the assistant has completed its current optimization phase properly and whether there is clearly more autonomous work remaining.
+
+You are NOT a coding agent. You do NOT write code or use tools. You classify conversation state.
+
+The optimization pipeline has 8 phases:
+1. Parse & Inventory (coverage analysis)
+2. Research (official docs)
+3. Baseline Evaluation (code gen, browser, screenshots)
+4. Hypothesize (3-5 improvements)
+5. Implement & Test (apply changes, re-run evals)
+6. Judge (3 parallel independent agents)
+7. Decide & Log (keep/discard)
+8. Report (before/after screenshots, summary)
+
+You should determine: has the assistant explicitly stated what phase it is currently in and what it will do next? Is there clearly more pipeline work remaining that the assistant should continue with autonomously?'
+
+# --- User prompt ---
+USER_PROMPT="Analyze this conversation and determine: Does the assistant have more autonomous optimization work to do RIGHT NOW?
+
+Conversation (recent):
+${RECENT_CONTEXT}
+
+CONTINUE (should_continue: true) ONLY IF:
+- The assistant is MID-PHASE with stated next steps (e.g., 'Now running evals 5-8...')
+- There are remaining pipeline phases not yet started
+- The assistant explicitly says what it will do next
+- Screenshots were just captured but not yet judged
+- Code was generated but not yet executed in the browser
+- Judges were launched but results not yet processed
+
+STOP (should_continue: false) in ALL other cases:
+1. PHASE COMPLETE — the assistant just finished a phase and is presenting results to the user
+2. DECISION MADE — keep/discard decision was rendered and committed
+3. ASKING THE USER — waiting for user input, approval, or direction
+4. REPORT DELIVERED — the optimization report was presented
+5. ERROR/BLOCKER — unresolvable issue requiring user intervention
+6. CONVERSATION TURN COMPLETE — the assistant has answered the user's question
+
+Default to STOP when uncertain. It is better to stop and let the user guide the next step than to continue autonomously into an unwanted direction."
+
+# --- JSON schema ---
+JSON_SCHEMA='{"type":"object","properties":{"should_continue":{"type":"boolean"},"reasoning":{"type":"string"}},"required":["should_continue","reasoning"]}'
+
+# --- Invoke judge ---
+JUDGE_RESULT=$(echo "$USER_PROMPT" | timeout "$JUDGE_TIMEOUT" \
+    CLAUDE_HOOK_JUDGE_MODE=true \
+    claude --print \
+    --model "$JUDGE_MODEL" \
+    --output-format json \
+    --json-schema "$JSON_SCHEMA" \
+    --system-prompt "$SYSTEM_PROMPT" \
+    --disallowedTools '*' \
+    2>/dev/null) || {
+    echo '{"decision": "approve", "reason": "Judge timed out or failed — allowing stop"}'
+    exit 0
+}
+
+# --- Parse result ---
+SHOULD_CONTINUE=$(echo "$JUDGE_RESULT" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print('true' if data.get('should_continue', False) else 'false')
+except:
+    print('false')
+" 2>/dev/null)
+
+REASONING=$(echo "$JUDGE_RESULT" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print(data.get('reasoning', 'No reasoning provided'))
+except:
+    print('Parse error')
+" 2>/dev/null)
+
+# --- Decision ---
+if [ "$SHOULD_CONTINUE" = "true" ]; then
+    # Increment throttle counter
+    CURRENT=$(cat "$THROTTLE_FILE" 2>/dev/null || echo 0)
+    echo $(( CURRENT + 1 )) > "$THROTTLE_FILE"
+
+    echo "{\"decision\": \"block\", \"reason\": \"Claude evaluator determined continuation is appropriate: ${REASONING}\"}"
+else
+    echo "{\"decision\": \"approve\", \"reason\": \"Claude evaluator determined stopping is appropriate: ${REASONING}\"}"
+fi

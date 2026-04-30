@@ -1,0 +1,34 @@
+{
+  "id": "eval-009",
+  "name": "constrain-zoom-tilt-london",
+  "landmark": "London, UK",
+  "perspective": "constrained navigation overhead",
+  "section_coverage": ["ScreenSpaceCameraController", "Constraining Navigation"],
+  "difficulty": "medium",
+  "description": "Set zoom limits and prevent tilting below the horizon. Tests ScreenSpaceCameraController properties: minimumZoomDistance, maximumZoomDistance, maximumTiltAngle, enableRotate.",
+  "prompt": "Set up a CesiumJS viewer looking at London (51.5074 N, 0.1278 W) from 5000 meters. Constrain the camera so users can zoom between 1000m and 50000m, cannot tilt below the horizon, and cannot rotate the globe. Keep all other interactions enabled.",
+  "expected_behaviors": [
+    "Accesses viewer.scene.screenSpaceCameraController",
+    "Sets minimumZoomDistance to 1000",
+    "Sets maximumZoomDistance to 50000",
+    "Sets maximumTiltAngle to Math.PI / 2",
+    "Sets enableRotate to false",
+    "Does NOT disable enableZoom, enableTilt, or enableInputs",
+    "Positions camera over London at 5000m"
+  ],
+  "visual_expectations": "An overhead or angled view of London at 5000m altitude showing the Thames, urban grid, and parks. Navigation constraints are not visible in screenshots but the camera position should be correct.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "screenSpaceCameraController", "description": "Accesses camera controller"},
+    {"type": "pattern_present", "pattern": "minimumZoomDistance", "description": "Sets min zoom"},
+    {"type": "pattern_present", "pattern": "maximumZoomDistance", "description": "Sets max zoom"},
+    {"type": "pattern_present", "pattern": "maximumTiltAngle", "description": "Sets tilt limit"},
+    {"type": "pattern_present", "pattern": "enableRotate.*false", "description": "Disables rotation"},
+    {"type": "pattern_absent", "pattern": "enableInputs.*false", "description": "Does NOT disable all inputs"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "London at 5000m with constraints applied"}
+  ],
+  "regression_critical": true
+}

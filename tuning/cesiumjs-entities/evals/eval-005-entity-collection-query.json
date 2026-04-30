@@ -1,0 +1,30 @@
+{
+  "id": "eval-005",
+  "name": "entity-collection-query-and-modify",
+  "difficulty": "hard",
+  "description": "Add entities then query and modify them by ID. Tests EntityCollection.getById, property modification after creation, and the show/remove patterns.",
+  "prompt": "Create 5 point entities representing major airports: JFK (-73.7781, 40.6413), LAX (-118.4085, 33.9416), ORD (-87.9073, 41.9742), LHR (-0.4614, 51.4700), NRT (140.3929, 35.7720). Give each an ID matching its airport code. Then hide the LHR entity by setting show to false, and change JFK's point color from its original color to bright magenta. Finally, remove the NRT entity entirely.",
+  "expected_behaviors": [
+    "Creates 5 entities with explicit IDs",
+    "Uses viewer.entities.getById to retrieve specific entities",
+    "Sets LHR entity show to false",
+    "Changes JFK point color to magenta",
+    "Removes NRT entity via viewer.entities.removeById or .remove()",
+    "Only 3 entities should be visible at the end (JFK magenta, LAX, ORD)"
+  ],
+  "visual_expectations": "Three visible airport markers: JFK (magenta, eastern US), LAX (western US), and ORD (central US). LHR and NRT should NOT be visible.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "getById|entities\\.getById", "description": "Queries entities by ID"},
+    {"type": "pattern_present", "pattern": "show.*false|\\.show\\s*=\\s*false", "description": "Hides an entity"},
+    {"type": "pattern_present", "pattern": "removeById|remove\\(", "description": "Removes an entity"},
+    {"type": "pattern_present", "pattern": "MAGENTA|magenta|Color\\.MAGENTA", "description": "JFK color changed to magenta"},
+    {"type": "pattern_present", "pattern": "\"JFK\"|'JFK'", "description": "JFK ID used"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Three airport markers visible (JFK magenta, LAX, ORD). LHR and NRT not visible."}
+  ],
+  "regression_critical": false,
+  "notes": "Tests Entity API CRUD operations — add, query, modify, hide, remove. The skill needs to clearly document getById, show property, and remove/removeById patterns."
+}

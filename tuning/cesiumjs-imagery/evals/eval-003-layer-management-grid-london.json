@@ -1,0 +1,35 @@
+{
+  "id": "eval-003",
+  "name": "layer-management-grid-london",
+  "landmark": "London, UK",
+  "perspective": "debug overlay over city",
+  "section_coverage": [
+    "ImageryLayerCollection API",
+    "Debugging Providers"
+  ],
+  "difficulty": "medium",
+  "description": "Exercise imagery layer add/remove/order operations while leaving a visible debug grid overlay over London.",
+  "prompt": "Create a CesiumJS viewer centered on London. Replace the base layer with OpenStreetMap tiles, then add both a TileCoordinatesImageryProvider overlay and a GridImageryProvider overlay. Remove the tile-coordinates overlay so the final result shows only the yellow or wireframe grid over the OSM map. Use the imageryLayers collection API rather than relying on constructor shortcuts.",
+  "expected_behaviors": [
+    "Accesses viewer.imageryLayers",
+    "Adds multiple imagery layers",
+    "Uses GridImageryProvider",
+    "Uses TileCoordinatesImageryProvider",
+    "Removes one overlay so only the grid remains visible",
+    "Centers camera on London"
+  ],
+  "visual_expectations": "A recognizable London map with an obvious debug grid overlay on top. The tile coordinate labels should not remain visible in the final scene.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "viewer\\.imageryLayers|imageryLayers", "description": "Uses layer collection API" },
+    { "type": "pattern_present", "pattern": "GridImageryProvider", "description": "Uses grid provider" },
+    { "type": "pattern_present", "pattern": "TileCoordinatesImageryProvider", "description": "Uses tile coordinates provider" },
+    { "type": "pattern_present", "pattern": "imageryLayers\\.remove", "description": "Removes a layer" },
+    { "type": "pattern_present", "pattern": "-0\\.12|51\\.50", "description": "Targets London coordinates" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 5000, "description": "Grid overlay visible over London" }
+  ],
+  "regression_critical": true
+}

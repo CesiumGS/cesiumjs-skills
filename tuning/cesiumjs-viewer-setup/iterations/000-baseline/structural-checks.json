@@ -1,0 +1,15 @@
+{
+  "frontmatter_valid": true,
+  "frontmatter_fields": {"name": "cesiumjs-viewer-setup", "description": "present (283 chars)"},
+  "line_count": 426,
+  "line_count_in_range": true,
+  "required_sections": {
+    "Quick Start": true,
+    "Viewer Constructor Options": true,
+    "Common Patterns": true,
+    "Performance Tips": true,
+    "See Also": true
+  },
+  "all_required_sections_present": true,
+  "structural_integrity_score": 1.0
+}

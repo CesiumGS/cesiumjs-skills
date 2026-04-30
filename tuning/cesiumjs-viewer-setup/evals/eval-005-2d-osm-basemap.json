@@ -1,0 +1,54 @@
+{
+  "id": "eval-005",
+  "name": "2d-map-with-osm-basemap",
+  "difficulty": "medium",
+  "description": "Create a 2D map view with a custom OpenStreetMap base layer. Tests scene mode configuration AND the dependency between baseLayer and baseLayerPicker — you must disable baseLayerPicker when providing a custom baseLayer.",
+  "prompt": "Create a CesiumJS application that shows a flat 2D map (not a 3D globe) using OpenStreetMap tiles as the base layer. I don't need the base layer picker widget.",
+  "expected_behaviors": [
+    "Sets sceneMode to SceneMode.SCENE2D",
+    "Creates a custom baseLayer using OpenStreetMapImageryProvider",
+    "Sets baseLayerPicker to false (REQUIRED when using custom baseLayer)",
+    "Uses the correct OSM tile URL",
+    "Imports SceneMode and OpenStreetMapImageryProvider"
+  ],
+  "visual_expectations": "A flat, top-down 2D map showing OpenStreetMap tiles — the characteristic OSM cartographic style with road labels, building outlines, and pastel colors. No 3D globe curvature. The view should be zoomable and pannable as a flat map.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JavaScript errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "Code executes without throwing"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "SceneMode\\.SCENE2D|sceneMode.*SCENE2D",
+      "description": "2D scene mode is configured"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "OpenStreetMapImageryProvider",
+      "description": "OSM imagery provider is used"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "baseLayerPicker:\\s*false",
+      "description": "Base layer picker disabled (required for custom base layer)"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "baseLayer:",
+      "description": "Custom base layer is provided in constructor"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 3000,
+      "description": "Should show a flat 2D map with OSM cartographic tiles, no globe curvature"
+    }
+  ],
+  "regression_critical": false,
+  "notes": "The baseLayerPicker/baseLayer dependency is a common source of runtime errors. If baseLayerPicker is true (default) and a custom baseLayer is provided, CesiumJS throws. The skill must make this dependency clear."
+}

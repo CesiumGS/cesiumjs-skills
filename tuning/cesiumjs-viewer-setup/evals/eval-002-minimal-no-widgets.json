@@ -1,0 +1,68 @@
+{
+  "id": "eval-002",
+  "name": "minimal-viewer-no-widgets",
+  "difficulty": "medium",
+  "description": "Create a clean, widget-free viewer. Tests whether the skill correctly communicates ALL the widget toggles that need to be disabled and any dependencies between options (e.g., baseLayerPicker must be false to use a custom baseLayer).",
+  "prompt": "I need a completely clean CesiumJS globe with no UI widgets at all — no timeline, no animation controls, no home button, no search bar, nothing. Just a bare 3D globe with terrain that fills the viewport. I want the cleanest possible view for embedding in a dashboard.",
+  "expected_behaviors": [
+    "Disables ALL widget options: animation, baseLayerPicker, fullscreenButton, geocoder, homeButton, infoBox, sceneModePicker, selectionIndicator, timeline, navigationHelpButton",
+    "Does NOT disable 'projectionPicker' or 'vrButton' (they are already false by default — setting them explicitly is harmless but unnecessary)",
+    "Still sets Ion token and terrain",
+    "Container div fills viewport"
+  ],
+  "visual_expectations": "A full-window 3D globe with NO UI chrome whatsoever. No timeline bar at bottom, no animation controls at bottom-left, no buttons in top-right corner, no search bar. Just the globe with terrain and imagery.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JavaScript errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "Code executes without throwing"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "animation:\\s*false",
+      "description": "Animation widget disabled"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "timeline:\\s*false",
+      "description": "Timeline widget disabled"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "geocoder:\\s*false",
+      "description": "Geocoder widget disabled"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "homeButton:\\s*false",
+      "description": "Home button disabled"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "infoBox:\\s*false",
+      "description": "Info box disabled"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "navigationHelpButton:\\s*false",
+      "description": "Navigation help disabled"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "baseLayerPicker:\\s*true",
+      "description": "Does not explicitly enable baseLayerPicker (it would conflict with custom baseLayer if one is set)"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 3000,
+      "description": "Globe should be fully rendered with zero UI elements visible"
+    }
+  ],
+  "regression_critical": true,
+  "notes": "Common failure: forgetting one or two widget options (selectionIndicator, navigationHelpButton are often missed). Also tests whether the LLM understands that baseLayerPicker must be false if using a custom baseLayer."
+}

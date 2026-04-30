@@ -1,0 +1,30 @@
+{
+  "id": "eval-007",
+  "name": "cutout-rectangle-florida",
+  "landmark": "Florida, USA",
+  "perspective": "regional cutout reveal",
+  "section_coverage": [
+    "Cutout Rectangle"
+  ],
+  "difficulty": "medium",
+  "description": "Use a cutout rectangle to reveal the base imagery through an overlay over Florida.",
+  "prompt": "Create a CesiumJS viewer centered on Florida and the northern Caribbean. Add a dark Earth at Night overlay above the default base imagery, then cut a rectangular hole over the Florida peninsula so the normal base imagery shows through in that area while the surrounding region still shows the darker overlay.",
+  "expected_behaviors": [
+    "Creates an overlay imagery layer",
+    "Uses Rectangle.fromDegrees to define a cutout",
+    "Assigns cutoutRectangle to the overlay layer",
+    "Frames Florida"
+  ],
+  "visual_expectations": "The region around Florida should appear darker due to the overlay, but the peninsula itself should be visibly cut out, revealing the base imagery beneath.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "cutoutRectangle", "description": "Uses cutout rectangle property" },
+    { "type": "pattern_present", "pattern": "Rectangle\\.fromDegrees", "description": "Creates rectangle from degrees" },
+    { "type": "pattern_present", "pattern": "-82|-80|27\\.|29\\.", "description": "Targets Florida region" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 7000, "description": "Overlay cutout over Florida" }
+  ],
+  "regression_critical": false
+}

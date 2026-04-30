@@ -1,0 +1,62 @@
+{
+  "id": "eval-007",
+  "name": "low-power-dashboard-render-mode",
+  "difficulty": "hard",
+  "description": "Create a performance-optimized viewer for embedding in a dashboard. Tests the skill's performance tips section — specifically requestRenderMode, scene3DOnly, widget reduction, and the critical detail that requestRender() must be called after programmatic changes.",
+  "prompt": "I'm embedding a CesiumJS globe in a monitoring dashboard that shows mostly static data. It'll be running on a tablet with limited battery. Optimize the viewer for minimum power consumption — the globe will only update when new data arrives, not continuously. I want terrain but no unnecessary widgets. Also add a single point entity for our headquarters at coordinates 37.7749 N, 122.4194 W to verify the setup works.",
+  "expected_behaviors": [
+    "Enables requestRenderMode: true (key performance optimization)",
+    "Sets maximumRenderTimeChange: Infinity (only render on explicit request)",
+    "Enables scene3DOnly: true (since 2D/CV not needed, saves GPU memory)",
+    "Disables unnecessary widgets (at minimum: animation, timeline)",
+    "Configures terrain",
+    "Adds a point entity at the specified coordinates",
+    "Calls viewer.scene.requestRender() after adding the entity OR uses the entity API which auto-triggers renders",
+    "May reduce msaaSamples for additional power savings"
+  ],
+  "visual_expectations": "A 3D globe with terrain and a visible point/marker entity near San Francisco (37.77N, 122.42W). Minimal UI chrome. The scene should be static (not continuously animating).",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JavaScript errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "Code executes without throwing"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "requestRenderMode:\\s*true",
+      "description": "Request render mode enabled"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "scene3DOnly:\\s*true",
+      "description": "Locked to 3D mode for GPU savings"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "entities\\.add|viewer\\.entities",
+      "description": "Entity is added"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "37\\.77",
+      "description": "Latitude for SF headquarters is correct"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-122\\.4",
+      "description": "Longitude for SF is negative (west)"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Globe with terrain and a visible point entity near San Francisco"
+    }
+  ],
+  "regression_critical": false,
+  "notes": "This eval tests the intersection of the viewer-setup skill with the entity skill. The viewer-setup skill should provide enough context for the LLM to correctly set up requestRenderMode, but entity creation technically belongs to cesiumjs-entities. A good viewer-setup skill helps the LLM get the rendering mode right even when combining domains. Common failure: enabling requestRenderMode but not understanding that entities auto-trigger renders (so requestRender() is optional with the Entity API)."
+}

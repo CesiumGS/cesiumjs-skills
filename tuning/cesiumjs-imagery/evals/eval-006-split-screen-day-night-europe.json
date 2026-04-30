@@ -1,0 +1,31 @@
+{
+  "id": "eval-006",
+  "name": "split-screen-day-night-europe",
+  "landmark": "Southern Europe",
+  "perspective": "continental split comparison",
+  "section_coverage": [
+    "Split-Screen Comparison"
+  ],
+  "difficulty": "medium",
+  "description": "Create a left-right split comparison between normal globe imagery and a night-lights overlay over Southern Europe.",
+  "prompt": "Set up a CesiumJS viewer centered on Italy and the surrounding Mediterranean region. Keep the default globe imagery on one side and add Earth at Night as a split-screen overlay on the left half of the viewport only. Set the split position to the center so the screenshot clearly shows a day-versus-night comparison across the same geography.",
+  "expected_behaviors": [
+    "Uses SplitDirection.LEFT or RIGHT on an imagery layer",
+    "Sets viewer.scene.splitPosition to 0.5 or similar",
+    "Uses a second imagery layer for the split overlay",
+    "Frames Southern Europe"
+  ],
+  "visual_expectations": "The viewer should show a clear vertical split, with Southern Europe visible on both sides. One half should show normal globe imagery and the other half should show the night-lights treatment.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "SplitDirection", "description": "Uses split direction enum" },
+    { "type": "pattern_present", "pattern": "splitDirection", "description": "Sets splitDirection on layer" },
+    { "type": "pattern_present", "pattern": "splitPosition", "description": "Sets scene split position" },
+    { "type": "pattern_present", "pattern": "12\\.|41\\.", "description": "Targets Italy region" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 7000, "description": "Split-screen day/night Europe comparison" }
+  ],
+  "regression_critical": false
+}

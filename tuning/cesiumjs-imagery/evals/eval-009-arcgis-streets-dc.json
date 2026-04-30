@@ -1,0 +1,29 @@
+{
+  "id": "eval-009",
+  "name": "arcgis-streets-dc",
+  "landmark": "Washington, DC, USA",
+  "perspective": "city street basemap",
+  "section_coverage": [
+    "ArcGisMapServerImageryProvider"
+  ],
+  "difficulty": "medium",
+  "description": "Use the ArcGIS MapServer URL path for a recognizable street map over Washington, DC.",
+  "prompt": "Create a CesiumJS viewer that uses an ArcGIS World Street Map imagery source and position the camera over Washington, DC. The result should show a recognizable street-map style view around the National Mall and downtown area, not satellite imagery.",
+  "expected_behaviors": [
+    "Uses ArcGisMapServerImageryProvider.fromUrl or equivalent ArcGIS URL-based path",
+    "Adds the resulting imagery layer to the viewer",
+    "Frames Washington, DC"
+  ],
+  "visual_expectations": "A street-map style rendering of Washington, DC with the Potomac River and central city street network visible.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "ArcGisMapServerImageryProvider", "description": "Uses ArcGIS provider" },
+    { "type": "pattern_present", "pattern": "World_Street_Map|MapServer", "description": "Uses ArcGIS World Street Map URL" },
+    { "type": "pattern_present", "pattern": "-77\\.0|38\\.8", "description": "Targets DC coordinates" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 7000, "description": "ArcGIS street map over Washington, DC" }
+  ],
+  "regression_critical": false
+}

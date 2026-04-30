@@ -1,0 +1,30 @@
+{
+  "id": "eval-013",
+  "name": "eiffel-tower-from-east",
+  "landmark": "Eiffel Tower, Paris",
+  "perspective": "mid-altitude from east",
+  "section_coverage": ["lookAt -- Lock Camera to Target"],
+  "difficulty": "medium",
+  "description": "View the Eiffel Tower from the east, looking west. Tests heading=270 with lookAt. Complements eval-003 (from south) for directional coverage.",
+  "prompt": "Use lookAt to view the Eiffel Tower (48.8584 N, 2.2945 E) from the east side, looking west toward the tower. Position the camera at 1200 meters distance with a 20-degree downward angle. I want to see the Champ de Mars stretching out behind the tower to the west.",
+  "expected_behaviors": [
+    "Uses lookAt with HeadingPitchRange",
+    "Heading ~270 degrees (facing west = camera is east of target)",
+    "Pitch ~-20 degrees",
+    "Range ~1200m",
+    "Releases lookAt lock afterward with lookAtTransform(Matrix4.IDENTITY)"
+  ],
+  "visual_expectations": "The Eiffel Tower area from the east. The Champ de Mars gardens should extend to the west (behind the tower position). The Seine River should be visible to the south. Paris urban grid fills the frame.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "lookAt", "description": "Uses lookAt"},
+    {"type": "pattern_present", "pattern": "HeadingPitchRange", "description": "Uses HeadingPitchRange"},
+    {"type": "pattern_present", "pattern": "270|3.*Math\\.PI.*2|4\\.71", "description": "Heading ~270 degrees"},
+    {"type": "pattern_present", "pattern": "lookAtTransform", "description": "Releases lookAt lock"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Eiffel Tower from east, looking west"}
+  ],
+  "regression_critical": false
+}

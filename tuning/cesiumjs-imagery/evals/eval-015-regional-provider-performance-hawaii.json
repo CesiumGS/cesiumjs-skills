@@ -1,0 +1,33 @@
+{
+  "id": "eval-015",
+  "name": "regional-provider-performance-hawaii",
+  "landmark": "Hawaiian Islands, USA",
+  "perspective": "regional bounded imagery provider",
+  "section_coverage": [
+    "Performance Tips",
+    "ImageryLayer Display Properties",
+    "UrlTemplateImageryProvider"
+  ],
+  "difficulty": "medium",
+  "description": "Exercise the performance guidance by configuring a regional imagery provider with tight bounds and level limits over Hawaii.",
+  "prompt": "Create a CesiumJS viewer centered on the Hawaiian Islands using a regional imagery layer built with UrlTemplateImageryProvider. Constrain the provider with a tight rectangle around Hawaii and set minimumTerrainLevel or maximumTerrainLevel so the layer is clearly intended for a limited zoom range. Keep the final view zoomed to the islands so the bounded regional imagery is visible.",
+  "expected_behaviors": [
+    "Uses UrlTemplateImageryProvider",
+    "Sets a tight rectangle for a regional provider",
+    "Sets minimumTerrainLevel or maximumTerrainLevel",
+    "Frames Hawaii closely"
+  ],
+  "visual_expectations": "A regional view of the Hawaiian island chain. The imagery should visibly focus on Hawaii rather than a global map, and the code should clearly demonstrate bounded regional-provider configuration.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "UrlTemplateImageryProvider", "description": "Uses URL template imagery provider" },
+    { "type": "pattern_present", "pattern": "rectangle", "description": "Sets tight rectangle bounds" },
+    { "type": "pattern_present", "pattern": "minimumTerrainLevel|maximumTerrainLevel", "description": "Uses imagery performance level limits" },
+    { "type": "pattern_present", "pattern": "-160|-155|19\\.|22\\.", "description": "Targets Hawaii region" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 6000, "description": "Regional imagery provider focused on Hawaii" }
+  ],
+  "regression_critical": false
+}

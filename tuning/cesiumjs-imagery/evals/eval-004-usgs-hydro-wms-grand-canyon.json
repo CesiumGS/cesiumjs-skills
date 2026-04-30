@@ -1,0 +1,31 @@
+{
+  "id": "eval-004",
+  "name": "usgs-hydro-wms-grand-canyon",
+  "landmark": "Grand Canyon, USA",
+  "perspective": "regional hydro overlay",
+  "section_coverage": [
+    "WebMapServiceImageryProvider (WMS)"
+  ],
+  "difficulty": "medium",
+  "description": "Use a public WMS service and frame the Grand Canyon region. Tests WMS configuration and rectangle support.",
+  "prompt": "Create a CesiumJS viewer that uses a public WMS imagery source from the USGS Hydro Cached service and position the camera over the Grand Canyon and Colorado River region. The result should show a hydrographic map-style rendering rather than normal satellite imagery.",
+  "expected_behaviors": [
+    "Creates a WebMapServiceImageryProvider",
+    "Supplies a public WMS URL and layers parameter",
+    "Wraps the provider in an ImageryLayer or equivalent add pattern",
+    "Frames the Grand Canyon region"
+  ],
+  "visual_expectations": "A map-like hydrographic rendering over northern Arizona, with the Colorado River corridor and surrounding region visible.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "WebMapServiceImageryProvider", "description": "Uses WMS provider" },
+    { "type": "pattern_present", "pattern": "WMSServer|MapServer", "description": "Uses public WMS endpoint" },
+    { "type": "pattern_present", "pattern": "layers", "description": "Sets WMS layer id" },
+    { "type": "pattern_present", "pattern": "-112|36\\.", "description": "Targets Grand Canyon region" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 7000, "description": "USGS WMS imagery over Grand Canyon region" }
+  ],
+  "regression_critical": false
+}

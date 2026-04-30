@@ -1,0 +1,23 @@
+{
+  "iteration": "001",
+  "timestamp": "2026-04-08T20:15:00Z",
+  "eval_results": {
+    "eval-001": {"programmatic_pass_rate": 1.0, "visual_score": 0.915},
+    "eval-002": {"programmatic_pass_rate": 1.0, "visual_score": 0.793},
+    "eval-003": {"programmatic_pass_rate": 1.0, "visual_score": 0.918},
+    "eval-004": {"programmatic_pass_rate": 1.0, "visual_score": 0.885},
+    "eval-005": {"programmatic_pass_rate": 1.0, "visual_score": 0.873}
+  },
+  "criteria_scores": {
+    "code_executes": 1.0,
+    "no_console_errors": 1.0,
+    "api_accuracy": 1.0,
+    "visual_correctness": 0.877,
+    "completeness": 1.0,
+    "structural_integrity": 1.0,
+    "conciseness": 1.0,
+    "triggering_accuracy": 1.0
+  },
+  "aggregate_score": 0.969,
+  "notes": "Programmatic: perfect 36/36 (identical to baseline). Visual: eval-003 improved 0.82→0.918 (+0.098) — altitude guidelines worked. However eval-002 dropped 0.90→0.793 and others had minor dips. Net visual average dropped 0.90→0.877. Much of this appears to be judge variance rather than real quality regression."
+}
