@@ -1,0 +1,135 @@
+# Save as: .github/ISSUE_TEMPLATE/bug-report.yml
+#
+# Schema docs:
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
+
+name: Bug report
+description: A skill produced wrong or broken CesiumJS code, the runner failed, or output regressed.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when a skill produced incorrect or non-functional output, when the eval runner failed, or when something previously worked and now does not. For methodology or design feedback, use the "Feedback or RFC" template instead.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing the bug.
+      placeholder: e.g. "cesiumjs-camera generates flyTo with negative pitch that flips horizon"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Affected skill
+      options:
+        - cesiumjs-viewer-setup
+        - cesiumjs-camera
+        - cesiumjs-entities
+        - cesiumjs-3d-tiles
+        - cesiumjs-imagery
+        - cesiumjs-terrain-environment
+        - cesiumjs-primitives
+        - cesiumjs-materials-shaders
+        - cesiumjs-custom-shader
+        - cesiumjs-time-properties
+        - cesiumjs-spatial-math
+        - cesiumjs-interaction
+        - cesiumjs-models-particles
+        - cesiumjs-core-utilities
+        - using-cesiumjs-skills (orientation)
+        - Multiple or unsure
+        - Runner or tooling, not a skill
+    validations:
+      required: true
+
+  - type: dropdown
+    id: branch
+    attributes:
+      label: Branch
+      options:
+        - main
+        - eval-and-optimization
+        - Other (please note in Context)
+    validations:
+      required: true
+
+  - type: textarea
+    id: prompt
+    attributes:
+      label: What you asked for
+      description: The prompt or instruction you gave the agent. Paste verbatim.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What you got
+      description: Generated code, error message, or screenshot. Paste full output if short, otherwise the relevant excerpt plus a link or attachment.
+      render: javascript
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What correct output would look like, ideally with a reference (CesiumJS docs link, working Sandcastle, etc.).
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Step-by-step instructions to trigger the bug. Include CesiumJS version if relevant.
+      placeholder: |
+        1. Load skill cesiumjs-camera
+        2. Run prompt above against Claude Sonnet 4.6
+        3. Execute generated code in browser at localhost:3000
+        4. Observe horizon flips after 2 seconds
+    validations:
+      required: true
+
+  - type: input
+    id: cesium_version
+    attributes:
+      label: CesiumJS version
+      placeholder: e.g. "1.139.1"
+    validations:
+      required: false
+
+  - type: input
+    id: model
+    attributes:
+      label: Model used
+      description: Which model generated the output, if applicable.
+      placeholder: e.g. "claude-sonnet-4-6"
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Optional. Anything else that might help (related issues, prior runs, screenshots).
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues for duplicates.
+          required: true
+        - label: I confirmed this is reproducible (i.e., not a one-off LLM sampling artifact at non-zero temperature).
+          required: false
+        - label: I redacted any access tokens, personal paths, or proprietary data from the pasted output.
+          required: true

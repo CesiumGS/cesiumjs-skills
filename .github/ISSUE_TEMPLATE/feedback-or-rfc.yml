@@ -1,0 +1,90 @@
+# Save as: .github/ISSUE_TEMPLATE/feedback-or-rfc.yml
+#
+# This file uses GitHub's YAML issue-forms schema. When committed to
+# .github/ISSUE_TEMPLATE/, GitHub renders it as a structured form that
+# contributors fill out instead of a blank text box.
+# Docs: https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
+
+name: Feedback or RFC
+description: Share feedback on a skill, propose an eval scenario, kick off a methodology discussion, or announce a related effort.
+title: "[Feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for feedback on the skills in `main`, the eval and optimization suite on `eval-and-optimization`, the methodology, or the runner. For a likely bug in a specific skill, add the `bug` label.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing what this is about.
+      placeholder: e.g. "Add persona variants (beginner, expert, migrator) for cesiumjs-camera evals"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of feedback
+      options:
+        - Methodology or RFC
+        - Eval scenario contribution
+        - Skill content feedback
+        - Runner or tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: area
+    attributes:
+      label: Area affected
+      description: Which skill, file, or branch is this about? Paths welcome.
+      placeholder: e.g. "tuning/cesiumjs-camera/evals/" or "skills/cesiumjs-imagery/SKILL.md"
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What prompted this? Link to relevant code, prior issues, or external resources if useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal or current thinking
+      description: Concrete suggestion, eval scenario draft, or framing of the discussion. If proposing an eval, include the prompt, expected behaviors, and visual expectations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale or evidence
+      description: Optional. Data, prior runs, screenshots, or references that support the proposal.
+    validations:
+      required: false
+
+  - type: textarea
+    id: open_questions
+    attributes:
+      label: Open questions
+      description: Optional. What would you like community input on?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues for duplicates.
+          required: true
+        - label: If proposing an eval scenario, I followed the schema in `tuning/<skill>/evals/eval-NNN-*.json`.
+          required: false

@@ -1,0 +1,101 @@
+# Save as: .github/ISSUE_TEMPLATE/feature-request.yml
+#
+# Schema docs:
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
+
+name: Feature request
+description: Propose a new skill, expand an existing one, add tooling, or improve documentation.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to propose net-new functionality. For bugs, use "Bug report". For methodology discussions or eval scenario contributions, use "Feedback or RFC".
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing the proposed addition.
+      placeholder: e.g. "Add a cesiumjs-vector-data skill covering CzmlDataSource time-dynamic attributes"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of feature
+      options:
+        - New skill
+        - Expand an existing skill
+        - Runner or tooling improvement
+        - New eval category or scenario type
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: Which skill, file, or branch this affects. Paths welcome.
+      placeholder: e.g. "skills/cesiumjs-entities/SKILL.md" or "tuning/tools/run_eval_suite.py"
+    validations:
+      required: false
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Use case and motivation
+      description: What problem does this solve? Who benefits? Concrete examples are helpful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed shape
+      description: Sketch the proposed addition. For a new skill, list the topics it would cover and roughly what triggers it. For a tooling change, describe the new behavior. Skill-shaped proposals should follow the Agent Skills convention (frontmatter with `name` and `description`, body covering the API surface).
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Other ways to solve the problem and why this approach is preferred.
+    validations:
+      required: false
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: Optional. What this proposal explicitly does not cover, to set expectations.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Contribution willingness
+      description: Are you offering to implement this?
+      options:
+        - I can submit a PR
+        - I can help review and test
+        - I can provide eval scenarios or examples
+        - Proposing only
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and PRs for duplicates.
+          required: true
+        - label: For new skills, I checked `docs/DOMAINS.md` to confirm the area is not already covered by an existing skill.
+          required: false
