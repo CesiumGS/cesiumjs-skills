@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CesiumJS In-Browser Harness</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.139/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.139/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <style>
+    html, body, #cesiumContainer {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    #harnessStatus {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      padding: 6px 10px;
+      background: rgba(0, 0, 0, 0.65);
+      color: #cfe9ff;
+      font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <div id="harnessStatus">harness loading...</div>
+  <script>
+    (function () {
+      "use strict";
+
+      // ---- Error and warning capture ------------------------------------
+      // Browser automation drivers (Chrome DevTools MCP, Playwright MCP)
+      // can read these arrays via evaluate() to decide pass / fail.
+      window.__evalErrors = [];
+      window.__evalWarnings = [];
+
+      window.addEventListener("error", function (e) {
+        window.__evalErrors.push({
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+          colno: e.colno,
+        });
+      });
+
+      window.addEventListener("unhandledrejection", function (e) {
+        var reason = e.reason || {};
+        window.__evalErrors.push({
+          message: "Unhandled promise rejection: " + (reason.message || String(reason)),
+          stack: reason.stack || null,
+        });
+      });
+
+      var origConsoleError = console.error;
+      console.error = function () {
+        var args = Array.prototype.slice.call(arguments);
+        window.__evalErrors.push({ message: args.map(String).join(" ") });
+        origConsoleError.apply(console, args);
+      };
+
+      var origConsoleWarn = console.warn;
+      console.warn = function () {
+        var args = Array.prototype.slice.call(arguments);
+        window.__evalWarnings.push({ message: args.map(String).join(" ") });
+        origConsoleWarn.apply(console, args);
+      };
+
+      // ---- Ion token from URL -------------------------------------------
+      // Read from ?ionToken=... at navigation time. Never bake one in.
+      // Without a token, base imagery and terrain providers will not load,
+      // but other CesiumJS APIs still work.
+      var params = new URLSearchParams(window.location.search);
+      var ionToken = params.get("ionToken");
+      if (typeof Cesium === "undefined") {
+        document.getElementById("harnessStatus").textContent =
+          "ERROR: Cesium failed to load from CDN.";
+        return;
+      }
+      if (ionToken) {
+        Cesium.Ion.defaultAccessToken = ionToken;
+      } else {
+        console.warn(
+          "No Ion token. Append ?ionToken=YOUR_TOKEN to the URL to enable Ion-backed imagery and terrain."
+        );
+      }
+
+      // ---- Public helpers exposed on window -----------------------------
+      // Drivers should call __resetHarness() between iterations to drop
+      // any prior viewer and clear captured errors / warnings.
+      window.__resetHarness = function () {
+        try {
+          if (window.__viewer && typeof window.__viewer.destroy === "function") {
+            window.__viewer.destroy();
+          }
+        } catch (e) {
+          // ignore destroy errors
+        }
+        window.__viewer = null;
+        var container = document.getElementById("cesiumContainer");
+        if (container) {
+          container.innerHTML = "";
+        }
+        window.__evalErrors = [];
+        window.__evalWarnings = [];
+      };
+
+      // Snapshot of harness state for inspection by drivers.
+      window.__harnessState = function () {
+        return {
+          errors: window.__evalErrors.slice(),
+          warnings: window.__evalWarnings.slice(),
+          hasViewer: !!window.__viewer,
+          cesiumLoaded: typeof Cesium !== "undefined",
+          cesiumVersion: typeof Cesium !== "undefined" ? Cesium.VERSION : null,
+          ionTokenSet: !!ionToken,
+        };
+      };
+
+      // Convenience: by convention, code injected by drivers should store
+      // the active Viewer on window.__viewer so __resetHarness() can clean
+      // it up. Example:
+      //   const viewer = new Cesium.Viewer("cesiumContainer");
+      //   window.__viewer = viewer;
+      window.__viewer = null;
+
+      // ---- Ready signal -------------------------------------------------
+      var status = document.getElementById("harnessStatus");
+      if (status) {
+        status.textContent =
+          "harness ready (Cesium " +
+          (Cesium.VERSION || "?") +
+          (ionToken ? ", Ion token set" : ", no Ion token") +
+          ")";
+      }
+      window.__harnessReady = true;
+      console.log("CesiumJS harness ready. Cesium version:", Cesium.VERSION);
+    })();
+  </script>
+</body>
+</html>
