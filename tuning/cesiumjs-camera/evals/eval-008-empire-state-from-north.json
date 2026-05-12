@@ -1,0 +1,27 @@
+{
+  "id": "eval-008",
+  "name": "empire-state-building-from-north",
+  "landmark": "Empire State Building, NYC",
+  "perspective": "mid-altitude from north looking south",
+  "difficulty": "medium",
+  "description": "View the Empire State Building from the north, looking south down Manhattan. Tests heading=180 (facing south = camera is north of target).",
+  "prompt": "Use lookAt to view the Empire State Building (40.7484 N, 73.9857 W) from the north side, looking south down Manhattan. Position the camera at 1500 meters distance with a 30-degree downward angle. I want to see the Midtown and Downtown Manhattan stretching south behind the building.",
+  "expected_behaviors": [
+    "Uses lookAt with HeadingPitchRange",
+    "Heading ~180 degrees (facing south = camera is north of target)",
+    "Pitch ~-30 degrees",
+    "Range ~1500m"
+  ],
+  "visual_expectations": "The Empire State Building area viewed from the north. Looking south, you should see Midtown Manhattan in the foreground with Downtown/Financial District in the distance. The urban canyon of Manhattan's grid should be visible.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "lookAt", "description": "Uses lookAt"},
+    {"type": "pattern_present", "pattern": "HeadingPitchRange", "description": "Uses HeadingPitchRange"},
+    {"type": "pattern_present", "pattern": "180|Math\\.PI(?!\\s*/)", "description": "Heading ~180 degrees (south-facing)"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Empire State Building from north, looking south down Manhattan"}
+  ],
+  "regression_critical": false
+}

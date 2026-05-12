@@ -1,0 +1,35 @@
+{
+  "id": "eval-001",
+  "name": "ion-night-overlay-nyc",
+  "landmark": "New York City, USA",
+  "perspective": "regional night overlay",
+  "section_coverage": [
+    "Quick Start and ImageryLayer Factories",
+    "ImageryLayer Display Properties"
+  ],
+  "difficulty": "easy",
+  "description": "Create a viewer centered on the northeastern United States and add Cesium ion Earth at Night imagery as a semi-transparent overlay. Tests the async factory path and runtime layer display tuning.",
+  "prompt": "Create a CesiumJS globe centered on New York City and the surrounding northeastern United States. Keep the default world imagery as the base layer, then add Cesium ion Earth at Night as a semi-transparent overlay so city lights are visible over the region. Set the overlay alpha below 1.0 and slightly increase its brightness. Use a camera height high enough to show the New York to Boston corridor.",
+  "expected_behaviors": [
+    "Uses ImageryLayer.fromProviderAsync",
+    "Uses IonImageryProvider.fromAssetId with the Earth at Night imagery asset",
+    "Adds the imagery layer to viewer.imageryLayers",
+    "Sets alpha below 1.0 on the overlay layer",
+    "Sets brightness above 1.0 on the overlay layer",
+    "Positions the camera over the northeastern United States"
+  ],
+  "visual_expectations": "A globe view of the northeastern United States with visible night lights over the New York City region and nearby urban corridor. The overlay should not completely hide the underlying imagery.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "ImageryLayer\\.fromProviderAsync", "description": "Uses async imagery layer factory" },
+    { "type": "pattern_present", "pattern": "IonImageryProvider\\.fromAssetId", "description": "Uses Ion imagery provider" },
+    { "type": "pattern_present", "pattern": "alpha\\s*=\\s*0\\.", "description": "Sets overlay alpha below 1" },
+    { "type": "pattern_present", "pattern": "brightness\\s*=\\s*1\\.", "description": "Adjusts brightness" },
+    { "type": "pattern_present", "pattern": "-74|40\\.", "description": "Targets NYC coordinates" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 7000, "description": "Night overlay visible over NYC corridor" }
+  ],
+  "regression_critical": true
+}

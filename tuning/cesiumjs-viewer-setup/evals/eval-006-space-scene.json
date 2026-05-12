@@ -1,0 +1,50 @@
+{
+  "id": "eval-006",
+  "name": "space-scene-no-globe",
+  "difficulty": "medium",
+  "description": "Create a space scene with no globe or atmosphere. Tests whether the skill correctly communicates the globe:false pattern and its interaction with skyAtmosphere and baseLayerPicker. A subtle scenario because disabling the globe has cascading implications.",
+  "prompt": "I'm building a space visualization that shows satellites orbiting Earth. I need a CesiumJS viewer configured for space — no globe surface, no atmosphere glow, just the black void of space with stars. I'll add the satellite entities later, just set up the viewer properly.",
+  "expected_behaviors": [
+    "Sets globe to false (disables the Earth surface entirely)",
+    "Sets skyAtmosphere to false (disables the atmospheric limb glow)",
+    "Disables baseLayerPicker (no imagery layers without a globe)",
+    "May optionally keep or disable skyBox (stars) — keeping stars is appropriate for space",
+    "Does NOT try to add terrain (no globe means no terrain)",
+    "Does NOT disable the skyBox unless asked (stars in space are expected)"
+  ],
+  "visual_expectations": "A dark space scene with a star field visible. No Earth surface, no blue atmospheric glow around the limb. The view should be pure space — the camera can look in any direction and see stars. The Cesium default star skybox should be visible.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JavaScript errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "Code executes without throwing"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "globe:\\s*false",
+      "description": "Globe is disabled"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "skyAtmosphere:\\s*false",
+      "description": "Atmosphere is disabled"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "Terrain|terrainProvider|fromWorldTerrain",
+      "description": "No terrain configured (impossible without globe)"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 3000,
+      "description": "Dark space with star field, no Earth surface or atmospheric glow"
+    }
+  ],
+  "regression_critical": false,
+  "notes": "Common failure: setting globe:false but forgetting skyAtmosphere:false (leaves a floating blue ring). Also: trying to add terrain when there's no globe, which silently fails or errors."
+}

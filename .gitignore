@@ -1,5 +1,22 @@
+# Local-only configuration and credentials
 .vscode
 .env
-demo/index.html
 working-notes.md
-tuning/
+.DS_Store
+
+# Demo HTML files that contain hardcoded tokens — keep gitignored
+demo/index.html
+tuning/geo-embeddings-test.html
+
+# Per-eval execution traces — entire subtree.
+# Contains run-time artifacts that may include access tokens, local paths,
+# and prompt comments. The curated screenshot gallery in
+# tuning/examples/screenshots/ is the public-facing visual evidence.
+tuning/*/iterations/*/traces/
+
+# Unrelated lean4 tooling carried in via tuning/.claude/
+tuning/.claude/tools/lean4
+tuning/.claude/docs/lean4
+
+# Internal planning docs
+docs/superpowers/plans/

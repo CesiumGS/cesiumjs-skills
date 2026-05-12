@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CesiumJS Eval Runner</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.139/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.139/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <style>
+    html, body, #cesiumContainer {
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <script>
+    // Error tracking for eval
+    window.__evalErrors = [];
+    window.__evalWarnings = [];
+    window.addEventListener('error', (e) => {
+      window.__evalErrors.push({ message: e.message, filename: e.filename, lineno: e.lineno });
+    });
+    const _origConsoleError = console.error;
+    console.error = function(...args) {
+      window.__evalErrors.push({ message: args.map(String).join(' ') });
+      _origConsoleError.apply(console, args);
+    };
+    const _origConsoleWarn = console.warn;
+    console.warn = function(...args) {
+      window.__evalWarnings.push({ message: args.map(String).join(' ') });
+      _origConsoleWarn.apply(console, args);
+    };
+
+    // Ion token
+    Cesium.Ion.defaultAccessToken = "%%CESIUM_ACCESS_TOKEN%%";
+
+    // Generated code will be injected below by the eval runner
+    (async () => {
+      try {
+        %%GENERATED_CODE%%
+      } catch (e) {
+        window.__evalErrors.push({ message: e.message, stack: e.stack });
+        document.body.innerHTML = '<pre style="color:red;padding:20px;">RUNTIME ERROR:\n' + e.message + '\n\n' + e.stack + '</pre>';
+      }
+    })();
+  </script>
+</body>
+</html>

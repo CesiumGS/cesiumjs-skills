@@ -1,0 +1,2484 @@
+{
+  "skill_path": "skills/cesiumjs-imagery/SKILL.md",
+  "evals_dir": "tuning/cesiumjs-imagery/evals",
+  "total_sections": 25,
+  "covered_sections": 24,
+  "uncovered_sections": 1,
+  "coverage_percentage": 96.0,
+  "sections": [
+    {
+      "section": "CesiumJS Imagery Layers",
+      "level": 1,
+      "line_count": 16,
+      "code_block_count": 1,
+      "api_count": 3,
+      "apis": [
+        "ImageryLayer",
+        "ImageryLayerCollection",
+        "ImageryProvider"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryProvider",
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery",
+            "layers"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "ImageryProvider",
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery",
+            "layers"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "ImageryProvider",
+            "ImageryLayer",
+            "ImageryLayerCollection"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery",
+            "layers"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [
+            "ImageryProvider",
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery",
+            "layers"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [
+            "ImageryProvider"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery",
+            "layers"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "ImageryProvider",
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [
+            "ImageryProvider"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [
+            "ImageryProvider"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery",
+            "layers"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [
+            "ImageryProvider"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [
+            "ImageryProvider"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "ImageryProvider",
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "cesiumjs",
+            "imagery"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Quick Start and ImageryLayer Factories",
+      "level": 2,
+      "line_count": 27,
+      "code_block_count": 1,
+      "api_count": 6,
+      "apis": [
+        "ImageryLayer.fromProviderAsync",
+        "ImageryLayer.fromWorldImagery",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "Viewer",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer.fromProviderAsync",
+            "Viewer",
+            "IonImageryProvider.fromAssetId",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "start",
+            "imagerylayer",
+            "factories",
+            "quick"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "Viewer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "Viewer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "Viewer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "Viewer"
+          ],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "ImageryLayerCollection API",
+      "level": 2,
+      "line_count": 28,
+      "code_block_count": 1,
+      "api_count": 11,
+      "apis": [
+        "Added",
+        "All",
+        "ImageryProvider",
+        "Moved",
+        "Of",
+        "Removed",
+        "ShownOrHidden",
+        "ToBottom",
+        "ToTop",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "Of",
+            "ImageryProvider",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "Of",
+            "ImageryProvider",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "scene",
+            "ImageryProvider",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "imagerylayercollection"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [
+            "ImageryProvider"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [
+            "ImageryProvider"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [
+            "Of",
+            "scene"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "Of",
+            "Moved",
+            "ImageryProvider",
+            "Removed"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [
+            "Of",
+            "All",
+            "ImageryProvider"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [
+            "Of",
+            "All",
+            "ImageryProvider"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Of",
+            "scene",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [
+            "ImageryProvider"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [
+            "Of",
+            "scene",
+            "ImageryProvider"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "Of",
+            "ImageryProvider"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "ImageryLayer Display Properties",
+      "level": 2,
+      "line_count": 28,
+      "code_block_count": 1,
+      "api_count": 0,
+      "apis": [],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "properties",
+            "display",
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "properties",
+            "display",
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagerylayer"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "properties",
+            "display",
+            "imagerylayer"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Swapping the Base Layer",
+      "level": 2,
+      "line_count": 11,
+      "code_block_count": 1,
+      "api_count": 6,
+      "apis": [
+        "ImageryLayer",
+        "Layers.add",
+        "Layers.get",
+        "Layers.remove",
+        "OpenStreetMapImageryProvider",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "base",
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "OpenStreetMapImageryProvider",
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "base",
+            "layer",
+            "swapping"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "base",
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "base",
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "base",
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "base",
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "base",
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "base",
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "base",
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "layer"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "layer"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Imagery Providers",
+      "level": 2,
+      "line_count": 1,
+      "code_block_count": 0,
+      "api_count": 0,
+      "apis": [],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "providers",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "IonImageryProvider",
+      "level": 3,
+      "line_count": 9,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "AssetId",
+        "ImageryLayer.fromProviderAsync",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer.fromProviderAsync",
+            "AssetId",
+            "IonImageryProvider.fromAssetId",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "ionimageryprovider"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "AssetId"
+          ],
+          "keyword_overlap": [
+            "ionimageryprovider"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "OpenStreetMapImageryProvider",
+      "level": 3,
+      "line_count": 13,
+      "code_block_count": 1,
+      "api_count": 3,
+      "apis": [
+        "Layers.addImageryProvider",
+        "OpenStreetMapImageryProvider",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "OpenStreetMapImageryProvider",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "openstreetmapimageryprovider"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "UrlTemplateImageryProvider",
+      "level": 3,
+      "line_count": 32,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "GeographicTilingScheme",
+        "Layers.addImageryProvider",
+        "ModuleUrl",
+        "UrlTemplateImageryProvider",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [
+            "UrlTemplateImageryProvider"
+          ],
+          "keyword_overlap": [
+            "urltemplateimageryprovider"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "UrlTemplateImageryProvider"
+          ],
+          "keyword_overlap": [
+            "urltemplateimageryprovider"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "WebMapServiceImageryProvider (WMS)",
+      "level": 3,
+      "line_count": 15,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "ImageryLayer",
+        "Layers.add",
+        "Rectangle.fromDegrees",
+        "WebMapServiceImageryProvider",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [
+            "WebMapServiceImageryProvider",
+            "ImageryLayer"
+          ],
+          "keyword_overlap": [
+            "webmapserviceimageryprovider"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [
+            "Rectangle.fromDegrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [
+            "Rectangle.fromDegrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "WebMapTileServiceImageryProvider (WMTS)",
+      "level": 3,
+      "line_count": 18,
+      "code_block_count": 1,
+      "api_count": 4,
+      "apis": [
+        "Credit",
+        "Layers.addImageryProvider",
+        "WebMapTileServiceImageryProvider",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [
+            "WebMapTileServiceImageryProvider"
+          ],
+          "keyword_overlap": [
+            "wmts",
+            "webmaptileserviceimageryprovider"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [
+            "WebMapTileServiceImageryProvider"
+          ],
+          "keyword_overlap": [
+            "wmts",
+            "webmaptileserviceimageryprovider"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "ArcGisMapServerImageryProvider",
+      "level": 3,
+      "line_count": 20,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "ArcGisMapServerImageryProvider.fromBasemapType",
+        "ArcGisMapServerImageryProvider.fromUrl",
+        "ImageryLayer.fromProviderAsync",
+        "Layers.add",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer.fromProviderAsync",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [
+            "ArcGisMapServerImageryProvider.fromUrl"
+          ],
+          "keyword_overlap": [
+            "arcgismapserverimageryprovider"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "BingMapsImageryProvider",
+      "level": 3,
+      "line_count": 16,
+      "code_block_count": 1,
+      "api_count": 4,
+      "apis": [
+        "BingMapsImageryProvider.fromUrl",
+        "ImageryLayer.fromProviderAsync",
+        "Layers.add",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer.fromProviderAsync",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "imageryLayers",
+            "Layers.add"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "MapboxStyleImageryProvider",
+      "level": 3,
+      "line_count": 12,
+      "code_block_count": 1,
+      "api_count": 4,
+      "apis": [
+        "ImageryLayer",
+        "Layers.add",
+        "MapboxStyleImageryProvider",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers",
+            "Layers.add"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "SingleTileImageryProvider",
+      "level": 3,
+      "line_count": 12,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "ImageryLayer.fromProviderAsync",
+        "Layers.add",
+        "Rectangle.fromDegrees",
+        "SingleTileImageryProvider.fromUrl",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer.fromProviderAsync",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [
+            "Rectangle.fromDegrees"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [
+            "SingleTileImageryProvider.fromUrl",
+            "Rectangle.fromDegrees"
+          ],
+          "keyword_overlap": [
+            "singletileimageryprovider"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Split-Screen Comparison",
+      "level": 2,
+      "line_count": 14,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "ImageryLayer.fromProviderAsync",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "imageryLayers",
+        "scene"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer.fromProviderAsync",
+            "IonImageryProvider.fromAssetId",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "scene",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "split",
+            "screen",
+            "comparison"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "scene",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "screen"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "screen"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Cutout Rectangle",
+      "level": 2,
+      "line_count": 11,
+      "code_block_count": 1,
+      "api_count": 3,
+      "apis": [
+        "Layers.get",
+        "Rectangle.fromDegrees",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "rectangle"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [
+            "Rectangle.fromDegrees"
+          ],
+          "keyword_overlap": [
+            "rectangle",
+            "cutout"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [
+            "Rectangle.fromDegrees"
+          ],
+          "keyword_overlap": [
+            "rectangle"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "rectangle"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Color-to-Alpha",
+      "level": 2,
+      "line_count": 9,
+      "code_block_count": 1,
+      "api_count": 3,
+      "apis": [
+        "Color",
+        "Layers.get",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "alpha"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [
+            "Color"
+          ],
+          "keyword_overlap": [
+            "color"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "Color"
+          ],
+          "keyword_overlap": [
+            "alpha",
+            "color"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [
+            "Color"
+          ],
+          "keyword_overlap": [
+            "color"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Draping Imagery on 3D Tiles",
+      "level": 2,
+      "line_count": 14,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "DTileset.fromUrl",
+        "ImageryLayer.fromProviderAsync",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "scene"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer.fromProviderAsync",
+            "IonImageryProvider.fromAssetId"
+          ],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tiles",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "tiles",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tiles",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "scene"
+          ],
+          "keyword_overlap": [
+            "tiles",
+            "draping",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tiles",
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [
+            "scene"
+          ],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "imagery"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Debugging Providers",
+      "level": 2,
+      "line_count": 12,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "GridImageryProvider",
+        "ImageryLayer",
+        "Layers.add",
+        "TileCoordinatesImageryProvider",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "GridImageryProvider",
+            "TileCoordinatesImageryProvider",
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "debugging",
+            "providers"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "ImageryLayer",
+            "imageryLayers"
+          ],
+          "keyword_overlap": []
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "ImageryLayer"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Tile Discard Policies",
+      "level": 2,
+      "line_count": 16,
+      "code_block_count": 1,
+      "api_count": 2,
+      "apis": [
+        "NeverTileDiscardPolicy",
+        "UrlTemplateImageryProvider"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tile"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tile"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tile"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tile"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tile"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tile"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [
+            "NeverTileDiscardPolicy",
+            "UrlTemplateImageryProvider"
+          ],
+          "keyword_overlap": [
+            "discard",
+            "tile",
+            "policies"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [
+            "UrlTemplateImageryProvider"
+          ],
+          "keyword_overlap": []
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Error Handling",
+      "level": 2,
+      "line_count": 18,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "Event.addEventListener",
+        "ImageryLayer.fromProviderAsync",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "ImageryLayer.fromProviderAsync",
+            "IonImageryProvider.fromAssetId",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "Layers.add",
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error",
+            "handling"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "error"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Time-Dynamic WMTS",
+      "level": 2,
+      "line_count": 20,
+      "code_block_count": 1,
+      "api_count": 5,
+      "apis": [
+        "Credit",
+        "Layers.addImageryProvider",
+        "WebMapTileServiceImageryProvider",
+        "clock",
+        "imageryLayers"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-001",
+          "eval_name": "ion-night-overlay-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-002",
+          "eval_name": "osm-base-layer-paris",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-003",
+          "eval_name": "layer-management-grid-london",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-004",
+          "eval_name": "usgs-hydro-wms-grand-canyon",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-005",
+          "eval_name": "usgs-shaded-relief-wmts-grand-canyon",
+          "api_overlap": [
+            "WebMapTileServiceImageryProvider"
+          ],
+          "keyword_overlap": [
+            "time",
+            "wmts"
+          ]
+        },
+        {
+          "eval_id": "eval-006",
+          "eval_name": "split-screen-day-night-europe",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-007",
+          "eval_name": "cutout-rectangle-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-008",
+          "eval_name": "color-to-alpha-japan",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-009",
+          "eval_name": "arcgis-streets-dc",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-010",
+          "eval_name": "single-tile-alert-florida",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-011",
+          "eval_name": "label-drape-osm-buildings-nyc",
+          "api_overlap": [
+            "imageryLayers"
+          ],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-012",
+          "eval_name": "time-dynamic-wmts-greenland",
+          "api_overlap": [
+            "WebMapTileServiceImageryProvider",
+            "clock"
+          ],
+          "keyword_overlap": [
+            "time",
+            "wmts",
+            "dynamic"
+          ]
+        },
+        {
+          "eval_id": "eval-013",
+          "eval_name": "never-discard-policy-iceland",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-014",
+          "eval_name": "layer-error-events-london",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        },
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "time"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "Performance Tips",
+      "level": 2,
+      "line_count": 10,
+      "code_block_count": 0,
+      "api_count": 1,
+      "apis": [
+        "LINEAR"
+      ],
+      "covered_by": [
+        {
+          "eval_id": "eval-015",
+          "eval_name": "regional-provider-performance-hawaii",
+          "api_overlap": [],
+          "keyword_overlap": [
+            "tips",
+            "performance"
+          ]
+        }
+      ],
+      "is_covered": true
+    },
+    {
+      "section": "See Also",
+      "level": 2,
+      "line_count": 3,
+      "code_block_count": 0,
+      "api_count": 0,
+      "apis": [],
+      "covered_by": [],
+      "is_covered": false
+    }
+  ],
+  "uncovered_list": [
+    {
+      "section": "See Also",
+      "level": 2,
+      "line_count": 3,
+      "code_blocks": 0,
+      "apis": []
+    }
+  ]
+}

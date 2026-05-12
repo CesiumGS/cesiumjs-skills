@@ -1,0 +1,22 @@
+{
+  "status": "keep",
+  "compared_to": "001",
+  "timestamp": "2026-04-10T02:10:00Z",
+  "rationale": "Iteration 003 wins all 4 judged evals against current best (iter-001). Unanimous wins on eval-002 (Paris) and eval-009 (DC) — the navigationHelpButton fix eliminated the tooltip that caused iter-001's eval-002 regression. Eval-003 and eval-010 won by majority (1 win + 2 ties each). Zero regressions. Zero critical eval losses. The only change from iter-001 was adding navigationHelpButton: false and navigationInstructionsInitiallyVisible: false — a minimal, targeted fix that resolved a known issue without introducing new risk.",
+  "judge_methodology": "pairwise-3-independent-judges-randomized-AB",
+  "per_eval_results": {
+    "eval-002": {"majority": "iter003_wins", "votes": ["iter003", "iter003", "iter003"], "note": "Unanimous. Tooltip removed, clean viewport"},
+    "eval-003": {"majority": "iter003_wins", "votes": ["Tie", "iter003", "Tie"], "note": "One judge noticed cleaner UI in iter-003"},
+    "eval-009": {"majority": "iter003_wins", "votes": ["iter003", "iter003", "iter003"], "note": "Unanimous. Cleaner toolbar"},
+    "eval-010": {"majority": "iter003_wins", "votes": ["Tie", "Tie", "iter003"], "note": "One judge noted marginal UI improvement"}
+  },
+  "hypotheses_validated": {
+    "H1_navigation_tooltip": "FULLY VALIDATED. All judges consistently preferred the version without the navigation help tooltip. Unanimous wins on evals where the tooltip was most visible."
+  },
+  "iteration_history": [
+    {"iter": "000", "status": "baseline"},
+    {"iter": "001", "status": "keep", "changes": "widget cleanup, setView, altitude table"},
+    {"iter": "002", "status": "discard", "changes": "baseLayer:false caused critical regression"},
+    {"iter": "003", "status": "keep", "changes": "nav tooltip fix on top of iter-001"}
+  ]
+}

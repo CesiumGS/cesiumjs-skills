@@ -1,0 +1,17 @@
+{
+  "status": "discard",
+  "compared_to": "001",
+  "timestamp": "2026-04-10T02:05:00Z",
+  "rationale": "CRITICAL REGRESSION on evals 002 and 003 (both regression_critical). The baseLayer: false pattern (H2) was adopted by the model but caused non-default imagery layers (OSM, ArcGIS) to not render — all affected evals show satellite imagery instead of the expected cartographic tiles. Root cause: generated code wraps in its own (async () => {})() IIFE which nests inside the template's IIFE, likely creating a timing issue where the viewer is created but imagery layers added asynchronously don't resolve before screenshot. The navigation tooltip fix (H1: navigationHelpButton: false) DID work correctly — eval-001 shows clean viewport. But H2 poisoned the result. Auto-discard per regression policy.",
+  "judge_methodology": "visual-inspection-pre-judge",
+  "critical_regressions": [
+    {"eval": "eval-002", "description": "Shows satellite imagery instead of OSM cartography over Paris", "severity": "critical"},
+    {"eval": "eval-003", "description": "Shows satellite imagery + grid instead of OSM + grid over London", "severity": "critical"},
+    {"eval": "eval-009", "description": "Shows satellite imagery instead of ArcGIS street map over DC", "severity": "critical"}
+  ],
+  "hypotheses_validated": {
+    "H1_navigation_tooltip": "VALIDATED — navigationHelpButton: false works correctly, viewport is clean",
+    "H2_baseLayer_false": "INVALIDATED — caused critical regression. The model adopted baseLayer: false but imagery replacement fails. Likely interaction with eval template's async IIFE wrapping."
+  },
+  "next_iteration_notes": "Keep H1 (nav tooltip fix). REVERT H2 (baseLayer: false). Keep only the remove+add pattern for base layer swapping. The generated code's own (async ()=>{})() wrapper may be interfering with the template. Investigate whether to instruct the model NOT to wrap code in an async IIFE since the template already provides one."
+}

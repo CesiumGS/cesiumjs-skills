@@ -1,0 +1,42 @@
+{
+  "skill_name": "cesiumjs-imagery",
+  "skill_path": "skills/cesiumjs-imagery/SKILL.md",
+  "baseline_version": "iterations/000-baseline/SKILL.md",
+  "max_iterations": 10,
+  "browser_viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "judge_methodology": "pairwise-3-independent-judges",
+  "coverage_targets": {
+    "minimum_section_coverage_percentage": 90.0,
+    "minimum_evals_per_code_heavy_section": 1
+  },
+  "regression_policy": {
+    "strategy": "any_regression_critical_eval_lost_discard"
+  },
+  "notes": {
+    "token_gated_sections_not_in_initial_suite": [
+      "BingMapsImageryProvider",
+      "MapboxStyleImageryProvider"
+    ],
+    "suite_focus": "Viewer-verifiable public or ion-backed imagery sources first; token-gated providers deferred."
+  },
+  "eval_scenarios": [
+    "evals/eval-001-ion-night-overlay-nyc.json",
+    "evals/eval-002-osm-base-layer-paris.json",
+    "evals/eval-003-layer-management-grid-london.json",
+    "evals/eval-004-usgs-hydro-wms-grand-canyon.json",
+    "evals/eval-005-usgs-shaded-relief-wmts-grand-canyon.json",
+    "evals/eval-006-split-screen-day-night-europe.json",
+    "evals/eval-007-cutout-rectangle-florida.json",
+    "evals/eval-008-color-to-alpha-japan.json",
+    "evals/eval-009-arcgis-streets-dc.json",
+    "evals/eval-010-single-tile-alert-florida.json",
+    "evals/eval-011-label-drape-osm-buildings-nyc.json",
+    "evals/eval-012-time-dynamic-wmts-greenland.json",
+    "evals/eval-013-never-discard-policy-iceland.json",
+    "evals/eval-014-layer-error-events-london.json",
+    "evals/eval-015-regional-provider-performance-hawaii.json"
+  ]
+}

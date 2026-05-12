@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/run-hook.cmd cesiumjs-optimization-judge"
+          }
+        ]
+      }
+    ]
+  }
+}

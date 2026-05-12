@@ -1,0 +1,55 @@
+{
+  "id": "eval-001",
+  "name": "basic-globe-with-terrain",
+  "difficulty": "easy",
+  "description": "The most fundamental CesiumJS task: create a viewer with world terrain. Tests whether the skill produces correct bootstrapping code that actually renders a globe.",
+  "prompt": "Create a complete CesiumJS application that shows a 3D globe with world terrain. Use Cesium Ion for the terrain data. The viewer should fill the entire browser window.",
+  "expected_behaviors": [
+    "Sets Ion.defaultAccessToken before creating the Viewer",
+    "Creates a new Viewer with a container element",
+    "Uses Terrain.fromWorldTerrain() for terrain (preferred over createWorldTerrainAsync)",
+    "Includes the required CSS import for widgets",
+    "Includes the HTML container div with appropriate sizing",
+    "Uses ES module imports from 'cesium'"
+  ],
+  "visual_expectations": "A full-window 3D globe should be visible with terrain detail (mountains, valleys visible when zoomed in). The default Bing aerial imagery should be the base layer. Standard Cesium widgets (timeline, animation controls, home button, etc.) should be visible around the edges of the viewer.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JavaScript errors in the browser console"
+    },
+    {
+      "type": "code_runs",
+      "description": "Code executes without throwing exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Ion\\.defaultAccessToken",
+      "description": "Ion token is set"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new Viewer",
+      "description": "Viewer constructor is called"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Terrain\\.fromWorldTerrain|createWorldTerrainAsync",
+      "description": "World terrain is configured"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "import.*from ['\"]cesium['\"]",
+      "description": "Uses ES module imports"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 3000,
+      "description": "After initial globe load and tile fetching"
+    }
+  ],
+  "regression_critical": true,
+  "notes": "This is the baseline sanity check. If the skill can't produce a working globe, nothing else matters."
+}

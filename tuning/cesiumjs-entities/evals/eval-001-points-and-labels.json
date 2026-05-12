@@ -1,0 +1,28 @@
+{
+  "id": "eval-001",
+  "name": "multiple-points-with-labels",
+  "difficulty": "easy",
+  "description": "Add several labeled point entities to the globe. Tests the most basic Entity API usage — positions, point graphics, and labels.",
+  "prompt": "Create a CesiumJS viewer with three point markers on the globe: one red point at the Statue of Liberty (40.6892 N, 74.0445 W), one blue point at the Eiffel Tower (48.8584 N, 2.2945 E), and one green point at the Sydney Opera House (33.8568 S, 151.2153 E). Each point should have a text label with the landmark name. Zoom the camera to show all three.",
+  "expected_behaviors": [
+    "Creates three entities via viewer.entities.add",
+    "Each entity has a point graphic with correct color",
+    "Each entity has a label with the landmark name",
+    "Coordinates are correct (negative longitude for NYC, negative latitude for Sydney)",
+    "Zooms or flies to show all entities"
+  ],
+  "visual_expectations": "Three colored point markers visible on the globe at their respective locations. Text labels should be readable near each point. The view should be zoomed out enough to see at least two of the three points.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "entities\\.add", "description": "Uses entities.add"},
+    {"type": "pattern_present", "pattern": "point:", "description": "Point graphics defined"},
+    {"type": "pattern_present", "pattern": "label:", "description": "Label graphics defined"},
+    {"type": "pattern_present", "pattern": "-74\\.04", "description": "Statue of Liberty longitude (negative)"},
+    {"type": "pattern_present", "pattern": "-33\\.8|33\\.85.*S", "description": "Sydney latitude (negative for south)"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Globe with three labeled points visible"}
+  ],
+  "regression_critical": true
+}

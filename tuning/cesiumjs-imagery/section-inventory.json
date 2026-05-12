@@ -1,0 +1,577 @@
+{
+  "skill_name": "cesiumjs-imagery",
+  "skill_path": "skills/cesiumjs-imagery/SKILL.md",
+  "generated_at": "2026-04-09T09:38:22.749514+00:00",
+  "total_sections": 25,
+  "sections": [
+    {
+      "heading": "CesiumJS Imagery Layers",
+      "level": 1,
+      "line_count": 16,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "6a03987e",
+          "line_count": 4,
+          "apis_used": [
+            "ImageryLayer",
+            "ImageryLayerCollection",
+            "ImageryProvider"
+          ]
+        }
+      ],
+      "api_references": [
+        "ImageryLayer",
+        "ImageryLayerCollection",
+        "ImageryProvider"
+      ]
+    },
+    {
+      "heading": "Quick Start and ImageryLayer Factories",
+      "level": 2,
+      "line_count": 27,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "592c5cab",
+          "line_count": 23,
+          "apis_used": [
+            "ImageryLayer.fromProviderAsync",
+            "ImageryLayer.fromWorldImagery",
+            "IonImageryProvider.fromAssetId",
+            "Layers.add",
+            "Viewer",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "ImageryLayer.fromProviderAsync",
+        "ImageryLayer.fromWorldImagery",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "Viewer",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "ImageryLayerCollection API",
+      "level": 2,
+      "line_count": 28,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "905c3667",
+          "line_count": 19,
+          "apis_used": [
+            "All",
+            "ImageryProvider",
+            "Of",
+            "ToBottom",
+            "ToTop",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "Added",
+        "All",
+        "ImageryProvider",
+        "Moved",
+        "Of",
+        "Removed",
+        "ShownOrHidden",
+        "ToBottom",
+        "ToTop",
+        "imageryLayers",
+        "scene"
+      ]
+    },
+    {
+      "heading": "ImageryLayer Display Properties",
+      "level": 2,
+      "line_count": 28,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "7cc8f5b5",
+          "line_count": 6,
+          "apis_used": []
+        }
+      ],
+      "api_references": []
+    },
+    {
+      "heading": "Swapping the Base Layer",
+      "level": 2,
+      "line_count": 11,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "4ad58645",
+          "line_count": 7,
+          "apis_used": [
+            "ImageryLayer",
+            "Layers.add",
+            "Layers.get",
+            "Layers.remove",
+            "OpenStreetMapImageryProvider",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "ImageryLayer",
+        "Layers.add",
+        "Layers.get",
+        "Layers.remove",
+        "OpenStreetMapImageryProvider",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "Imagery Providers",
+      "level": 2,
+      "line_count": 1,
+      "code_block_count": 0,
+      "code_blocks": [],
+      "api_references": []
+    },
+    {
+      "heading": "IonImageryProvider",
+      "level": 3,
+      "line_count": 9,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "349a897d",
+          "line_count": 5,
+          "apis_used": [
+            "AssetId",
+            "ImageryLayer.fromProviderAsync",
+            "IonImageryProvider.fromAssetId",
+            "Layers.add",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "AssetId",
+        "ImageryLayer.fromProviderAsync",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "OpenStreetMapImageryProvider",
+      "level": 3,
+      "line_count": 13,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "a38710d4",
+          "line_count": 7,
+          "apis_used": [
+            "Layers.addImageryProvider",
+            "OpenStreetMapImageryProvider",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "Layers.addImageryProvider",
+        "OpenStreetMapImageryProvider",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "UrlTemplateImageryProvider",
+      "level": 3,
+      "line_count": 32,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "7900e7ee",
+          "line_count": 24,
+          "apis_used": [
+            "GeographicTilingScheme",
+            "Layers.addImageryProvider",
+            "ModuleUrl",
+            "UrlTemplateImageryProvider",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "GeographicTilingScheme",
+        "Layers.addImageryProvider",
+        "ModuleUrl",
+        "UrlTemplateImageryProvider",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "WebMapServiceImageryProvider (WMS)",
+      "level": 3,
+      "line_count": 15,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "cab0d10a",
+          "line_count": 11,
+          "apis_used": [
+            "ImageryLayer",
+            "Layers.add",
+            "Rectangle.fromDegrees",
+            "WebMapServiceImageryProvider",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "ImageryLayer",
+        "Layers.add",
+        "Rectangle.fromDegrees",
+        "WebMapServiceImageryProvider",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "WebMapTileServiceImageryProvider (WMTS)",
+      "level": 3,
+      "line_count": 18,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "a44391ad",
+          "line_count": 12,
+          "apis_used": [
+            "Credit",
+            "Layers.addImageryProvider",
+            "WebMapTileServiceImageryProvider",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "Credit",
+        "Layers.addImageryProvider",
+        "WebMapTileServiceImageryProvider",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "ArcGisMapServerImageryProvider",
+      "level": 3,
+      "line_count": 20,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "c890fdd5",
+          "line_count": 16,
+          "apis_used": [
+            "ArcGisMapServerImageryProvider.fromBasemapType",
+            "ArcGisMapServerImageryProvider.fromUrl",
+            "ImageryLayer.fromProviderAsync",
+            "Layers.add",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "ArcGisMapServerImageryProvider.fromBasemapType",
+        "ArcGisMapServerImageryProvider.fromUrl",
+        "ImageryLayer.fromProviderAsync",
+        "Layers.add",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "BingMapsImageryProvider",
+      "level": 3,
+      "line_count": 16,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "b6f06056",
+          "line_count": 9,
+          "apis_used": [
+            "BingMapsImageryProvider.fromUrl",
+            "ImageryLayer.fromProviderAsync",
+            "Layers.add",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "BingMapsImageryProvider.fromUrl",
+        "ImageryLayer.fromProviderAsync",
+        "Layers.add",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "MapboxStyleImageryProvider",
+      "level": 3,
+      "line_count": 12,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "10e715e8",
+          "line_count": 8,
+          "apis_used": [
+            "ImageryLayer",
+            "Layers.add",
+            "MapboxStyleImageryProvider",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "ImageryLayer",
+        "Layers.add",
+        "MapboxStyleImageryProvider",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "SingleTileImageryProvider",
+      "level": 3,
+      "line_count": 12,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "355396ef",
+          "line_count": 8,
+          "apis_used": [
+            "ImageryLayer.fromProviderAsync",
+            "Layers.add",
+            "Rectangle.fromDegrees",
+            "SingleTileImageryProvider.fromUrl",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "ImageryLayer.fromProviderAsync",
+        "Layers.add",
+        "Rectangle.fromDegrees",
+        "SingleTileImageryProvider.fromUrl",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "Split-Screen Comparison",
+      "level": 2,
+      "line_count": 14,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "c3acbf98",
+          "line_count": 8,
+          "apis_used": [
+            "ImageryLayer.fromProviderAsync",
+            "IonImageryProvider.fromAssetId",
+            "Layers.add",
+            "imageryLayers",
+            "scene"
+          ]
+        }
+      ],
+      "api_references": [
+        "ImageryLayer.fromProviderAsync",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "imageryLayers",
+        "scene"
+      ]
+    },
+    {
+      "heading": "Cutout Rectangle",
+      "level": 2,
+      "line_count": 11,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "02fe1513",
+          "line_count": 7,
+          "apis_used": [
+            "Layers.get",
+            "Rectangle.fromDegrees",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "Layers.get",
+        "Rectangle.fromDegrees",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "Color-to-Alpha",
+      "level": 2,
+      "line_count": 9,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "e965a2b4",
+          "line_count": 5,
+          "apis_used": [
+            "Color",
+            "Layers.get",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "Color",
+        "Layers.get",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "Draping Imagery on 3D Tiles",
+      "level": 2,
+      "line_count": 14,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "844bb92d",
+          "line_count": 10,
+          "apis_used": [
+            "DTileset.fromUrl",
+            "ImageryLayer.fromProviderAsync",
+            "IonImageryProvider.fromAssetId",
+            "Layers.add",
+            "scene"
+          ]
+        }
+      ],
+      "api_references": [
+        "DTileset.fromUrl",
+        "ImageryLayer.fromProviderAsync",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "scene"
+      ]
+    },
+    {
+      "heading": "Debugging Providers",
+      "level": 2,
+      "line_count": 12,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "f9efdf28",
+          "line_count": 8,
+          "apis_used": [
+            "GridImageryProvider",
+            "ImageryLayer",
+            "Layers.add",
+            "TileCoordinatesImageryProvider",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "GridImageryProvider",
+        "ImageryLayer",
+        "Layers.add",
+        "TileCoordinatesImageryProvider",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "Tile Discard Policies",
+      "level": 2,
+      "line_count": 16,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "a98fa832",
+          "line_count": 6,
+          "apis_used": [
+            "NeverTileDiscardPolicy",
+            "UrlTemplateImageryProvider"
+          ]
+        }
+      ],
+      "api_references": [
+        "NeverTileDiscardPolicy",
+        "UrlTemplateImageryProvider"
+      ]
+    },
+    {
+      "heading": "Error Handling",
+      "level": 2,
+      "line_count": 18,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "0fef9d24",
+          "line_count": 14,
+          "apis_used": [
+            "Event.addEventListener",
+            "ImageryLayer.fromProviderAsync",
+            "IonImageryProvider.fromAssetId",
+            "Layers.add",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "Event.addEventListener",
+        "ImageryLayer.fromProviderAsync",
+        "IonImageryProvider.fromAssetId",
+        "Layers.add",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "Time-Dynamic WMTS",
+      "level": 2,
+      "line_count": 20,
+      "code_block_count": 1,
+      "code_blocks": [
+        {
+          "hash": "17fd5ea1",
+          "line_count": 14,
+          "apis_used": [
+            "Credit",
+            "Layers.addImageryProvider",
+            "WebMapTileServiceImageryProvider",
+            "clock",
+            "imageryLayers"
+          ]
+        }
+      ],
+      "api_references": [
+        "Credit",
+        "Layers.addImageryProvider",
+        "WebMapTileServiceImageryProvider",
+        "clock",
+        "imageryLayers"
+      ]
+    },
+    {
+      "heading": "Performance Tips",
+      "level": 2,
+      "line_count": 10,
+      "code_block_count": 0,
+      "code_blocks": [],
+      "api_references": [
+        "LINEAR"
+      ]
+    },
+    {
+      "heading": "See Also",
+      "level": 2,
+      "line_count": 3,
+      "code_block_count": 0,
+      "code_blocks": [],
+      "api_references": []
+    }
+  ]
+}

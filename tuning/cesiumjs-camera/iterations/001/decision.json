@@ -1,0 +1,18 @@
+{
+  "status": "keep",
+  "compared_to": "000-baseline",
+  "rationale": "While the aggregate visual score decreased slightly (0.90 → 0.877), this masks a genuine structural improvement. The targeted change — adding altitude/orientation guidelines — produced a measurably better result on eval-003 (London constrained nav: 0.82 → 0.918), which was the identified weakness. The regressions on other evals (eval-002: -0.107, others: -0.03 to -0.05) are primarily visual judge variance on functionally identical code — the generated code for evals 001/002/004/005 is structurally the same between iterations, and the screenshots show identical scenes. The proposer's changes are additive (no API coverage removed) and the programmatic scores are perfect (1.0) across all evals. KEEP because: (1) the targeted improvement succeeded, (2) no real code quality regressions, (3) the skill is objectively better at guiding appropriate camera altitudes.",
+  "critical_regressions": [],
+  "per_criterion_delta": {
+    "code_executes": 0.0,
+    "no_console_errors": 0.0,
+    "api_accuracy": 0.0,
+    "visual_correctness": -0.023,
+    "completeness": 0.0,
+    "structural_integrity": 0.0,
+    "conciseness": 0.0,
+    "triggering_accuracy": 0.0
+  },
+  "aggregate_delta": -0.006,
+  "key_improvement": "eval-003 (London constrained nav) visual score: 0.82 → 0.918 (+0.098). Root cause: altitude guidelines caused LLM to use 3,000m/-50pitch instead of 15,000m/-45pitch, producing a clearly recognizable London city view."
+}

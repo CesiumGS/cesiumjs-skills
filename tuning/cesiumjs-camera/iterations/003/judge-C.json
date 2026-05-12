@@ -1,0 +1,61 @@
+{
+  "judge": "C",
+  "verdicts": {
+    "eval-001": {
+      "winner": "ITER003",
+      "rationale": "Baseline shows only blank sky (camera pointed straight up, Eiffel Tower not visible), while ITER003 achieves a genuine ground-level perspective near Paris terrain, even though 3D building tiles are glitchy."
+    },
+    "eval-002": {
+      "winner": "TIE",
+      "rationale": "Both produce nearly identical top-down aerial views of central Paris clearly showing the Seine, Champ de Mars, and urban grid at the correct altitude."
+    },
+    "eval-003": {
+      "winner": "TIE",
+      "rationale": "Both show a mid-altitude angled view of Paris from the south looking north with the Seine and urban grid visible; neither is meaningfully better than the other."
+    },
+    "eval-004": {
+      "winner": "TIE",
+      "rationale": "Both show a very similar angled view of the Manhattan urban grid from the east at roughly the correct heading and pitch; the framing difference is negligible."
+    },
+    "eval-005": {
+      "winner": "ITER003",
+      "rationale": "Baseline shows a flat, low-density suburban view far from the Manhattan skyline with no recognizable skyline silhouette, while ITER003 delivers a dramatic close-up 3D view of Manhattan skyscrapers as expected for a skyline shot from across the Hudson."
+    },
+    "eval-006": {
+      "winner": "TIE",
+      "rationale": "Both show virtually identical near-horizontal rim views of the Grand Canyon with layered rock formations and canyon depth visible."
+    },
+    "eval-007": {
+      "winner": "TIE",
+      "rationale": "Both produce nearly identical top-down satellite-style views of the Grand Canyon terrain centered on the correct area."
+    },
+    "eval-008": {
+      "winner": "ITER003",
+      "rationale": "ITER003 shows a wider, more identifiable Manhattan grid stretching southward from the north as expected, while the baseline shows a lower-density neighborhood area that is less clearly Midtown Manhattan."
+    },
+    "eval-009": {
+      "winner": "TIE",
+      "rationale": "Both show a correct angled view of London from roughly 5000m with the Thames and urban grid visible; navigation constraints are not visually distinguishable."
+    },
+    "eval-010": {
+      "winner": "TIE",
+      "rationale": "Both show Rome with the Tiber River visible from the correct altitude; ITER003 is slightly more zoomed in but both correctly position the camera over Rome."
+    },
+    "eval-011": {
+      "winner": "BASELINE",
+      "rationale": "Baseline shows a low-altitude angled view of lower Manhattan from the correct approximate area after the tour, while ITER003 shows an extremely close-up ground-level view of Midtown skyscrapers that does not match the expected 'moderate altitude' end position over the Empire State Building."
+    },
+    "eval-012": {
+      "winner": "TIE",
+      "rationale": "Both show essentially the same globe-from-space view with Europe prominently centered, correctly showing UK, Scandinavia, Mediterranean, and Eastern Europe."
+    },
+    "eval-013": {
+      "winner": "BASELINE",
+      "rationale": "Baseline more clearly shows the Champ de Mars extending westward and the Seine to the south from an eastern perspective, while ITER003 appears more northward-oriented and less precisely positioned east of the tower."
+    },
+    "eval-014": {
+      "winner": "TIE",
+      "rationale": "Both correctly show Paris from the north looking south with the Champ de Mars and tower area visible in the foreground; the views are nearly equivalent."
+    }
+  }
+}

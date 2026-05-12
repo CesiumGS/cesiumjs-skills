@@ -1,0 +1,61 @@
+{
+  "judge": "A",
+  "verdicts": {
+    "eval-001": {
+      "winner": "ITER003",
+      "rationale": "Baseline shows only blue sky with no terrain or tower (completely wrong camera angle), while ITER003 shows a ground-level perspective with 3D buildings visible — despite rendering artifacts, it at least achieves the correct low-altitude intent."
+    },
+    "eval-002": {
+      "winner": "TIE",
+      "rationale": "Both show a nearly identical top-down aerial view of central Paris with the Seine, Champ de Mars, and Eiffel Tower area clearly visible at appropriate altitude."
+    },
+    "eval-003": {
+      "winner": "TIE",
+      "rationale": "Both show Paris from the south at medium altitude looking north with the Seine and Eiffel Tower area visible; perspective and framing are effectively equivalent."
+    },
+    "eval-004": {
+      "winner": "TIE",
+      "rationale": "Both show NYC Midtown from the east looking westward with comparable angled aerial perspectives and similar framing of the urban grid."
+    },
+    "eval-005": {
+      "winner": "ITER003",
+      "rationale": "ITER003 renders a dramatic 3D Manhattan skyline with detailed buildings from a near-street-level westward viewpoint matching the Hudson River postcard perspective, while baseline shows a flat, low-detail view with no skyline prominence."
+    },
+    "eval-006": {
+      "winner": "TIE",
+      "rationale": "Both show a near-horizontal ground-level view looking across Grand Canyon terrain from the south rim; the compositions are nearly identical with comparable canyon depth and rock formation visibility."
+    },
+    "eval-007": {
+      "winner": "TIE",
+      "rationale": "Both deliver a top-down aerial view of the Grand Canyon showing the sinuous canyon formations and layered rock; framing and altitude appear equivalent."
+    },
+    "eval-008": {
+      "winner": "TIE",
+      "rationale": "Both show NYC from the north looking south with similar angled aerial framing of the Midtown Manhattan grid and waterfront; quality is comparable."
+    },
+    "eval-009": {
+      "winner": "TIE",
+      "rationale": "Both show London at moderate altitude with the urban grid and green spaces visible; the camera position and tilt are appropriate in both and constraints are not visually distinguishable."
+    },
+    "eval-010": {
+      "winner": "ITER003",
+      "rationale": "ITER003 shows Rome's Circus Maximus and Tiber river bend more centrally framed and at a better altitude for recognizing the city, while baseline's more oblique angle pushes the key landmarks to the periphery."
+    },
+    "eval-011": {
+      "winner": "ITER003",
+      "rationale": "ITER003 ends with the camera close to Midtown Manhattan skyscrapers showing tall 3D buildings consistent with arriving near the Empire State Building, while baseline's two screenshots show the same flat low-altitude Brooklyn/lower-Manhattan area with no evidence of the second flyTo completing correctly."
+    },
+    "eval-012": {
+      "winner": "TIE",
+      "rationale": "Both show essentially the same globe view centered on Europe with correct framing of the Mediterranean, UK, and Scandinavia after the flyHome animation."
+    },
+    "eval-013": {
+      "winner": "TIE",
+      "rationale": "Both show Paris from the east looking west with the Seine and Champ de Mars area visible; ITER003 is at slightly higher altitude giving broader context but both satisfy the directional requirement."
+    },
+    "eval-014": {
+      "winner": "TIE",
+      "rationale": "Both show Paris from the north looking south with the Champ de Mars, Seine, and Trocadéro area visible; framing and perspective are comparable between the two."
+    }
+  }
+}

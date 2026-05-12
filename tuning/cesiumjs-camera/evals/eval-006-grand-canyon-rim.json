@@ -1,0 +1,28 @@
+{
+  "id": "eval-006",
+  "name": "grand-canyon-south-rim",
+  "landmark": "Grand Canyon",
+  "perspective": "south rim perspective looking across",
+  "difficulty": "hard",
+  "description": "View the Grand Canyon from the south rim, looking north across the canyon. Tests near-ground camera positioning with a horizontal perspective over dramatic terrain.",
+  "prompt": "Position the camera at the south rim of the Grand Canyon (approximately 36.06 N, 112.14 W), looking north across the canyon at about 100 meters above the rim. I want to see the canyon depth and the north rim in the distance. Use a near-horizontal pitch to see across the canyon.",
+  "expected_behaviors": [
+    "Camera near the south rim coordinates",
+    "Very low altitude (50-200m above terrain)",
+    "Pitch near horizontal (-5 to -15 degrees) to see across the canyon",
+    "Heading ~0 (facing north, across the canyon)",
+    "Should convey the depth and scale of the canyon"
+  ],
+  "visual_expectations": "A dramatic view from the south rim looking north across the Grand Canyon. The canyon walls, depth, and layered rock formations should be visible. The perspective should feel like standing at an overlook.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "36\\.0", "description": "Grand Canyon latitude"},
+    {"type": "pattern_present", "pattern": "-112", "description": "Grand Canyon longitude negative"},
+    {"type": "pattern_present", "pattern": "flyTo|setView|lookAt", "description": "Uses a camera method"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 6000, "description": "Grand Canyon from south rim looking north"}
+  ],
+  "regression_critical": false
+}

@@ -1,0 +1,69 @@
+{
+  "skill_name": "cesiumjs-viewer-setup",
+  "skill_path": "skills/cesiumjs-viewer-setup/SKILL.md",
+  "baseline_version": "iterations/000-baseline/SKILL.md",
+  "max_iterations": 10,
+  "eval_model": "claude-sonnet-4-6",
+  "eval_temperature": 0,
+  "judge_model_visual": "claude-sonnet-4-6",
+  "judge_model_qualitative": "claude-sonnet-4-6",
+  "browser_viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "scoring": {
+    "weights": {
+      "code_executes": 0.20,
+      "no_console_errors": 0.10,
+      "api_accuracy": 0.20,
+      "visual_correctness": 0.25,
+      "completeness": 0.10,
+      "structural_integrity": 0.05,
+      "conciseness": 0.05,
+      "triggering_accuracy": 0.05
+    },
+    "regression_policy": {
+      "strategy": "critical_criteria_must_not_regress",
+      "critical_criteria": [
+        "code_executes",
+        "api_accuracy",
+        "structural_integrity"
+      ],
+      "tolerance": 0.0,
+      "description": "If ANY critical criterion scores lower than the current best on ANY eval scenario, the iteration is automatically disqualified. Non-critical criteria may decrease slightly if the aggregate improves."
+    }
+  },
+  "structural_checks": {
+    "frontmatter_required_fields": ["name", "description"],
+    "max_lines": 500,
+    "min_lines": 300,
+    "required_sections": [
+      "Quick Start",
+      "Viewer Constructor Options",
+      "Common Patterns",
+      "Performance Tips",
+      "See Also"
+    ],
+    "domain_boundary": {
+      "description": "This skill must NOT include APIs owned by other skills",
+      "forbidden_patterns": [
+        "camera\\.flyTo\\(",
+        "new Entity\\(",
+        "ScreenSpaceEventHandler",
+        "new Material\\(",
+        "SampledProperty",
+        "Cartesian3\\.fromDegrees.*detailed usage"
+      ],
+      "allowed_crossover": "Brief mentions in Common Patterns are allowed (e.g., camera.flyTo in a production setup pattern) but detailed API documentation belongs to the owning skill"
+    }
+  },
+  "eval_scenarios": [
+    "evals/eval-001-basic-globe.json",
+    "evals/eval-002-minimal-no-widgets.json",
+    "evals/eval-003-production-osm-buildings.json",
+    "evals/eval-004-google-3d-tiles.json",
+    "evals/eval-005-2d-osm-basemap.json",
+    "evals/eval-006-space-scene.json",
+    "evals/eval-007-low-power-dashboard.json"
+  ]
+}

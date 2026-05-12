@@ -1,0 +1,8 @@
+{
+  "skills": {
+    "skill-optimizer": {
+      "path": "skills/skill-optimizer/SKILL.md",
+      "description": "Phased skill optimization with research, hypotheses, visual verification, and 3 parallel judges"
+    }
+  }
+}

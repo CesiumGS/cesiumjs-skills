@@ -1,0 +1,32 @@
+{
+  "skill_name": "cesiumjs-camera",
+  "skill_path": "skills/cesiumjs-camera/SKILL.md",
+  "baseline_version": "iterations/000-baseline/SKILL.md",
+  "max_iterations": 10,
+  "eval_model": "claude-sonnet-4-6",
+  "eval_temperature": 0,
+  "judge_methodology": "pairwise-3-independent-judges",
+  "browser_viewport": {"width": 1280, "height": 720},
+  "coverage": {
+    "total_sections": 19,
+    "covered_sections": 18,
+    "coverage_percentage": 94.7,
+    "uncovered": ["See Also (cross-references only, not testable)"]
+  },
+  "eval_scenarios": [
+    {"file": "evals/eval-001-eiffel-ground-level.json", "landmark": "Eiffel Tower", "perspective": "ground level", "sections": ["Camera Fundamentals", "setView"]},
+    {"file": "evals/eval-002-eiffel-aerial.json", "landmark": "Eiffel Tower", "perspective": "aerial bird's eye", "sections": ["setView"]},
+    {"file": "evals/eval-003-eiffel-from-south.json", "landmark": "Eiffel Tower", "perspective": "from south (lookAt)", "sections": ["lookAt"]},
+    {"file": "evals/eval-004-empire-state-orbit-east.json", "landmark": "Empire State Building", "perspective": "from east (lookAt)", "sections": ["lookAt"]},
+    {"file": "evals/eval-005-nyc-skyline-hudson.json", "landmark": "NYC Skyline", "perspective": "panoramic from Hudson", "sections": ["setView", "flyTo"]},
+    {"file": "evals/eval-006-grand-canyon-rim.json", "landmark": "Grand Canyon", "perspective": "south rim", "sections": ["setView", "flyTo"]},
+    {"file": "evals/eval-007-grand-canyon-aerial.json", "landmark": "Grand Canyon", "perspective": "aerial overview", "sections": ["setView"]},
+    {"file": "evals/eval-008-empire-state-from-north.json", "landmark": "Empire State Building", "perspective": "from north (lookAt)", "sections": ["lookAt"]},
+    {"file": "evals/eval-009-constrain-zoom-tilt-london.json", "landmark": "London", "perspective": "constrained nav", "sections": ["ScreenSpaceCameraController", "Constraining Navigation"]},
+    {"file": "evals/eval-010-remap-input-events.json", "landmark": "Rome", "perspective": "remapped inputs", "sections": ["Remapping Input Events"]},
+    {"file": "evals/eval-011-chained-flyto-tour-nyc.json", "landmark": "NYC", "perspective": "multi-stop tour", "sections": ["flyTo -- Animated Flight"]},
+    {"file": "evals/eval-012-flyhome-custom-default.json", "landmark": "Europe", "perspective": "custom home view", "sections": ["flyHome"]},
+    {"file": "evals/eval-013-eiffel-from-east.json", "landmark": "Eiffel Tower", "perspective": "from east (lookAt)", "sections": ["lookAt"]},
+    {"file": "evals/eval-014-eiffel-from-north.json", "landmark": "Eiffel Tower", "perspective": "from north (lookAt)", "sections": ["lookAt"]}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "status": "discard",
+  "compared_to": "000-baseline",
+  "rationale": "REGRESSION on eval-002 (polygon extrusion). Despite winning 2 evals (001, 005) and tying 2 (003, 004), iteration 001 LOST on eval-002 which is marked regression_critical. The baseline shows a correct 3D extruded column over Colorado; iteration 001 renders only a flat 2D polygon — the extrusion was lost. The proposer's changes to height/clampToGround guidance likely caused the code generator to use height:0 without extrudedHeight being rendered properly (possibly a camera angle issue or the outline-fix guidance interfered with the extrusion pattern). Per regression policy: any critical regression = DISCARD.",
+  "pairwise_tally": {
+    "iteration_001_wins": 2,
+    "baseline_wins": 1,
+    "ties": 2
+  },
+  "critical_regression": {
+    "eval": "eval-002",
+    "description": "3D polygon extrusion lost — flat polygon rendered instead of 100,000m extruded column",
+    "root_cause_hypothesis": "Proposer added guidance to use height:0 instead of clampToGround for outline visibility. This may have confused the code generator into setting height:0 without proper extrudedHeight rendering, or the camera flyTo rectangle framing doesn't show the extrusion from the right angle."
+  },
+  "improvements_noted": [
+    "eval-001: Global landmark view dramatically improved (all 3 points with labels visible)",
+    "eval-005: Airport labels added, better camera framing with isShowing filter"
+  ],
+  "next_iteration_guidance": "Preserve the eval-001 camera framing fix and eval-005 isShowing filter, but fix the polygon extrusion regression. The height:0 vs clampToGround guidance needs to be scoped to GeoJSON/ground-clamped polygons specifically, not applied broadly to all polygon examples."
+}

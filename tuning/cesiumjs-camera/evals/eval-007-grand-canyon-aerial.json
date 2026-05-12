@@ -1,0 +1,27 @@
+{
+  "id": "eval-007",
+  "name": "grand-canyon-aerial-overview",
+  "landmark": "Grand Canyon",
+  "perspective": "aerial overview",
+  "difficulty": "easy",
+  "description": "Bird's eye view of the Grand Canyon showing the full river canyon from above. Tests appropriate altitude for geographic features.",
+  "prompt": "Show me the Grand Canyon from directly above at about 20,000 meters altitude, looking straight down. I want to see the Colorado River winding through the canyon. Center on coordinates 36.10 N, 112.11 W.",
+  "expected_behaviors": [
+    "Uses setView (instant, top-down — preferred over flyTo for this)",
+    "High altitude (15000-25000m)",
+    "Pitch -90 (straight down)",
+    "Canyon and river should be centered"
+  ],
+  "visual_expectations": "A top-down aerial view showing the Grand Canyon's distinctive sinuous shape carved by the Colorado River. The layered rock formations and canyon width should be visible from this altitude.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "setView|flyTo", "description": "Uses setView or flyTo"},
+    {"type": "pattern_present", "pattern": "-90", "description": "Straight-down pitch"},
+    {"type": "pattern_present", "pattern": "-112", "description": "Grand Canyon longitude"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Aerial overview of Grand Canyon"}
+  ],
+  "regression_critical": false
+}

@@ -1,0 +1,73 @@
+{
+  "iteration": "001",
+  "skill_path": "iterations/001/SKILL.md",
+  "timestamp": "2026-04-08T19:15:00Z",
+  "eval_results": {
+    "eval-001": {
+      "programmatic": {
+        "code_runs": 1.0,
+        "no_console_errors": 1.0,
+        "pattern_pass_rate": 0.25,
+        "pattern_details": "Same CDN artifacts as baseline — 3/4 pattern failures are environment artifacts"
+      },
+      "visual": {
+        "scene_rendered": 1.0,
+        "correct_content": 1.0,
+        "visual_quality": 0.95,
+        "expected_elements": 1.0,
+        "overall_visual_score": 0.9925
+      }
+    },
+    "eval-002": {
+      "programmatic": {
+        "code_runs": 1.0,
+        "no_console_errors": 1.0,
+        "pattern_pass_rate": 1.0,
+        "pattern_details": "9/9 checks pass — all widget toggles correct"
+      },
+      "visual": {
+        "scene_rendered": 1.0,
+        "correct_content": 1.0,
+        "visual_quality": 0.95,
+        "expected_elements": 1.0,
+        "overall_visual_score": 0.9925
+      }
+    },
+    "eval-003": {
+      "programmatic": {
+        "code_runs": 1.0,
+        "no_console_errors": 1.0,
+        "pattern_pass_rate": 1.0,
+        "pattern_details": "8/8 checks pass"
+      },
+      "visual": {
+        "scene_rendered": 1.0,
+        "correct_content": 0.9,
+        "visual_quality": 0.85,
+        "expected_elements": 0.9,
+        "overall_visual_score": 0.9625
+      }
+    }
+  },
+  "criteria_scores": {
+    "code_executes": {"score": 1.0},
+    "no_console_errors": {"score": 1.0},
+    "api_accuracy": {"score": 0.75, "per_eval": [0.25, 1.0, 1.0]},
+    "visual_correctness": {"score": 0.9825, "per_eval": [0.9925, 0.9925, 0.9625]},
+    "completeness": {"score": 1.0},
+    "structural_integrity": {"score": 1.0},
+    "conciseness": {"score": 1.0},
+    "triggering_accuracy": {"score": 1.0}
+  },
+  "aggregate_score": 0.9456,
+  "weights_used": {
+    "code_executes": 0.20,
+    "no_console_errors": 0.10,
+    "api_accuracy": 0.20,
+    "visual_correctness": 0.25,
+    "structural_integrity": 0.05,
+    "completeness": 0.10,
+    "conciseness": 0.05,
+    "triggering_accuracy": 0.05
+  }
+}

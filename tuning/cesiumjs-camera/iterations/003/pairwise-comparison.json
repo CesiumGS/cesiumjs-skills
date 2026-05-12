@@ -1,0 +1,83 @@
+{
+  "methodology": "3-parallel-independent-judges with majority vote",
+  "per_eval_verdicts": {
+    "eval-001-eiffel-ground-level": {
+      "judge_A": "ITER003", "judge_B": "ITER003", "judge_C": "ITER003",
+      "majority": "ITER003 (3-0)",
+      "rationale": "Unanimous — baseline shows blank sky, iter003 achieves ground-level with OSM buildings"
+    },
+    "eval-002-eiffel-aerial": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (3-0)",
+      "rationale": "Unanimous — identical top-down Paris aerial views"
+    },
+    "eval-003-eiffel-from-south": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (3-0)",
+      "rationale": "Unanimous — both show correct south-to-north Paris view"
+    },
+    "eval-004-empire-state-from-east": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (3-0)",
+      "rationale": "Unanimous — comparable Midtown views"
+    },
+    "eval-005-nyc-skyline-hudson": {
+      "judge_A": "ITER003", "judge_B": "ITER003", "judge_C": "ITER003",
+      "majority": "ITER003 (3-0)",
+      "rationale": "Unanimous — baseline flat grid, iter003 dramatic 3D skyline with OSM buildings"
+    },
+    "eval-006-grand-canyon-rim": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (3-0)",
+      "rationale": "Unanimous — equivalent rim perspectives"
+    },
+    "eval-007-grand-canyon-aerial": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (3-0)",
+      "rationale": "Unanimous — identical top-down canyon views"
+    },
+    "eval-008-empire-state-from-north": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "ITER003",
+      "majority": "TIE (2-1)",
+      "rationale": "Majority tie — judge C preferred iter003's wider grid but A and B called it equivalent"
+    },
+    "eval-009-constrain-zoom-tilt-london": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (3-0)",
+      "rationale": "Unanimous — constraints not visually distinguishable"
+    },
+    "eval-010-remap-input-events": {
+      "judge_A": "ITER003", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (2-1)",
+      "rationale": "Majority tie — only judge A preferred iter003's Rome framing"
+    },
+    "eval-011-chained-flyto-tour-nyc": {
+      "judge_A": "ITER003", "judge_B": "ITER003", "judge_C": "BASELINE",
+      "majority": "ITER003 (2-1)",
+      "rationale": "Majority iter003 — judges A/B noted baseline's chaining may have failed; judge C preferred baseline's altitude"
+    },
+    "eval-012-flyhome-custom-default-europe": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (3-0)",
+      "rationale": "Unanimous — identical Europe home views"
+    },
+    "eval-013-eiffel-from-east": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "BASELINE",
+      "majority": "TIE (2-1)",
+      "rationale": "Majority tie — judge C preferred baseline's Champ de Mars framing"
+    },
+    "eval-014-eiffel-from-north": {
+      "judge_A": "TIE", "judge_B": "TIE", "judge_C": "TIE",
+      "majority": "TIE (3-0)",
+      "rationale": "Unanimous — both correct north-to-south views"
+    }
+  },
+  "summary": {
+    "iter003_wins": 3,
+    "baseline_wins": 0,
+    "ties": 11,
+    "iter003_win_evals": ["eval-001-eiffel-ground-level", "eval-005-nyc-skyline-hudson", "eval-011-chained-flyto-tour-nyc"],
+    "baseline_win_evals": [],
+    "recommendation": "KEEP"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "comparison_type": "pairwise",
+  "baseline": "000-baseline",
+  "iteration": "002",
+  "judgments": {
+    "eval-001": {
+      "winner": "TIE",
+      "rationale": "Both show nearly identical views of mostly blue sky with a thin terrain strip at the bottom, neither achieving the expected close ground-level view of the Eiffel Tower."
+    },
+    "eval-002": {
+      "winner": "TIE",
+      "rationale": "Both produce virtually identical top-down aerial views of central Paris with the Eiffel Tower area and Seine River clearly visible, matching the expected outcome equally well."
+    },
+    "eval-003": {
+      "winner": "A",
+      "rationale": "A shows a clearer south-to-north perspective with the Seine in the foreground and Trocadero visible beyond, while B shifts to a more westward overhead angle that makes the Trocadero less prominent."
+    },
+    "eval-004": {
+      "winner": "TIE",
+      "rationale": "Both show nearly identical oblique views of Midtown Manhattan from the east looking west with comparable framing and building detail."
+    },
+    "eval-005": {
+      "winner": "B",
+      "rationale": "B renders 3D buildings prominently showing the Manhattan skyline from across the Hudson, while A shows a distant flat view where buildings are barely discernible."
+    },
+    "eval-006": {
+      "winner": "B",
+      "rationale": "B delivers a dramatic close-up view into the Grand Canyon with layered rock formations and visible depth, while A shows a distant flat perspective where the canyon is barely perceptible."
+    },
+    "eval-007": {
+      "winner": "TIE",
+      "rationale": "Both show comparable top-down aerial views of the Grand Canyon terrain at similar altitudes with only marginal differences in zoom level."
+    },
+    "eval-008": {
+      "winner": "B",
+      "rationale": "B renders 3D skyscrapers looking south down Manhattan with prominent building detail, while A shows a flat high-altitude overhead view without 3D building relief."
+    }
+  },
+  "summary": {
+    "iteration_002_wins": 3,
+    "baseline_wins": 1,
+    "ties": 4,
+    "recommendation": "KEEP"
+  }
+}
