@@ -1,0 +1,20 @@
+# Save as: .github/ISSUE_TEMPLATE/config.yml
+#
+# This file controls the issue chooser. It is NOT itself a template.
+# It can disable blank issues and add external links above the template list.
+# Docs: https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+
+# Set to false to require contributors to pick one of the templates.
+# Set to true to keep "Open a blank issue" as an option below the templates.
+blank_issues_enabled: true
+
+contact_links:
+  - name: CesiumJS forum
+    url: https://community.cesium.com/
+    about: Questions about CesiumJS itself (not this skills plugin) belong on the official forum.
+  - name: Claude Code documentation
+    url: https://docs.claude.com/en/docs/claude-code/overview
+    about: Questions about Claude Code, plugins, or the Skill API belong with Anthropic's docs.
+  - name: Eval and optimization branch
+    url: https://github.com/CesiumGS/cesiumjs-skills/tree/eval-and-optimization
+    about: Browse the eval suite, methodology, scoring history, and curated screenshot gallery.
