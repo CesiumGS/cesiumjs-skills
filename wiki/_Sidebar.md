@@ -1,11 +1,8 @@
 # CesiumJS Skills Wiki
 
-> Work in progress. For current statuses, see [[Status Dashboard|Status-Dashboard]].
-
 ## Overview
 
 * [[Home|Home]]
-* [[Status Dashboard|Status-Dashboard]]
 
 ## Architecture
 

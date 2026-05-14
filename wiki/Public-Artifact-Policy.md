@@ -5,7 +5,7 @@ The evaluation framework is public-facing. Artifacts committed to the repository
 ## Allowed by Default
 
 - Scenario manifests under `evals/scenarios/`.
-- Sanitized status summaries under `evals/results/`.
+- Sanitized evaluation summaries under `evals/results/`.
 - Architecture docs and ADRs.
 - Public wiki pages.
 - Programmatic check summaries that use relative paths and no credentials.

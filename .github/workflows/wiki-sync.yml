@@ -47,21 +47,16 @@ jobs:
             cp -r .assets/* /tmp/asset-content/
           fi
 
-      - name: Update footer and status dashboard in temp wiki content
-        env:
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
+      - name: Update footer in temp wiki content
         run: |
           set -euo pipefail
           FOOTER_DATE=$(date -u '+%B %-d, %Y')
-          TABLE_DATE=$(date -u '+%-m/%-d/%y')
 
           TMP_CONTENT=/tmp/wiki-content
           FOOTER_PATH="$TMP_CONTENT/_Footer.md"
-          STATUS_DASHBOARD_PATH="$TMP_CONTENT/Status-Dashboard.md"
 
           if [ ! -d "$TMP_CONTENT" ]; then
-            echo "No wiki content copied to $TMP_CONTENT; skipping dashboard/footer update"
+            echo "No wiki content copied to $TMP_CONTENT; skipping footer update"
             exit 0
           fi
 
@@ -82,39 +77,6 @@ jobs:
               echo ""
               echo "*Last updated: $FOOTER_DATE - This content is automatically synchronized from the source repository*"
             } > "$FOOTER_PATH"
-          fi
-
-          CHANGED_FILES=""
-          if [ -z "${BEFORE//0}" ]; then
-            CHANGED_FILES=$(git ls-files wiki | tr '\n' ' ')
-          else
-            CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER" -- wiki/ || true)
-          fi
-
-          if [ -f "$STATUS_DASHBOARD_PATH" ] && [ -n "$CHANGED_FILES" ]; then
-            echo "Changed wiki files: $CHANGED_FILES"
-            for f in $CHANGED_FILES; do
-              case "$f" in
-                *.md)
-                  base=$(basename "$f" .md)
-                  if [ "$base" = "_Footer" ] || [ "$base" = "Home" ] || [ "$base" = "Status-Dashboard" ]; then
-                    continue
-                  fi
-                  tmpfile=$(mktemp)
-                  awk -v filelink="$base" -v dateval="$TABLE_DATE" '{
-                    if (index($0, "]("filelink")")!=0) {
-                      n=split($0, parts, "|");
-                      if (n>=2) {
-                        parts[n-1] = " " dateval " ";
-                        out = parts[1];
-                        for(i=2;i<=n;i++) out = out "|" parts[i];
-                        print out;
-                      } else print $0;
-                    } else print $0;
-                  }' "$STATUS_DASHBOARD_PATH" > "$tmpfile" && mv "$tmpfile" "$STATUS_DASHBOARD_PATH"
-                ;;
-              esac
-            done
           fi
 
       - name: Clone wiki repository

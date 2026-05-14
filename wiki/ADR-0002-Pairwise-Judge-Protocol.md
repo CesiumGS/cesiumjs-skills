@@ -1,9 +1,5 @@
 # ADR-0002: Use Pairwise Judge Protocol
 
-## Status
-
-Accepted
-
 ## Context
 
 CesiumJS correctness is often visual. A scene can execute without console errors and still be wrong because the camera is poorly framed, terrain is missing, imagery is incorrect, or an expected object is not visible.

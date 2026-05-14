@@ -1,7 +1,5 @@
 # Home
 
-> For a document status overview, see the [Status Dashboard](Status-Dashboard).
-
 The CesiumJS Skills wiki is generated from source-controlled Markdown in the `wiki/` directory of the `CesiumGS/cesiumjs-skills` repository. Changes should be proposed through pull requests to the source repository rather than edited directly in the GitHub wiki.
 
 ## What This Wiki Covers
@@ -13,13 +11,12 @@ The framework starts with `CesiumGS/cesiumjs-skills`, where skill documents guid
 ## Start Here
 
 1. [Architecture Concept Document](Architecture-Concept-Document) - Goals, constraints, building blocks, runtime views, decisions, risks, and glossary.
-2. [Status Dashboard](Status-Dashboard) - Current status of the wiki pages.
-3. [Run Skill Evaluations Locally](Run-Skill-Evaluations-Locally) - How to validate manifests and reproduce selected browser scenarios.
-4. [Add an Evaluation Scenario](Add-Evaluation-Scenario) - How to add public-safe scenario manifests.
-5. [Public Artifact Policy](Public-Artifact-Policy) - Which eval artifacts can be committed publicly.
-6. [ADR-0001: Skills-First Sequencing](ADR-0001-Skills-First-Sequencing) - Why the initial implementation starts in `cesiumjs-skills`.
-7. [ADR-0002: Pairwise Judge Protocol](ADR-0002-Pairwise-Judge-Protocol) - Why visual evaluation uses A/B/TIE comparison with three independent judges.
-8. [ADR-0003: Deterministic Decision Policy](ADR-0003-Deterministic-Decision-Policy) - How gates, verdicts, and report scores are separated.
+2. [Run Skill Evaluations Locally](Run-Skill-Evaluations-Locally) - How to validate manifests and reproduce selected browser scenarios.
+3. [Add an Evaluation Scenario](Add-Evaluation-Scenario) - How to add public-safe scenario manifests.
+4. [Public Artifact Policy](Public-Artifact-Policy) - Which eval artifacts can be committed publicly.
+5. [ADR-0001: Skills-First Sequencing](ADR-0001-Skills-First-Sequencing) - Why the initial implementation starts in `cesiumjs-skills`.
+6. [ADR-0002: Pairwise Judge Protocol](ADR-0002-Pairwise-Judge-Protocol) - Why visual evaluation uses A/B/TIE comparison with three independent judges.
+7. [ADR-0003: Deterministic Decision Policy](ADR-0003-Deterministic-Decision-Policy) - How gates, verdicts, and report scores are separated.
 
 ## Architecture Overview
 

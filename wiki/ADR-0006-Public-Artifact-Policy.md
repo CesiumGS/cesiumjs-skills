@@ -1,9 +1,5 @@
 # ADR-0006: Commit Public-Safe Evidence Only
 
-## Status
-
-Accepted
-
 ## Context
 
 Evaluation traces can include generated HTML, access tokens, local paths, prompts, console output, screenshots, and model metadata. Some of these artifacts are useful for debugging but unsafe to commit publicly without review.

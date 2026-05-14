@@ -1,9 +1,5 @@
 # ADR-0004: Use Browser-Backed Visual Evaluation
 
-## Status
-
-Accepted
-
 ## Context
 
 Many CesiumJS failures cannot be detected from generated code alone. Examples include wrong camera distance, reversed longitude sign, missing terrain, invisible imagery, flat city scenes where 3D buildings were expected, or asynchronous loading that never completes.

@@ -1,9 +1,5 @@
 # ADR-0001: Use Skills-First Sequencing
 
-## Status
-
-Accepted
-
 ## Context
 
 The long-term goal is a reusable Cesium AI evaluation framework that can evaluate skills, documentation, examples, MCP tools, and Cesium ion workflows. The near-term implementation evidence exists in `CesiumGS/cesiumjs-skills`, where skill documents already have representative scenarios, browser execution helpers, and iteration history.

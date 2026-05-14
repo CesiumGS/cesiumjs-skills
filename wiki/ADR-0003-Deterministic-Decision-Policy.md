@@ -1,9 +1,5 @@
 # ADR-0003: Separate Deterministic Decision Policy From Report Scores
 
-## Status
-
-Accepted
-
 ## Context
 
 Evaluation systems often mix LLM judgment, programmatic checks, and numeric aggregate scores. That can make decisions hard to audit. For Cesium AI evaluation, maintainers need to know whether a candidate was kept because it passed critical correctness gates, won visual comparisons, or merely improved a weighted average.

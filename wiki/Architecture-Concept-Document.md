@@ -1,6 +1,5 @@
 # Cesium AI Evaluation Framework Architecture Concept Document
 
-> Status: Draft for public review
 > Audience: CesiumGS maintainers, contributors, tool authors, and developers interested in AI-assisted Cesium workflows
 > Public-safety note: This document must not include private tokens, private customer data, confidential planning links, or internal-only procedures.
 
