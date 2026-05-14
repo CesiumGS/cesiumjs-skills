@@ -127,75 +127,40 @@ The framework sits between changes to Cesium guidance or tooling and decisions a
 
 ```mermaid
 flowchart LR
-    subgraph Inputs["Versioned Inputs"]
-        direction TB
-        Scenario["Scenario manifest<br/>prompt, expectations, checks"]
-        Candidate["Candidate context<br/>skill, prompt, model, tool config"]
-        Baseline["Baseline context<br/>current best or release target"]
-    end
+    Scenario["Scenario manifest<br/>prompt, expectations, checks"]
+    Candidate["Candidate context<br/>skill, prompt, model, tool config"]
+    Baseline["Baseline context<br/>current best or release target"]
+    Adapter["Agent or tool adapter"]
+    Runner["Evaluation runner"]
+    Environment["Browser-backed<br/>Cesium environment"]
+    Evidence["Evidence bundle<br/>metadata, logs, scene state, screenshots"]
+    Checks["Deterministic checks<br/>schema, API, runtime gates"]
+    Judges["Pairwise judges<br/>BASELINE / CANDIDATE / TIE"]
+    Decision["Decision engine<br/>keep, discard, or review"]
+    Report["Report and history"]
+    Summary["Public-safe summary<br/>sanitized results and curated artifacts"]
+    Analysis["Regression analysis<br/>coverage gaps, failure patterns"]
+    Proposal["Candidate update<br/>skill, docs, examples, tools"]
+    Review["Maintainer review<br/>accept, revise, or reject"]
 
-    subgraph Execution["Controlled Execution"]
-        direction TB
-        Adapter["Agent or tool adapter"]
-        Runner["Evaluation runner"]
-        Environment["Browser-backed<br/>Cesium environment"]
-    end
-
-    subgraph Evidence["Captured Evidence"]
-        direction TB
-        Runtime["Runtime metadata"]
-        Console["Console and page errors"]
-        Scene["Scene state"]
-        Screenshots["Screenshots"]
-    end
-
-    subgraph Evaluation["Evaluation Policy"]
-        direction TB
-        Checks["Deterministic checks<br/>schema, API, runtime gates"]
-        Judges["Pairwise judges<br/>BASELINE / CANDIDATE / TIE"]
-        Decision["Decision engine<br/>keep, discard, or review"]
-    end
-
-    subgraph Outputs["Public-Safe Outputs"]
-        direction TB
-        Report["Report and history"]
-        Summaries["Sanitized summaries"]
-        Artifacts["Curated artifacts"]
-    end
-
-    subgraph Iteration["Improvement Loop"]
-        direction TB
-        Analysis["Regression analysis<br/>coverage gaps, failure patterns"]
-        Proposal["Candidate update<br/>skill, docs, examples, tools"]
-        Review["Maintainer review<br/>accept, revise, or reject"]
-    end
-
-    Scenario --> Runner
-    Candidate --> Adapter
-    Baseline --> Adapter
-    Adapter --> Runner
-    Runner --> Environment
-    Environment --> Runtime
-    Environment --> Console
-    Environment --> Scene
-    Environment --> Screenshots
-    Runtime --> Checks
-    Console --> Checks
-    Scene --> Checks
-    Screenshots --> Judges
-    Scene --> Judges
-    Checks --> Decision
-    Judges --> Decision
-    Decision --> Report
-    Report --> Summaries
-    Report --> Artifacts
-    Report --> Analysis
-    Summaries --> Analysis
-    Artifacts --> Analysis
-    Analysis --> Proposal
-    Proposal --> Review
-    Review --> Candidate
-    Review --> Scenario
+    Scenario -->|defines task| Runner
+    Candidate -->|candidate under test| Adapter
+    Baseline -->|comparison target| Adapter
+    Adapter -->|generates output| Runner
+    Runner -->|executes in| Environment
+    Environment -->|captures| Evidence
+    Evidence -->|programmatic facts| Checks
+    Evidence -->|visual and qualitative evidence| Judges
+    Checks -->|gates| Decision
+    Judges -->|majority verdict| Decision
+    Decision -->|records outcome| Report
+    Report -->|publishes| Summary
+    Report -.->|drives next iteration| Analysis
+    Summary -.->|informs maintainers| Analysis
+    Analysis -.-> Proposal
+    Proposal -.-> Review
+    Review -.->|updates context| Candidate
+    Review -.->|adds or refines coverage| Scenario
 
     classDef input fill:#e8f3ff,stroke:#2563eb,color:#0f172a
     classDef execute fill:#ecfdf3,stroke:#16a34a,color:#0f172a
@@ -205,9 +170,9 @@ flowchart LR
     classDef iterate fill:#fff1f2,stroke:#e11d48,color:#0f172a
     class Scenario,Candidate,Baseline input
     class Adapter,Runner,Environment execute
-    class Runtime,Console,Scene,Screenshots evidence
+    class Evidence evidence
     class Checks,Judges,Decision policy
-    class Report,Summaries,Artifacts output
+    class Report,Summary output
     class Analysis,Proposal,Review iterate
 ```
 
