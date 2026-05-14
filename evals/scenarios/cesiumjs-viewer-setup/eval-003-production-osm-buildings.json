@@ -59,14 +59,15 @@
     {
       "timing": "after_load",
       "delay_ms": 5000,
-      "description": "Initial load — globe and terrain should be visible"
+      "description": "Initial load \u2014 globe and terrain should be visible"
     },
     {
       "timing": "after_animation",
       "delay_ms": 10000,
-      "description": "After flyTo completes — NYC buildings and terrain should be fully rendered"
+      "description": "After flyTo completes \u2014 NYC buildings and terrain should be fully rendered"
     }
   ],
   "regression_critical": true,
-  "notes": "This is the 'hero' scenario — the most common real-world setup. Common failures: (1) forgetting 'await' on createOsmBuildingsAsync, (2) wrong coordinate sign for NYC longitude, (3) camera altitude too high (100km) or too low (10m), (4) not importing createOsmBuildingsAsync."
+  "notes": "This is the 'hero' scenario \u2014 the most common real-world setup. Common failures: (1) forgetting 'await' on createOsmBuildingsAsync, (2) wrong coordinate sign for NYC longitude, (3) camera altitude too high (100km) or too low (10m), (4) not importing createOsmBuildingsAsync.",
+  "runner_mode": "review-only"
 }

@@ -22,6 +22,7 @@ Each scenario must include:
 - `programmatic_checks` - Deterministic checks such as `no_console_errors`, `code_runs`, `pattern_present`, or `pattern_absent`.
 - `screenshots` - Capture timing and description.
 - `regression_critical` - Whether losing this scenario blocks a candidate.
+- `runner_mode` - Optional. Use `global-js` for scenarios runnable by `scripts/run-public-eval.py`; use `review-only` for public catalog scenarios that need a future adapter.
 
 The human-readable schema is in `evals/schemas/scenario.schema.json`.
 

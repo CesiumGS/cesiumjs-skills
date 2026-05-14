@@ -15,7 +15,11 @@ SCANNED_ROOTS = [
     "evals",
     "README.md",
     ".github/workflows",
+    "scripts",
 ]
+SKIP_FILES = {
+    "scripts/check-public-artifacts.py",
+}
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 PATTERNS = {
     "gist URL": re.compile(r"https?://gist\.github\.com/", re.I),
@@ -51,6 +55,8 @@ def main() -> None:
         except UnicodeDecodeError:
             continue
         rel = path.relative_to(REPO_ROOT)
+        if str(rel) in SKIP_FILES:
+            continue
         for line_number, line in enumerate(text.splitlines(), 1):
             for label, pattern in PATTERNS.items():
                 if pattern.search(line):

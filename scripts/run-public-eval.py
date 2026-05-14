@@ -123,8 +123,10 @@ def find_code_path(generated_dir: Path, scenario: dict[str, Any]) -> Path:
     slug = generated_dir / f"{scenario_slug(scenario)}.js"
     if slug.exists():
         return slug
+    exact_display = exact.relative_to(REPO_ROOT)
+    slug_display = slug.relative_to(REPO_ROOT)
     raise FileNotFoundError(
-        f"Missing generated code for {scenario['id']}. Expected {exact} or {slug}"
+        f"Missing generated code for {scenario['id']}. Expected {exact_display} or {slug_display}"
     )
 
 
@@ -232,7 +234,13 @@ def load_runs(args: argparse.Namespace) -> list[ScenarioRun]:
         scenario = load_json(scenario_path)
         if only and scenario["id"] not in only:
             continue
-        code_path = find_code_path(generated_dir, scenario)
+        if scenario.get("runner_mode", "global-js") == "review-only":
+            print(f"[run-public-eval] skipping review-only scenario {scenario['id']}")
+            continue
+        try:
+            code_path = find_code_path(generated_dir, scenario)
+        except FileNotFoundError as exc:
+            raise SystemExit(str(exc)) from exc
         runs.append(
             ScenarioRun(
                 scenario=scenario,
@@ -245,6 +253,9 @@ def load_runs(args: argparse.Namespace) -> list[ScenarioRun]:
 
 def main() -> None:
     args = parse_args()
+    runs = load_runs(args)
+    if not runs:
+        raise SystemExit("No runnable scenarios selected")
 
     if sync_playwright is None:
         print(
@@ -260,10 +271,6 @@ def main() -> None:
     ion_token = os.environ.get("CESIUM_ION_TOKEN")
     if not ion_token:
         raise SystemExit("Set CESIUM_ION_TOKEN before running browser evals")
-
-    runs = load_runs(args)
-    if not runs:
-        raise SystemExit("No scenarios selected")
 
     with LocalHTTPServer(REPO_ROOT) as server:
         with sync_playwright() as playwright:

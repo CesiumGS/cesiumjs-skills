@@ -2,17 +2,17 @@
   "id": "eval-004",
   "name": "google-photorealistic-3d-tiles",
   "difficulty": "hard",
-  "description": "Set up Google Photorealistic 3D Tiles. This is a TRAP scenario — there are specific, non-obvious requirements (Google geocoder, onlyUsingWithGoogleGeocoder flag) that the skill must communicate clearly. Without these, the code will either error or violate Google's terms of service.",
+  "description": "Set up Google Photorealistic 3D Tiles. This is a TRAP scenario \u2014 there are specific, non-obvious requirements (Google geocoder, onlyUsingWithGoogleGeocoder flag) that the skill must communicate clearly. Without these, the code will either error or violate Google's terms of service.",
   "prompt": "I want to use Google's Photorealistic 3D Tiles in my CesiumJS app to show realistic building and terrain imagery. Set it up properly so I can view San Francisco.",
   "expected_behaviors": [
     "Sets GoogleMaps.defaultApiKey OR uses the tiles via Ion (without key)",
-    "Creates the Viewer with geocoder set to IonGeocodeProviderType.GOOGLE — this is REQUIRED when using Google 3D Tiles",
+    "Creates the Viewer with geocoder set to IonGeocodeProviderType.GOOGLE \u2014 this is REQUIRED when using Google 3D Tiles",
     "Calls createGooglePhotorealistic3DTileset()",
     "Passes onlyUsingWithGoogleGeocoder: true to the factory helper",
     "Adds the tileset to scene.primitives",
     "Positions camera over San Francisco"
   ],
-  "visual_expectations": "Photorealistic 3D buildings and terrain of San Francisco. Unlike OSM buildings (blocky extrusions), Google 3D Tiles show actual photogrammetry — textured, realistic building facades, trees, roads. The Golden Gate Bridge or downtown SF skyline should be recognizable if camera is positioned correctly.",
+  "visual_expectations": "Photorealistic 3D buildings and terrain of San Francisco. Unlike OSM buildings (blocky extrusions), Google 3D Tiles show actual photogrammetry \u2014 textured, realistic building facades, trees, roads. The Golden Gate Bridge or downtown SF skyline should be recognizable if camera is positioned correctly.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -47,9 +47,10 @@
     {
       "timing": "after_animation",
       "delay_ms": 12000,
-      "description": "After camera arrives at SF — photorealistic tiles should be streaming in"
+      "description": "After camera arrives at SF \u2014 photorealistic tiles should be streaming in"
     }
   ],
   "regression_critical": false,
-  "notes": "This is the hardest eval for this skill. The Google geocoder requirement and onlyUsingWithGoogleGeocoder flag are non-obvious — they exist for legal/ToS reasons, not technical ones. The skill must communicate these clearly enough that the LLM doesn't skip them. Common failure: omitting the geocoder option entirely, which produces a working app that violates Google ToS."
+  "notes": "This is the hardest eval for this skill. The Google geocoder requirement and onlyUsingWithGoogleGeocoder flag are non-obvious \u2014 they exist for legal/ToS reasons, not technical ones. The skill must communicate these clearly enough that the LLM doesn't skip them. Common failure: omitting the geocoder option entirely, which produces a working app that violates Google ToS.",
+  "runner_mode": "review-only"
 }

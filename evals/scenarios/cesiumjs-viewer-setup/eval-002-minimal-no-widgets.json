@@ -3,10 +3,10 @@
   "name": "minimal-viewer-no-widgets",
   "difficulty": "medium",
   "description": "Create a clean, widget-free viewer. Tests whether the skill correctly communicates ALL the widget toggles that need to be disabled and any dependencies between options (e.g., baseLayerPicker must be false to use a custom baseLayer).",
-  "prompt": "I need a completely clean CesiumJS globe with no UI widgets at all — no timeline, no animation controls, no home button, no search bar, nothing. Just a bare 3D globe with terrain that fills the viewport. I want the cleanest possible view for embedding in a dashboard.",
+  "prompt": "I need a completely clean CesiumJS globe with no UI widgets at all \u2014 no timeline, no animation controls, no home button, no search bar, nothing. Just a bare 3D globe with terrain that fills the viewport. I want the cleanest possible view for embedding in a dashboard.",
   "expected_behaviors": [
     "Disables ALL widget options: animation, baseLayerPicker, fullscreenButton, geocoder, homeButton, infoBox, sceneModePicker, selectionIndicator, timeline, navigationHelpButton",
-    "Does NOT disable 'projectionPicker' or 'vrButton' (they are already false by default — setting them explicitly is harmless but unnecessary)",
+    "Does NOT disable 'projectionPicker' or 'vrButton' (they are already false by default \u2014 setting them explicitly is harmless but unnecessary)",
     "Still sets Ion token and terrain",
     "Container div fills viewport"
   ],
@@ -64,5 +64,6 @@
     }
   ],
   "regression_critical": true,
-  "notes": "Common failure: forgetting one or two widget options (selectionIndicator, navigationHelpButton are often missed). Also tests whether the LLM understands that baseLayerPicker must be false if using a custom baseLayer."
+  "notes": "Common failure: forgetting one or two widget options (selectionIndicator, navigationHelpButton are often missed). Also tests whether the LLM understands that baseLayerPicker must be false if using a custom baseLayer.",
+  "runner_mode": "review-only"
 }

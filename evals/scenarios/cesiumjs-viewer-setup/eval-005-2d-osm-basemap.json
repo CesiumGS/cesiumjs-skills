@@ -2,7 +2,7 @@
   "id": "eval-005",
   "name": "2d-map-with-osm-basemap",
   "difficulty": "medium",
-  "description": "Create a 2D map view with a custom OpenStreetMap base layer. Tests scene mode configuration AND the dependency between baseLayer and baseLayerPicker — you must disable baseLayerPicker when providing a custom baseLayer.",
+  "description": "Create a 2D map view with a custom OpenStreetMap base layer. Tests scene mode configuration AND the dependency between baseLayer and baseLayerPicker \u2014 you must disable baseLayerPicker when providing a custom baseLayer.",
   "prompt": "Create a CesiumJS application that shows a flat 2D map (not a 3D globe) using OpenStreetMap tiles as the base layer. I don't need the base layer picker widget.",
   "expected_behaviors": [
     "Sets sceneMode to SceneMode.SCENE2D",
@@ -11,7 +11,7 @@
     "Uses the correct OSM tile URL",
     "Imports SceneMode and OpenStreetMapImageryProvider"
   ],
-  "visual_expectations": "A flat, top-down 2D map showing OpenStreetMap tiles — the characteristic OSM cartographic style with road labels, building outlines, and pastel colors. No 3D globe curvature. The view should be zoomable and pannable as a flat map.",
+  "visual_expectations": "A flat, top-down 2D map showing OpenStreetMap tiles \u2014 the characteristic OSM cartographic style with road labels, building outlines, and pastel colors. No 3D globe curvature. The view should be zoomable and pannable as a flat map.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -50,5 +50,6 @@
     }
   ],
   "regression_critical": false,
-  "notes": "The baseLayerPicker/baseLayer dependency is a common source of runtime errors. If baseLayerPicker is true (default) and a custom baseLayer is provided, CesiumJS throws. The skill must make this dependency clear."
+  "notes": "The baseLayerPicker/baseLayer dependency is a common source of runtime errors. If baseLayerPicker is true (default) and a custom baseLayer is provided, CesiumJS throws. The skill must make this dependency clear.",
+  "runner_mode": "review-only"
 }

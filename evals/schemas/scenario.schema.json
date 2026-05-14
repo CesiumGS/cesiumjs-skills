@@ -73,6 +73,11 @@
     },
     "regression_critical": {
       "type": "boolean"
+    },
+    "runner_mode": {
+      "type": "string",
+      "enum": [ "global-js", "review-only" ],
+      "description": "global-js scenarios can run in scripts/run-public-eval.py. review-only scenarios are catalog/coverage scenarios until a compatible execution adapter exists."
     }
   }
 }

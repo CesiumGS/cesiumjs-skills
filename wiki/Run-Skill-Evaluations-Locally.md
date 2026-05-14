@@ -33,6 +33,8 @@ evals/generated/cesiumjs-camera/candidate/eval-001.js
 
 The generated file should contain only the JavaScript body. The runner provides the page, CesiumJS CDN script, `cesiumContainer`, and token assignment.
 
+Scenarios marked `runner_mode: "review-only"` are skipped by the local runner. They remain part of the public scenario catalog, but need a compatible execution adapter before browser automation can run them directly.
+
 ## Run a Scenario
 
 Install Playwright locally, set a Cesium ion token, and run the public runner:

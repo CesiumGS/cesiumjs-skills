@@ -2,8 +2,8 @@
   "id": "eval-007",
   "name": "low-power-dashboard-render-mode",
   "difficulty": "hard",
-  "description": "Create a performance-optimized viewer for embedding in a dashboard. Tests the skill's performance tips section — specifically requestRenderMode, scene3DOnly, widget reduction, and the critical detail that requestRender() must be called after programmatic changes.",
-  "prompt": "I'm embedding a CesiumJS globe in a monitoring dashboard that shows mostly static data. It'll be running on a tablet with limited battery. Optimize the viewer for minimum power consumption — the globe will only update when new data arrives, not continuously. I want terrain but no unnecessary widgets. Also add a single point entity for our headquarters at coordinates 37.7749 N, 122.4194 W to verify the setup works.",
+  "description": "Create a performance-optimized viewer for embedding in a dashboard. Tests the skill's performance tips section \u2014 specifically requestRenderMode, scene3DOnly, widget reduction, and the critical detail that requestRender() must be called after programmatic changes.",
+  "prompt": "I'm embedding a CesiumJS globe in a monitoring dashboard that shows mostly static data. It'll be running on a tablet with limited battery. Optimize the viewer for minimum power consumption \u2014 the globe will only update when new data arrives, not continuously. I want terrain but no unnecessary widgets. Also add a single point entity for our headquarters at coordinates 37.7749 N, 122.4194 W to verify the setup works.",
   "expected_behaviors": [
     "Enables requestRenderMode: true (key performance optimization)",
     "Sets maximumRenderTimeChange: Infinity (only render on explicit request)",
@@ -58,5 +58,6 @@
     }
   ],
   "regression_critical": false,
-  "notes": "This eval tests the intersection of the viewer-setup skill with the entity skill. The viewer-setup skill should provide enough context for the LLM to correctly set up requestRenderMode, but entity creation technically belongs to cesiumjs-entities. A good viewer-setup skill helps the LLM get the rendering mode right even when combining domains. Common failure: enabling requestRenderMode but not understanding that entities auto-trigger renders (so requestRender() is optional with the Entity API)."
+  "notes": "This eval tests the intersection of the viewer-setup skill with the entity skill. The viewer-setup skill should provide enough context for the LLM to correctly set up requestRenderMode, but entity creation technically belongs to cesiumjs-entities. A good viewer-setup skill helps the LLM get the rendering mode right even when combining domains. Common failure: enabling requestRenderMode but not understanding that entities auto-trigger renders (so requestRender() is optional with the Entity API).",
+  "runner_mode": "review-only"
 }

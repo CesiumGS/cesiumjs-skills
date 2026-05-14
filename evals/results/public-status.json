@@ -18,6 +18,9 @@
         "tally": null,
         "critical_regressions": [],
         "rationale_summary": "Iteration 001 aggregate (0.9456) is marginally lower than baseline (0.9469). No critical regressions detected \u2014 the differences are within visual judge noise (0.9925 vs 1.0 on evals 001/002). The proposer's changes (callouts, dependency traps, cascading options) are specifically targeted at evals 004-007 which were NOT evaluated in this tracer bullet. The changes are likely beneficial for the full eval set but show no measurable improvement on evals 001-003."
+      },
+      "runner_mode_counts": {
+        "review-only": 7
       }
     },
     {
@@ -43,6 +46,9 @@
         },
         "critical_regressions": [],
         "rationale_summary": "Iteration 003 wins 3 evals by majority vote (2 unanimously), loses 0, ties 11. No regressions on any eval. The 3 wins are substantial visual improvements: (1) eval-001 ground-level now shows OSM buildings instead of blank sky, (2) eval-005 NYC skyline shows dramatic 3D cityscape instead of flat grid, (3) eval-011 chained flyTo successfully completes both stops. The 11 ties confirm no regressions on existing well-performing evals."
+      },
+      "runner_mode_counts": {
+        "global-js": 14
       }
     },
     {
@@ -71,6 +77,9 @@
           }
         ],
         "rationale_summary": "REGRESSION on eval-002 (polygon extrusion). Despite winning 2 evals (001, 005) and tying 2 (003, 004), iteration 001 LOST on eval-002 which is marked regression_critical. The baseline shows a correct 3D extruded column over Colorado; iteration 001 renders only a flat 2D polygon \u2014 the extrusion was lost. The proposer's changes to height/clampToGround guidance likely caused the code generator to use height:0 without extrudedHeight being rendered properly (possibly a camera angle issue or the outline-fix guidance interfered with the extrusion pattern). Per regression policy: any critical regression = DISCARD."
+      },
+      "runner_mode_counts": {
+        "global-js": 5
       }
     },
     {
@@ -93,6 +102,9 @@
         "tally": null,
         "critical_regressions": [],
         "rationale_summary": "Iteration 003 wins all 4 judged evals against current best (iter-001). Unanimous wins on eval-002 (Paris) and eval-009 (DC) \u2014 the navigationHelpButton fix eliminated the tooltip that caused iter-001's eval-002 regression. Eval-003 and eval-010 won by majority (1 win + 2 ties each). Zero regressions. Zero critical eval losses. The only change from iter-001 was adding navigationHelpButton: false and navigationInstructionsInitiallyVisible: false \u2014 a minimal, targeted fix that resolved a known issue without introducing new risk."
+      },
+      "runner_mode_counts": {
+        "global-js": 15
       }
     }
   ]

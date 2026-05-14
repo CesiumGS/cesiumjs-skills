@@ -51,5 +51,6 @@
     }
   ],
   "regression_critical": true,
-  "notes": "This is the baseline sanity check. If the skill can't produce a working globe, nothing else matters."
+  "notes": "This is the baseline sanity check. If the skill can't produce a working globe, nothing else matters.",
+  "runner_mode": "review-only"
 }

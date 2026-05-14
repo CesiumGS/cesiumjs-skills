@@ -104,6 +104,8 @@ def validate_scenario(path: Path) -> tuple[str, str]:
             fail(f"{path}: screenshots[{index}].delay_ms must be a non-negative integer")
     if not isinstance(data["regression_critical"], bool):
         fail(f"{path}: regression_critical must be boolean")
+    if data.get("runner_mode", "global-js") not in {"global-js", "review-only"}:
+        fail(f"{path}: runner_mode must be global-js or review-only")
 
     return path.parent.name, data["id"]
 
@@ -128,6 +130,14 @@ def validate_results(skill_counts: dict[str, int]) -> None:
                 f"{RESULTS_PATH}: {skill} scenario_count {entry.get('scenario_count')} "
                 f"does not match {skill_counts[skill]}"
             )
+        runner_mode_counts = entry.get("runner_mode_counts")
+        if not isinstance(runner_mode_counts, dict):
+            fail(f"{RESULTS_PATH}: {skill} runner_mode_counts must be an object")
+        if sum(runner_mode_counts.values()) != skill_counts[skill]:
+            fail(f"{RESULTS_PATH}: {skill} runner_mode_counts do not sum to scenario_count")
+        unknown_modes = set(runner_mode_counts) - {"global-js", "review-only"}
+        if unknown_modes:
+            fail(f"{RESULTS_PATH}: {skill} has unknown runner mode(s): {sorted(unknown_modes)}")
 
 
 def main() -> None:

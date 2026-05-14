@@ -9,6 +9,12 @@ It is intentionally separate from local tuning traces.
 - `results/public-status.json` - Sanitized current-best and decision summary.
 - `schemas/scenario.schema.json` - Human-readable schema for scenario files.
 
+Scenarios default to `runner_mode: "global-js"`, meaning they can run through
+`scripts/run-public-eval.py` with generated JavaScript snippets that use the
+global `Cesium` object. Scenarios marked `runner_mode: "review-only"` are
+public catalog and coverage scenarios until a compatible execution adapter is
+added.
+
 ## Public Artifact Boundary
 
 Committed eval artifacts may include scenario manifests, coverage summaries,

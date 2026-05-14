@@ -1,11 +1,13 @@
 name: Public Eval Checks
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "evals/**"
       - "scripts/validate-evals.py"
       - "scripts/check-public-artifacts.py"
+      - "scripts/run-public-eval.py"
       - ".architecture/**"
       - "wiki/**"
       - ".github/workflows/evals.yml"
@@ -15,6 +17,7 @@ on:
       - "evals/**"
       - "scripts/validate-evals.py"
       - "scripts/check-public-artifacts.py"
+      - "scripts/run-public-eval.py"
       - ".architecture/**"
       - "wiki/**"
       - ".github/workflows/evals.yml"
@@ -26,6 +29,9 @@ jobs:
     steps:
       - name: Check out source repo
         uses: actions/checkout@v4
+
+      - name: Compile Python scripts
+        run: python3 -m py_compile scripts/validate-evals.py scripts/check-public-artifacts.py scripts/run-public-eval.py
 
       - name: Validate public eval manifests
         run: python3 scripts/validate-evals.py

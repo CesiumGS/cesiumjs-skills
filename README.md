@@ -84,6 +84,7 @@ python3 scripts/run-public-eval.py cesiumjs-camera --iteration candidate --only 
 ```
 
 Raw generated code, HTML, screenshots, and run traces under `evals/generated/` and `evals/runs/` are local-only and gitignored by default.
+Scenarios marked `runner_mode: "review-only"` are included in the public catalog but skipped by the browser runner until a compatible adapter exists.
 
 ## Compatibility
 

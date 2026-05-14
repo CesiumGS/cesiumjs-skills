@@ -3,16 +3,16 @@
   "name": "space-scene-no-globe",
   "difficulty": "medium",
   "description": "Create a space scene with no globe or atmosphere. Tests whether the skill correctly communicates the globe:false pattern and its interaction with skyAtmosphere and baseLayerPicker. A subtle scenario because disabling the globe has cascading implications.",
-  "prompt": "I'm building a space visualization that shows satellites orbiting Earth. I need a CesiumJS viewer configured for space — no globe surface, no atmosphere glow, just the black void of space with stars. I'll add the satellite entities later, just set up the viewer properly.",
+  "prompt": "I'm building a space visualization that shows satellites orbiting Earth. I need a CesiumJS viewer configured for space \u2014 no globe surface, no atmosphere glow, just the black void of space with stars. I'll add the satellite entities later, just set up the viewer properly.",
   "expected_behaviors": [
     "Sets globe to false (disables the Earth surface entirely)",
     "Sets skyAtmosphere to false (disables the atmospheric limb glow)",
     "Disables baseLayerPicker (no imagery layers without a globe)",
-    "May optionally keep or disable skyBox (stars) — keeping stars is appropriate for space",
+    "May optionally keep or disable skyBox (stars) \u2014 keeping stars is appropriate for space",
     "Does NOT try to add terrain (no globe means no terrain)",
     "Does NOT disable the skyBox unless asked (stars in space are expected)"
   ],
-  "visual_expectations": "A dark space scene with a star field visible. No Earth surface, no blue atmospheric glow around the limb. The view should be pure space — the camera can look in any direction and see stars. The Cesium default star skybox should be visible.",
+  "visual_expectations": "A dark space scene with a star field visible. No Earth surface, no blue atmospheric glow around the limb. The view should be pure space \u2014 the camera can look in any direction and see stars. The Cesium default star skybox should be visible.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -46,5 +46,6 @@
     }
   ],
   "regression_critical": false,
-  "notes": "Common failure: setting globe:false but forgetting skyAtmosphere:false (leaves a floating blue ring). Also: trying to add terrain when there's no globe, which silently fails or errors."
+  "notes": "Common failure: setting globe:false but forgetting skyAtmosphere:false (leaves a floating blue ring). Also: trying to add terrain when there's no globe, which silently fails or errors.",
+  "runner_mode": "review-only"
 }
