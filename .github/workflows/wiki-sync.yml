@@ -1,0 +1,161 @@
+# This action syncs source-controlled wiki pages from the repository to the GitHub wiki.
+
+name: Publish Wiki from Source
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'wiki/**'
+      - '.assets/**'
+      - '.github/workflows/wiki-sync.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source repo
+        uses: actions/checkout@v4
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Copy wiki directory to temp
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/wiki-content
+          mkdir -p /tmp/wiki-content
+          cp -r wiki/* /tmp/wiki-content/
+
+      - name: Copy asset directory to temp
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/asset-content
+          mkdir -p /tmp/asset-content
+          if [ -d .assets ] && find .assets -mindepth 1 -print -quit | grep -q .; then
+            cp -r .assets/* /tmp/asset-content/
+          fi
+
+      - name: Update footer and status dashboard in temp wiki content
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          FOOTER_DATE=$(date -u '+%B %-d, %Y')
+          TABLE_DATE=$(date -u '+%-m/%-d/%y')
+
+          TMP_CONTENT=/tmp/wiki-content
+          FOOTER_PATH="$TMP_CONTENT/_Footer.md"
+          STATUS_DASHBOARD_PATH="$TMP_CONTENT/Status-Dashboard.md"
+
+          if [ ! -d "$TMP_CONTENT" ]; then
+            echo "No wiki content copied to $TMP_CONTENT; skipping dashboard/footer update"
+            exit 0
+          fi
+
+          if [ -f "$FOOTER_PATH" ]; then
+            if grep -q "Last updated:" "$FOOTER_PATH"; then
+              sed -E -i "s/.*Last updated:.*$/*Last updated: $FOOTER_DATE - This content is automatically synchronized from the source repository*/" "$FOOTER_PATH"
+            else
+              echo "" >> "$FOOTER_PATH"
+              echo "*Last updated: $FOOTER_DATE - This content is automatically synchronized from the source repository*" >> "$FOOTER_PATH"
+            fi
+          else
+            {
+              echo "---"
+              echo ""
+              echo "This wiki is generated from source-controlled Markdown in the CesiumGS/cesiumjs-skills repository. Do not edit generated wiki pages directly."
+              echo ""
+              echo "---"
+              echo ""
+              echo "*Last updated: $FOOTER_DATE - This content is automatically synchronized from the source repository*"
+            } > "$FOOTER_PATH"
+          fi
+
+          CHANGED_FILES=""
+          if [ -z "${BEFORE//0}" ]; then
+            CHANGED_FILES=$(git ls-files wiki | tr '\n' ' ')
+          else
+            CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER" -- wiki/ || true)
+          fi
+
+          if [ -f "$STATUS_DASHBOARD_PATH" ] && [ -n "$CHANGED_FILES" ]; then
+            echo "Changed wiki files: $CHANGED_FILES"
+            for f in $CHANGED_FILES; do
+              case "$f" in
+                *.md)
+                  base=$(basename "$f" .md)
+                  if [ "$base" = "_Footer" ] || [ "$base" = "Home" ] || [ "$base" = "Status-Dashboard" ]; then
+                    continue
+                  fi
+                  tmpfile=$(mktemp)
+                  awk -v filelink="$base" -v dateval="$TABLE_DATE" '{
+                    if (index($0, "]("filelink")")!=0) {
+                      n=split($0, parts, "|");
+                      if (n>=2) {
+                        parts[n-1] = " " dateval " ";
+                        out = parts[1];
+                        for(i=2;i<=n;i++) out = out "|" parts[i];
+                        print out;
+                      } else print $0;
+                    } else print $0;
+                  }' "$STATUS_DASHBOARD_PATH" > "$tmpfile" && mv "$tmpfile" "$STATUS_DASHBOARD_PATH"
+                ;;
+              esac
+            done
+          fi
+
+      - name: Clone wiki repository
+        run: |
+          set -euo pipefail
+          WIKI_REMOTE="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git"
+          if ! git clone "$WIKI_REMOTE" /tmp/wiki; then
+            mkdir -p /tmp/wiki
+            cd /tmp/wiki
+            git init
+            git remote add origin "$WIKI_REMOTE"
+          fi
+
+      - name: Replace wiki contents
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/wiki/*
+          cp -r /tmp/wiki-content/* /tmp/wiki/
+          if [ -d /tmp/asset-content ] && find /tmp/asset-content -mindepth 1 -print -quit | grep -q .; then
+            mkdir -p /tmp/wiki/.assets
+            cp -r /tmp/asset-content/* /tmp/wiki/.assets/
+          fi
+
+      - name: Fix asset paths for wiki compatibility
+        run: |
+          cd /tmp/wiki
+          find . -name "*.md" -type f -exec sed -i 's|/\.assets/|.assets/|g' {} +
+
+      - name: Add edit disclaimer and remove duplicate H1 titles
+        run: |
+          cd /tmp/wiki
+          find . -name "*.md" -type f -exec sed -i '1s/^/<!-- DO NOT EDIT THIS FILE DIRECTLY. This wiki is automatically generated from the source repository. All changes must be made through pull requests to https:\/\/github.com\/CesiumGS\/cesiumjs-skills\/tree\/main\/wiki -->\n\n/' {} +
+          find . -name "*.md" -type f -exec sed -i 's|^# \(.*\)$|<!-- original title: "\1" removed -->|g' {} +
+
+      - name: Commit and push changes to wiki
+        run: |
+          set -euo pipefail
+          cd /tmp/wiki
+          git add .
+          git commit -m "update wiki from source repo" || echo "nothing to commit"
+          if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+            git push
+          else
+            git push -u origin HEAD:master
+          fi

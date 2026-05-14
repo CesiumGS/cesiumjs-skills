@@ -33,6 +33,7 @@ These skills follow the [Agent Skills](https://agentskills.io/) open standard. C
 
 - [Skills Catalog](#skills-catalog)
 - [Domain Mapping](#domain-mapping)
+- [Architecture](#architecture)
 - [Compatibility](#compatibility)
 - [Repository Layout](#repository-layout)
 - [License](#license)
@@ -62,6 +63,10 @@ These skills follow the [Agent Skills](https://agentskills.io/) open standard. C
 
 Every public class, function, and enum in CesiumJS is assigned to exactly one skill. Cross-domain ownership rules and the full symbol map are documented in [`docs/DOMAINS.md`](docs/DOMAINS.md).
 
+## Architecture
+
+The AI evaluation framework architecture is documented in [`.architecture/acd.md`](.architecture/acd.md), with supporting architecture decision records in `.architecture/`. Source-controlled GitHub Wiki pages live in [`wiki/`](wiki/) and are published from `main` by [`.github/workflows/wiki-sync.yml`](.github/workflows/wiki-sync.yml).
+
 ## Compatibility
 
 The [Agent Skills](https://agentskills.io/) format is an open standard originally developed by Anthropic and adopted by leading AI development tools including Claude Code, GitHub Copilot, and many others.
@@ -78,6 +83,9 @@ cesiumjs-skills/
 ├── docs/
 │   ├── DOMAINS.md                   # Symbol ownership map
 │   └── skills-catalog.md            # Skills catalog
+├── .architecture/                   # ACD and ADRs for the AI eval framework
+├── wiki/                            # Source-controlled GitHub Wiki pages
+├── .github/workflows/wiki-sync.yml  # Publishes wiki/ to the GitHub Wiki from main
 ├── .claude-plugin/
 │   ├── plugin.json                  # Claude Code plugin manifest
 │   └── marketplace.json             # Plugin marketplace catalog
