@@ -4,7 +4,7 @@ name: Publish Wiki from Source
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, wiki-acd-sync ]
     paths:
       - 'wiki/**'
       - '.assets/**'
