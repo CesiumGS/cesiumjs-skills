@@ -21,17 +21,73 @@ The framework starts with `CesiumGS/cesiumjs-skills`, where skill documents guid
 ## Architecture Overview
 
 ```mermaid
-flowchart TD
-    Scenario[Versioned scenario manifest] --> Runner[Evaluation runner]
-    Candidate[Candidate skill or tool context] --> Adapter[Agent or tool adapter]
+flowchart LR
+    subgraph Inputs["Versioned Inputs"]
+        direction TB
+        Scenario["Scenario manifest<br/>prompt, expectations, checks"]
+        Candidate["Candidate context<br/>skill, prompt, model, tool config"]
+        Baseline["Baseline context<br/>current best or release target"]
+    end
+
+    subgraph Execution["Controlled Execution"]
+        direction TB
+        Adapter["Agent or tool adapter"]
+        Runner["Evaluation runner"]
+        Environment["Browser-backed<br/>Cesium environment"]
+    end
+
+    subgraph Evidence["Captured Evidence"]
+        direction TB
+        Runtime["Runtime metadata"]
+        Console["Console and page errors"]
+        Scene["Scene state"]
+        Screenshots["Screenshots"]
+    end
+
+    subgraph Evaluation["Evaluation Policy"]
+        direction TB
+        Checks["Deterministic checks<br/>schema, API, runtime gates"]
+        Judges["Pairwise judges<br/>BASELINE / CANDIDATE / TIE"]
+        Decision["Decision engine<br/>keep, discard, or review"]
+    end
+
+    subgraph Outputs["Public-Safe Outputs"]
+        direction TB
+        Report["Report and history"]
+        Summaries["Sanitized summaries"]
+        Artifacts["Curated artifacts"]
+    end
+
+    Scenario --> Runner
+    Candidate --> Adapter
+    Baseline --> Adapter
     Adapter --> Runner
-    Runner --> Browser[Browser-backed Cesium environment]
-    Browser --> Evidence[Runtime evidence and artifacts]
-    Evidence --> Checks[Deterministic checks]
-    Evidence --> Judges[Pairwise judges]
-    Checks --> Decision[Decision engine]
+    Runner --> Environment
+    Environment --> Runtime
+    Environment --> Console
+    Environment --> Scene
+    Environment --> Screenshots
+    Runtime --> Checks
+    Console --> Checks
+    Scene --> Checks
+    Screenshots --> Judges
+    Scene --> Judges
+    Checks --> Decision
     Judges --> Decision
-    Decision --> Report[Report and history]
+    Decision --> Report
+    Report --> Summaries
+    Report --> Artifacts
+
+    classDef input fill:#e8f3ff,stroke:#2563eb,color:#0f172a
+    classDef execute fill:#ecfdf3,stroke:#16a34a,color:#0f172a
+    classDef evidence fill:#fff7ed,stroke:#f97316,color:#0f172a
+    classDef policy fill:#f5f3ff,stroke:#7c3aed,color:#0f172a
+    classDef output fill:#f8fafc,stroke:#475569,color:#0f172a
+    class Scenario,Candidate,Baseline input
+    class Adapter,Runner,Environment execute
+    class Runtime,Console,Scene,Screenshots evidence
+    class Checks,Judges,Decision policy
+    class Report,Summaries,Artifacts output
 ```
 
 ## External Links
