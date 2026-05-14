@@ -163,6 +163,13 @@ flowchart LR
         Artifacts["Curated artifacts"]
     end
 
+    subgraph Iteration["Improvement Loop"]
+        direction TB
+        Analysis["Regression analysis<br/>coverage gaps, failure patterns"]
+        Proposal["Candidate update<br/>skill, docs, examples, tools"]
+        Review["Maintainer review<br/>accept, revise, or reject"]
+    end
+
     Scenario --> Runner
     Candidate --> Adapter
     Baseline --> Adapter
@@ -182,17 +189,26 @@ flowchart LR
     Decision --> Report
     Report --> Summaries
     Report --> Artifacts
+    Report --> Analysis
+    Summaries --> Analysis
+    Artifacts --> Analysis
+    Analysis --> Proposal
+    Proposal --> Review
+    Review --> Candidate
+    Review --> Scenario
 
     classDef input fill:#e8f3ff,stroke:#2563eb,color:#0f172a
     classDef execute fill:#ecfdf3,stroke:#16a34a,color:#0f172a
     classDef evidence fill:#fff7ed,stroke:#f97316,color:#0f172a
     classDef policy fill:#f5f3ff,stroke:#7c3aed,color:#0f172a
     classDef output fill:#f8fafc,stroke:#475569,color:#0f172a
+    classDef iterate fill:#fff1f2,stroke:#e11d48,color:#0f172a
     class Scenario,Candidate,Baseline input
     class Adapter,Runner,Environment execute
     class Runtime,Console,Scene,Screenshots evidence
     class Checks,Judges,Decision policy
     class Report,Summaries,Artifacts output
+    class Analysis,Proposal,Review iterate
 ```
 
 Public v1 repository artifacts include:
