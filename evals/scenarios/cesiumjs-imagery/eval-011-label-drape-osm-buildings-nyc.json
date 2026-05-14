@@ -1,0 +1,31 @@
+{
+  "id": "eval-011",
+  "name": "label-drape-osm-buildings-nyc",
+  "landmark": "Lower Manhattan, USA",
+  "perspective": "3d city with draped labels",
+  "section_coverage": [
+    "Draping Imagery on 3D Tiles"
+  ],
+  "difficulty": "hard",
+  "description": "Load a 3D tileset and drape an imagery layer on the tileset rather than the globe. Uses lower Manhattan for visual recognizability.",
+  "prompt": "Create a CesiumJS viewer over lower Manhattan with OSM Buildings loaded. Then add a label-style imagery layer and drape it onto the 3D buildings tileset rather than the globe, using the tileset.imageryLayers collection. Position the camera at a city-overview angle so the buildings are clearly visible.",
+  "expected_behaviors": [
+    "Loads OSM Buildings or another 3D tileset",
+    "Adds the tileset to scene.primitives",
+    "Creates a second imagery layer",
+    "Uses tileset.imageryLayers.add instead of viewer.imageryLayers.add",
+    "Frames lower Manhattan"
+  ],
+  "visual_expectations": "A recognizable 3D Manhattan scene with visible building massing. The draped imagery may appear as labels or raster detail over the 3D tileset.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "createOsmBuildingsAsync|Cesium3DTileset", "description": "Loads a 3D tileset" },
+    { "type": "pattern_present", "pattern": "tileset\\.imageryLayers\\.add", "description": "Drapes imagery on the tileset" },
+    { "type": "pattern_present", "pattern": "-74\\.|40\\.70", "description": "Targets lower Manhattan" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 10000, "description": "3D Manhattan with draped imagery" }
+  ],
+  "regression_critical": false
+}

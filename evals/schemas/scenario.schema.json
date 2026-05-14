@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/CesiumGS/cesiumjs-skills/evals/schemas/scenario.schema.json",
+  "title": "CesiumJS Skills Evaluation Scenario",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "difficulty",
+    "description",
+    "prompt",
+    "expected_behaviors",
+    "visual_expectations",
+    "programmatic_checks",
+    "screenshots",
+    "regression_critical"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^eval-[0-9]{3}$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "difficulty": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "expected_behaviors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "visual_expectations": {
+      "type": "string"
+    },
+    "programmatic_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [ "type", "description" ],
+        "properties": {
+          "type": {
+            "enum": [ "no_console_errors", "code_runs", "pattern_present", "pattern_absent" ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "screenshots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [ "timing", "delay_ms", "description" ],
+        "properties": {
+          "timing": { "type": "string" },
+          "delay_ms": { "type": "integer" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "regression_critical": {
+      "type": "boolean"
+    }
+  }
+}

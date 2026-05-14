@@ -1,0 +1,28 @@
+{
+  "id": "eval-014",
+  "name": "eiffel-tower-from-north",
+  "landmark": "Eiffel Tower, Paris",
+  "perspective": "mid-altitude from north",
+  "section_coverage": ["lookAt -- Lock Camera to Target"],
+  "difficulty": "medium",
+  "description": "View the Eiffel Tower from the north, looking south. Tests heading=180 with lookAt. Complements evals 003 (south) and 013 (east) for full directional coverage.",
+  "prompt": "Use lookAt to view the Eiffel Tower (48.8584 N, 2.2945 E) from the north, looking south toward it. Position the camera at 1000 meters distance with a 25-degree downward angle. I want to see the tower with the Champ de Mars behind it stretching to the south.",
+  "expected_behaviors": [
+    "Uses lookAt with HeadingPitchRange",
+    "Heading ~180 degrees (facing south = camera is north of target)",
+    "Pitch ~-25 degrees",
+    "Range ~1000m"
+  ],
+  "visual_expectations": "The Eiffel Tower area from the north, looking south. The Champ de Mars and École Militaire should be visible behind the tower. The Seine and Trocadéro are in the foreground.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "lookAt", "description": "Uses lookAt"},
+    {"type": "pattern_present", "pattern": "HeadingPitchRange", "description": "Uses HeadingPitchRange"},
+    {"type": "pattern_present", "pattern": "180|Math\\.PI(?!\\s*/)", "description": "Heading ~180 degrees"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Eiffel Tower from north, looking south"}
+  ],
+  "regression_critical": false
+}

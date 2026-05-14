@@ -1,0 +1,27 @@
+{
+  "id": "eval-001",
+  "name": "eiffel-tower-ground-level",
+  "landmark": "Eiffel Tower, Paris",
+  "perspective": "ground-level tourist view",
+  "difficulty": "hard",
+  "description": "View the Eiffel Tower from nearby ground level, as if a tourist is standing at the Champ de Mars looking up at the tower. Tests whether the skill guides the LLM to use appropriate low-altitude, slightly-upward camera angles.",
+  "prompt": "Position the CesiumJS camera to show the Eiffel Tower in Paris from ground level, as if I'm a tourist standing near the base of the tower looking up at it. I want to see the tower rising above me against the sky. The Eiffel Tower is at coordinates 48.8584 N, 2.2945 E.",
+  "expected_behaviors": [
+    "Uses lookAt or setView with a very low altitude (50-200m)",
+    "Pitch should be slightly upward or near horizontal (-10 to +10 degrees)",
+    "Range/distance from target should be 200-800m for ground-level feel",
+    "Should be able to see the tower structure against the sky"
+  ],
+  "visual_expectations": "A close, low-angle view of the Eiffel Tower area. The camera should be near ground level, with the terrain/city visible below and the tower structure prominent. The perspective should feel like standing near the tower, not flying above it.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "lookAt|setView|flyTo", "description": "Uses a camera positioning method"},
+    {"type": "pattern_present", "pattern": "48\\.8", "description": "Paris latitude"},
+    {"type": "pattern_present", "pattern": "2\\.29", "description": "Paris longitude"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 6000, "description": "Ground-level view of Eiffel Tower area"}
+  ],
+  "regression_critical": true
+}

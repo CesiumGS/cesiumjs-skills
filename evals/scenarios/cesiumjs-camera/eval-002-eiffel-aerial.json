@@ -1,0 +1,27 @@
+{
+  "id": "eval-002",
+  "name": "eiffel-tower-aerial",
+  "landmark": "Eiffel Tower, Paris",
+  "perspective": "aerial bird's eye",
+  "difficulty": "easy",
+  "description": "View the Eiffel Tower from high above. Tests whether the skill produces a clear aerial/bird's eye camera position.",
+  "prompt": "Show me the Eiffel Tower in Paris from a bird's eye view, looking straight down from about 3000 meters. I want to see the tower's cross-shaped shadow and the surrounding Champ de Mars gardens. Eiffel Tower coordinates: 48.8584 N, 2.2945 E.",
+  "expected_behaviors": [
+    "Uses setView or flyTo (not lookAt — aerial top-down doesn't need orbital lock)",
+    "Altitude around 2000-4000m",
+    "Pitch should be steep: -70 to -90 degrees (near straight down)",
+    "Heading doesn't matter much for top-down"
+  ],
+  "visual_expectations": "A top-down or near-top-down view of central Paris showing the Eiffel Tower area, Champ de Mars gardens, and the Seine River. The urban grid of Paris should be clearly visible.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "setView|flyTo", "description": "Uses setView or flyTo"},
+    {"type": "pattern_present", "pattern": "48\\.8", "description": "Paris latitude"},
+    {"type": "pattern_present", "pattern": "-[7-9]0", "description": "Steep downward pitch (70-90 degrees)"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Aerial view of Eiffel Tower and surroundings"}
+  ],
+  "regression_critical": true
+}

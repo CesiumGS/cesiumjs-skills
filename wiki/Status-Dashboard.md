@@ -8,6 +8,9 @@ This dashboard tracks source-controlled wiki pages for the Cesium AI Evaluation 
 |---|---|---|
 | [Home](Home) | ![Draft](https://img.shields.io/badge/Draft-yellow?style=flat-square) | 5/14/26 |
 | [Architecture Concept Document](Architecture-Concept-Document) | ![Draft](https://img.shields.io/badge/Draft-yellow?style=flat-square) | 5/14/26 |
+| [Run Skill Evaluations Locally](Run-Skill-Evaluations-Locally) | ![Draft](https://img.shields.io/badge/Draft-yellow?style=flat-square) | 5/14/26 |
+| [Add an Evaluation Scenario](Add-Evaluation-Scenario) | ![Draft](https://img.shields.io/badge/Draft-yellow?style=flat-square) | 5/14/26 |
+| [Public Artifact Policy](Public-Artifact-Policy) | ![Accepted](https://img.shields.io/badge/Accepted-brightgreen?style=flat-square) | 5/14/26 |
 | [ADR-0001: Skills-First Sequencing](ADR-0001-Skills-First-Sequencing) | ![Accepted](https://img.shields.io/badge/Accepted-brightgreen?style=flat-square) | 5/14/26 |
 | [ADR-0002: Pairwise Judge Protocol](ADR-0002-Pairwise-Judge-Protocol) | ![Accepted](https://img.shields.io/badge/Accepted-brightgreen?style=flat-square) | 5/14/26 |
 | [ADR-0003: Deterministic Decision Policy](ADR-0003-Deterministic-Decision-Policy) | ![Accepted](https://img.shields.io/badge/Accepted-brightgreen?style=flat-square) | 5/14/26 |

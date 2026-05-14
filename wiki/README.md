@@ -11,6 +11,7 @@ The CesiumJS Skills wiki is maintained in the `/wiki/` directory of the source r
 5. Store reusable images under `/.assets/` if assets are needed. Reference them with `/.assets/<file>` in source Markdown; the workflow rewrites those paths for wiki rendering.
 6. Update `_Sidebar.md` when adding or renaming pages.
 7. Update `Status-Dashboard.md` when adding pages or changing review status.
+8. Keep evaluation workflow pages aligned with the public `evals/` directory, not private planning material or local raw traces.
 
 ## Review Expectations
 

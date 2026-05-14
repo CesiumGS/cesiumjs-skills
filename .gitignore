@@ -3,6 +3,8 @@
 .env
 working-notes.md
 .DS_Store
+__pycache__/
+*.pyc
 
 # Demo HTML files that contain hardcoded tokens — keep gitignored
 demo/index.html
@@ -13,6 +15,12 @@ tuning/geo-embeddings-test.html
 # and prompt comments. The curated screenshot gallery in
 # tuning/examples/screenshots/ is the public-facing visual evidence.
 tuning/*/iterations/*/traces/
+
+# Public eval local inputs and raw run outputs. Scenario manifests and
+# sanitized summaries under evals/scenarios and evals/results are tracked.
+evals/generated/
+evals/runs/
+evals/tmp/
 
 # Unrelated lean4 tooling carried in via tuning/.claude/
 tuning/.claude/tools/lean4

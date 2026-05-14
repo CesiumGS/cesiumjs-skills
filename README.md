@@ -34,6 +34,7 @@ These skills follow the [Agent Skills](https://agentskills.io/) open standard. C
 - [Skills Catalog](#skills-catalog)
 - [Domain Mapping](#domain-mapping)
 - [Architecture](#architecture)
+- [Evaluation Framework](#evaluation-framework)
 - [Compatibility](#compatibility)
 - [Repository Layout](#repository-layout)
 - [License](#license)
@@ -67,6 +68,23 @@ Every public class, function, and enum in CesiumJS is assigned to exactly one sk
 
 The AI evaluation framework architecture is documented in [`.architecture/acd.md`](.architecture/acd.md), with supporting architecture decision records in `.architecture/`. Source-controlled GitHub Wiki pages live in [`wiki/`](wiki/) and are published from `main` by [`.github/workflows/wiki-sync.yml`](.github/workflows/wiki-sync.yml).
 
+## Evaluation Framework
+
+Public v1 evaluation scenarios and sanitized status summaries live in [`evals/`](evals/). Run the lightweight public checks with:
+
+```bash
+python3 scripts/validate-evals.py
+python3 scripts/check-public-artifacts.py
+```
+
+For local browser-backed scenario reproduction, place generated JavaScript snippets under `evals/generated/<skill>/<iteration>/`, set `CESIUM_ION_TOKEN`, and run:
+
+```bash
+python3 scripts/run-public-eval.py cesiumjs-camera --iteration candidate --only eval-001
+```
+
+Raw generated code, HTML, screenshots, and run traces under `evals/generated/` and `evals/runs/` are local-only and gitignored by default.
+
 ## Compatibility
 
 The [Agent Skills](https://agentskills.io/) format is an open standard originally developed by Anthropic and adopted by leading AI development tools including Claude Code, GitHub Copilot, and many others.
@@ -84,8 +102,10 @@ cesiumjs-skills/
 │   ├── DOMAINS.md                   # Symbol ownership map
 │   └── skills-catalog.md            # Skills catalog
 ├── .architecture/                   # ACD and ADRs for the AI eval framework
+├── evals/                           # Public-safe eval scenarios and summaries
 ├── wiki/                            # Source-controlled GitHub Wiki pages
 ├── .github/workflows/wiki-sync.yml  # Publishes wiki/ to the GitHub Wiki from main
+├── scripts/                         # Secret, public-artifact, and eval validation tools
 ├── .claude-plugin/
 │   ├── plugin.json                  # Claude Code plugin manifest
 │   └── marketplace.json             # Plugin marketplace catalog

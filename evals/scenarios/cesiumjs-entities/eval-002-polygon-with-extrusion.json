@@ -1,0 +1,28 @@
+{
+  "id": "eval-002",
+  "name": "polygon-with-extrusion",
+  "difficulty": "medium",
+  "description": "Create an extruded polygon (3D shape rising from the ground). Tests polygon hierarchy, extrusion, and material/alpha handling.",
+  "prompt": "Draw a semi-transparent blue polygon over the state of Colorado (roughly a rectangle from 37N to 41N, 102W to 109W) and extrude it upward to 100,000 meters to create a 3D column. Make it semi-transparent so the terrain is visible through it.",
+  "expected_behaviors": [
+    "Creates a polygon entity with correct Colorado coordinates",
+    "Uses Cartesian3.fromDegreesArray for the polygon hierarchy",
+    "Sets extrudedHeight to 100000",
+    "Uses Color.BLUE.withAlpha() for semi-transparency",
+    "Longitudes are negative (western hemisphere)"
+  ],
+  "visual_expectations": "A tall, semi-transparent blue 3D column over the rectangular shape of Colorado, rising from the terrain. The terrain and globe should be visible through the translucent faces.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "polygon:", "description": "Polygon graphics defined"},
+    {"type": "pattern_present", "pattern": "extrudedHeight", "description": "Polygon is extruded"},
+    {"type": "pattern_present", "pattern": "withAlpha", "description": "Semi-transparency applied"},
+    {"type": "pattern_present", "pattern": "-102|-109", "description": "Colorado longitudes are negative"},
+    {"type": "pattern_present", "pattern": "fromDegreesArray", "description": "Uses fromDegreesArray for coordinates"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Semi-transparent blue 3D column over Colorado"}
+  ],
+  "regression_critical": true
+}

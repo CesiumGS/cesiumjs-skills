@@ -1,0 +1,34 @@
+name: Public Eval Checks
+
+on:
+  pull_request:
+    paths:
+      - "evals/**"
+      - "scripts/validate-evals.py"
+      - "scripts/check-public-artifacts.py"
+      - ".architecture/**"
+      - "wiki/**"
+      - ".github/workflows/evals.yml"
+  push:
+    branches: [ main, wiki-acd-sync ]
+    paths:
+      - "evals/**"
+      - "scripts/validate-evals.py"
+      - "scripts/check-public-artifacts.py"
+      - ".architecture/**"
+      - "wiki/**"
+      - ".github/workflows/evals.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source repo
+        uses: actions/checkout@v4
+
+      - name: Validate public eval manifests
+        run: python3 scripts/validate-evals.py
+
+      - name: Scan public docs and eval artifacts
+        run: python3 scripts/check-public-artifacts.py

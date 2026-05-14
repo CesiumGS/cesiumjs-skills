@@ -93,7 +93,7 @@ The framework has two related jobs:
 
 ## 3.1 What is the Cesium AI Evaluation Framework
 
-The framework is a set of conventions, manifests, runners, checks, judge protocols, artifacts, and documentation for evaluating AI-assisted Cesium development. Its first implementation lives with the CesiumJS skills evaluation and optimization work under `tuning/` on the `eval-and-optimization` branch.
+The framework is a set of conventions, manifests, runners, checks, judge protocols, artifacts, and documentation for evaluating AI-assisted Cesium development. Its first public implementation lives under `evals/` in this repository.
 
 It evaluates whether an AI agent, given a particular skill or tool context, produces an output that satisfies the scenario. For CesiumJS skill evaluations, that output is usually JavaScript code that is executed in a browser-backed Cesium scene. For future MCP evaluations, the output may be a sequence of structured tool calls and observed scene state.
 
@@ -140,14 +140,17 @@ flowchart TD
     Decision --> Report[Report and history]
 ```
 
-Current branch artifacts include:
+Public v1 repository artifacts include:
 
-- `tuning/<skill>/evals/*.json` scenario manifests.
-- `tuning/tools/run_eval_suite.py` browser execution helper.
-- `tuning/tools/coverage-analyzer.py` section coverage analyzer.
-- `tuning/<skill>/iterations/<n>/` iteration artifacts.
-- `tuning/examples/screenshots/` curated public-safe visual examples.
-- `demo/viewer/` persistent browser viewer for faster local iteration.
+- `evals/scenarios/<skill>/*.json` public-safe scenario manifests.
+- `evals/results/public-status.json` sanitized current-best and decision summaries.
+- `evals/schemas/scenario.schema.json` human-readable scenario schema.
+- `scripts/validate-evals.py` deterministic scenario and summary validation.
+- `scripts/check-public-artifacts.py` public-facing artifact safety scan.
+- `scripts/run-public-eval.py` local browser-backed reproduction runner.
+- `.github/workflows/evals.yml` lightweight public eval validation in CI.
+
+Local tuning history and raw traces may exist outside this public surface, but they are not the public source of truth and must not be required to understand the wiki or ACD.
 
 # 4. Solution Strategy
 
@@ -329,8 +332,8 @@ The framework should support three operational tiers.
 
 | Tier | Purpose | Current or target behavior |
 |------|---------|----------------------------|
-| Tier 1: Archival evaluation record | Preserve methodology, scenarios, selected scores, judge verdicts, decisions, and curated screenshots. | Current `eval-and-optimization` branch content under `tuning/`. |
-| Tier 2: Reproducible local and CI harness | Run deterministic checks and selected visual scenarios from a clean checkout with documented commands. | Next implementation target; should use a persistent local viewer and/or Playwright-friendly browser harness. |
+| Tier 1: Archival evaluation record | Preserve methodology, scenarios, selected scores, judge verdicts, decisions, and curated screenshots. | Public v1 content under `evals/scenarios/` and `evals/results/`. |
+| Tier 2: Reproducible local and CI harness | Run deterministic checks and selected visual scenarios from a clean checkout with documented commands. | `scripts/validate-evals.py`, `scripts/check-public-artifacts.py`, `scripts/run-public-eval.py`, and `.github/workflows/evals.yml`. |
 | Tier 3: MCP/tool-call evaluation | Evaluate structured tool selection, schema validation, multi-tool orchestration, error recovery, and final scene state. | Future target once relevant MCP/tool runtimes are mature enough. |
 
 Operational policies:

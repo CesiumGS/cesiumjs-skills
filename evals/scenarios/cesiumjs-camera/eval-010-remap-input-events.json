@@ -1,0 +1,33 @@
+{
+  "id": "eval-010",
+  "name": "remap-input-right-drag-rotate",
+  "landmark": "Rome, Italy",
+  "perspective": "custom input mapping overhead",
+  "section_coverage": ["Remapping Input Events", "ScreenSpaceCameraController"],
+  "difficulty": "hard",
+  "description": "Remap mouse input so right-drag rotates and Ctrl+left-drag tilts. Tests CameraEventType and KeyboardEventModifier usage.",
+  "prompt": "Set up a CesiumJS viewer looking at Rome (41.9028 N, 12.4964 E) from 8000 meters. Remap the mouse controls so that: right-drag rotates the globe (instead of the default left-drag), Ctrl+left-drag tilts the camera, and mouse wheel zooms. Position the camera looking slightly north.",
+  "expected_behaviors": [
+    "Accesses screenSpaceCameraController",
+    "Sets rotateEventTypes to CameraEventType.RIGHT_DRAG",
+    "Sets tiltEventTypes with CameraEventType.LEFT_DRAG and KeyboardEventModifier.CTRL",
+    "Sets or preserves zoomEventTypes as CameraEventType.WHEEL",
+    "Uses CameraEventType enum values",
+    "Uses KeyboardEventModifier enum values"
+  ],
+  "visual_expectations": "An overhead view of Rome at 8000m showing the Tiber River, Colosseum area, and Vatican. The input remapping is not visible in screenshots but the camera position should be correct.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "rotateEventTypes", "description": "Remaps rotation"},
+    {"type": "pattern_present", "pattern": "tiltEventTypes", "description": "Remaps tilt"},
+    {"type": "pattern_present", "pattern": "CameraEventType", "description": "Uses CameraEventType"},
+    {"type": "pattern_present", "pattern": "RIGHT_DRAG", "description": "Right-drag for rotation"},
+    {"type": "pattern_present", "pattern": "KeyboardEventModifier", "description": "Uses modifier keys"},
+    {"type": "pattern_present", "pattern": "CTRL", "description": "Ctrl modifier for tilt"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Rome at 8000m with custom input mapping"}
+  ],
+  "regression_critical": false
+}

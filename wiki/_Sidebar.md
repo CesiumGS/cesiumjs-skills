@@ -10,6 +10,12 @@
 ## Architecture
 
 * [[Architecture Concept Document|Architecture-Concept-Document]]
+* [[Public Artifact Policy|Public-Artifact-Policy]]
+
+## Evaluation Workflow
+
+* [[Run Skill Evaluations Locally|Run-Skill-Evaluations-Locally]]
+* [[Add an Evaluation Scenario|Add-Evaluation-Scenario]]
 
 ## Architecture Decision Records
 
