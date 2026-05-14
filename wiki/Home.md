@@ -21,7 +21,7 @@ The framework starts with `CesiumGS/cesiumjs-skills`, where skill documents guid
 ## Architecture Overview
 
 ```mermaid
-flowchart LR
+flowchart TD
     Scenario["Scenario manifest<br/>prompt, expectations, checks"]
     Candidate["Candidate context<br/>skill, prompt, model, tool config"]
     Baseline["Baseline context<br/>current best or release target"]

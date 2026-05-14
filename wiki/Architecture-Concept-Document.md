@@ -126,7 +126,7 @@ The framework sits between changes to Cesium guidance or tooling and decisions a
 ## 3.4 Technical Context
 
 ```mermaid
-flowchart LR
+flowchart TD
     Scenario["Scenario manifest<br/>prompt, expectations, checks"]
     Candidate["Candidate context<br/>skill, prompt, model, tool config"]
     Baseline["Baseline context<br/>current best or release target"]
