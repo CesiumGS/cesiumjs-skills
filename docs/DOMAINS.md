@@ -1,8 +1,8 @@
 # CesiumJS Skills Domain Mapping
 
-> **Version baseline:** CesiumJS v1.139.1 (2026-03-05)
-> **Last updated:** 2026-04-21
-> **Total public symbols assigned:** ~535
+> **Version baseline:** CesiumJS v1.142 (2026-06-01)
+> **Last updated:** 2026-06-01
+> **Total public symbols assigned:** ~550
 
 This document is the definitive source of truth for the CesiumJS skill decomposition. Every public class, function, and enum in CesiumJS is assigned to exactly one domain. Other domains may cross-reference a symbol, but only one domain **owns** it.
 
@@ -13,16 +13,16 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 | 1 | `cesiumjs-viewer-setup` | ~70 | CesiumJS viewer setup - Viewer, CesiumWidget, widgets, Ion token, Scene configuration, SceneMode, factory helpers, geocoders, platform services. Use when initializing a CesiumJS application, configuring viewer widgets, setting Ion access tokens, creating default terrain or imagery, or bootstrapping a 3D globe. |
 | 2 | `cesiumjs-camera` | ~10 | CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, tracking entities, or converting between screen and world coordinates. |
 | 3 | `cesiumjs-entities` | ~60 | CesiumJS entities and data sources - Entity, EntityCollection, DataSource, GeoJsonDataSource, KmlDataSource, CzmlDataSource, Graphics types, Visualizers. Use when adding points, labels, models, polygons, or polylines to the map, loading GeoJSON/KML/CZML/GPX data, or working with the high-level Entity API. |
-| 4 | `cesiumjs-3d-tiles` | ~45 | CesiumJS 3D Tiles - Cesium3DTileset, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets, styling building features, querying metadata properties, working with voxels or point clouds, or clipping spatial data. |
+| 4 | `cesiumjs-3d-tiles` | ~48 | CesiumJS 3D Tiles - Cesium3DTileset, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets or Mapbox Vector Tiles as runtime 3D Tiles, styling building/vector features, querying metadata properties, working with voxels or point clouds, or clipping spatial data. |
 | 5 | `cesiumjs-imagery` | ~30 | CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLayerCollection, WMS, WMTS, Bing, OpenStreetMap, ArcGIS, Mapbox, tile discard policies. Use when adding or swapping base map layers, configuring imagery providers, layering multiple map sources, or creating split-screen imagery comparisons. |
 | 6 | `cesiumjs-terrain-environment` | ~35 | CesiumJS terrain, globe, and environment - TerrainProvider, Globe, sampleTerrain, atmosphere, sky, fog, lighting, shadows, panoramas. Use when configuring terrain providers, querying terrain heights, customizing atmosphere or sky rendering, adding panoramas, or adjusting scene lighting and shadows. |
-| 7 | `cesiumjs-primitives` | ~72 | CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static geometry, creating custom shapes, batching draw calls, or using low-level billboard, label, and point collections. |
+| 7 | `cesiumjs-primitives` | ~82 | CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, BufferPrimitive collections, GeoJsonPrimitive, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static/vector geometry, loading GeoJSON without entities, creating custom shapes, batching draw calls, or using low-level collections. |
 | 8 | `cesiumjs-materials-shaders` | ~20 | CesiumJS materials and post-processing — Material, Fabric JSON, MaterialAppearance, ImageBasedLighting, PostProcessStage, PostProcessStageLibrary, bloom, depth of field, ambient occlusion, FXAA, tonemapping, BlendingState. Use when defining Fabric materials for entities or primitives, configuring PBR image-based lighting, or adding screen-space post-processing effects. |
 | 14 | `cesiumjs-custom-shader` | ~7 | CustomShader authoring — vertexShaderText and fragmentShaderText against VertexInput, FragmentInput, FeatureIds, Metadata, czm_modelMaterial. Use when reading EXT_mesh_features or EXT_structural_metadata property textures/tables, vertex displacement, or shading VoxelPrimitive. |
 | 9 | `cesiumjs-time-properties` | ~57 | CesiumJS time, properties, and animation - Clock, JulianDate, TimeInterval, Property, SampledProperty, CallbackProperty, interpolation, splines, CZML temporal data. Use when making entity attributes time-dynamic, configuring the simulation clock, interpolating positions over time, or working with sampled or callback properties. |
 | 10 | `cesiumjs-spatial-math` | ~55 | CesiumJS spatial math - Cartesian3, Cartographic, Matrix4, Quaternion, Transforms, Ellipsoid, BoundingSphere, projections, coordinate conversions. Use when converting between coordinate systems, computing positions on the ellipsoid, performing spatial intersection tests, building model matrices, or working with geographic projections. |
-| 11 | `cesiumjs-interaction` | ~8 | CesiumJS interaction and picking - ScreenSpaceEventHandler, Scene.pick, Scene.drillPick, Scene.pickPosition, mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, implementing hover effects, or building drag-based interactions. |
-| 12 | `cesiumjs-models-particles` | ~20 | CesiumJS models, glTF, and particle effects - Model, ModelAnimation, ModelNode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata. |
+| 11 | `cesiumjs-interaction` | ~8 | CesiumJS interaction and picking - ScreenSpaceEventHandler, Scene.pick, Scene.drillPick, Scene.pickPosition, mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, registering multi-key-modifier input actions, implementing hover effects, or building drag-based interactions. |
+| 12 | `cesiumjs-models-particles` | ~21 | CesiumJS models, glTF, and particle effects - Model, ModelAnimation, ModelNode, EdgeDisplayMode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, controlling edge rendering, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata. |
 | 13 | `cesiumjs-core-utilities` | ~46 | CesiumJS core utilities and networking - Resource, Color, Event, Request, RequestScheduler, error handling, helper functions, feature detection. Use when fetching remote data, managing HTTP requests, working with colors, handling events, debugging errors, or using utility functions like defined, clone, or buildModuleUrl. |
 
 ---
@@ -249,7 +249,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ---
 
-## Domain 4: cesiumjs-3d-tiles (~45 entries)
+## Domain 4: cesiumjs-3d-tiles (~48 entries)
 
 ### 3D Tiles Core
 - Cesium3DTileset
@@ -258,6 +258,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - Cesium3DTileFeature
 - Cesium3DTilePointFeature
 - Cesium3DTileStyle
+- MVTDataProvider
 
 ### Style Expressions
 - ConditionsExpression
@@ -302,6 +303,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 ### Specialized Content
 - GaussianSplat3DTileContent
 - TimeDynamicPointCloud
+- VectorGltf3DTileContent
 
 ### Terrain Bridge (experimental)
 - Cesium3DTilesTerrainData
@@ -310,6 +312,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 ### Rendering Config
 - PointCloudShading
 - Cesium3DTileColorBlendMode (enum)
+- Cesium3DTileset.edgeDisplayMode (uses EdgeDisplayMode; primary enum home: Domain 12)
 
 ### Enums
 - ClassificationType
@@ -423,7 +426,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ---
 
-## Domain 7: cesiumjs-primitives (~72 entries)
+## Domain 7: cesiumjs-primitives (~82 entries)
 
 ### Primitives
 - Primitive
@@ -431,6 +434,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - ClassificationPrimitive
 - GroundPrimitive
 - GroundPolylinePrimitive
+- GeoJsonPrimitive
 
 ### Geometry Infrastructure
 - Geometry
@@ -484,6 +488,9 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - PolylineCollection
 - PointPrimitiveCollection
 - CloudCollection
+- BufferPointCollection
+- BufferPolylineCollection
+- BufferPolygonCollection
 
 ### Primitive Items
 - Billboard
@@ -491,6 +498,15 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - Polyline
 - PointPrimitive
 - CumulusCloud
+- BufferPoint
+- BufferPolyline
+- BufferPolygon
+
+### Buffer Primitive Materials
+- BufferPrimitiveMaterial
+- BufferPointMaterial
+- BufferPolylineMaterial
+- BufferPolygonMaterial
 
 ### Debug
 - DebugModelMatrixPrimitive
@@ -729,6 +745,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 ### Event Handling
 - ScreenSpaceEventHandler
 - ScreenSpaceEventType (enum)
+- KeyboardEventModifier array support on setInputAction/getInputAction/removeInputAction
 
 ### Functions
 - addDrillPickedResults
@@ -759,7 +776,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ---
 
-## Domain 12: cesiumjs-models-particles (~20 entries)
+## Domain 12: cesiumjs-models-particles (~21 entries)
 
 ### Model Core
 - Model
@@ -787,12 +804,14 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ### Enums
 - ModelAnimationLoop
+- EdgeDisplayMode
 
 ### Cross-References
 - CustomShader (primary: Domain 8)
 - ImageBasedLighting (primary: Domain 8)
 - ClippingPlane/ClippingPolygon (primary: Domain 4)
 - ModelGraphics (primary: Domain 3)
+- Cesium3DTileset.edgeDisplayMode (primary tileset setup: Domain 4)
 
 ---
 
@@ -917,7 +936,7 @@ These rules prevent activation collisions (multiple skills triggering for the sa
 
 ---
 
-## Recently Added APIs (v1.120-v1.139)
+## Recently Added APIs (v1.120-v1.142)
 
 | Version | Addition | Domain |
 |---------|----------|--------|
@@ -935,6 +954,11 @@ These rules prevent activation collisions (multiple skills triggering for the sa
 | v1.139 | EquirectangularPanorama | 6 |
 | v1.139 | CubeMapPanorama | 6 |
 | v1.139 | GoogleStreetViewCubeMapPanoramaProvider | 6 |
+| v1.140 | BufferPointCollection, BufferPolylineCollection, BufferPolygonCollection | 7 |
+| v1.142 | GeoJsonPrimitive | 7 |
+| v1.142 | MVTDataProvider | 4 |
+| v1.142 | EdgeDisplayMode | 12 |
+| v1.142 | multiple KeyboardEventModifier keys in ScreenSpaceEventHandler | 11 |
 
 ---
 

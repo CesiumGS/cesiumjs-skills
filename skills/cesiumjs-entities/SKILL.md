@@ -4,7 +4,7 @@ description: "CesiumJS entities and data sources - Entity, EntityCollection, Dat
 ---
 # CesiumJS Entities & DataSources
 
-> **Version baseline:** CesiumJS 1.139 -- ES module imports: `import { ... } from "cesium";`
+> **Version baseline:** CesiumJS 1.142 -- ES module imports: `import { ... } from "cesium";`
 > **Ownership rule:** `*Graphics` classes belong here; `*Geometry` classes belong in cesiumjs-primitives. Properties (SampledProperty, CallbackProperty, MaterialProperty subtypes) belong in cesiumjs-time-properties.
 
 ## Architecture
@@ -224,6 +224,11 @@ for (const entity of ds.entities.values) {
 
 `GeoJsonDataSource.load()` also accepts an inline GeoJSON object instead of a URL.
 
+Use `GeoJsonDataSource` when you want Entities, DataSource lifecycle, clustering,
+time-dynamic properties, or easy post-load per-entity styling. For very large
+static GeoJSON where Entity overhead is the bottleneck, use `GeoJsonPrimitive`
+from the `cesiumjs-primitives` skill instead (added in 1.142).
+
 ### KML / KMZ
 
 ```javascript
@@ -344,8 +349,14 @@ const url = URL.createObjectURL(result.kmz);
 | `WallGraphics` | positions, minimumHeights, maximumHeights |
 | `PolylineVolumeGraphics` | positions, shape (Cartesian2[]) |
 | `PlaneGraphics` | plane (Plane), dimensions (Cartesian2) |
-| `PathGraphics` | resolution, leadTime, trailTime, width |
+| `PathGraphics` | resolution, leadTime, trailTime, width, `relativeTo` (experimental, 1.140+) |
 | `Cesium3DTilesetGraphics` | uri |
+
+> **`PathGraphics.relativeTo` (experimental, 1.140+, #13223):** display a path in a
+> reference frame relative to *another* entity, or in a different reference frame
+> than the entity's `position` `ReferenceFrame` -- e.g. draw a drone's track
+> relative to a moving vehicle rather than ECEF. Marked experimental; the signature
+> may change.
 
 ## Key Enums
 
