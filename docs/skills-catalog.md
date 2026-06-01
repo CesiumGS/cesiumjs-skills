@@ -28,7 +28,7 @@ This directory contains Cesium ecosystem agent skills organized into two categor
 
 ### CesiumJS Domain Skills (Baked-In Reference)
 
-Self-contained, domain-level skills that passively activate when developers ask CesiumJS questions. Each skill provides a Quick Start, API reference, runnable code examples, performance tips, and cross-references. Based on CesiumJS v1.139.x.
+Self-contained, domain-level skills that passively activate when developers ask CesiumJS questions. Each skill provides a Quick Start, API reference, runnable code examples, performance tips, and cross-references. Based on CesiumJS v1.142.x.
 
 | # | Skill | Description |
 |---|-------|-------------|
@@ -41,11 +41,11 @@ Self-contained, domain-level skills that passively activate when developers ask 
 | 7 | **[cesiumjs-materials-shaders](./cesiumjs-materials-shaders/)** | Material/Fabric, ImageBasedLighting, PostProcessStage, bloom, tonemapping |
 | 8 | **[cesiumjs-custom-shader](./cesiumjs-custom-shader/)** | CustomShader authoring — GLSL for Model/Cesium3DTileset/VoxelPrimitive, feature IDs, EXT_structural_metadata |
 | 9 | **[cesiumjs-entities](./cesiumjs-entities/)** | Entity API, Graphics types, DataSources (GeoJSON/KML/CZML/GPX), Visualizers |
-| 10 | **[cesiumjs-primitives](./cesiumjs-primitives/)** | Primitive API, GeometryInstance, Appearances, Billboard/Label/Point collections |
-| 11 | **[cesiumjs-3d-tiles](./cesiumjs-3d-tiles/)** | Cesium3DTileset, styling, metadata, voxels, point clouds, I3S, clipping |
+| 10 | **[cesiumjs-primitives](./cesiumjs-primitives/)** | Primitive API, GeometryInstance, Appearances, BufferPrimitive collections, GeoJsonPrimitive |
+| 11 | **[cesiumjs-3d-tiles](./cesiumjs-3d-tiles/)** | Cesium3DTileset, styling, metadata, MVTDataProvider, voxels, point clouds, I3S, clipping |
 | 12 | **[cesiumjs-camera](./cesiumjs-camera/)** | Camera flyTo/lookAt/setView, ScreenSpaceCameraController, flight animation |
-| 13 | **[cesiumjs-interaction](./cesiumjs-interaction/)** | ScreenSpaceEventHandler, Scene.pick/drillPick, hover, drag interactions |
-| 14 | **[cesiumjs-models-particles](./cesiumjs-models-particles/)** | Model/glTF loading, animation, ParticleSystem, emitters |
+| 13 | **[cesiumjs-interaction](./cesiumjs-interaction/)** | ScreenSpaceEventHandler, multi-key modifiers, Scene.pick/drillPick, hover, drag interactions |
+| 14 | **[cesiumjs-models-particles](./cesiumjs-models-particles/)** | Model/glTF loading, EdgeDisplayMode, animation, ParticleSystem, emitters |
 
 The domain mapping and class ownership rules are documented in **[DOMAINS.md](./DOMAINS.md)**.
 

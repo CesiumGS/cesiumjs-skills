@@ -4,7 +4,7 @@ description: "CesiumJS core utilities and networking - Resource, Color, Event, R
 ---
 # CesiumJS Core Utilities & Networking
 
-Version baseline: CesiumJS v1.139+ (ES module imports, `defaultValue` removed in v1.134)
+Version baseline: CesiumJS v1.142+ (ES module imports, `defaultValue` removed in v1.134)
 
 ## Breaking Change: defaultValue Removed (v1.134)
 
