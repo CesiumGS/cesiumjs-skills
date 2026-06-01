@@ -4,7 +4,7 @@ description: "CesiumJS spatial math - Cartesian3, Cartographic, Matrix4, Quatern
 ---
 # CesiumJS Spatial Math & Transforms
 
-Version baseline: CesiumJS v1.139 (2026-03-05)
+Version baseline: CesiumJS v1.142 (2026-06-01)
 
 Mathematical foundation for every CesiumJS application: coordinate types, unit conversions, ellipsoid geometry, reference frame transforms, bounding volumes, intersection tests, and projections.
 
@@ -42,6 +42,13 @@ Cartesian3.UNIT_X; // (1,0,0)
 Cartesian3.UNIT_Y; // (0,1,0)
 Cartesian3.UNIT_Z; // (0,0,1)
 ```
+
+> **Breaking change (1.139, #8359):** `Cartesian2`, `Cartesian3`, and `Cartesian4`
+> are now ES6 classes. Calling `new` on a static **factory** method now throws --
+> `new Cartesian3.fromArray([...])` and `new Cartesian3.fromDegrees(...)` are
+> errors. Drop `new` for factory methods (`Cartesian3.fromArray([...])`); keep it
+> only for the real constructor (`new Cartesian3(x, y, z)`). More classes are
+> migrating to ES6 classes, so apply this rule everywhere.
 
 ### Vector Operations
 

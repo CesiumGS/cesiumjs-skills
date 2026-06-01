@@ -1,6 +1,6 @@
 # CustomShader Reference
 
-Exhaustive struct/enum tables and built-in uniform catalog for the `cesiumjs-custom-shader` skill. Sourced from CesiumGS/cesium `main` branch as of 2026-04-21 (v1.141 tip), targeting the CesiumJS 1.139 public API.
+Exhaustive struct/enum tables and built-in uniform catalog for the `cesiumjs-custom-shader` skill. Updated for the CesiumJS 1.142 public API.
 
 ---
 
@@ -169,7 +169,7 @@ Auto-generated from the primitive's `featureIds` array. All values are GLSL `int
 
 ## Metadata struct
 
-Addressable via `vsInput.metadata.<prop>` and `fsInput.metadata.<prop>`. Sources supported in 1.139:
+Addressable via `vsInput.metadata.<prop>` and `fsInput.metadata.<prop>`. Sources supported in 1.142:
 
 1. **Property attributes** — per-vertex (vertex and fragment).
 2. **Property textures** — per-texel (**fragment only**).
@@ -182,7 +182,7 @@ Addressable via `vsInput.metadata.<prop>` and `fsInput.metadata.<prop>`. Sources
 | `UINT8` (scalar/vector) | Supported | Supported |
 | Other integer types (`INT8`, `INT16`, `UINT16`, `INT32`, `UINT32`) | Not supported | Supported (signedness preserved post-1.139) |
 | `FLOAT32` | Limited | Supported |
-| `FLOAT64`, `INT64`, `UINT64` | Not available in 1.139 | Not available in 1.139 (added 1.140 via #13323 with downcasting) |
+| `FLOAT64`, `INT64`, `UINT64` | Not supported | Limited support via downcasting (1.140+) |
 | `BOOLEAN` | — | — |
 | `STRING` | — | — |
 | `ENUM` | Supported (as integer) | Supported |
@@ -253,7 +253,7 @@ Populated only when the parent tileset's `tileset.json` carries a `statistics` o
 | `standardDeviation` | floating-point of same dimension | σ |
 | `variance` | floating-point of same dimension | σ² |
 
-Enum properties note: an `occurrence` field is documented as TODO (not yet implemented in 1.139).
+Enum properties note: an `occurrence` field is documented as TODO.
 
 ---
 
