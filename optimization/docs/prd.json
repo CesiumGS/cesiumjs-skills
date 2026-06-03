@@ -1,0 +1,297 @@
+{
+  "project": "cesiumjs-skills",
+  "branchName": "feat/eval-and-optimization",
+  "description": "Cesium AI Evaluation Framework - fully autonomous loop that proposes skill changes, evaluates generated CesiumJS code in a browser-backed runner, runs deterministic checks plus three-judge pairwise A/B/TIE visual comparison, and applies a rule-based keep/reject decision with no required human gate.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add scenario JSON schema and validator script",
+      "description": "As an evaluator, I need a versioned schema for evaluation scenarios so every manifest is machine-checkable.",
+      "acceptanceCriteria": [
+        "Create optimization/schemas/scenario.schema.json with required fields: id, name, difficulty, description, prompt, expected_behaviors, visual_expectations, programmatic_checks, screenshots, regression_critical; optional: runner_mode, target_skill_sections, version",
+        "Create optimization/scripts/validate-evals.py that loads every optimization/scenarios/<skill>/*.json and validates against the schema",
+        "Validator exits non-zero with actionable diagnostics on any failure",
+        "Add at least one passing example scenario under optimization/scenarios/cesiumjs-camera/eval-001-*.json",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add public-safety partition and scanners",
+      "description": "As a maintainer, I need raw evidence kept out of git and tracked files scanned for tokens/paths so the repo stays public-safe.",
+      "acceptanceCriteria": [
+        "Update .gitignore to exclude optimization/runs/, optimization/generated/, optimization/candidates/<skill>/<iteration>/raw/, *.eval.html, raw console captures",
+        "Create optimization/scripts/check-public-artifacts.py that scans tracked files under optimization/ for Ion-token patterns, absolute filesystem paths (/Users/, /home/), email addresses, and configurable regex list; exits non-zero on any hit",
+        "Create optimization/scripts/check-secrets.sh that wraps a secret scanner over the staged diff",
+        "Document the configurable pattern list location at top of check-public-artifacts.py",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Add scenario version hashing and re-baseline flag",
+      "description": "As the framework, I need scenarios content-hashed so I can detect changes and flag them as 'needs re-baseline' until explicitly re-baselined.",
+      "acceptanceCriteria": [
+        "Compute and persist a content hash for each scenario manifest at validate time",
+        "Add optimization/scripts/rebaseline-scenario.py that accepts <skill> <eval-id> and records the new hash as the baseline in optimization/results/baselines.json",
+        "Decision engine (downstream) excludes scenarios whose current hash != recorded baseline hash from win/loss totals and tags them 'rebaseline_required'",
+        "Tests pass for hash computation and rebaseline state transitions",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Define runtime-agnostic adapter interface plus MCP stub",
+      "description": "As an architect, I need an adapter interface so skills and future MCP runtimes can both feed the same downstream pipeline.",
+      "acceptanceCriteria": [
+        "Create optimization/framework/adapters/base.py with an Adapter base class defining: prepare(scenario, candidate), invoke(), collect_output() returning output path + metadata dict, runtime_metadata()",
+        "Create optimization/framework/adapters/mcp_adapter.py that subclasses Adapter and raises NotImplementedError with a docstring describing the future shape (tool call sequence, tool selection metadata, scene-state checks)",
+        "Adapter interface is importable and unit-testable independent of any concrete runtime",
+        "Tests pass that instantiating the MCP stub and calling invoke raises NotImplementedError",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Implement skills adapter that calls Claude API and writes generated JS",
+      "description": "As the runner, I need a skills adapter that invokes an agent with a candidate skill and writes the generated JavaScript output.",
+      "acceptanceCriteria": [
+        "Create optimization/framework/adapters/skills_adapter.py implementing the Adapter interface from US-004",
+        "Reads ANTHROPIC_API_KEY from env; refuses to write any file if the key is missing",
+        "Takes inputs: scenario id, candidate skill file path, model id, temperature",
+        "Writes generated JS body to optimization/generated/<skill>/<iteration>/<eval-id>.js",
+        "Writes metadata sidecar optimization/generated/<skill>/<iteration>/<eval-id>.meta.json with model id, temperature, skill content hash, timestamp UTC",
+        "Post-generation safety scan strips/refuses any Ion token or absolute path in the generated JS",
+        "Tests pass for input/output contract and safety scan",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Implement browser-backed Cesium evaluation runner",
+      "description": "As the runner, I need to execute generated JS against a real Cesium scene in a headless browser and capture evidence.",
+      "acceptanceCriteria": [
+        "Create optimization/scripts/run-public-eval.py that materializes optimization/runs/<skill>/<iteration>/<eval-id>-<name>/eval.html with CesiumJS CDN script, cesiumContainer div, and CESIUM_ION_TOKEN env injection (token must not be written to any tracked file)",
+        "Uses Playwright headless Chromium with a fixed viewport (record viewport size in metadata)",
+        "Executes the page, waits for scenario-defined ready conditions, takes screenshots at scenario-defined timings",
+        "Writes screenshot.png (or numbered series), console.json with all messages and page errors",
+        "Scenarios with runner_mode: 'review-only' are listed and skipped, not failed",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Add evidence bundle structure with reproducibility metadata",
+      "description": "As an auditor, I need every run's evidence bundle to carry all metadata needed to reproduce it.",
+      "acceptanceCriteria": [
+        "Runner writes metadata.json containing: scenario version hash, candidate skill content hash, runner git commit, model id, temperature/seed, judge protocol version, browser viewport, Playwright/Chromium version, timestamp UTC, artifact hashes for screenshot+console",
+        "Runner writes scene-state.json capturing serializable scene properties (camera position, entity count, imagery layer count) when extractable",
+        "Bundle layout matches: optimization/runs/<skill>/<iteration>/<eval-id>-<name>/{eval.html, screenshot.png, console.json, programmatic-checks.json, scene-state.json, metadata.json}",
+        "metadata.json validates against a new optimization/schemas/run-metadata.schema.json",
+        "Tests pass for metadata schema validation",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Implement deterministic check engine",
+      "description": "As the framework, I need pass/fail checks that run without LLM judgment to catch critical regressions cheaply.",
+      "acceptanceCriteria": [
+        "Create optimization/framework/checks/engine.py supporting check types: code_runs, no_console_errors, pattern_present, pattern_absent, schema_match, api_present",
+        "Each check returns { check_id, type, result: 'pass' | 'fail', detail }",
+        "Engine writes programmatic-checks.json into the run directory",
+        "Re-running the engine on the same evidence bundle and scenario version produces byte-identical results",
+        "Completes in under 5 seconds per scenario on a typical machine",
+        "Tests pass covering each check type with pass and fail fixtures",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Implement single pairwise judge call",
+      "description": "As the framework, I need one judge that compares baseline and candidate evidence pairwise and returns a structured verdict.",
+      "acceptanceCriteria": [
+        "Create optimization/framework/judges/single.py with a function judge(scenario, baseline_bundle, candidate_bundle, judge_model_id, judge_protocol_version, seed) returning { verdict: 'BASELINE' | 'CANDIDATE' | 'TIE', rationale: str, model_id, protocol_version }",
+        "Prompt template lives in optimization/framework/judges/prompts/pairwise-v1.txt and is referenced by version",
+        "Randomizes which side is presented as 'A' vs 'B' using the provided seed; records the mapping in the returned record",
+        "Refuses to run if ANTHROPIC_API_KEY (or configured judge key) is missing",
+        "Tests pass for verdict parsing and label randomization given a mocked model response",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Implement three-judge orchestration with majority vote",
+      "description": "As the framework, I need three independent judges per scenario and a majority verdict so visual decisions are robust to single-judge noise.",
+      "acceptanceCriteria": [
+        "Create optimization/framework/judges/panel.py that invokes the single-judge function three times with three different seeds (and, if configured, three different model ids)",
+        "Computes per-scenario verdict as majority of three; three-way tie among votes resolves to TIE",
+        "Writes judge-verdicts.json with all three rationales, individual verdicts, model ids, seeds, label randomizations, protocol version, and final majority",
+        "If fewer than three verdicts are obtainable, marks scenario judge_unavailable and does NOT count it as a loss",
+        "Tests pass for majority computation across all 27 vote combinations",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Implement autonomous decision engine",
+      "description": "As the framework, I need a rule-based keep/reject engine that resolves all outcomes deterministically without human input.",
+      "acceptanceCriteria": [
+        "Create optimization/framework/decision/engine.py with a pure function decide(check_results, judge_results, scenario_meta) returning { decision: 'KEEP' | 'REJECT', rule_fired: str, counts: {wins, losses, ties, critical_failures}, rationale: str }",
+        "Rules applied in order: (1) any programmatic_checks fail on regression_critical scenario -> REJECT, (2) any judge loss on regression_critical scenario -> REJECT, (3) candidate wins > baseline wins -> KEEP, (4) baseline wins > candidate wins -> REJECT, (5) tie -> KEEP CURRENT BEST",
+        "All five rules resolve without prompting; no interactive input anywhere",
+        "Optional --override flag with rationale string is supported on a wrapper CLI but never required",
+        "Writes decision.json to optimization/results/<skill>/<iteration>/",
+        "Tests pass exercising each of the five rules and the override path",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Implement report generator with sanitized public output",
+      "description": "As a contributor, I need a sanitized human-readable summary of each iteration.",
+      "acceptanceCriteria": [
+        "Create optimization/scripts/generate-report.py that writes optimization/results/public-status.json with current-best skill version, last decision, per-scenario win/loss/tie counts, regression-critical status, timestamp UTC",
+        "Also writes optimization/results/<skill>/<iteration>/summary.md with per-scenario verdict, check status, and curated screenshot reference (relative path only)",
+        "Computes report scores (programmatic correctness %, API accuracy %, visual win rate, coverage delta) from structured evidence and includes them alongside but never replacing the rule-fired decision",
+        "All output files pass optimization/scripts/check-public-artifacts.py before write succeeds",
+        "Tests pass for score computation and sanitization checks",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Implement coverage analyzer",
+      "description": "As the proposer, I need to know which skill sections lack scenario coverage so I can prioritize gaps.",
+      "acceptanceCriteria": [
+        "Create optimization/scripts/analyze-coverage.py that parses skill markdown headings and code-block API references from skills/<skill>/SKILL.md and supporting files",
+        "Reads scenario manifests' optional target_skill_sections and expected_behaviors",
+        "Outputs optimization/results/coverage.json mapping each skill section / public API to the scenarios that exercise it, with an 'uncovered' list",
+        "Output passes check-public-artifacts.py",
+        "Tests pass for parsing and mapping logic",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Implement optimization proposer",
+      "description": "As the framework, I need an agent that reads history and proposes a revised skill so the loop improves itself autonomously.",
+      "acceptanceCriteria": [
+        "Create optimization/scripts/propose-candidate.py that receives <skill> and reads: current best skill content, last decision record, per-scenario verdicts + rationales for last N iterations (configurable), coverage report",
+        "Calls Claude API with a versioned prompt template at optimization/framework/proposer/prompts/propose-v1.txt",
+        "Outputs a candidate skill file at optimization/candidates/<skill>/<iteration>/SKILL.md and hypothesis.md describing the change and the scenario evidence it addresses",
+        "Records proposer model id, prompt version, temperature, seed in optimization/candidates/<skill>/<iteration>/proposer-metadata.json",
+        "Refuses to run if ANTHROPIC_API_KEY is missing",
+        "Tests pass for input assembly and output paths using a mocked model",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Implement autonomous iteration loop",
+      "description": "As an operator, I want to start the loop and have it run iteration after iteration until a stopping condition, with no interactive pauses.",
+      "acceptanceCriteria": [
+        "Create optimization/scripts/run-loop.py with CLI: <skill> --max-iterations N --stop-on plateau|regression|max --plateau-n M",
+        "Each iteration: proposer -> skills adapter (all scenarios) -> browser runner -> deterministic checks -> three-judge panel -> decision engine -> report generator -> append to optimization/history/<skill>/iteration-NNN/",
+        "On KEEP: candidate becomes new current best for next iteration. On REJECT: candidate is preserved under history but current best unchanged",
+        "Stops on: max iterations, M consecutive ties, unrecoverable runner error, SIGINT",
+        "No prompt for confirmation, no maintainer-blocking gate, no interactive input anywhere in the loop",
+        "Tests pass for stopping conditions using mocked subcomponents",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Add PR CI workflow running deterministic gates only",
+      "description": "As a contributor, I want fast PR feedback without burning LLM judge cost.",
+      "acceptanceCriteria": [
+        "Create or update .github/workflows/evals.yml triggered on pull_request",
+        "Runs optimization/scripts/validate-evals.py, optimization/scripts/check-public-artifacts.py, optimization/scripts/check-secrets.sh in that order",
+        "No LLM judge calls in this workflow",
+        "Workflow completes in under 2 minutes on a public ubuntu-latest runner",
+        "Failures produce actionable annotations on the PR",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Add scheduled and manual visual judge workflow",
+      "description": "As a maintainer, I want to trigger or schedule a full multi-judge visual run separately from PR CI.",
+      "acceptanceCriteria": [
+        "Create .github/workflows/evals-visual.yml triggered on workflow_dispatch, on cron schedule (nightly), and on release tags",
+        "Runs the full pipeline: adapter -> runner -> checks -> three-judge panel -> decision -> report",
+        "Reads CESIUM_ION_TOKEN, ANTHROPIC_API_KEY, and any judge model keys from CI secrets; never echoes them",
+        "Uploads sanitized report as a workflow artifact and commits it back to optimization/results/ via PR or push branch (configurable)",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Update local reproduction wiki page with full loop instructions",
+      "description": "As a contributor, I want documented commands to reproduce any public decision locally.",
+      "acceptanceCriteria": [
+        "Update wiki/Run-Skill-Evaluations-Locally.md to cover: install (Playwright + Python deps), token setup (CESIUM_ION_TOKEN, ANTHROPIC_API_KEY), single-scenario run via run-public-eval.py, full skill loop via run-loop.py",
+        "All commands are copy-paste runnable from a clean checkout",
+        "Create optimization/scripts/smoke-test-docs.sh that executes each documented command (using a tiny scenario set) and exits non-zero on any failure",
+        "Local runner respects check-public-artifacts.py before any artifact is moved into tracked optimization/results/",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

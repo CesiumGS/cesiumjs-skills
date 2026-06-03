@@ -1,0 +1,22 @@
+{
+  "skill": "cesiumjs-primitives",
+  "iteration": "001",
+  "model_id": "claude-sonnet-4-6",
+  "temperature": 1.0,
+  "prompt_version": "propose-v1",
+  "timestamp_utc": "2026-05-26T21:03:19.584932+00:00",
+  "current_skill_hash": "dcd0eeb9bcc8ed6d97d62f6ced517ac92d66208ab51c1c6a8d714f109d74898f",
+  "candidate_skill_hash": "4e764f1dea80d5de86d2a0437e927fb98b0cc3ef2d14489d482f843a655f88bc",
+  "decision_summary": {
+    "decision": "BASELINE",
+    "rule_fired": "initial",
+    "counts": {
+      "wins": 0,
+      "losses": 0,
+      "ties": 0
+    }
+  },
+  "history_iterations": 0,
+  "uncovered_sections_count": 8,
+  "uncovered_apis_count": 16
+}

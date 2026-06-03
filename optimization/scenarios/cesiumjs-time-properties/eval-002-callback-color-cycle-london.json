@@ -1,0 +1,76 @@
+{
+  "id": "eval-002",
+  "name": "callback-color-cycle-london",
+  "landmark": "London pulsing marker entity",
+  "perspective": "city view with colour-cycling entity",
+  "difficulty": "medium",
+  "description": "Create a large polygon entity over central London whose material is a ColorMaterialProperty backed by a CallbackProperty that returns Color.fromHsl((seconds % 8) / 8, 0.8, 0.5) \u2014 cycling through the full hue range every 8 seconds. Set viewer.clock to run at multiplier 1, shouldAnimate true, and rely on the runner's screenshot delay to capture a non-default-hue colour.",
+  "prompt": "Add a polygon entity covering central London as a rectangle from (-0.18, 51.48) to (-0.08, 51.54). Assign its polygon.material to new ColorMaterialProperty(new CallbackProperty((time, result) => { const seconds = JulianDate.secondsDifference(time, viewer.clock.startTime); const hue = (seconds % 8) / 8; return Color.fromHsl(hue, 0.8, 0.5, 0.8, result); }, false)). Set viewer.clock.shouldAnimate = true. Set viewer.clock.startTime = JulianDate.fromIso8601('2026-05-20T12:00:00Z') and currentTime = JulianDate.addSeconds(startTime, 3, new JulianDate()). Frame the camera over central London (51.51 N, -0.13 W) at 25,000 m altitude looking straight down.",
+  "expected_behaviors": [
+    "Adds 1 polygon entity covering central London",
+    "Polygon.material is a ColorMaterialProperty(new CallbackProperty(...))",
+    "CallbackProperty's function computes a colour from time",
+    "Uses Color.fromHsl for hue cycling",
+    "Sets viewer.clock.shouldAnimate = true",
+    "Sets viewer.clock.startTime and currentTime to specific JulianDate values",
+    "Frames the camera over central London (around 51.51 N, -0.13 W) at 15,000-50,000 m altitude"
+  ],
+  "visual_expectations": "A top-down view of central London with a large rectangular polygon overlay coloured with a vivid saturated colour (orange, yellow, green, blue, purple, or pink \u2014 any one of the HSL ramp), partially transparent. The Thames should be visible underneath.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?CallbackProperty",
+      "description": "Uses CallbackProperty"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ColorMaterialProperty",
+      "description": "Uses ColorMaterialProperty"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.fromHsl",
+      "description": "Cycles hue via Color.fromHsl"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "JulianDate\\.secondsDifference",
+      "description": "Reads elapsed seconds"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "shouldAnimate\\s*=\\s*true",
+      "description": "Animates the clock"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "polygon",
+      "description": "Polygon entity"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "51\\.5",
+      "description": "Targets London latitude"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_color_cycle",
+      "delay_ms": 6000,
+      "description": "London polygon with one of the HSL cycle colours"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "Property System -- Time-Varying Values",
+    "Material Properties"
+  ]
+}

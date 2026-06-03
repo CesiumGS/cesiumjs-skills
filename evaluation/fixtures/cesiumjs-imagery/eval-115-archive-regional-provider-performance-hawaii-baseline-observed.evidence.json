@@ -1,0 +1,160 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 7,
+        "total": 7
+      },
+      "source_scenario_id": "eval-015"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-115",
+  "case_name": "regional-provider-performance-hawaii",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-imagery/baseline/eval-015-regional-provider-performance-hawaii/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Tight bounding rectangle around the Hawaiian Islands\nconst hawaiiRectangle = Cesium.Rectangle.fromDegrees(-161.0, 18.5, -154.0, 22.5);\n\n// Regional UrlTemplateImageryProvider constrained to Hawaii.\n// The provider itself is given the same rectangle so it never requests\n// tiles outside the islands, and minimumTerrainLevel / maximumTerrainLevel\n// on the ImageryLayer limit rendering to a deliberate zoom window.\nconst hawaiiProvider = new Cesium.UrlTemplateImageryProvider({\n  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',\n  credit: 'OpenStreetMap contributors',\n  rectangle: hawaiiRectangle,\n  minimumLevel: 2,\n  maximumLevel: 16,\n});\n\nconst hawaiiLayer = new Cesium.ImageryLayer(hawaiiProvider, {\n  rectangle: hawaiiRectangle,\n  maximumTerrainLevel: 14,  // do not render above this detail level (too zoomed-in)\n});\n\nhawaiiLayer.alpha = 0.8;\nhawaiiLayer.brightness = 1.2;\nhawaiiLayer.contrast = 1.25;\nviewer.imageryLayers.add(hawaiiLayer);\n\nviewer.entities.add({\n  name: 'Regional imagery provider bounds',\n  rectangle: {\n    coordinates: hawaiiRectangle,\n    fill: false,\n    outline: true,\n    outlineColor: Cesium.Color.RED,\n    outlineWidth: 4,\n  },\n});\n\n// Frame the camera on the Hawaiian Islands at a regional altitude.\nviewer.camera.setView({\n  destination: Cesium.Rectangle.fromDegrees(-162.0, 18.0, -153.5, 23.2),\n  orientation: {\n    heading: Cesium.Math.toRadians(0),\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0,\n  },\n});\n",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "7de30cd836206d561905bab18b3f0062b880993b903401fe5449aed26a16126d",
+      "programmatic_checks": "a7044f03e28bed4e4fba64aa31f4efb76196d580e06814b5b046614ea65c1f6a",
+      "scene_state": "242c08a1ac84f64a323544cda2a36db2f5cde1513eb5d91f75e2cf222c494936",
+      "screenshot_quality": "abb0fc20a983e12d54e98d1c06b0e7baad47116fa584dafe58a6f3962a430fd1",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "7975b28713c354b55b6f50bd26b2b5d4c0c24483a22430b0797d283ca432ea2d"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "8842ef0c98540713f1e9e72185baaf59d58e01470c00fea45cb75fe21337e13e",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "a13ef78d320bf1fd74ac3dd30bbf9257022c567e35c9a421482db9ea17033493",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:43:23.827177+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses URL template imagery provider",
+        "detail": "Pattern matched: 'UrlTemplateImageryProvider'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Sets tight rectangle bounds",
+        "detail": "Pattern matched: 'rectangle'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses imagery performance level limits",
+        "detail": "Pattern matched: 'minimumTerrainLevel'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Targets Hawaii region",
+        "detail": "Pattern matched: '22.'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-015",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 7,
+      "total": 7
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-imagery/baseline/eval-015-regional-provider-performance-hawaii",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": -6292086.800316081,
+        "y": -2574160.6735300254,
+        "z": 2540330.325664516
+      },
+      "roll": 0
+    },
+    "entity_count": 1,
+    "imagery_layer_count": 2,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-015",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 252,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 80093,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 200.79,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-imagery/eval-015-screenshot.png"
+  ],
+  "skill": "cesiumjs-imagery",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-imagery/baseline/eval-015.js"
+}

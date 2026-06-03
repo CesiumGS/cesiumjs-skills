@@ -1,0 +1,28 @@
+{
+  "id": "eval-003",
+  "name": "geojson-data-source",
+  "difficulty": "medium",
+  "description": "Load GeoJSON data and style it. Tests the DataSource API and entity styling after load.",
+  "prompt": "Load the US states GeoJSON from this URL: https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json — then style all the polygons with a random color per state and a white outline. Fly the camera to the continental US after loading.",
+  "expected_behaviors": [
+    "Uses GeoJsonDataSource.load with the URL",
+    "Adds the data source to viewer.dataSources",
+    "Iterates over entities to apply custom styling",
+    "Sets polygon material to random colors",
+    "Sets outline to white",
+    "Flies or zooms to the data after loading"
+  ],
+  "visual_expectations": "A colorful map of US states, each state a different random color with white outlines. The camera should be positioned to show the continental United States.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "GeoJsonDataSource", "description": "Uses GeoJsonDataSource"},
+    {"type": "pattern_present", "pattern": "dataSources\\.add|dataSources\\.get", "description": "Adds to dataSources"},
+    {"type": "pattern_present", "pattern": "us-states\\.json", "description": "Loads the correct URL"},
+    {"type": "pattern_present", "pattern": "polygon\\.material|material", "description": "Styles the polygons"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 8000, "description": "Colorful US states map with white outlines"}
+  ],
+  "regression_critical": false
+}

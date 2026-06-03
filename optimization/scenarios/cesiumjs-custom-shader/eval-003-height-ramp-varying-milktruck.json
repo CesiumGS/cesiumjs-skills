@@ -1,0 +1,37 @@
+{
+  "id": "eval-003",
+  "name": "height-ramp-varying-milktruck",
+  "landmark": "CesiumMilkTruck sample model",
+  "perspective": "framed model with vertical color ramp",
+  "difficulty": "hard",
+  "description": "Load the public Cesium Milk Truck sample model and apply a CustomShader that uses a FLOAT varying to pass the vertex height (positionMC.y for this model) to the fragment shader, then colours the fragment from blue at the bottom to yellow at the top of the model. Tests varying declaration with VaryingType.FLOAT, varying write in vertex shader, varying read in fragment shader.",
+  "prompt": "Use an eval-stable viewer with baseLayer: false, disabled baseLayerPicker/navigationHelpButton/animation/timeline/geocoder/homeButton/sceneModePicker/fullscreenButton/infoBox/selectionIndicator, and window.viewer assigned. Set viewer.scene.globe.baseColor to a neutral dark gray and do not add OpenStreetMap imagery; this close-up model test should not request high-zoom map tiles. Load the public Cesium Milk Truck sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMilkTruck/CesiumMilkTruck.glb using Model.fromGltfAsync with scale 4.0 and minimumPixelSize 200. Apply a CustomShader with a varying v_height of type VaryingType.FLOAT. In the vertexShaderText assign v_height = vsInput.attributes.positionMC.y (the CesiumMilkTruck's vertical axis in model coords is Y, not Z — the y-component ranges roughly -1.0 to +2.5). In the fragmentShaderText, compute t = clamp((v_height + 1.0) / 3.5, 0.0, 1.0), then material.diffuse = mix(vec3(0.0, 0.2, 1.0), vec3(1.0, 0.9, 0.0), t). Position the truck via Transforms.eastNorthUpToFixedFrame(Cartesian3.fromDegrees(-118.4912, 34.0195, 0)). Add to viewer.scene.primitives. Frame the full truck, not a cropped edge, with explicit camera coordinates or viewer.camera.lookAt targeting the known Cartesian3 position. Do not use model.boundingSphere or flyToBoundingSphere. If using HeadingPitchRange, use a range around 90 to 120 meters, not 30 meters. A good framing is the truck centered at medium distance from slightly above, with the whole vehicle and the blue-to-yellow height ramp visible.",
+  "expected_behaviors": [
+    "Calls Model.fromGltfAsync with the public CesiumMilkTruck glb URL",
+    "Constructs a CustomShader with both vertexShaderText AND fragmentShaderText",
+    "Declares varyings: { v_height: VaryingType.FLOAT }",
+    "Vertex shader writes v_height = vsInput.attributes.positionMC.y for the Milk Truck vertical axis",
+    "Fragment shader reads v_height and mixes between two distinct RGB vec3 values via mix() or smoothstep",
+    "Writes the mixed colour into material.diffuse",
+    "Positions the model at -118.49, 34.02 via Transforms.eastNorthUpToFixedFrame",
+    "Frames the camera close enough that the truck is the dominant element"
+  ],
+  "visual_expectations": "The Cesium Milk Truck visible from the side or front, with its lower surfaces tinted blue/dark and its upper surfaces tinted yellow/bright, producing a clear vertical color gradient across the vehicle body.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "Model\\.fromGltfAsync", "description": "Uses Model.fromGltfAsync" },
+    { "type": "pattern_present", "pattern": "CesiumMilkTruck", "description": "Targets the CesiumMilkTruck sample model" },
+    { "type": "pattern_present", "pattern": "VaryingType\\.FLOAT", "description": "Declares FLOAT varying" },
+    { "type": "pattern_present", "pattern": "v_height", "description": "Defines the v_height varying" },
+    { "type": "pattern_present", "pattern": "vertexMain", "description": "Defines vertexMain" },
+    { "type": "pattern_present", "pattern": "fragmentMain", "description": "Defines fragmentMain" },
+    { "type": "pattern_present", "pattern": "positionMC\\.y", "description": "Reads vertex height from positionMC.y" },
+    { "type": "pattern_present", "pattern": "material\\.diffuse", "description": "Writes the ramp into material.diffuse" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 6000, "description": "CesiumMilkTruck with blue-to-yellow vertical color ramp" }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": ["Varyings", "Attributes", "czm_modelVertexOutput & czm_modelMaterial"]
+}

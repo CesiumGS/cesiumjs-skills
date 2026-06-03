@@ -1,0 +1,36 @@
+{
+  "id": "eval-003",
+  "name": "quaternion-heading-marker",
+  "landmark": "CesiumAir aircraft rotated via Quaternion",
+  "perspective": "framed aircraft with non-default rotation",
+  "difficulty": "hard",
+  "description": "Load the public CesiumAir glb model and construct its modelMatrix from a Quaternion built via Quaternion.fromAxisAngle with the local up axis (Cartesian3.UNIT_Z) and an angle of Cesium.Math.toRadians(45) or CesiumMath.toRadians(45) — so the aircraft's nose points northeast in the local east-north-up frame. Then compose with Matrix4.fromTranslationQuaternionRotationScale (or equivalent). Tests Quaternion.fromAxisAngle, Matrix3.fromQuaternion, and Matrix4 composition.",
+  "prompt": "Load the public Cesium Air model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb using Model.fromGltfAsync with scale 50, minimumPixelSize 300. Build the modelMatrix: origin Cartesian3.fromDegrees(-115.1735, 36.1146, 3000). Compose Transforms.eastNorthUpToFixedFrame(origin) as the ENU frame, then build Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, Cesium.Math.toRadians(45)) for a 45-deg yaw, Matrix3.fromQuaternion(q) for rotation matrix, Matrix4.fromRotationTranslation(rot3, Cartesian3.ZERO) for the 4x4. Final modelMatrix = Matrix4.multiply(enuFrame, rotMatrix4, new Matrix4()). Add model to scene.primitives. Frame from above-behind using explicit camera coords (NOT viewer.flyTo of the model): viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-115.1755, 36.1130, 3200), orientation: { heading: Cesium.Math.toRadians(30), pitch: Cesium.Math.toRadians(-25), roll: 0 } }) — looking northeast-and-down at the aircraft from 250 m away so its 45-deg yaw is clearly visible.",
+  "expected_behaviors": [
+    "Calls Model.fromGltfAsync with the public CesiumAir glb URL",
+    "Calls Quaternion.fromAxisAngle with an axis vector and an angle from Cesium.Math.toRadians or CesiumMath.toRadians",
+    "Uses Matrix3.fromQuaternion to build a rotation matrix",
+    "Composes the rotation with an ENU frame from Transforms.eastNorthUpToFixedFrame via Matrix4.multiply",
+    "Origin coordinates are around -115.17 W, 36.11 N (Las Vegas) at non-zero altitude",
+    "Sets minimumPixelSize on the model so it's visible from camera distance",
+    "Adds the model to viewer.scene.primitives",
+    "Frames the camera close to the aircraft"
+  ],
+  "visual_expectations": "The Cesium Air aircraft visible above terrain (Las Vegas desert area), with its nose pointing toward the northeast rather than straight north (the default). The yaw should be clearly non-zero — the aircraft should appear rotated about its vertical axis.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "Model\\.fromGltfAsync", "description": "Uses Model.fromGltfAsync" },
+    { "type": "pattern_present", "pattern": "Quaternion\\.fromAxisAngle", "description": "Builds quaternion from axis-angle" },
+    { "type": "pattern_present", "pattern": "Matrix3\\.fromQuaternion", "description": "Converts quaternion to Matrix3" },
+    { "type": "pattern_present", "pattern": "Matrix4\\.multiply", "description": "Composes matrices with Matrix4.multiply" },
+    { "type": "pattern_present", "pattern": "Transforms\\.eastNorthUpToFixedFrame", "description": "Uses ENU local frame" },
+    { "type": "pattern_present", "pattern": "(?:CesiumMath|Cesium\\.Math)\\.toRadians", "description": "Converts degrees to radians" },
+    { "type": "pattern_present", "pattern": "Cartesian3\\.UNIT_Z", "description": "Uses UNIT_Z axis" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 6000, "description": "Aircraft with non-default 45-deg yaw rotation" }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": ["Quaternion -- Rotation", "Matrix4 -- 4x4 Transforms", "Transforms -- Reference Frames"]
+}

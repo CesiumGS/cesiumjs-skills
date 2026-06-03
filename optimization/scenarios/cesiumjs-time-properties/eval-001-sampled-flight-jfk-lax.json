@@ -1,0 +1,37 @@
+{
+  "id": "eval-001",
+  "name": "sampled-flight-jfk-lax",
+  "landmark": "Flight path from JFK to LAX",
+  "perspective": "continental US view of an animated flight",
+  "difficulty": "hard",
+  "description": "Configure the clock for a 60-second interval, define a SampledPositionProperty with 4 control points (JFK, Kansas, Denver, LAX) along a great-circle-style path, and bind it to an entity with a billboard + path graphic. Then advance the clock to the middle of the interval so the screenshot captures the aircraft mid-flight over the central US.",
+  "prompt": "Create a SampledPositionProperty (interpolation: LinearApproximation degree 1 or HermitePolynomialApproximation degree 2 if you prefer smooth). Configure the clock: start = JulianDate.fromIso8601('2026-05-20T12:00:00Z'); stop = JulianDate.addSeconds(start, 60, new JulianDate()). Set viewer.clock.startTime, stopTime, currentTime to start, multiplier 1, clockRange ClockRange.LOOP_STOP, shouldAnimate true. Add four samples to the position property at fractions 0.0, 0.33, 0.67, 1.0 (relative seconds 0, 20, 40, 60): JFK (-73.7781, 40.6413, 9000), Kansas (-98.0, 39.0, 11000), Denver (-104.9903, 39.7392, 11000), LAX (-118.4085, 33.9416, 9000). Add an entity with a visible point graphic (preferred) or a billboard using a small inline data URL only; do not reference /Apps/SampleData or any local sample image path. Add a path with width 3, leadTime 60, trailTime 60, material Color.YELLOW. Set viewer.clock.currentTime to start + 30 seconds before screenshot so the entity sits roughly mid-flight near Denver.",
+  "expected_behaviors": [
+    "Constructs viewer.clock.startTime, stopTime via JulianDate.fromIso8601 and JulianDate.addSeconds",
+    "Constructs new SampledPositionProperty()",
+    "Adds at least 3 samples via property.addSample(JulianDate, Cartesian3.fromDegrees(...))",
+    "Sets the property as the entity.position",
+    "Entity has a path graphic with non-zero leadTime or trailTime",
+    "Advances clock to the middle of the interval (currentTime = start + ~30 seconds) before screenshot",
+    "Sets shouldAnimate = true OR forces the path to be visible at a non-start time",
+    "Path graphic has a coloured material (e.g., Color.YELLOW or ORANGE)"
+  ],
+  "visual_expectations": "A continental US camera view with an animated entity (billboard) positioned roughly over the central US (Colorado/Kansas), connected to a visible yellow flight path arc spanning from the east coast (JFK) to the southwest coast (LAX). The path should be a visible polyline indicating an arc from northeast to southwest.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "SampledPositionProperty", "description": "Uses SampledPositionProperty" },
+    { "type": "pattern_present", "pattern": "addSample", "description": "Adds samples to the property" },
+    { "type": "pattern_present", "pattern": "JulianDate\\.fromIso8601", "description": "Uses ISO time" },
+    { "type": "pattern_present", "pattern": "JulianDate\\.addSeconds", "description": "Advances JulianDate" },
+    { "type": "pattern_present", "pattern": "viewer\\.clock", "description": "Configures viewer clock" },
+    { "type": "pattern_present", "pattern": "path", "description": "Entity has path graphic" },
+    { "type": "pattern_present", "pattern": "(?:leadTime|trailTime)", "description": "Path has leadTime or trailTime" },
+    { "type": "pattern_present", "pattern": "-118\\.4|33\\.9", "description": "References LAX coordinates" }
+  ],
+  "screenshots": [
+    { "timing": "after_midflight", "delay_ms": 6000, "description": "Animated flight at mid-route over central US" }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": ["Property System -- Time-Varying Values", "Clock -- Simulation Time Controller", "JulianDate -- The Time Primitive"]
+}

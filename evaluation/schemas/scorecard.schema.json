@@ -1,0 +1,334 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvaluationScorecard",
+  "description": "CI/CD-facing deterministic evaluation scorecard.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "timestamp_utc",
+    "git_commit",
+    "overall_result",
+    "deterministic_result",
+    "overall_score",
+    "threshold",
+    "category_scores",
+    "critical_failures",
+    "visual_summary",
+    "cases",
+    "artifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "run_id": { "type": "string" },
+    "timestamp_utc": { "type": "string" },
+    "git_commit": { "type": "string" },
+    "overall_result": { "type": "string", "enum": ["pass", "fail"] },
+    "deterministic_result": { "type": "string", "enum": ["pass", "fail"] },
+    "overall_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "category_scores": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/category_score" }
+    },
+    "critical_failures": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/critical_failure" }
+    },
+    "visual_summary": {
+      "$ref": "#/definitions/visual_summary"
+    },
+    "cases": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/case_result" }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "category_score": {
+      "type": "object",
+      "required": ["score", "passed_weight", "total_weight", "passed_checks", "total_checks"],
+      "additionalProperties": false,
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "passed_weight": { "type": "number", "minimum": 0 },
+        "total_weight": { "type": "number", "minimum": 0 },
+        "passed_checks": { "type": "integer", "minimum": 0 },
+        "total_checks": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "critical_failure": {
+      "type": "object",
+      "required": [
+        "case_id",
+        "case_name",
+        "skill",
+        "task",
+        "check_id",
+        "category",
+        "actual",
+        "expected",
+        "tolerance",
+        "evidence_path",
+        "detail"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "case_id": { "type": "string" },
+        "case_name": { "type": "string" },
+        "skill": { "type": "string" },
+        "task": { "type": "string" },
+        "check_id": { "type": "string" },
+        "category": { "type": "string" },
+        "actual": {},
+        "expected": {},
+        "tolerance": {},
+        "evidence_path": { "type": "string" },
+        "detail": { "type": "string" }
+      }
+    },
+    "case_result": {
+      "type": "object",
+      "required": [
+        "case_id",
+        "case_name",
+        "skill",
+        "task",
+        "category",
+        "probe_contract",
+        "source_context",
+        "result",
+        "score",
+        "duration_ms",
+        "error",
+        "evidence_path",
+        "evidence_summary",
+        "screenshots",
+        "visual_review",
+        "checks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "case_id": { "type": "string" },
+        "case_name": { "type": "string" },
+        "skill": { "type": "string" },
+        "task": { "type": "string" },
+        "category": { "type": "string" },
+        "probe_contract": { "$ref": "#/definitions/probe_contract" },
+        "source_context": { "$ref": "#/definitions/source_context" },
+        "result": { "type": "string", "enum": ["pass", "fail"] },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "error": { "type": ["string", "null"] },
+        "evidence_path": { "type": "string" },
+        "evidence_summary": { "$ref": "#/definitions/evidence_summary" },
+        "screenshots": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "visual_review": {
+          "$ref": "#/definitions/visual_review_result"
+        },
+        "checks": {
+          "type": "array",
+          "items": { "$ref": "result.schema.json#/definitions/check_result" }
+        }
+      }
+    },
+    "probe_contract": {
+      "type": "object",
+      "required": [
+        "capture",
+        "snapshot_before_and_after",
+        "snapshot_after",
+        "before_trigger",
+        "after_trigger",
+        "actual_source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "capture": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "snapshot_before_and_after": { "type": "boolean" },
+        "snapshot_after": { "type": "boolean" },
+        "before_trigger": { "type": ["string", "null"] },
+        "after_trigger": { "type": ["string", "null"] },
+        "actual_source": { "type": ["string", "null"] }
+      }
+    },
+    "source_context": {
+      "type": "object",
+      "required": [
+        "source",
+        "source_scenario_id",
+        "source_name",
+        "landmark",
+        "perspective",
+        "difficulty",
+        "expected_behaviors",
+        "visual_expectations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "source_scenario_id": { "type": ["string", "null"] },
+        "source_name": { "type": ["string", "null"] },
+        "landmark": { "type": ["string", "null"] },
+        "perspective": { "type": ["string", "null"] },
+        "difficulty": { "type": ["string", "null"] },
+        "expected_behaviors": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "visual_expectations": { "type": "string" }
+      }
+    },
+    "evidence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "expected_result": { "type": ["string", "null"] },
+        "evidence_source": { "type": ["string", "null"] },
+        "actual_source_path": { "type": ["string", "null"] },
+        "run_artifact_path": { "type": ["string", "null"] },
+        "source_scenario_id": { "type": ["string", "null"] },
+        "observed_from": { "type": ["string", "null"] },
+        "evidence_path": { "type": "string" },
+        "has_generated_code": { "type": "boolean" }
+      }
+    },
+    "visual_summary": {
+      "type": "object",
+      "required": [
+        "result",
+        "visual_review_supplied",
+        "required_count",
+        "reviewed_count",
+        "total_cases",
+        "pass_count",
+        "fail_count",
+        "needs_review_count",
+        "not_reviewed_count",
+        "not_applicable_count",
+        "blocking_failures"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "result": { "type": "string", "enum": ["pass", "fail", "needs_review", "not_required"] },
+        "visual_review_supplied": { "type": "boolean" },
+        "required_count": { "type": "integer", "minimum": 0 },
+        "reviewed_count": { "type": "integer", "minimum": 0 },
+        "total_cases": { "type": "integer", "minimum": 0 },
+        "pass_count": { "type": "integer", "minimum": 0 },
+        "fail_count": { "type": "integer", "minimum": 0 },
+        "needs_review_count": { "type": "integer", "minimum": 0 },
+        "not_reviewed_count": { "type": "integer", "minimum": 0 },
+        "not_applicable_count": { "type": "integer", "minimum": 0 },
+        "blocking_failures": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/visual_blocking_failure" }
+        }
+      }
+    },
+    "visual_blocking_failure": {
+      "type": "object",
+      "required": ["case_id", "case_name", "skill", "status", "summary", "artifact_path"],
+      "additionalProperties": false,
+      "properties": {
+        "case_id": { "type": "string" },
+        "case_name": { "type": "string" },
+        "skill": { "type": "string" },
+        "status": { "type": "string", "enum": ["fail", "needs_review", "not_reviewed"] },
+        "summary": { "type": "string" },
+        "artifact_path": { "type": "string" }
+      }
+    },
+    "visual_review_result": {
+      "type": "object",
+      "required": [
+        "status",
+        "required",
+        "blocking",
+        "score",
+        "reviewer",
+        "reviewed_at",
+        "summary",
+        "dimensions",
+        "observations",
+        "risks",
+        "screenshots",
+        "artifact_path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "needs_review", "not_reviewed", "not_applicable"]
+        },
+        "required": { "type": "boolean" },
+        "blocking": { "type": "boolean" },
+        "score": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "overall_score": { "type": ["number", "null"], "minimum": 0, "maximum": 10 },
+        "failure_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "judge": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "reviewer": { "type": "string" },
+        "reviewed_at": { "type": ["string", "null"] },
+        "summary": { "type": "string" },
+        "dimensions": { "$ref": "#/definitions/visual_dimensions" },
+        "observations": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "risks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "screenshots": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "artifact_path": { "type": "string" }
+      }
+    },
+    "visual_dimension": {
+      "type": "object",
+      "required": ["status", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "needs_review", "not_applicable"]
+        },
+        "score": { "type": ["number", "null"], "minimum": 0, "maximum": 10 },
+        "note": { "type": "string" }
+      }
+    },
+    "visual_dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": { "$ref": "#/definitions/visual_dimension" }
+      },
+      "properties": {
+        "nonblank_render": { "$ref": "#/definitions/visual_dimension" },
+        "target_visible": { "$ref": "#/definitions/visual_dimension" },
+        "framing": { "$ref": "#/definitions/visual_dimension" },
+        "occlusion": { "$ref": "#/definitions/visual_dimension" },
+        "clutter": { "$ref": "#/definitions/visual_dimension" },
+        "prompt_match": { "$ref": "#/definitions/visual_dimension" }
+      }
+    }
+  }
+}

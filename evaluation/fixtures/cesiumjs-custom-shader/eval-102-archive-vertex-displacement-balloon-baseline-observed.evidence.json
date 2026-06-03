@@ -1,0 +1,181 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 10,
+        "total": 10
+      },
+      "source_scenario_id": "eval-002"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-102",
+  "case_name": "vertex-displacement-balloon",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-custom-shader/baseline/eval-002-vertex-displacement-balloon/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst customShader = new Cesium.CustomShader({\n  vertexShaderText: `\n    void vertexMain(VertexInput vsInput, inout czm_modelVertexOutput vsOutput) {\n      vsOutput.positionMC = vsInput.attributes.positionMC + vsInput.attributes.normalMC * 0.6;\n    }\n  `\n});\n\nconst modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(\n  Cesium.Cartesian3.fromDegrees(-75.0, 40.0, 200.0)\n);\n\nconst model = await Cesium.Model.fromGltfAsync({\n  url: 'https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumBalloon/CesiumBalloon.glb',\n  modelMatrix: modelMatrix,\n  scale: 1.0,\n  minimumPixelSize: 400,\n  customShader: customShader\n});\n\nviewer.scene.primitives.add(model);\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-74.998, 39.998, 300),\n  orientation: {\n    heading: Cesium.Math.toRadians(315),\n    pitch: Cesium.Math.toRadians(-10),\n    roll: 0\n  }\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "db893780cfb3ff2380d0015dd98834ca9f8284af54b64c50564f6d58e8fc2c3e",
+      "programmatic_checks": "79e9ed9390bbb66da4c0d4c185d6c45b0dfafe20107ca4898a0cdb2e7978aea0",
+      "scene_state": "31c6354434d3c3001df4a1d79b6d3c58186d6b41533da61745a25cb9f945eabb",
+      "screenshot_quality": "772397c4ba455fba60339f0fbeb4936b82c8cc20c05bf2dbeacdb234d535fc32",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "79aab26db1778ce68f64c6e1e154fa8ff8d10f5de7f118b8b65d4d71136c8b60"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "6f4f5cc1746ef10e5116229ed5c5ae9e22a592550f193cab569254492a8c4ee4",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "217ebab61d1f0daf97d44a4d0b5d4defde9722c66ced64d7495390368ecbabe5",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:00:22.004036+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses Model.fromGltfAsync",
+        "detail": "Pattern matched: 'Model.fromGltfAsync'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Targets the CesiumBalloon sample model",
+        "detail": "Pattern matched: 'CesiumBalloon'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Defines vertexShaderText",
+        "detail": "Pattern matched: 'vertexShaderText'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Defines vertexMain function",
+        "detail": "Pattern matched: 'vertexMain'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Writes to vsOutput.positionMC",
+        "detail": "Pattern matched: 'vsOutput.positionMC'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Reads normalMC vertex attribute",
+        "detail": "Pattern matched: 'normalMC'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_8",
+        "description": "Does NOT misuse positionEC in vertex shader",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-002",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 10,
+      "total": 10
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-custom-shader/baseline/eval-002-vertex-displacement-balloon",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 5.497787143782138,
+      "pitch": -0.17453292519943342,
+      "position": {
+        "x": 1266587.314808389,
+        "y": -4726308.2877858,
+        "z": 4078008.2830727426
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-002",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2433,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 449231,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 225.11,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-custom-shader/eval-002-screenshot.png"
+  ],
+  "skill": "cesiumjs-custom-shader",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-custom-shader/baseline/eval-002.js"
+}

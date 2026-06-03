@@ -1,0 +1,167 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 8,
+        "total": 8
+      },
+      "source_scenario_id": "eval-004"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-104",
+  "case_name": "globe-translucency-bahamas",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-terrain-environment/baseline/eval-004-globe-translucency-bahamas/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n  terrain: undefined,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Configure globe translucency\nviewer.scene.globe.translucency.enabled = true;\nviewer.scene.globe.translucency.frontFaceAlphaByDistance = new Cesium.NearFarScalar(400000, 0.5, 4000000, 1.0);\nviewer.scene.globe.translucency.backFaceAlphaByDistance = new Cesium.NearFarScalar(400000, 0.5, 4000000, 1.0);\n\n// Clear underground colour\nviewer.scene.globe.undergroundColor = Cesium.Color.BLACK.withAlpha(0.0);\n\n// Show sky atmosphere\nviewer.scene.skyAtmosphere.show = true;\n\n// Frame the Bahamas\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-77.5, 24.5, 1500000),\n  orientation: {\n    heading: 0,\n    pitch: Cesium.Math.toRadians(-50),\n    roll: 0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "86ebfd51e63bbc77f1c7c33be7417ed8c53bc4b071616f0f5e4920bfc67070f4",
+      "programmatic_checks": "926870e14cdf31a12de539abb867fb184414eccad5ad2fd8b8d69b74263b061e",
+      "scene_state": "a6f9406ce54c090dd0e51e44943bf12d544d9e97a5858351d57d149f7ce43bd7",
+      "screenshot_quality": "1ff95afe6d476ce255dce39ccc1cc974ba91c2aef0d4f798c48a69d647fd10e3",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "0c450767884f4e7a0448acda48f01ce3ad09c8e4737235f7bc417b8ba5c36378"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "3342be717537b46acf22586ca87686bf0c97bb30bbcf86a10c51aba13ec7227c",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "32eeefbfa97a7f5689dacc42aac1c9f0bc48a06be2c8771a9f712e0f67b02e67",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:12:00.294008+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Enables globe translucency",
+        "detail": "Pattern matched: 'globe.translucency.enabled'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Configures alpha-by-distance or alpha",
+        "detail": "Pattern matched: 'frontFaceAlphaByDistance'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses NearFarScalar or simple alpha",
+        "detail": "Pattern matched: 'NearFarScalar'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Targets Bahamas longitude",
+        "detail": "Pattern matched: '-77.'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Targets Bahamas latitude",
+        "detail": "Pattern matched: '24.'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-004",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 8,
+      "total": 8
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-terrain-environment/baseline/eval-004-globe-translucency-bahamas",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 8.881784197001252e-16,
+      "pitch": -0.8726646259971647,
+      "position": {
+        "x": 1552335.9157612366,
+        "y": -7002134.815764235,
+        "z": 3250817.3493719427
+      },
+      "roll": 6.283185307179585
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-004",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2732,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 994161,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 255.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-terrain-environment/eval-004-screenshot.png"
+  ],
+  "skill": "cesiumjs-terrain-environment",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-terrain-environment/baseline/eval-004.js"
+}

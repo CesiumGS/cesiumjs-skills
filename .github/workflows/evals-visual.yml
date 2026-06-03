@@ -1,0 +1,207 @@
+name: Visual Judge Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: "Skill name to evaluate (e.g., cesiumjs-camera), or 'all'"
+        required: true
+        default: 'all'
+        type: string
+      max_iterations:
+        description: 'Maximum number of iterations'
+        required: false
+        default: '3'
+        type: string
+      stop_on:
+        description: 'Stop condition'
+        required: false
+        default: 'max'
+        type: choice
+        options:
+          - max
+          - plateau
+          - regression
+      commit_results:
+        description: 'Commit results back to repo'
+        required: false
+        default: 'true'
+        type: boolean
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  visual-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for baseline lookups
+
+      - name: Check canonical eval surface
+        run: python3 optimization/scripts/check-canonical-eval-surface.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Set up Node for Claude CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude Code CLI
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+
+      - name: Validate environment secrets
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$CESIUM_ION_TOKEN" ]; then
+            echo "Error: CESIUM_ION_TOKEN secret is not set"
+            exit 1
+          fi
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "Error: ANTHROPIC_API_KEY secret is not set"
+            exit 1
+          fi
+          echo "All required secrets are present"
+
+      - name: Determine skill for scheduled/tag runs
+        id: determine-skill
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skill=${{ inputs.skill }}" >> $GITHUB_OUTPUT
+            echo "max_iterations=${{ inputs.max_iterations }}" >> $GITHUB_OUTPUT
+            echo "stop_on=${{ inputs.stop_on }}" >> $GITHUB_OUTPUT
+            echo "commit_results=${{ inputs.commit_results }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "skill=all" >> $GITHUB_OUTPUT
+            echo "max_iterations=1" >> $GITHUB_OUTPUT
+            echo "stop_on=max" >> $GITHUB_OUTPUT
+            echo "commit_results=true" >> $GITHUB_OUTPUT
+          else
+            echo "skill=all" >> $GITHUB_OUTPUT
+            echo "max_iterations=1" >> $GITHUB_OUTPUT
+            echo "stop_on=max" >> $GITHUB_OUTPUT
+            echo "commit_results=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run full evaluation pipeline
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ "${{ steps.determine-skill.outputs.skill }}" = "all" ]; then
+            python3 optimization/scripts/run-all-evals.py \
+              --skills all \
+              --max-iterations ${{ steps.determine-skill.outputs.max_iterations }} \
+              --stop-on ${{ steps.determine-skill.outputs.stop_on }}
+          else
+            python3 optimization/scripts/run-loop.py \
+              ${{ steps.determine-skill.outputs.skill }} \
+              --max-iterations ${{ steps.determine-skill.outputs.max_iterations }} \
+              --stop-on ${{ steps.determine-skill.outputs.stop_on }}
+          fi
+
+      - name: Sanitize artifacts before upload
+        run: |
+          # Run public safety check on all eval artifacts
+          python3 optimization/scripts/check-public-artifacts.py
+
+          # Also run secrets check to be extra safe
+          bash optimization/scripts/check-secrets.sh
+
+          # Raw eval.html embeds CESIUM_ION_TOKEN and must never be uploaded.
+          find optimization/runs/ -name '*.html' -delete
+
+      - name: Upload evaluation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report-${{ steps.determine-skill.outputs.skill }}-${{ github.run_number }}
+          path: |
+            optimization/results/
+            optimization/results/public-status.json
+            optimization/results/coverage.json
+          retention-days: 90
+
+      - name: Upload sanitized evidence bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-bundles-${{ steps.determine-skill.outputs.skill }}-${{ github.run_number }}
+          path: |
+            optimization/runs/
+            !**/*.html
+            !**/raw/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Commit results back to repo
+        if: steps.determine-skill.outputs.commit_results == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create a new branch for results
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+          BRANCH_NAME="optimization/visual-results-${{ steps.determine-skill.outputs.skill }}-${TIMESTAMP}"
+          git checkout -b "${BRANCH_NAME}"
+
+          # Stage result files only (not runs or generated artifacts)
+          git add optimization/results/ ':!optimization/results/baselines.json' || true
+          git add optimization/history/ || true
+
+          # Commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "optimization: visual results for ${{ steps.determine-skill.outputs.skill }}
+
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.run_number }}
+            Trigger: ${{ github.event_name }}
+            Timestamp: ${TIMESTAMP}
+
+            Automated evaluation results from three-judge visual pipeline."
+
+            # Push the branch
+            git push origin "${BRANCH_NAME}"
+
+            # Create PR if gh CLI is available
+            if command -v gh &> /dev/null; then
+              gh pr create \
+                --title "optimization: visual results for ${{ steps.determine-skill.outputs.skill }}" \
+                --body "Automated visual evaluation results.
+
+                **Skill:** ${{ steps.determine-skill.outputs.skill }}
+                **Workflow Run:** ${{ github.run_number }}
+                **Trigger:** ${{ github.event_name }}
+
+                This PR contains sanitized evaluation results from the autonomous pipeline." \
+                --base main \
+                --head "${BRANCH_NAME}" || echo "Failed to create PR, branch pushed successfully"
+            else
+              echo "Branch ${BRANCH_NAME} pushed. Create PR manually."
+            fi
+          fi

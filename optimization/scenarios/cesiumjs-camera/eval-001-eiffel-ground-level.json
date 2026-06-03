@@ -1,0 +1,29 @@
+{
+  "id": "eval-001",
+  "name": "eiffel-tower-ground-level",
+  "landmark": "Eiffel Tower, Paris",
+  "perspective": "ground-level tourist view",
+  "difficulty": "hard",
+  "description": "View the Eiffel Tower location from nearby ground level, as if a tourist is standing at the Champ de Mars looking up toward the tower. Tests whether the skill guides the LLM to use appropriate low-altitude, slightly-upward camera angles without requiring private 3D building tiles.",
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer (`maximumLevel: 18`) and no ion defaults. Position the CesiumJS camera to show the Eiffel Tower location in Paris from a low tourist-like angle, with enough standoff that the whole subject is visible and not clipped. Because this public eval cannot rely on OSM Buildings or Google Photorealistic 3D Tiles, add a visible tower surrogate at the Eiffel Tower coordinates (48.8584 N, 2.2945 E), such as a tall gold polyline, cylinder, box, or labeled entity rising roughly 300m above the ground. Frame the surrogate with viewer.camera.lookAt or an equivalent setView so the marker is fully visible with city map context below; avoid an extreme full-screen close-up. Do not call createOsmBuildingsAsync, createGooglePhotorealistic3DTileset, Terrain.fromWorldTerrain, or ion asset helpers.",
+  "expected_behaviors": [
+    "Uses lookAt or setView with a very low altitude (50-200m)",
+    "Pitch should be slightly upward or near horizontal (-10 to +10 degrees)",
+    "Range/distance from target should be 200-800m for ground-level feel",
+    "Adds a visible marker/surrogate at the Eiffel Tower location so the public eval has an inspectable subject"
+  ],
+  "visual_expectations": "A close, low-angle view of the Eiffel Tower area. The camera should be near ground level, with city map context below and a visible tall marker/surrogate at the Eiffel Tower location rising into the sky. The whole surrogate should fit inside the frame rather than being clipped by an extreme close-up.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "lookAt|setView|flyTo", "description": "Uses a camera positioning method"},
+    {"type": "pattern_present", "pattern": "48\\.8", "description": "Paris latitude"},
+    {"type": "pattern_present", "pattern": "2\\.29", "description": "Paris longitude"},
+    {"type": "pattern_present", "pattern": "entities\\.add|Polyline|CylinderGraphics|BoxGraphics|polyline|cylinder|box", "description": "Adds a visible public-eval subject marker"},
+    {"type": "pattern_absent", "pattern": "createOsmBuildingsAsync|createGooglePhotorealistic3DTileset|fromIonAssetId|fromWorldTerrain", "description": "Avoids entitlement-backed 3D assets"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 6000, "description": "Ground-level view of Eiffel Tower area"}
+  ],
+  "regression_critical": true
+}

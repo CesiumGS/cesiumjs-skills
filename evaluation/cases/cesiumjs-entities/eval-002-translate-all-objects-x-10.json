@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "id": "eval-002",
+  "name": "translate-all-objects-x-10",
+  "skill": "cesiumjs-entities",
+  "description": "Review-derived deterministic case. A visual screenshot may look unchanged against a flat background, so the scorecard validates raw Cartesian position deltas.",
+  "category": "semantic_scene_state",
+  "critical": true,
+  "prompt": "Translate every object in the scene exactly 10 units in the positive X direction. Do not change Y or Z coordinates.",
+  "preflight": {
+    "viewer_setup": "cartesian-empty-scene",
+    "entities": [
+      { "id": "box-a", "position_ecef": [1, 2, 3] },
+      { "id": "box-b", "position_ecef": [-4, 5, 6] }
+    ]
+  },
+  "probe": {
+    "capture": [
+      "entities[box-a].position_ecef",
+      "entities[box-b].position_ecef"
+    ],
+    "snapshot_before_and_after": true
+  },
+  "checks": [
+    {
+      "id": "no_runtime_errors",
+      "type": "no_runtime_errors",
+      "category": "execution_health",
+      "critical": true,
+      "description": "Candidate completes without captured console/runtime errors"
+    },
+    {
+      "id": "box_a_exists",
+      "type": "entity_exists",
+      "entity_id": "box-a",
+      "snapshot": "both",
+      "category": "entity_state",
+      "critical": true
+    },
+    {
+      "id": "box_b_exists",
+      "type": "entity_exists",
+      "entity_id": "box-b",
+      "snapshot": "both",
+      "category": "entity_state",
+      "critical": true
+    },
+    {
+      "id": "box_a_x_plus_10",
+      "type": "entity_translation_delta",
+      "entity_id": "box-a",
+      "frame": "ecef",
+      "axis": "x",
+      "operator": "==",
+      "value_meters": 10,
+      "tolerance_meters": 0,
+      "category": "semantic_scene_state",
+      "critical": true
+    },
+    {
+      "id": "box_b_x_plus_10",
+      "type": "entity_translation_delta",
+      "entity_id": "box-b",
+      "frame": "ecef",
+      "axis": "x",
+      "operator": "==",
+      "value_meters": 10,
+      "tolerance_meters": 0,
+      "category": "semantic_scene_state",
+      "critical": true
+    },
+    {
+      "id": "box_a_no_y_drift",
+      "type": "entity_translation_delta",
+      "entity_id": "box-a",
+      "frame": "ecef",
+      "axis": "y",
+      "operator": "==",
+      "value_meters": 0,
+      "tolerance_meters": 0,
+      "category": "semantic_scene_state",
+      "critical": true
+    },
+    {
+      "id": "box_b_no_z_drift",
+      "type": "entity_translation_delta",
+      "entity_id": "box-b",
+      "frame": "ecef",
+      "axis": "z",
+      "operator": "==",
+      "value_meters": 0,
+      "tolerance_meters": 0,
+      "category": "semantic_scene_state",
+      "critical": true
+    }
+  ],
+  "timeout_ms": 1000,
+  "notes": "This is the review example where rendering alone is not enough because a pure translation can look identical on a flat background."
+}

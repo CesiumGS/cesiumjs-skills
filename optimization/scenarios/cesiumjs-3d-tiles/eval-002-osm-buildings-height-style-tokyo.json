@@ -1,0 +1,35 @@
+{
+  "id": "eval-002",
+  "name": "public-tileset-height-style",
+  "landmark": "Cesium 3D Tiles sample dragon",
+  "perspective": "public sample tileset with declarative colour bands",
+  "difficulty": "medium",
+  "description": "Load a public URL-backed 3D Tiles sample and apply a Cesium3DTileStyle with red/yellow/green conditions. Tests declarative styling without relying on Cesium ion OSM Buildings entitlement.",
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion defaults. Load `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` via `Cesium.Cesium3DTileset.fromUrl`, add it to `viewer.scene.primitives`, and assign `tileset.style = new Cesium.Cesium3DTileStyle({ color: { conditions: [[\"true\", \"color('green')\"]] } })`. Do not compare undefined sample metadata properties such as `${Height}` because that triggers a Cesium render-error panel; this scenario is testing valid style assignment plus the conditions array, not metadata semantics. Do not use defined(), createOsmBuildingsAsync(), Google Photorealistic 3D Tiles, or ion asset helpers. Frame the sample tileset close enough to see the applied green colour.",
+  "expected_behaviors": [
+    "Calls Cesium3DTileset.fromUrl with a public CesiumGS sample URL",
+    "Adds the tileset to viewer.scene.primitives",
+    "Creates a Cesium3DTileStyle with a conditions array and a true catch-all",
+    "Style ends with a ['true', ...] catch-all condition for safety",
+    "Style does NOT call defined() (the DSL does not support it)",
+    "Frames the public sample tileset so the style is visible"
+  ],
+  "visual_expectations": "The public 3D Tiles sample should render clearly with a visible declarative style applied, at minimum the green catch-all colour if the sample lacks height metadata.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "Cesium3DTileset\\.fromUrl", "description": "Uses URL-backed 3D Tiles factory" },
+    { "type": "pattern_present", "pattern": "TilesetWithDiscreteLOD", "description": "Uses public CesiumGS sample tileset" },
+    { "type": "pattern_present", "pattern": "Cesium3DTileStyle", "description": "Uses Cesium3DTileStyle" },
+    { "type": "pattern_present", "pattern": "conditions", "description": "Style uses conditions array" },
+    { "type": "pattern_present", "pattern": "true", "description": "Style has a safe true catch-all" },
+    { "type": "pattern_absent", "pattern": "\\bdefined\\(", "description": "Does NOT use defined() (unsupported in tileset style DSL)" },
+    { "type": "pattern_present", "pattern": "(?:red|yellow|green|#[fF]{2}0|color\\(\")", "description": "Style assigns named colors" },
+    { "type": "pattern_absent", "pattern": "createOsmBuildingsAsync|fromIonAssetId", "description": "Avoids entitlement-backed OSM Buildings" }
+  ],
+  "screenshots": [
+    { "timing": "after_tiles_load", "delay_ms": 9000, "description": "Public sample tileset with declarative colour style" }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": ["OSM Buildings", "Declarative Styling"]
+}

@@ -1,0 +1,22 @@
+{
+  "skill": "cesiumjs-camera",
+  "iteration": "002",
+  "model_id": "claude-sonnet-4-6",
+  "temperature": 1.0,
+  "prompt_version": "propose-v1",
+  "timestamp_utc": "2026-05-27T20:57:28.658804+00:00",
+  "current_skill_hash": "dce1b6248156fc4acbd7dff9059c67f0c0043c8c987cba836905a96a81c92ea1",
+  "candidate_skill_hash": "d68762a58bf5b19729e961f461148f307cb5cc4e7b17c8a37db87f35d2a2f5cc",
+  "decision_summary": {
+    "decision": "SCORECARD_FOCUS",
+    "rule_fired": "scorecard_critical_failure_focus",
+    "counts": {
+      "losses": 1,
+      "ties": 0,
+      "wins": 0
+    }
+  },
+  "history_iterations": 1,
+  "uncovered_sections_count": 5,
+  "uncovered_apis_count": 16
+}

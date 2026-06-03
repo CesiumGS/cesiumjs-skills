@@ -1,0 +1,31 @@
+{
+  "id": "eval-004",
+  "name": "public-tileset-vivid-style",
+  "landmark": "Cesium 3D Tiles sample dragon",
+  "perspective": "public sample tileset with vivid styling",
+  "difficulty": "easy",
+  "description": "Load a public 3D Tiles sample and apply a vivid Cesium3DTileStyle expression. Tests style assignment and visible color changes without ion-backed OSM Buildings.",
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion defaults. Load `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` with `Cesium.Cesium3DTileset.fromUrl`, add it to `viewer.scene.primitives`, then assign a vivid `Cesium.Cesium3DTileStyle` to `tileset.style`. Use a constant explicit color expression such as `color('cyan', 1.0)` or a conditions array with only a safe `true` fallback; do not compare undefined sample metadata properties because Cesium's style engine will stop rendering. Frame the sample tileset close enough that the vivid style is visible. Do not use createOsmBuildingsAsync(), Google Photorealistic 3D Tiles, or ion asset helpers.",
+  "expected_behaviors": [
+    "Calls Cesium3DTileset.fromUrl with a public CesiumGS sample URL",
+    "Adds the tileset to viewer.scene.primitives",
+    "Assigns a Cesium3DTileStyle to tileset.style",
+    "Style uses an expression that produces multiple distinct colours (color('hsl(...)') or color('rgb(...)') or color expressions per condition)",
+    "Frames the public sample tileset so the style is visible"
+  ],
+  "visual_expectations": "The public sample 3D Tiles geometry should be rendered in a vivid non-default colour or set of colours, centered and large enough to inspect.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "Cesium3DTileset\\.fromUrl", "description": "Uses URL-backed 3D Tiles factory" },
+    { "type": "pattern_present", "pattern": "TilesetWithDiscreteLOD", "description": "Uses public CesiumGS sample tileset" },
+    { "type": "pattern_present", "pattern": "Cesium3DTileStyle", "description": "Uses Cesium3DTileStyle" },
+    { "type": "pattern_present", "pattern": "(?:hsl|rgb|vec4|color\\()", "description": "Style produces explicit colors" },
+    { "type": "pattern_absent", "pattern": "createOsmBuildingsAsync|fromIonAssetId", "description": "Avoids entitlement-backed OSM Buildings" }
+  ],
+  "screenshots": [
+    { "timing": "after_tiles_load", "delay_ms": 9000, "description": "Public sample tileset with vivid Cesium3DTileStyle" }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": ["Loading a Tileset", "Declarative Styling"]
+}

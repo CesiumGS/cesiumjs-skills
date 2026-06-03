@@ -1,0 +1,33 @@
+{
+  "id": "eval-011",
+  "name": "chained-flyto-tour-nyc",
+  "landmark": "New York City",
+  "perspective": "multi-stop animated tour",
+  "section_coverage": ["flyTo -- Animated Flight"],
+  "difficulty": "hard",
+  "description": "Chain two flyTo animations using the complete callback. Tests the callback-based flight chaining pattern and EasingFunction usage.",
+  "prompt": "Create a two-stop camera tour of New York City. First, fly to the Statue of Liberty (40.6892 N, 74.0445 W) at 800 meters altitude with a 35-degree downward angle in 3 seconds. After arriving, automatically fly to the Empire State Building (40.7484 N, 73.9857 W) at 600 meters altitude with a 30-degree downward angle in 2 seconds. Use a linear easing function for the second flight.",
+  "expected_behaviors": [
+    "Two camera.flyTo calls",
+    "Uses complete callback to chain them (NOT await, NOT setTimeout)",
+    "First stop: Statue of Liberty coordinates, 800m, 3s duration",
+    "Second stop: Empire State Building coordinates, 600m, 2s duration",
+    "Second flight uses EasingFunction.LINEAR_NONE",
+    "Both have negative pitch for downward angle"
+  ],
+  "visual_expectations": "After ~5 seconds total, camera should be positioned over Midtown Manhattan near the Empire State Building, showing the urban grid from a moderate altitude.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "flyTo", "description": "Uses flyTo"},
+    {"type": "pattern_present", "pattern": "complete", "description": "Uses complete callback for chaining"},
+    {"type": "pattern_present", "pattern": "-74\\.04", "description": "Statue of Liberty longitude"},
+    {"type": "pattern_present", "pattern": "-73\\.98", "description": "Empire State longitude"},
+    {"type": "pattern_present", "pattern": "EasingFunction|LINEAR_NONE", "description": "Uses easing function"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 3000, "description": "During first flight or at Statue of Liberty"},
+    {"timing": "after_animation", "delay_ms": 8000, "description": "After both flights — Empire State area"}
+  ],
+  "regression_critical": false
+}

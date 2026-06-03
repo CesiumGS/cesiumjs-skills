@@ -41,7 +41,7 @@ body:
     attributes:
       label: Area
       description: Which skill, file, or branch this affects. Paths welcome.
-      placeholder: e.g. "skills/cesiumjs-entities/SKILL.md" or "tuning/tools/run_eval_suite.py"
+      placeholder: e.g. "skills/cesiumjs-entities/SKILL.md" or "optimization/scripts/run-all-evals.py"
     validations:
       required: false
 
@@ -97,5 +97,5 @@ body:
       options:
         - label: I searched existing issues and PRs for duplicates.
           required: true
-        - label: For new skills, I checked `docs/DOMAINS.md` to confirm the area is not already covered by an existing skill.
+        - label: For new skills, I checked `wiki/Domain-Mapping.md` to confirm the area is not already covered by an existing skill.
           required: false

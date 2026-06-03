@@ -1,0 +1,188 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 11,
+        "total": 11
+      },
+      "source_scenario_id": "eval-002"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-102",
+  "case_name": "public-tileset-height-style",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-3d-tiles/baseline/eval-002-public-tileset-height-style/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst tileset = await Cesium.Cesium3DTileset.fromUrl(\n  'https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json',\n  { maximumScreenSpaceError: 16 }\n);\n\nviewer.scene.primitives.add(tileset);\n\ntileset.style = new Cesium.Cesium3DTileStyle({\n  color: {\n    conditions: [\n      ['true', \"color('green')\"],\n    ],\n  },\n});\n\nawait viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(\n  0.0,\n  Cesium.Math.toRadians(-30.0),\n  tileset.boundingSphere.radius * 3.0\n));",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "0b694272255cb8d3c665ec32acf33212ee90fd38e0ec41673c7b3b4a49ea354d",
+      "programmatic_checks": "c46e73dc1b269dfadb2fdb5361e65f2fe38112fbda1a55717ec293c973698d2c",
+      "scene_state": "a59ec699a469cd07f0831251c4362d2121162356af183e2ef16b998fec31a5e9",
+      "screenshot_quality": "dbb12159315cc1fb63b6c53123ef4534f1335336e513cb5e4e5db10fb3e8d917",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "ecbd25d2ed6b3bb8e731a89f21968a71222e94cd7bd98fb32ba781553e30b6e3"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "7f8dc72d5d69dca5af33f35719f643ce416302beb00807d0a59945ed32f1eabd",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "9806ff8459c2a6c81a8d328372d7d8e3c41df6f7b6fb8be8f282621c5bd0eb8c",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T20:54:08.417324+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses URL-backed 3D Tiles factory",
+        "detail": "Pattern matched: 'Cesium3DTileset.fromUrl'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses public CesiumGS sample tileset",
+        "detail": "Pattern matched: 'TilesetWithDiscreteLOD'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses Cesium3DTileStyle",
+        "detail": "Pattern matched: 'Cesium3DTileStyle'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Style uses conditions array",
+        "detail": "Pattern matched: 'conditions'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Style has a safe true catch-all",
+        "detail": "Pattern matched: 'true'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_7",
+        "description": "Does NOT use defined() (unsupported in tileset style DSL)",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "Style assigns named colors",
+        "detail": "Pattern matched: 'green'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_9",
+        "description": "Avoids entitlement-backed OSM Buildings",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-002",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 11,
+      "total": 11
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-3d-tiles/baseline/eval-002-public-tileset-height-style",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -0.5239757473800575,
+      "position": {
+        "x": 1215755.9846860215,
+        "y": -4739209.779946634,
+        "z": 4080978.7997948364
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-002",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 1920,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 681584,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 239.27,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-3d-tiles/eval-002-screenshot.png"
+  ],
+  "skill": "cesiumjs-3d-tiles",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-3d-tiles/baseline/eval-002.js"
+}

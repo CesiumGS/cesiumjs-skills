@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-primitives
-description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static geometry, creating custom shapes, batching draw calls, or using low-level billboard, label, and point collections."
+description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, BufferPrimitive collections, GeoJsonPrimitive, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static or vector geometry, loading GeoJSON without entities, creating custom shapes, batching draw calls, or using low-level collections."
 ---
 # CesiumJS Primitives & Geometry
 
-> **Applies to:** CesiumJS v1.139+ (ES module imports, `??` instead of `defaultValue`)
+> **Applies to:** CesiumJS v1.142+ (ES module imports, `??` instead of `defaultValue`)
 
 ## Architecture
 
@@ -93,6 +93,66 @@ scene.primitives.add(new Primitive({
 }));
 ```
 
+### Batching Volume Geometry (CylinderGeometry Grid)
+
+Volume geometry (Cylinder, Box, Ellipsoid) must be positioned via `modelMatrix` on each GeometryInstance. Use `Matrix4.multiply` to combine a world-space anchor with a local offset, then batch all instances into one Primitive.
+
+```js
+import {
+  Primitive, GeometryInstance, CylinderGeometry,
+  PerInstanceColorAppearance, ColorGeometryInstanceAttribute,
+  Cartesian3, Matrix4, Transforms, Color, Math as CesiumMath,
+} from "cesium";
+
+const center = Cartesian3.fromDegrees(-73.9857, 40.7580);
+const anchorFrame = Transforms.eastNorthUpToFixedFrame(center, undefined, new Matrix4());
+const instances = [];
+const GRID = 10;
+const SPACING = 50; // metres
+
+for (let row = 0; row < GRID; row++) {
+  for (let col = 0; col < GRID; col++) {
+    const xOffset = (col - GRID / 2) * SPACING;
+    const yOffset = (row - GRID / 2) * SPACING;
+    // Combine anchor ENU frame with a local XYZ offset
+    const modelMatrix = Matrix4.multiply(
+      anchorFrame,
+      Matrix4.fromTranslation(new Cartesian3(xOffset, yOffset, 100), new Matrix4()),
+      new Matrix4(),
+    );
+    instances.push(new GeometryInstance({
+      geometry: new CylinderGeometry({
+        length: 200,
+        topRadius: 8,
+        bottomRadius: 8,
+        vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT,
+      }),
+      modelMatrix,
+      attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.fromRandom({ alpha: 1.0 })) },
+    }));
+  }
+}
+
+scene.primitives.add(new Primitive({
+  geometryInstances: instances,
+  appearance: new PerInstanceColorAppearance({ flat: true }),
+}));
+
+// Frame the grid so the full batch is visible -- a shallow pitch hides cylinders
+// behind the foreground; a near-nadir pitch flattens them. Aim for ~-45° (-PI/4)
+// at a range that covers the grid footprint (GRID * SPACING) with margin.
+const range = GRID * SPACING * 3; // ~1500 m for a 10x10x50m grid
+viewer.camera.lookAt(
+  center,
+  new Cartesian3(0, -range * 0.7, range * 0.7), // offset south + up for -45° pitch
+);
+```
+
+**Key patterns:**
+- `Matrix4.multiply(anchorFrame, Matrix4.fromTranslation(offset, result), result)` -- compose the ENU frame at a geographic anchor with a local East/North/Up translation.
+- `Color.fromRandom({ alpha: 1.0 })` produces fully-opaque random colours suitable for rainbow-coloured batches.
+- **Framing matters:** for a grid of vertical volumes, prefer a `~-45°` (`-CesiumMath.PI_OVER_FOUR`, ~`-0.785` rad) pitch at a range of roughly `3 * gridFootprint`. Pitches shallower than ~`-0.6` rad can push the grid off-screen or hide it behind buildings; nadir views flatten cylinders into dots and lose the batched "field" appearance.
+
 ## Updating Per-Instance Attributes
 
 ```js
@@ -121,6 +181,113 @@ group.add(new LabelCollection());
 scene.primitives.add(group);
 group.show = false; // toggle all children
 ```
+
+## Choosing a Vector Data Path
+
+| Need | Use |
+|---|---|
+| Entity lifecycle, clustering, per-entity styling, time-dynamic values | `GeoJsonDataSource` in `cesiumjs-entities` |
+| One large GeoJSON object with low overhead and primitive-level performance | `GeoJsonPrimitive` in this skill |
+| Tiled vector data, 3D Tiles LOD, metadata styling, feature picking | `MVTDataProvider` in `cesiumjs-3d-tiles` |
+| Fully manual high-throughput point/polyline/polygon buffers | `BufferPointCollection`, `BufferPolylineCollection`, `BufferPolygonCollection` |
+
+## Buffer Primitive Collections (Experimental, 1.140+)
+
+Use `BufferPointCollection`, `BufferPolylineCollection`, and `BufferPolygonCollection`
+for very large vector datasets where Entity/DataSource overhead is too high. These
+APIs were introduced in 1.140 (#13212) and refined through 1.142; they are
+experimental and use flyweight primitive objects: reuse one `BufferPoint`,
+`BufferPolyline`, or `BufferPolygon` when adding or iterating thousands of items.
+
+```js
+import {
+  BlendOption,
+  BoundingSphere,
+  BufferPoint,
+  BufferPointCollection,
+  BufferPointMaterial,
+  Cartesian3,
+  Color,
+} from "cesium";
+
+const positions = [
+  Cartesian3.fromDegrees(-75.16, 39.95),
+  Cartesian3.fromDegrees(-73.98, 40.75),
+];
+
+const points = scene.primitives.add(new BufferPointCollection({
+  primitiveCountMax: positions.length,
+  allowPicking: true,
+  blendOption: BlendOption.TRANSLUCENT,
+  boundingVolume: BoundingSphere.fromPoints(positions), // world space in 1.142+
+}));
+
+const point = new BufferPoint();
+const material = new BufferPointMaterial({
+  color: Color.CYAN.withAlpha(0.65),
+  outlineColor: Color.WHITE.withAlpha(0.9),
+  outlineWidth: 2,
+  size: 10,
+});
+
+positions.forEach((position, featureId) => {
+  points.add({
+    position,
+    featureId,
+    material,
+  }, point);
+});
+
+const picked = scene.pick(windowPosition);
+if (picked?.collection === points) {
+  console.log(picked.index, picked.primitive.featureId);
+}
+```
+
+> **Breaking change (1.141, #13448):** `BufferPrimitiveCollection.modelMatrix`,
+> `boundingVolume`, and `boundingVolumeWC` are now **readonly** -- you may mutate
+> the object in place, but reassigning the property (`collection.modelMatrix = ...`)
+> throws. Update the existing matrix/volume instead of swapping in a new one.
+
+1.142 notes:
+- `boundingVolume` is now world-space, not local/model-space. If you provide it manually, include the collection `modelMatrix` transform yourself.
+- Providing `boundingVolume` skips automatic recomputation; this helps large animated collections but makes you responsible for keeping the volume valid.
+- `blendOption` is supported on all three buffer collections and enables alpha from `BufferPrimitiveMaterial#color`; `BufferPointCollection` also honors `outlineColor.alpha`.
+- Use `BlendOption.OPAQUE` only when every material is fully opaque; use `TRANSLUCENT` or mixed blending when alpha varies.
+
+## GeoJsonPrimitive (Experimental, 1.142+)
+
+`GeoJsonPrimitive` loads GeoJSON directly into buffer primitive collections,
+bypassing `GeoJsonDataSource` and the Entity layer. Prefer it for large static
+or bulk-updated vector datasets. Keep using `GeoJsonDataSource` when you need
+Entity conveniences, time-dynamic properties, clustering, or DataSource lifecycle
+integration.
+
+```js
+import { GeoJsonPrimitive } from "cesium";
+
+const counties = await GeoJsonPrimitive.fromUrl("/data/counties.geojson", {
+  allowPicking: true,
+});
+scene.primitives.add(counties);
+
+console.log(counties.featureCount);
+console.log(counties.points);    // BufferPointCollection | undefined
+console.log(counties.polylines); // BufferPolylineCollection | undefined
+console.log(counties.polygons);  // BufferPolygonCollection | undefined
+
+// Picking returns the GeoJsonPrimitive pick object, including source properties.
+const picked = scene.pick(windowPosition);
+if (picked?.parentPrimitive === counties) {
+  const featureId = picked.primitive.featureId;
+  console.log(counties.getId(featureId));
+  console.log(counties.getProperties(featureId));
+}
+```
+
+`GeoJsonPrimitive.fromGeoJson(parsedObject)` is available when the GeoJSON is
+already in memory. Source feature IDs are exposed through `ids`/`getId()`, and
+source properties through `properties`/`getProperties()`.
 
 ## Built-in Geometry Types (31)
 
@@ -231,13 +398,14 @@ scene.primitives.add(new Primitive({
 
 ## GroundPrimitive
 
-Drapes geometry onto terrain/3D Tiles. Supported: `CircleGeometry`, `CorridorGeometry`, `EllipseGeometry`, `PolygonGeometry`, `RectangleGeometry`.
+Drapes geometry onto terrain/3D Tiles. Supported: `CircleGeometry`, `CorridorGeometry`, `EllipseGeometry`, `PolygonGeometry`, `RectangleGeometry`. Add to `scene.primitives` (not `scene.groundPrimitives` -- both work but `scene.primitives` is the conventional target when using a public basemap without Ion terrain).
 
 ```js
 import { GroundPrimitive, GeometryInstance, PolygonGeometry, PolygonHierarchy,
-  ColorGeometryInstanceAttribute, ClassificationType, Cartesian3, Color } from "cesium";
+  PerInstanceColorAppearance, ColorGeometryInstanceAttribute, ClassificationType,
+  Cartesian3, Color } from "cesium";
 
-scene.groundPrimitives.add(new GroundPrimitive({
+scene.primitives.add(new GroundPrimitive({
   geometryInstances: new GeometryInstance({
     geometry: new PolygonGeometry({
       polygonHierarchy: new PolygonHierarchy(
@@ -247,17 +415,20 @@ scene.groundPrimitives.add(new GroundPrimitive({
     id: "groundPolygon",
     attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.RED.withAlpha(0.5)) },
   }),
+  appearance: new PerInstanceColorAppearance({ flat: true, translucent: true }),
   classificationType: ClassificationType.TERRAIN, // TERRAIN, CESIUM_3D_TILE, or BOTH
 }));
 ```
 
 ## GroundPolylinePrimitive
 
+Drapes a polyline on terrain. Add to `scene.primitives` (not `scene.groundPrimitives`).
+
 ```js
 import { GroundPolylinePrimitive, GeometryInstance, GroundPolylineGeometry,
   PolylineColorAppearance, ColorGeometryInstanceAttribute, Cartesian3, Color } from "cesium";
 
-scene.groundPrimitives.add(new GroundPolylinePrimitive({
+scene.primitives.add(new GroundPolylinePrimitive({
   geometryInstances: new GeometryInstance({
     geometry: new GroundPolylineGeometry({
       positions: Cartesian3.fromDegreesArray([-112.13, 36.05, -112.09, 36.10, -112.13, 36.17]),
@@ -295,6 +466,14 @@ scene.primitives.add(new ClassificationPrimitive({
 
 GPU-efficient viewport-aligned images -- far more performant than entities at scale.
 
+> **Breaking change (1.140, #13253):** `BillboardCollection` and `LabelCollection`
+> now require WebGL 2, or WebGL 1 with `ANGLE_instanced_arrays` and
+> `MAX_VERTEX_TEXTURE_IMAGE_UNITS > 0`. On unsupported devices they no longer
+> render -- gate on `scene.context.webgl2` (or feature-detect the extension) if you
+> still target legacy WebGL 1 hardware.
+
+### Basic Usage
+
 ```js
 import { BillboardCollection, Cartesian3, Color, NearFarScalar,
   HeightReference, HorizontalOrigin, VerticalOrigin } from "cesium";
@@ -311,6 +490,41 @@ const b = billboards.add({
 b.position = Cartesian3.fromDegrees(-75.60, 40.05); // update dynamically
 billboards.remove(b);
 ```
+
+### PinBuilder -- Procedural Pin Images
+
+`PinBuilder` generates canvas-based pin icons at runtime without external image files. Use `fromColor` for solid-colour pins or `fromText` for labelled pins. Pass the returned canvas as the billboard `image`.
+
+When a scenario specifies an ordered list of cities/items and a colour-by-index scheme, **iterate the source array in the given order** and use the loop index directly as the HSL hue index. Re-ordering the source list (e.g. sorting by latitude) swaps which colour lands on which city and fails visual checks.
+
+```js
+import { BillboardCollection, PinBuilder, Cartesian3, Color, VerticalOrigin } from "cesium";
+
+const pinBuilder = new PinBuilder();
+const cities = [
+  { name: "Boston",       lng: -71.0589, lat: 42.3601 },
+  { name: "New York",     lng: -74.0060, lat: 40.7128 },
+  { name: "Philadelphia", lng: -75.1652, lat: 39.9526 },
+  { name: "Washington DC",lng: -77.0369, lat: 38.9072 },
+  { name: "Miami",        lng: -80.1918, lat: 25.7617 },
+];
+
+const billboards = scene.primitives.add(new BillboardCollection({ scene }));
+
+cities.forEach((city, index) => {
+  billboards.add({
+    position: Cartesian3.fromDegrees(city.lng, city.lat),
+    // Color.fromHsl(hue 0-1, saturation, lightness) produces evenly-spaced hues
+    image: pinBuilder.fromColor(Color.fromHsl(index / cities.length, 0.8, 0.5), 48),
+    verticalOrigin: VerticalOrigin.BOTTOM,
+  });
+});
+
+// Text label pin: pinBuilder.fromText("A", Color.ROYALBLUE, 48)
+// fromColor / fromText return a canvas -- pass directly as image
+```
+
+**`Color.fromHsl(hue, saturation, lightness)`** -- generates colours across the spectrum by varying `hue` (0–1 wraps full circle). Useful for rainbow-colouring N items: `Color.fromHsl(i / n, 0.8, 0.5)`. **`Color.fromRandom({ alpha })`** -- random hue/saturation/lightness with fixed alpha.
 
 ## LabelCollection
 
@@ -400,6 +614,17 @@ scene.primitives.add(new Primitive({
 | `PrimitiveType` | `POINTS`, `LINES`, `TRIANGLES`, etc. | Low-level Geometry |
 | `CloudType` | `CUMULUS` | CloudCollection |
 
+## Camera Framing for Primitive Scenes
+
+Programmatic checks (primitive count, camera position) can pass while the visual output completely misses the rendered geometry. A few rules of thumb that recur in visual evaluations:
+
+- **Volume-geometry grids (cylinders/boxes):** use ~`-PI/4` (~`-0.785` rad, -45°) pitch from a range of `~3 * gridFootprint`. Pitches shallower than ~`-0.6` rad can park the grid behind the camera or out of frame; pitches near `-PI/2` flatten vertical extent and make the batch look like dots.
+- **Surface polygons draped on terrain (GroundPrimitive):** with steeper pitches (~`-50°`) and far ranges, the polygon shrinks to a thin strip at the bottom edge. Reduce range or use a flatter pitch so the polygon occupies the centre of the frame.
+- **Continental polylines (Route 66, transcontinental routes):** a near-nadir top-down view from ~5–6 Mm above the centroid keeps the full path visible.
+- **Pin chains along a coast/route:** centre the camera on the midpoint of the chain at a range that covers the chain's bounding box with margin on all sides.
+
+When in doubt, `viewer.flyTo(primitive)` or `viewer.camera.flyToBoundingSphere(primitive._boundingSpheres[0])` after `primitive.ready` will frame the batch automatically.
+
 ## Performance Tips
 
 1. **Batch aggressively.** Combine thousands of GeometryInstances into one Primitive for a single draw call.
@@ -409,13 +634,16 @@ scene.primitives.add(new Primitive({
 5. **Keep `asynchronous: true`** (default). Check `primitive.ready` before accessing instance attributes.
 6. **Prefer fewer large collections** for Billboard, Label, and PointPrimitive. Group by update frequency.
 7. **Use `BlendOption.OPAQUE`** on BillboardCollection/PointPrimitiveCollection when all items are opaque (up to 2x gain).
-8. **Use GroundPrimitive** for terrain draping instead of entity `heightReference`.
-9. **Separate fill and outline** into two Primitives -- they cannot share a draw call.
-10. **Match `vertexFormat` exactly** to the appearance to skip unused vertex attribute computation.
-11. **Use `EllipsoidSurfaceAppearance`** over `MaterialAppearance` for surface geometry -- fewer vertex attributes.
+8. **Use buffer primitive collections** for large vector data when flyweight updates are acceptable.
+9. **Precompute buffer collection bounding volumes** for large animated collections, but remember they are world-space in 1.142+.
+10. **Use GroundPrimitive** for terrain draping instead of entity `heightReference`.
+11. **Separate fill and outline** into two Primitives -- they cannot share a draw call.
+12. **Match `vertexFormat` exactly** to the appearance to skip unused vertex attribute computation.
+13. **Use `EllipsoidSurfaceAppearance`** over `MaterialAppearance` for surface geometry -- fewer vertex attributes.
 
 ## See Also
 
 - **cesiumjs-entities** -- High-level Entity API wrapping primitives with time-dynamic properties.
+- **cesiumjs-3d-tiles** -- Use `MVTDataProvider` for tiled vector data as runtime 3D Tiles.
 - **cesiumjs-materials-shaders** -- Material (Fabric) system consumed by Appearances, post-processing.
 - **cesiumjs-spatial-math** -- Cartesian3, Matrix4, Transforms, coordinate conversions for positioning geometry.

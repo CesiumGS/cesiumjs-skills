@@ -1,0 +1,122 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses Model.fromGltfAsync",
+      "id": "pattern_present_02",
+      "pattern": "Model\\.fromGltfAsync",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets the CesiumMilkTruck sample model",
+      "id": "pattern_present_03",
+      "pattern": "CesiumMilkTruck",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Declares FLOAT varying",
+      "id": "pattern_present_04",
+      "pattern": "VaryingType\\.FLOAT",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Defines the v_height varying",
+      "id": "pattern_present_05",
+      "pattern": "v_height",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Defines vertexMain",
+      "id": "pattern_present_06",
+      "pattern": "vertexMain",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Defines fragmentMain",
+      "id": "pattern_present_07",
+      "pattern": "fragmentMain",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Reads vertex height from positionMC.y",
+      "id": "pattern_present_08",
+      "pattern": "positionMC\\.y",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Writes the ramp into material.diffuse",
+      "id": "pattern_present_09",
+      "pattern": "material\\.diffuse",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Load the public Cesium Milk Truck sample model and apply a CustomShader that uses a FLOAT varying to pass the vertex height (positionMC.y for this model) to the fragment shader, then colours the fragment from blue at the bottom to yellow at the top of the model. Tests varying declaration with VaryingType.FLOAT, varying write in vertex shader, varying read in fragment shader.",
+  "id": "eval-103",
+  "name": "archive-height-ramp-varying-milktruck",
+  "notes": "Imported from optimization/scenarios/cesiumjs-custom-shader/eval-003. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Calls Model.fromGltfAsync with the public CesiumMilkTruck glb URL",
+      "Constructs a CustomShader with both vertexShaderText AND fragmentShaderText",
+      "Declares varyings: { v_height: VaryingType.FLOAT }",
+      "Vertex shader writes v_height = vsInput.attributes.positionMC.y for the Milk Truck vertical axis",
+      "Fragment shader reads v_height and mixes between two distinct RGB vec3 values via mix() or smoothstep",
+      "Writes the mixed colour into material.diffuse",
+      "Positions the model at -118.49, 34.02 via Transforms.eastNorthUpToFixedFrame",
+      "Frames the camera close enough that the truck is the dominant element"
+    ],
+    "landmark": "CesiumMilkTruck sample model",
+    "perspective": "framed model with vertical color ramp",
+    "source": "optimization/scenarios",
+    "source_name": "height-ramp-varying-milktruck",
+    "source_scenario_id": "eval-003",
+    "visual_expectations": "The Cesium Milk Truck visible from the side or front, with its lower surfaces tinted blue/dark and its upper surfaces tinted yellow/bright, producing a clear vertical color gradient across the vehicle body."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Use an eval-stable viewer with baseLayer: false, disabled baseLayerPicker/navigationHelpButton/animation/timeline/geocoder/homeButton/sceneModePicker/fullscreenButton/infoBox/selectionIndicator, and window.viewer assigned. Set viewer.scene.globe.baseColor to a neutral dark gray and do not add OpenStreetMap imagery; this close-up model test should not request high-zoom map tiles. Load the public Cesium Milk Truck sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMilkTruck/CesiumMilkTruck.glb using Model.fromGltfAsync with scale 4.0 and minimumPixelSize 200. Apply a CustomShader with a varying v_height of type VaryingType.FLOAT. In the vertexShaderText assign v_height = vsInput.attributes.positionMC.y (the CesiumMilkTruck's vertical axis in model coords is Y, not Z \u2014 the y-component ranges roughly -1.0 to +2.5). In the fragmentShaderText, compute t = clamp((v_height + 1.0) / 3.5, 0.0, 1.0), then material.diffuse = mix(vec3(0.0, 0.2, 1.0), vec3(1.0, 0.9, 0.0), t). Position the truck via Transforms.eastNorthUpToFixedFrame(Cartesian3.fromDegrees(-118.4912, 34.0195, 0)). Add to viewer.scene.primitives. Frame the full truck, not a cropped edge, with explicit camera coordinates or viewer.camera.lookAt targeting the known Cartesian3 position. Do not use model.boundingSphere or flyToBoundingSphere. If using HeadingPitchRange, use a range around 90 to 120 meters, not 30 meters. A good framing is the truck centered at medium distance from slightly above, with the whole vehicle and the blue-to-yellow height ramp visible.",
+  "schema_version": 1,
+  "skill": "cesiumjs-custom-shader",
+  "timeout_ms": 5000
+}

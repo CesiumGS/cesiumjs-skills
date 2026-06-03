@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "eval-001",
+  "name": "click-event-contract",
+  "skill": "cesiumjs-interaction",
+  "description": "Deterministic interaction contract. The implementation must register a click handler and produce an observable event log when the test probe simulates a click.",
+  "category": "interaction_behavior",
+  "critical": true,
+  "prompt": "Register a Cesium LEFT_CLICK handler that records the picked entity id into an interaction log. The scene has two entities, alpha and beta. When the probe clicks alpha, the log must contain exactly one entry with pickedId alpha and no beta entry.",
+  "preflight": {
+    "viewer_setup": "default-globe",
+    "settle_ms": 100,
+    "entities": [
+      {
+        "id": "alpha",
+        "position_cartographic": {
+          "longitude_deg": -75,
+          "latitude_deg": 40,
+          "altitude_m": 0
+        }
+      },
+      {
+        "id": "beta",
+        "position_cartographic": {
+          "longitude_deg": -75.01,
+          "latitude_deg": 40,
+          "altitude_m": 0
+        }
+      }
+    ]
+  },
+  "probe": {
+    "capture": [
+      "events.click_log",
+      "entities[alpha].position_cartographic",
+      "entities[beta].position_cartographic",
+      "execution.success",
+      "errors"
+    ],
+    "after_trigger": "after_simulated_left_click_on_alpha",
+    "snapshot_after": true
+  },
+  "checks": [
+    {
+      "id": "code_completed",
+      "type": "code_runs",
+      "category": "execution_health",
+      "critical": true
+    },
+    {
+      "id": "no_runtime_errors",
+      "type": "no_runtime_errors",
+      "category": "execution_health",
+      "critical": true
+    },
+    {
+      "id": "one_click_logged",
+      "type": "collection_count",
+      "path": "/after/events/click_log",
+      "operator": "==",
+      "count": 1,
+      "category": "interaction_behavior",
+      "critical": true,
+      "description": "Exactly one click event was recorded"
+    },
+    {
+      "id": "alpha_clicked",
+      "type": "json_value_equals",
+      "path": "/after/events/click_log/0/pickedId",
+      "expected": "alpha",
+      "category": "interaction_behavior",
+      "critical": true,
+      "description": "The click event selected alpha"
+    },
+    {
+      "id": "click_type_left",
+      "type": "json_value_equals",
+      "path": "/after/events/click_log/0/type",
+      "expected": "LEFT_CLICK",
+      "category": "interaction_behavior",
+      "critical": true,
+      "description": "The recorded event came from a left click"
+    }
+  ],
+  "timeout_ms": 1000,
+  "notes": "This interaction case verifies observable event effects instead of only checking that handler source text exists."
+}

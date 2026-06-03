@@ -1,0 +1,22 @@
+{
+  "skill": "cesiumjs-spatial-math",
+  "iteration": "002",
+  "model_id": "claude-sonnet-4-6",
+  "temperature": 1.0,
+  "prompt_version": "propose-v1",
+  "timestamp_utc": "2026-05-27T21:38:57.439930+00:00",
+  "current_skill_hash": "42280bb47aebbcbeee3ca89c063135b44a9b648b603735643ae40604d038e089",
+  "candidate_skill_hash": "556bde4d9b6ee908da2690f5769f57939a58741e9ce72029e37e069ebd846ac8",
+  "decision_summary": {
+    "decision": "SCORECARD_FOCUS",
+    "rule_fired": "scorecard_critical_failure_focus",
+    "counts": {
+      "losses": 1,
+      "ties": 0,
+      "wins": 0
+    }
+  },
+  "history_iterations": 1,
+  "uncovered_sections_count": 4,
+  "uncovered_apis_count": 56
+}

@@ -1,0 +1,113 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses BillboardCollection (not entity API)",
+      "id": "pattern_present_02",
+      "pattern": "new (?:Cesium\\.)?BillboardCollection",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Adds collection to scene",
+      "id": "pattern_present_03",
+      "pattern": "scene\\.primitives\\.add",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses PinBuilder factory",
+      "id": "pattern_present_04",
+      "pattern": "(?:fromColor|fromText)",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses PinBuilder for marker images",
+      "id": "pattern_present_05",
+      "pattern": "PinBuilder",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Pins anchored at bottom",
+      "id": "pattern_present_06",
+      "pattern": "VerticalOrigin\\.BOTTOM",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses Cartesian3.fromDegrees",
+      "id": "pattern_present_07",
+      "pattern": "fromDegrees",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Does NOT use entity API (must use BillboardCollection)",
+      "id": "pattern_absent_08",
+      "pattern": "viewer\\.entities\\.add",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": true,
+  "description": "Use a single BillboardCollection (NOT entity API) to place 8 marker billboards at major US east coast cities. Each billboard uses a generated canvas pin image via PinBuilder.fromColor in a chosen color. Tests low-level BillboardCollection efficiency vs the Entity API.",
+  "id": "eval-102",
+  "name": "archive-billboard-collection-east-coast-cities",
+  "notes": "Imported from optimization/scenarios/cesiumjs-primitives/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Constructs a new BillboardCollection()",
+      "Adds the collection to viewer.scene.primitives",
+      "Calls collection.add 8 times (one per city)",
+      "Each billboard uses image from new PinBuilder().fromColor or fromText",
+      "Each billboard has position from Cartesian3.fromDegrees",
+      "Uses VerticalOrigin.BOTTOM",
+      "Frames the camera over the US east coast (around 35 N, -78 W) at 2-4 million m altitude"
+    ],
+    "landmark": "US east coast cities",
+    "perspective": "regional view with billboard markers",
+    "source": "optimization/scenarios",
+    "source_name": "billboard-collection-east-coast-cities",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "A regional camera view of the US east coast with 8 distinct coloured pin billboards visible at major cities. The pins should form a roughly vertical chain down the east coast, each with a different color."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Construct a new BillboardCollection() and add it to viewer.scene.primitives. Add 8 billboards at: Boston (42.3601, -71.0589), New York (40.7128, -74.0060), Philadelphia (39.9526, -75.1652), Washington DC (38.9072, -77.0369), Charleston (32.7765, -79.9311), Miami (25.7617, -80.1918), Atlanta (33.7490, -84.3880), Charlotte (35.2271, -80.8431). Each billboard's image should come from new PinBuilder().fromColor(Color.fromHsl(index / 8, 0.8, 0.5), 48). Use position Cartesian3.fromDegrees(lng, lat) and verticalOrigin VerticalOrigin.BOTTOM. Frame the camera over the east coast (around 35 N, -78 W, 3,000,000 m altitude).",
+  "schema_version": 1,
+  "skill": "cesiumjs-primitives",
+  "timeout_ms": 5000
+}

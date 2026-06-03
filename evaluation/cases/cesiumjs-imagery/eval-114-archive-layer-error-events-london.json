@@ -1,0 +1,79 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Wires errorEvent listeners",
+      "id": "pattern_present_02",
+      "pattern": "errorEvent\\.addEventListener",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Wires readyEvent listener",
+      "id": "pattern_present_03",
+      "pattern": "readyEvent\\.addEventListener",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets London coordinates",
+      "id": "pattern_present_04",
+      "pattern": "-0\\.12|51\\.50",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Wire readyEvent and errorEvent listeners on a working imagery layer while still rendering a visible map over London.",
+  "id": "eval-114",
+  "name": "archive-layer-error-events-london",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-014. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Creates an imagery layer from an async provider",
+      "Attaches layer.errorEvent listener",
+      "Attaches readyEvent listener",
+      "Inside readyEvent, attaches provider.errorEvent listener",
+      "Frames London"
+    ],
+    "landmark": "London, UK",
+    "perspective": "working map with event wiring",
+    "source": "optimization/scenarios",
+    "source_name": "layer-error-events-london",
+    "source_scenario_id": "eval-014",
+    "visual_expectations": "A normal visible map over London. The event listeners are not directly visible, so the visual test mainly confirms the scene still renders correctly."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create a CesiumJS viewer centered on London using a working public imagery layer, with `baseLayer: false` or no default ion imagery loaded first. Use an async provider/layer path if needed, explicitly wire both layer.errorEvent and provider.errorEvent listeners using the readyEvent pattern described in the skill, and keep the final scene rendering a normal visible map over London. The code must clearly show the error-handling wiring without relying on IonImageryProvider, ImageryLayer.fromWorldImagery, or ion defaults.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

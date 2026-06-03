@@ -1,0 +1,153 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6
+      },
+      "source_scenario_id": "eval-014"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-114",
+  "case_name": "layer-error-events-london",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-imagery/baseline/eval-014-layer-error-events-london/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: false,            // no ion default imagery; we add our own below\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// --- async provider/layer path -------------------------------------------\n// Wrap the synchronous OSM constructor in a Promise so the layer goes through\n// ImageryLayer.fromProviderAsync and all three event surfaces are available.\nconst providerPromise = Promise.resolve(\n  new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 19,\n    credit: 'OpenStreetMap contributors',\n  })\n);\n\nconst osmLayer = Cesium.ImageryLayer.fromProviderAsync(providerPromise);\n\n// --- error-event wiring --------------------------------------------------\n\n// 1. layer.errorEvent fires when the provider promise rejects (creation failure)\nosmLayer.errorEvent.addEventListener((error) => {\n  console.error('[imagery] Provider creation failed:', error);\n});\n\n// 2. layer.readyEvent fires once the promise resolves; the resolved provider\n//    is passed as the argument so we can attach per-tile error listeners.\nif (osmLayer.readyEvent) {\n  osmLayer.readyEvent.addEventListener((provider) => {\n    console.log('[imagery] Provider ready:', provider.constructor.name);\n\n    // provider.errorEvent fires on individual tile-fetch failures\n    provider.errorEvent.addEventListener((tileError) => {\n      console.warn(\n        '[imagery] Tile error \u2014 level:', tileError.level,\n        'x:', tileError.x,\n        'y:', tileError.y,\n        'msg:', tileError.message\n      );\n    });\n  });\n}\n\n// Add as index-0 base layer (globe has no other layers because baseLayer:false)\nviewer.imageryLayers.add(osmLayer, 0);\n\n// --- camera: London, top-down, ~800 km -----------------------------------\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-0.1276, 51.5074, 800000),\n  orientation: {\n    heading: 0.0,\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "56813dcda33bf39d5d16fa2f9026fe99fdbf76f0785b5b1388d5399b28cc39fe",
+      "programmatic_checks": "61221b4020d3db7d85e93c2dede0d29960bcc7a5d387bb4e082903d3417dac53",
+      "scene_state": "2c497e5ff825885bcddf188975b47dea80554fcd78c38499b9ee3f0287e65c40",
+      "screenshot_quality": "f1069751d1f6b9346a7634924ce21aba90c9d9c6a267eac1b69eb9e1d02aa017",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "1b314e62588fd9aadbe1414eecbafb933cfb57628f7174105c5e37fb050b7e0c"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "8842ef0c98540713f1e9e72185baaf59d58e01470c00fea45cb75fe21337e13e",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "15e86098abf28c9c48f992cb6a7caa53dfe92a83c71909ef4fc8e7438f1712b6",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:04:47.240843+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Wires errorEvent listeners",
+        "detail": "Pattern matched: 'errorEvent.addEventListener'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Wires readyEvent listener",
+        "detail": "Pattern matched: 'readyEvent.addEventListener'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Targets London coordinates",
+        "detail": "Pattern matched: '-0.12'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-014",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 6,
+      "total": 6
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-imagery/baseline/eval-014-layer-error-events-london",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 4475923.913317634,
+        "y": -9968.078633434687,
+        "z": 5595025.777912841
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-014",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 4305,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 1013532,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 218.79,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-imagery/eval-014-screenshot.png"
+  ],
+  "skill": "cesiumjs-imagery",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-imagery/baseline/eval-014.js"
+}

@@ -1,0 +1,167 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 8,
+        "total": 8
+      },
+      "source_scenario_id": "eval-001"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-101",
+  "case_name": "public-discrete-lod-dragon",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-3d-tiles/baseline/eval-001-public-discrete-lod-dragon/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst tileset = await Cesium.Cesium3DTileset.fromUrl(\n  'https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json',\n  { maximumScreenSpaceError: 8 }\n);\n\nviewer.scene.primitives.add(tileset);\n\nawait viewer.flyTo(tileset, {\n  duration: 0,\n  offset: new Cesium.HeadingPitchRange(\n    Cesium.Math.toRadians(30),\n    Cesium.Math.toRadians(-20),\n    tileset.boundingSphere.radius * 1.8\n  ),\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "b55a48defc28dd29f558a8998313988eac04b76eaf8f97d51bee7b8d9b014274",
+      "programmatic_checks": "ebcae68d3db04f9217770c86a028e153dff5a911119070a7563033019696e658",
+      "scene_state": "43ce43ad910cb605ce98e78f7cdd5b67cad5a8bda52407efa82302dad9b4c37f",
+      "screenshot_quality": "fabc92bb7eef545cc8f0e5d56bbfaea759965b224bd240738a2501c6a633ffa0",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "6364b23feb04ff1ea4d946f52d0d3e38ee19a069fc3313e201f3090a7b86bf74"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "7f8dc72d5d69dca5af33f35719f643ce416302beb00807d0a59945ed32f1eabd",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "d754ed05c8d5506f5d3b6a1fe83b474e5fbeb7d04877ab61563c919f0a8ee81b",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T20:54:08.417324+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses URL-backed 3D Tiles factory",
+        "detail": "Pattern matched: 'Cesium3DTileset.fromUrl'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses public CesiumGS sample tileset",
+        "detail": "Pattern matched: 'TilesetWithDiscreteLOD'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Adds tileset to scene primitives",
+        "detail": "Pattern matched: 'scene.primitives.add'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Frames the tileset",
+        "detail": "Pattern matched: 'flyTo'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_6",
+        "description": "Avoids private entitlement-backed assets",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-001",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 8,
+      "total": 8
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-3d-tiles/baseline/eval-001-public-discrete-lod-dragon",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 0.5234959792458316,
+      "pitch": -0.3493112760605712,
+      "position": {
+        "x": 1214674.8883355514,
+        "y": -4738144.163044814,
+        "z": 4081255.051159152
+      },
+      "roll": 6.283185018766249
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-001",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 3463,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 826364,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 215.2,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-3d-tiles/eval-001-screenshot.png"
+  ],
+  "skill": "cesiumjs-3d-tiles",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-3d-tiles/baseline/eval-001.js"
+}

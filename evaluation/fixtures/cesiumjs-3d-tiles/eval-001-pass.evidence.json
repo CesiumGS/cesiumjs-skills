@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "public-tileset-contract",
+  "skill": "cesiumjs-3d-tiles",
+  "source": "synthetic-fixture",
+  "expected_result": "pass",
+  "execution": {
+    "success": true
+  },
+  "before": {
+    "entities": {},
+    "tilesets": [],
+    "primitives": []
+  },
+  "after": {
+    "entities": {},
+    "tilesets": [
+      {
+        "source": "public-url",
+        "ready": true,
+        "requiresIonToken": false,
+        "distanceToCameraMeters": 240
+      }
+    ],
+    "primitives": [
+      {
+        "type": "Cesium3DTileset",
+        "show": true
+      }
+    ]
+  },
+  "errors": []
+}

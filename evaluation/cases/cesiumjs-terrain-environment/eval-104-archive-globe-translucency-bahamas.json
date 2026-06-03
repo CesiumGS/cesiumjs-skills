@@ -1,0 +1,94 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Enables globe translucency",
+      "id": "pattern_present_02",
+      "pattern": "globe\\.translucency\\.enabled",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Configures alpha-by-distance or alpha",
+      "id": "pattern_present_03",
+      "pattern": "(?:frontFaceAlphaByDistance|frontFaceAlpha|backFaceAlpha)",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses NearFarScalar or simple alpha",
+      "id": "pattern_present_04",
+      "pattern": "(?:NearFarScalar|backFaceAlpha)",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Bahamas longitude",
+      "id": "pattern_present_05",
+      "pattern": "-77\\.",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Bahamas latitude",
+      "id": "pattern_present_06",
+      "pattern": "24\\.",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Enable Globe translucency on water bodies so the ocean surface becomes partially transparent, revealing the seafloor. Frame over the Bahamas, a region with distinctive bright turquoise shallows and dark deep-water channels, so the contrast is visible in the screenshot.",
+  "id": "eval-104",
+  "name": "archive-globe-translucency-bahamas",
+  "notes": "Imported from optimization/scenarios/cesiumjs-terrain-environment/eval-004. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Sets viewer.scene.globe.translucency.enabled = true",
+      "Configures frontFaceAlphaByDistance (or front face alpha) with NearFarScalar or numeric",
+      "Frames over the Bahamas (around 24.5 N, -77.5 W) at 1-3 million m altitude",
+      "Camera pitch is moderately downward (between -30 and -70 degrees)"
+    ],
+    "landmark": "Translucent globe revealing seafloor over the Bahamas",
+    "perspective": "ocean translucency demonstration over coral reefs",
+    "source": "optimization/scenarios",
+    "source_name": "globe-translucency-bahamas",
+    "source_scenario_id": "eval-004",
+    "visual_expectations": "A regional view of the Bahamas with the ocean visibly translucent \u2014 the iconic bright turquoise shallows of the Great Bahama Bank should be clearly visible AND lighter than the surrounding deep-water dark zones, demonstrating that the surface is semi-transparent."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Configure globe translucency: `viewer.scene.globe.translucency.enabled = true; viewer.scene.globe.translucency.frontFaceAlphaByDistance = new Cesium.NearFarScalar(400000, 0.5, 4000000, 1.0); viewer.scene.globe.translucency.backFaceAlphaByDistance = new Cesium.NearFarScalar(400000, 0.5, 4000000, 1.0);`. Set `viewer.scene.globe.undergroundColor = Cesium.Color.BLACK.withAlpha(0.0)` to clear underground colour, and `viewer.scene.skyAtmosphere.show = true`. Frame the Bahamas: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-77.5, 24.5, 1500000), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-50), roll: 0 } }) \u2014 at 1.5M m altitude looking down with moderate pitch.",
+  "schema_version": 1,
+  "skill": "cesiumjs-terrain-environment",
+  "timeout_ms": 5000
+}

@@ -1,0 +1,94 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses URL-backed 3D Tiles factory",
+      "id": "pattern_present_02",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public CesiumGS sample tileset",
+      "id": "pattern_present_03",
+      "pattern": "TilesetWithDiscreteLOD",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Adds tileset to scene primitives",
+      "id": "pattern_present_04",
+      "pattern": "scene\\.primitives\\.add",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Frames the tileset",
+      "id": "pattern_present_05",
+      "pattern": "zoomTo|flyTo|HeadingPitchRange|setView",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids private entitlement-backed assets",
+      "id": "pattern_absent_06",
+      "pattern": "createGooglePhotorealistic3DTileset|createOsmBuildingsAsync|fromIonAssetId",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": true,
+  "description": "Load a public Cesium 3D Tiles sample and frame it from a different oblique close-up angle. This keeps 3D Tiles coverage runnable without Google Photorealistic 3D Tiles entitlement.",
+  "id": "eval-105",
+  "name": "archive-public-tileset-oblique-closeup",
+  "notes": "Imported from optimization/scenarios/cesiumjs-3d-tiles/eval-005. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Calls Cesium3DTileset.fromUrl with the public CesiumGS sample URL",
+      "Adds the returned tileset to viewer.scene.primitives",
+      "Frames the tileset close enough that the dragon content is visible",
+      "Avoids Google Photorealistic 3D Tiles and other entitlement-backed helpers"
+    ],
+    "landmark": "Cesium 3D Tiles sample dragon",
+    "perspective": "public 3D Tiles oblique close-up",
+    "source": "optimization/scenarios",
+    "source_name": "public-tileset-oblique-closeup",
+    "source_scenario_id": "eval-005",
+    "visual_expectations": "A visible public 3D Tiles dragon sample, centered and large enough to inspect. The screenshot should prove that URL-backed 3D Tiles content loaded successfully."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion defaults. Load the public Cesium Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` using `Cesium.Cesium3DTileset.fromUrl`, add it to `viewer.scene.primitives`, wait for readiness if needed, and frame it with `viewer.flyTo(tileset, { duration: 0, offset: new Cesium.HeadingPitchRange(Cesium.Math.toRadians(70), Cesium.Math.toRadians(-18), tileset.boundingSphere.radius * 2.4) })` or an equivalent camera so the dragon is visibly centered over the map. Do not call createGooglePhotorealistic3DTileset, createOsmBuildingsAsync, Terrain.fromWorldTerrain, or ion asset helpers.",
+  "schema_version": 1,
+  "skill": "cesiumjs-3d-tiles",
+  "timeout_ms": 5000
+}

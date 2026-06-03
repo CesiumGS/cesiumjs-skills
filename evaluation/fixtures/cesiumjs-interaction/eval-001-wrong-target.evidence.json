@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "click-event-contract",
+  "skill": "cesiumjs-interaction",
+  "source": "synthetic-fixture",
+  "expected_result": "fail",
+  "execution": {
+    "success": true
+  },
+  "before": {
+    "entities": {
+      "alpha": {},
+      "beta": {}
+    },
+    "events": {
+      "click_log": []
+    }
+  },
+  "after": {
+    "entities": {
+      "alpha": {},
+      "beta": {}
+    },
+    "events": {
+      "click_log": [
+        {
+          "type": "LEFT_CLICK",
+          "pickedId": "beta"
+        }
+      ]
+    }
+  },
+  "errors": []
+}

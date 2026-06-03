@@ -1,0 +1,34 @@
+{
+  "id": "eval-004",
+  "name": "boundingsphere-viz",
+  "landmark": "BoundingSphere visualization around OSM Buildings at the Burj Khalifa, Dubai",
+  "perspective": "city overview with a sphere visualization",
+  "difficulty": "hard",
+  "description": "Compute a BoundingSphere from 5 well-spaced points across the southwestern United States (LA, Phoenix, Las Vegas, Denver, Albuquerque) and visualize the result as a large translucent ellipsoid entity centered on bs.center with radii equal to bs.radius. Tests BoundingSphere.fromPoints and visualization via Entity API — kept lightweight (no terrain, no tileset) so the screenshot captures cleanly.",
+  "prompt": "Build a Cartesian3 positions array via Cartesian3.fromDegreesArray covering 5 SW US cities: LA (-118.2437, 34.0522), Phoenix (-112.0740, 33.4484), Las Vegas (-115.1398, 36.1699), Denver (-104.9903, 39.7392), Albuquerque (-106.6504, 35.0844). Compute bs = BoundingSphere.fromPoints(positions). Convert bs.center back to Cartographic then Cartesian3.fromRadians to get a position usable by the entity (or use bs.center directly). Add a viewer.entity at that position with ellipsoid graphics: radii new Cartesian3(bs.radius, bs.radius, bs.radius), material Color.YELLOW.withAlpha(0.3), outline true, outlineColor Color.YELLOW, outlineWidth 2. Also add 5 small point entities at the 5 city positions (pixelSize 18, color Color.CYAN) so the original points are visible. Frame globally to ensure the bounding sphere fits in view: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-110, 36, 8000000) }).",
+  "expected_behaviors": [
+    "Constructs a Cartesian3 positions array via Cartesian3.fromDegreesArray (or fromDegrees calls)",
+    "Calls BoundingSphere.fromPoints on the positions array",
+    "Reads bs.center and bs.radius",
+    "Adds an Entity at bs.center with ellipsoid graphics whose radii equal (bs.radius, bs.radius, bs.radius)",
+    "Ellipsoid material is translucent yellow",
+    "Adds 5 small point entities at the original sample positions for context",
+    "Frames camera at 5-12 million m altitude over the SW US so the bounding sphere fits"
+  ],
+  "visual_expectations": "A regional view of the southwestern US with a large semi-transparent yellow sphere visualization (with outlined edge) centered roughly over Arizona/New Mexico, enclosing 5 small cyan dots at the listed cities. The sphere should be clearly visible against the terrain.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "BoundingSphere\\.fromPoints", "description": "Uses BoundingSphere.fromPoints" },
+    { "type": "pattern_present", "pattern": "ellipsoid", "description": "Uses ellipsoid graphics" },
+    { "type": "pattern_present", "pattern": "Color\\.YELLOW", "description": "Uses YELLOW for sphere material" },
+    { "type": "pattern_present", "pattern": "(?:fromDegreesArray|fromDegrees)", "description": "Builds Cartesian3 positions from degrees" },
+    { "type": "pattern_present", "pattern": "-118\\.24", "description": "References LA longitude" },
+    { "type": "pattern_present", "pattern": "-104\\.99", "description": "References Denver longitude" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 5000, "description": "SW US with bounding sphere over 5 city dots" }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": ["BoundingSphere"]
+}

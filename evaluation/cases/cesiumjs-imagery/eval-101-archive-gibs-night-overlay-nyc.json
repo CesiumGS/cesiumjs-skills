@@ -1,0 +1,103 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public NASA GIBS city-lights imagery",
+      "id": "pattern_present_02",
+      "pattern": "VIIRS_CityLights_2012|gibs\\.earthdata",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses a public URL-backed imagery provider",
+      "id": "pattern_present_03",
+      "pattern": "WebMapTileServiceImageryProvider|UrlTemplateImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets overlay alpha below 1",
+      "id": "pattern_present_04",
+      "pattern": "alpha\\s*=\\s*0\\.",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Adjusts brightness",
+      "id": "pattern_present_05",
+      "pattern": "brightness\\s*=\\s*1\\.",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets NYC / Northeast corridor coordinates",
+      "id": "pattern_present_06",
+      "pattern": "-7[234]\\.|4[01]\\.",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids ion imagery helpers",
+      "id": "pattern_absent_07",
+      "pattern": "IonImageryProvider|fromWorldImagery",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": true,
+  "description": "Create a viewer centered on the northeastern United States and add NASA GIBS public VIIRS city-lights imagery as a semi-transparent overlay. Tests imagery layer display tuning without Cesium ion imagery entitlement.",
+  "id": "eval-101",
+  "name": "archive-gibs-night-overlay-nyc",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-001. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "easy",
+    "expected_behaviors": [
+      "Uses a public NASA GIBS provider for VIIRS CityLights imagery",
+      "Adds the imagery layer to viewer.imageryLayers",
+      "Sets alpha below 1.0 on the overlay layer",
+      "Sets brightness above 1.0 on the overlay layer",
+      "Positions the camera over the northeastern United States"
+    ],
+    "landmark": "New York City, USA",
+    "perspective": "regional night overlay",
+    "source": "optimization/scenarios",
+    "source_name": "gibs-night-overlay-nyc",
+    "source_scenario_id": "eval-001",
+    "visual_expectations": "A globe view of the northeastern United States with visible night lights over the New York City region and nearby urban corridor. The overlay should not completely hide the underlying imagery."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public CesiumJS globe centered on New York City and the surrounding northeastern United States. Use OpenStreetMap as the base layer, then add NASA GIBS public VIIRS city-lights imagery as a semi-transparent overlay using `WebMapTileServiceImageryProvider` or `UrlTemplateImageryProvider`. Use the public template `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{TileMatrix}/{TileRow}/{TileCol}.jpeg` (or the equivalent WMTS provider settings: layer `VIIRS_CityLights_2012`, tileMatrixSetID `GoogleMapsCompatible_Level8`, format `image/jpeg`). Set the overlay alpha below 1.0 and slightly increase its brightness. Use a camera height high enough to show the New York to Boston corridor. Do not use IonImageryProvider, ImageryLayer.fromWorldImagery, or default ion imagery.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

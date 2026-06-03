@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "eval-001",
+  "name": "target-view-volume",
+  "skill": "cesiumjs-camera",
+  "description": "Review-derived camera regression case. The camera must view the target from an acceptable side angle instead of hovering above it.",
+  "category": "camera_framing",
+  "critical": true,
+  "prompt": "Fly the camera to view the target landmark from an oblique angle. Do not place the camera directly above the target.",
+  "preflight": {
+    "viewer_setup": "default-globe",
+    "entities": [
+      {
+        "id": "target-landmark",
+        "position_ecef": [6378137, 0, 0],
+        "position_cartographic": {
+          "longitude_deg": 0,
+          "latitude_deg": 0,
+          "altitude_m": 0
+        }
+      }
+    ]
+  },
+  "probe": {
+    "capture": [
+      "camera.position_ecef",
+      "camera.direction_ecef",
+      "entities[target-landmark].position_ecef",
+      "entities[target-landmark].position_cartographic"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "checks": [
+    {
+      "id": "no_runtime_errors",
+      "type": "no_runtime_errors",
+      "category": "execution_health",
+      "critical": true,
+      "description": "Candidate completes without captured console/runtime errors"
+    },
+    {
+      "id": "camera_views_target_not_overhead",
+      "type": "camera_target_view",
+      "target_entity_id": "target-landmark",
+      "snapshot": "after",
+      "min_distance_meters": 50,
+      "max_distance_meters": 5000,
+      "max_view_angle_degrees": 5,
+      "max_up_alignment": 0.75,
+      "category": "camera_framing",
+      "critical": true
+    }
+  ],
+  "timeout_ms": 1000,
+  "notes": "Reviewer feedback called out agents flying above landmarks instead of viewing them. This deterministic check complements visual judging with a target-volume constraint."
+}

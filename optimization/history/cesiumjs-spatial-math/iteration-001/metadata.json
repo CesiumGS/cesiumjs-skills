@@ -1,0 +1,9 @@
+{
+  "iteration": "001",
+  "decision": "KEEP",
+  "timestamp_utc": "2026-05-26T21:11:31.317778+00:00",
+  "runs_dir": "evals/runs/cesiumjs-spatial-math/001",
+  "candidate_dir": "evals/candidates/cesiumjs-spatial-math/001",
+  "generated_dir": "evals/generated/cesiumjs-spatial-math/001",
+  "journal": "evals/history/cesiumjs-spatial-math/iteration-001/journal.jsonl"
+}

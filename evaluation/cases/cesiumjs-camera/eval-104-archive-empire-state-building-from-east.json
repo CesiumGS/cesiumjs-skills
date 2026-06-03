@@ -1,0 +1,87 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses lookAt",
+      "id": "pattern_present_02",
+      "pattern": "lookAt",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses HeadingPitchRange",
+      "id": "pattern_present_03",
+      "pattern": "HeadingPitchRange",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "NYC longitude negative",
+      "id": "pattern_present_04",
+      "pattern": "-73\\.98",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Heading ~270 degrees (east perspective)",
+      "id": "pattern_present_05",
+      "pattern": "270|3\\*Math\\.PI/2|4\\.71",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Lock camera onto the Empire State Building and view from the east. Tests lookAt with heading=270 (facing west = camera is east of target).",
+  "id": "eval-104",
+  "name": "archive-empire-state-building-from-east",
+  "notes": "Imported from optimization/scenarios/cesiumjs-camera/eval-004. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Uses lookAt with the building's coordinates",
+      "Heading ~270 degrees (facing west = camera east of target)",
+      "Pitch ~-25 degrees",
+      "Range ~800m",
+      "Longitude must be negative (-73.9857)"
+    ],
+    "landmark": "Empire State Building, NYC",
+    "perspective": "orbital view from east",
+    "source": "optimization/scenarios",
+    "source_name": "empire-state-building-from-east",
+    "source_scenario_id": "eval-004",
+    "visual_expectations": "The Empire State Building area viewed from the east, looking westward across Midtown Manhattan. The urban grid of NYC should be visible with the building location centered."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Lock the camera onto the Empire State Building (40.7484 N, 73.9857 W) using lookAt. Position the camera to the east of the building, looking west toward it, at about 800 meters distance and a slight downward angle of 25 degrees. The Empire State Building should be centered in the view.",
+  "schema_version": 1,
+  "skill": "cesiumjs-camera",
+  "timeout_ms": 5000
+}

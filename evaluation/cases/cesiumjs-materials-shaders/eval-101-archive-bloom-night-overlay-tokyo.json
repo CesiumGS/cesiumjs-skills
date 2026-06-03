@@ -1,0 +1,112 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses the built-in bloom stage",
+      "id": "pattern_present_02",
+      "pattern": "postProcessStages\\.bloom",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Enables bloom",
+      "id": "pattern_present_03",
+      "pattern": "bloom\\.enabled\\s*=\\s*true",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public GIBS night imagery",
+      "id": "pattern_present_04",
+      "pattern": "VIIRS_CityLights_2012|gibs\\.earthdata",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses URL-backed imagery layer",
+      "id": "pattern_present_05",
+      "pattern": "UrlTemplateImageryProvider|WebMapTileServiceImageryProvider|ImageryLayer",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Tokyo latitude",
+      "id": "pattern_present_06",
+      "pattern": "35\\.6",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Tokyo longitude",
+      "id": "pattern_present_07",
+      "pattern": "139\\.6",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids ion imagery helpers",
+      "id": "pattern_absent_08",
+      "pattern": "IonImageryProvider|fromWorldImagery",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": true,
+  "description": "Add NASA GIBS public VIIRS city-lights imagery over Tokyo and enable the built-in bloom post-processing stage so city lights produce a visible glow. Tests scene.postProcessStages.bloom and bloom uniform tuning without Cesium ion imagery entitlement.",
+  "id": "eval-101",
+  "name": "archive-bloom-night-overlay-tokyo",
+  "notes": "Imported from optimization/scenarios/cesiumjs-materials-shaders/eval-001. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Adds a public NASA GIBS night-imagery overlay layer",
+      "Uses the built-in viewer.scene.postProcessStages.bloom stage",
+      "Tunes bloom uniforms (at minimum contrast or brightness or delta or sigma)",
+      "Sets bloom.enabled = true (or relies on add() default enabling)",
+      "Frames the camera over Tokyo at 35.67 N, 139.65 E, around 500,000-1,500,000 m altitude",
+      "Camera pitch is straight down or close to it"
+    ],
+    "landmark": "Tokyo at night",
+    "perspective": "regional night view with bloom glow",
+    "source": "optimization/scenarios",
+    "source_name": "bloom-night-overlay-tokyo",
+    "source_scenario_id": "eval-001",
+    "visual_expectations": "A night view of the Tokyo metropolitan region with city lights clearly visible AND glowing softly outward due to the bloom stage. The glow should be perceptible \u2014 bright city centres should bleed into surrounding darker areas."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer. Add NASA GIBS VIIRS CityLights imagery from `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{TileMatrix}/{TileRow}/{TileCol}.jpeg` as an overlay using a URL-backed imagery provider. Set the night overlay's alpha = 0.85. Then enable Cesium's built-in bloom stage with `const bloom = viewer.scene.postProcessStages.bloom`; set bloom.enabled = true and tune bloom.uniforms: contrast = 128, brightness = -0.3, glowOnly = false, delta = 1, sigma = 3.78, stepSize = 5. Frame Tokyo straight-down at high altitude: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(139.6917, 35.6895, 1200000) }). The camera should see Tokyo at night with bloom glow on city lights. Do not use IonImageryProvider or default ion imagery.",
+  "schema_version": 1,
+  "skill": "cesiumjs-materials-shaders",
+  "timeout_ms": 5000
+}

@@ -1,0 +1,33 @@
+{
+  "id": "eval-001",
+  "name": "procedural-terrain-grand-canyon-rim",
+  "landmark": "Grand Canyon South Rim, Arizona",
+  "perspective": "ground-level rim view across the canyon",
+  "difficulty": "medium",
+  "description": "Configure a no-token procedural CustomHeightmapTerrainProvider, position the camera at the Grand Canyon South Rim (Mather Point), and look northward across the region. Tests terrain-provider assignment and visible terrain framing without Cesium ion world terrain entitlement.",
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer and no ion defaults. Set `viewer.terrainProvider` to a `new Cesium.CustomHeightmapTerrainProvider({ width: 32, height: 32, callback: function (x, y, level) { ... } })` whose callback returns a Float32Array with strongly varied, exaggerated canyon-like heights (for example high rims/ridges plus a central trench several thousand meters deep). Enable `viewer.scene.globe.depthTestAgainstTerrain = true` and lighting so relief is visible. Position the camera at Mather Point on the Grand Canyon South Rim (-112.0473 longitude, 36.0613 latitude, 6000-9000 m altitude) using setView with heading 0 (due north), pitch about -15 degrees, roll 0. Frame should show a textured map with visibly warped procedural terrain relief, not a flat map. Do not use CesiumTerrainProvider.fromIonAssetId or Terrain.fromWorldTerrain.",
+  "expected_behaviors": [
+    "Sets viewer.terrainProvider via CustomHeightmapTerrainProvider",
+    "Enables viewer.scene.globe.depthTestAgainstTerrain = true",
+    "Positions camera at Mather Point (around -112.05, 36.06) high enough to see the procedural relief",
+    "Camera heading is around 0 (due north) and pitch slightly downward (-3 to -10 degrees)",
+    "Uses Camera.setView (not flyTo or zoomTo)"
+  ],
+  "visual_expectations": "A dramatic public no-token terrain view near the Grand Canyon from the South Rim looking north. The OSM map should be visibly warped over exaggerated procedural ridges/trenches so the screenshot does not read as a flat basemap.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "CustomHeightmapTerrainProvider", "description": "Uses no-token procedural terrain provider" },
+    { "type": "pattern_present", "pattern": "terrainProvider", "description": "Sets terrainProvider on viewer" },
+    { "type": "pattern_present", "pattern": "depthTestAgainstTerrain", "description": "Enables depth test against terrain" },
+    { "type": "pattern_present", "pattern": "(?:setView|flyTo)", "description": "Positions camera via setView or flyTo" },
+    { "type": "pattern_present", "pattern": "-112\\.0", "description": "Targets Grand Canyon longitude" },
+    { "type": "pattern_present", "pattern": "36\\.0", "description": "Targets Grand Canyon latitude" },
+    { "type": "pattern_absent", "pattern": "fromIonAssetId|fromWorldTerrain", "description": "Avoids ion terrain helpers" }
+  ],
+  "screenshots": [
+    { "timing": "after_terrain_load", "delay_ms": 7000, "description": "Grand Canyon view from South Rim" }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": ["Terrain Providers"]
+}

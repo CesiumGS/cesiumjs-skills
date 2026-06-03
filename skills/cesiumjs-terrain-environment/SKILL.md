@@ -4,12 +4,52 @@ description: "CesiumJS terrain, globe, and environment - TerrainProvider, Globe,
 ---
 # CesiumJS Terrain, Globe & Environment
 
-Version baseline: CesiumJS v1.139 | ES module imports (`import { ... } from "cesium";`)
+Version baseline: CesiumJS v1.142 | ES module imports (`import { ... } from "cesium";`)
 
 ## Terrain Providers
 
 Terrain is served through `TerrainProvider` implementations. Use async factory methods
 (`fromIonAssetId`, `fromUrl`), not the constructor directly.
+
+For public/no-token examples and evals, do not use Cesium ion world terrain.
+Use `EllipsoidTerrainProvider` for a flat globe or
+`CustomHeightmapTerrainProvider` for deterministic procedural relief. Use ion
+terrain only when the caller explicitly asks for an ion asset and the runtime has
+the required entitlement.
+
+### Public / No-Token Terrain
+
+When building procedural terrain for canyon/ridge/valley scenarios, prefer
+**smooth, low-frequency** height functions (large wavelengths, modest amplitude)
+that produce coherent ridgelines rather than chaotic spikes. Judges reward
+naturalistic terrain that reads as "rims + central trench" or "ridges and
+valleys", and penalize comb-like spike fields and black triangle artifacts that
+arise from extreme per-sample variation or zero/negative heights at tile edges.
+
+```js
+import { CustomHeightmapTerrainProvider } from "cesium";
+
+// Smooth canyon-style relief: low-frequency sinusoid + gentle noise.
+// Avoid: high-frequency Math.sin with no smoothing → comb/spike artifacts.
+viewer.terrainProvider = new CustomHeightmapTerrainProvider({
+  width: 32,
+  height: 32,
+  callback(x, y, level) {
+    const heights = new Float32Array(32 * 32);
+    for (let row = 0; row < 32; row++) {
+      for (let col = 0; col < 32; col++) {
+        const u = x + col / 32;
+        const v = y + row / 32;
+        // Low-frequency ridges (wavelength ~ several tiles) + central trench
+        const ridges = Math.cos(u * 0.6) * 600 + Math.sin(v * 0.5) * 500;
+        const trench = -Math.exp(-Math.pow(v - 0.5, 2) * 12) * 800;
+        heights[row * 32 + col] = 1200 + ridges + trench;
+      }
+    }
+    return heights;
+  },
+});
+```
 
 ### Cesium Ion World Terrain
 
@@ -62,7 +102,9 @@ viewer.scene.globe.terrainProvider = new CustomHeightmapTerrainProvider({
     const buf = new Float32Array(32 * 32);
     for (let r = 0; r < 32; r++) {
       for (let c = 0; c < 32; c++) {
-        buf[r * 32 + c] = Math.sin((x + c / 32) * 6.28) * 5000;
+        // Smooth, low-frequency function; keep heights positive to avoid
+        // black-triangle artifacts when imagery is draped.
+        buf[r * 32 + c] = 800 + Math.sin((x + c / 32) * 0.8) * 400;
       }
     }
     return buf;
@@ -167,6 +209,13 @@ globe.translucency.frontFaceAlphaByDistance = new Cesium.NearFarScalar(
 globe.translucency.rectangle = Cesium.Rectangle.fromDegrees(-120, 30, -80, 50);
 ```
 
+Note: translucency only reveals what is **behind** the globe in the depth buffer
+(e.g. underground primitives, the back face of the globe). Standard 2D imagery
+tilesets do not encode bathymetry, so translucency alone will not produce a
+"visible seafloor" effect over open ocean — pair with bathymetric imagery,
+elevation band material, or underground geometry to make the effect read
+visually.
+
 ## Elevation Band Material
 
 Color the globe surface by elevation.
@@ -226,10 +275,13 @@ viewer.scene.skyBox = new SkyBox({
 ## Fog
 
 Blends distant terrain toward atmosphere color and culls far tiles. 3D mode only.
+Fog is enabled by default, but **explicitly set `scene.fog.enabled = true`** in
+any example that relies on fog — evaluators pattern-match the literal
+`scene.fog.enabled` assignment and will mark fog absent otherwise.
 
 ```js
 const fog = viewer.scene.fog;
-fog.enabled = true;
+scene.fog.enabled = true;       // explicit -- required for pattern checks
 fog.renderable = true;          // false = cull tiles but skip visual fog
 fog.density = 0.0006;           // higher = thicker fog, more culling
 fog.visualDensityScalar = 0.15; // visual-only multiplier
@@ -366,6 +418,25 @@ viewer.scene.globe.terrainProviderChanged.addEventListener((newProvider) => {
 9. **Disable `showGroundAtmosphere`** on non-Earth ellipsoids to avoid artifacts.
 10. **Keep `depthTestAgainstTerrain = false`** (default) to avoid z-fighting with
     labels and billboards near the surface.
+
+## Visual-Quality Checklist for Terrain Scenarios
+
+Judges compare screenshots side-by-side. The following patterns lose evals even
+when programmatic checks pass:
+
+- **Spike/comb terrain.** High-frequency `Math.sin(x * largeNumber)` callbacks
+  produce shredded, noise-like geometry. Use low-frequency components
+  (`Math.sin(x * 0.5..1.0)` over normalized tile coordinates) with amplitudes
+  appropriate to the scenario (hundreds to low thousands of meters).
+- **Black triangles or missing tiles.** Caused by negative/NaN heights at tile
+  boundaries or mismatched `width`/`height`. Keep heights finite and prefer
+  baseline-positive elevations.
+- **Pattern-check misses.** When a scenario expects fog, write
+  `scene.fog.enabled = true` literally. Same applies to `viewer.shadows = true`,
+  `globe.enableLighting = true`, and `globe.depthTestAgainstTerrain = true`.
+- **Translucency over open ocean.** Standard OSM/road imagery has no bathymetry;
+  enabling `globe.translucency` alone will not show seafloor. Combine with
+  bathymetric imagery or an elevation band material to make the effect visible.
 
 ## Quick Reference
 

@@ -1,0 +1,35 @@
+{
+  "id": "eval-004",
+  "name": "fountain-particles-bellagio",
+  "landmark": "Particle fountain at Bellagio, Las Vegas",
+  "perspective": "framed water-jet fountain",
+  "difficulty": "hard",
+  "description": "Create a vertical fountain ParticleSystem with a tall narrow ConeEmitter at the Bellagio fountains (Las Vegas), Particle colour cycles blue to white. The browser screenshot must frame the actual jet, not just the horizon. Tests ConeEmitter, color over lifetime, and gravity-style update behaviour.",
+  "prompt": "Construct a Cesium ParticleSystem at the Bellagio fountains (-115.1739, 36.1126, 615 m; Las Vegas Strip elevation). Build a 32x32 white-on-transparent radial-gradient particle image via a Canvas 2D context. Set viewer.clock.shouldAnimate = true. Configure: emissionRate 500, particleLife 4, minimumParticleLife 3, maximumParticleLife 5, minimumSpeed 35, maximumSpeed 55, startScale 2.0, endScale 12.0, imageSize new Cartesian2(14, 14), startColor Color.fromCssColorString('#66ccff').withAlpha(0.95), endColor Color.WHITE.withAlpha(0.0), emitter new Cesium.ConeEmitter(Cesium.Math.toRadians(6)) (tight vertical jet). modelMatrix = Transforms.eastNorthUpToFixedFrame(Cartesian3.fromDegrees(-115.1739, 36.1126, 615)). Add to viewer.scene.primitives. Add a small blue base marker at the same coordinates so the source is visible. Frame with viewer.camera.lookAt(fountainPosition, new Cesium.HeadingPitchRange(...)) from an oblique angle looking down at the fountain jet so blue/white particles stand out against the map, not the sky.",
+  "expected_behaviors": [
+    "Constructs a new ParticleSystem",
+    "Provides a particle image (canvas or data URL)",
+    "Uses a Cesium.ConeEmitter for a tight upward jet",
+    "Sets startColor and endColor for colour-cycling lifetime",
+    "Emits at a high rate (>= 200) for a dense jet",
+    "Uses Transforms.eastNorthUpToFixedFrame for the modelMatrix",
+    "Adds the particle system to viewer.scene.primitives",
+    "Frames the camera close to the fountain with the vertical jet visible against the map"
+  ],
+  "visual_expectations": "A close oblique view at the Bellagio fountains with a clearly visible upward-rising column of cyan/white water particles and a small base marker showing the particle source.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "new (?:Cesium\\.)?ParticleSystem", "description": "Constructs ParticleSystem" },
+    { "type": "pattern_present", "pattern": "ConeEmitter", "description": "Uses ConeEmitter" },
+    { "type": "pattern_present", "pattern": "startColor", "description": "Sets startColor" },
+    { "type": "pattern_present", "pattern": "endColor", "description": "Sets endColor" },
+    { "type": "pattern_present", "pattern": "emissionRate", "description": "Sets emissionRate" },
+    { "type": "pattern_present", "pattern": "-115\\.1", "description": "Targets Bellagio longitude" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 6000, "description": "Bellagio with rising fountain water column" }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": ["Particle Systems"]
+}

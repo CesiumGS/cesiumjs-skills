@@ -1,0 +1,153 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6
+      },
+      "source_scenario_id": "eval-006"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-106",
+  "case_name": "grand-canyon-south-rim",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-camera/baseline/eval-006-grand-canyon-south-rim/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n  terrainProvider: new Cesium.CustomHeightmapTerrainProvider({\n    width: 32,\n    height: 32,\n    callback: function (x, y, level) {\n      const width = 32;\n      const height = 32;\n      const heights = new Float32Array(width * height);\n      const tiles = 1 << level;\n      for (let row = 0; row < height; row++) {\n        for (let col = 0; col < width; col++) {\n          const u = (x + col / (width - 1)) / tiles;\n          const v = (y + row / (height - 1)) / tiles;\n          const lon = u * 360.0 - 180.0;\n          const lat = 90.0 - v * 180.0;\n          const dLon = lon + 112.14;\n          const dLat = lat - 36.08;\n          const local = Math.exp(-(dLon * dLon) / 1.4 - (dLat * dLat) / 0.32);\n          const trench = -4200.0 * Math.exp(-Math.pow((dLat + Math.sin(dLon * 5.0) * 0.04) / 0.06, 2.0)) * local;\n          const rims = 2100.0 * Math.exp(-Math.pow((Math.abs(dLat) - 0.15) / 0.08, 2.0)) * local;\n          const ridges = (\n            Math.sin((lon + 112.0) * 38.0) * 650.0 +\n            Math.cos((lat - 36.0) * 54.0) * 520.0\n          ) * local;\n          heights[row * width + col] = 2200.0 + rims + ridges + trench;\n        }\n      }\n      return heights;\n    },\n  }),\n}));\n\nviewer.scene.globe.enableLighting = true;\nviewer.scene.globe.depthTestAgainstTerrain = true;\n\nconst southWall = Cesium.Cartesian3.fromDegreesArrayHeights([\n  -112.30, 36.080, 2800,\n  -112.20, 36.085, 3000,\n  -112.08, 36.080, 2800,\n  -111.96, 36.075, 2900,\n]);\nviewer.entities.add({\n  name: 'South Rim canyon wall surrogate',\n  wall: {\n    positions: southWall,\n    minimumHeights: [900, 850, 900, 950],\n    material: Cesium.Color.ORANGE.withAlpha(0.5),\n    outline: true,\n    outlineColor: Cesium.Color.SADDLEBROWN,\n  },\n});\n\nconst northWall = Cesium.Cartesian3.fromDegreesArrayHeights([\n  -112.30, 36.190, 3000,\n  -112.18, 36.200, 3200,\n  -112.04, 36.195, 3000,\n  -111.94, 36.185, 2900,\n]);\nviewer.entities.add({\n  name: 'North Rim canyon wall surrogate',\n  wall: {\n    positions: northWall,\n    minimumHeights: [1000, 1050, 1000, 950],\n    material: Cesium.Color.DARKORANGE.withAlpha(0.48),\n    outline: true,\n    outlineColor: Cesium.Color.SADDLEBROWN,\n  },\n});\n\nviewer.entities.add({\n  name: 'Colorado River surrogate',\n  polyline: {\n    positions: Cesium.Cartesian3.fromDegreesArrayHeights([\n      -112.30, 36.130, 980,\n      -112.20, 36.145, 980,\n      -112.08, 36.135, 980,\n      -111.96, 36.150, 980,\n    ]),\n    width: 6,\n    material: Cesium.Color.DEEPSKYBLUE,\n    clampToGround: false,\n  },\n});\n\n// South Rim elevation is ~2,100 m; camera placed 100 m above the rim (~2,200 m).\n// Heading 0 = north, looking across the canyon toward the North Rim (~14 km away).\n// Pitch -8\u00b0 is near-horizontal: enough to see the canyon foreground drop away\n// while keeping the distant North Rim on the horizon.\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-112.14, 35.99, 9000.0),\n  orientation: {\n    heading: Cesium.Math.toRadians(0.0),\n    pitch:   Cesium.Math.toRadians(-30.0),\n    roll:    0.0,\n  },\n});\n",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "70e1e178136a094eb0a64d402ceb6c86bda1404a039437f67ef32995cbcd8deb",
+      "programmatic_checks": "2d659b30332482c8a38f0bca0d4428d934ad12c673e33f3ab78b111aabd77a13",
+      "scene_state": "6410bfe686cbe401a383cb853cc0b5b741ec3af1ffda78a281539032ad315a55",
+      "screenshot_quality": "6fbc346906e39a94cc40bffa2c676a6b956cd7a9abbb1f794a642021262e0926",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "79c6af8c7726041c27297ed7f154080fda1b61fa6738fb7090970a50b7f56836"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "dce1b6248156fc4acbd7dff9059c67f0c0043c8c987cba836905a96a81c92ea1",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "48c18873aba10ee294540464c606b8b4416fe310fd8ccb249940fd12145f5c01",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:30:30.467562+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Grand Canyon latitude",
+        "detail": "Pattern matched: '36.0'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Grand Canyon longitude negative",
+        "detail": "Pattern matched: '-112'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses a camera method",
+        "detail": "Pattern matched: 'setView'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-006",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 6,
+      "total": 6
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-camera/baseline/eval-006-grand-canyon-south-rim",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -0.5235987755982987,
+      "position": {
+        "x": -1949905.3482426368,
+        "y": -4792436.913178325,
+        "z": 3732582.7388873985
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 3,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-006",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 1821,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 718447,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 174.73,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-camera/eval-006-screenshot.png"
+  ],
+  "skill": "cesiumjs-camera",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-camera/baseline/eval-006.js"
+}

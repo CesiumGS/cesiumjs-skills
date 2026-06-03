@@ -53,7 +53,7 @@ body:
       label: Branch
       options:
         - main
-        - eval-and-optimization
+        - feat/eval-and-optimization
         - Other (please note in Context)
     validations:
       required: true

@@ -1,0 +1,9 @@
+{
+  "iteration": "001",
+  "decision": "REJECT",
+  "timestamp_utc": "2026-05-26T21:18:19.084505+00:00",
+  "runs_dir": "evals/runs/cesiumjs-viewer-setup/001",
+  "candidate_dir": "evals/candidates/cesiumjs-viewer-setup/001",
+  "generated_dir": "evals/generated/cesiumjs-viewer-setup/001",
+  "journal": "evals/history/cesiumjs-viewer-setup/iteration-001/journal.jsonl"
+}

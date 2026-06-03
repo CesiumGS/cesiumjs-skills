@@ -1,5 +1,37 @@
+# Local-only configuration and credentials
 .vscode
 .env
-demo/index.html
+# Local-only tooling: dynamic workflows + settings.local.json
+.claude/
 working-notes.md
+.DS_Store
+__pycache__/
+*.pyc
+
+# Demo HTML files that contain hardcoded tokens — keep gitignored
+demo/index.html
+
+# Historical local tuning workspaces are not part of the active pipeline.
 tuning/
+
+# Optimization local inputs and raw run outputs. Scenario manifests and
+# sanitized summaries under optimization/scenarios and optimization/results
+# are tracked.
+optimization/generated/
+optimization/runs/
+optimization/tmp/
+optimization/candidates/*/*/raw/
+
+# Pure evaluation scratch/output artifacts are local-only by default. Test
+# cases, schemas, and framework code under evaluation/ are tracked.
+evaluation/artifacts/
+evaluation/tmp/
+*.eval.html
+
+# Local planning and agent-loop scratch files
+local-plans/
+prompt.md
+CLAUDE.md
+progress.txt
+.last-branch
+archive/

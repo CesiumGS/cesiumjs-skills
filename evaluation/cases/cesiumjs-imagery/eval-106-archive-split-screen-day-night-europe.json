@@ -1,0 +1,102 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses split direction enum",
+      "id": "pattern_present_02",
+      "pattern": "SplitDirection",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets splitDirection on layer",
+      "id": "pattern_present_03",
+      "pattern": "splitDirection",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets scene split position",
+      "id": "pattern_present_04",
+      "pattern": "splitPosition",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public GIBS night imagery",
+      "id": "pattern_present_05",
+      "pattern": "VIIRS_CityLights_2012|gibs\\.earthdata",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Italy region",
+      "id": "pattern_present_06",
+      "pattern": "1[23]\\.|4[12]\\.",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids ion imagery helpers",
+      "id": "pattern_absent_07",
+      "pattern": "IonImageryProvider|fromWorldImagery",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Create a left-right split comparison between normal public map imagery and NASA GIBS public night-lights imagery over Southern Europe.",
+  "id": "eval-106",
+  "name": "archive-split-screen-day-night-europe",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-006. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Uses SplitDirection.LEFT or RIGHT on an imagery layer",
+      "Sets viewer.scene.splitPosition to 0.5 or similar",
+      "Uses a second public GIBS imagery layer for the split overlay",
+      "Frames Southern Europe"
+    ],
+    "landmark": "Southern Europe",
+    "perspective": "continental split comparison",
+    "source": "optimization/scenarios",
+    "source_name": "split-screen-day-night-europe",
+    "source_scenario_id": "eval-006",
+    "visual_expectations": "The viewer should show a clear vertical split, with Southern Europe visible on both sides. One half should show normal globe imagery and the other half should show the night-lights treatment."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Set up a CesiumJS viewer centered on Italy and the surrounding Mediterranean region using OpenStreetMap as the explicit base layer, with no default ion imagery. Add NASA GIBS VIIRS CityLights imagery from `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{TileMatrix}/{TileRow}/{TileCol}.jpeg` as a split-screen overlay on the left half of the viewport only, using SplitDirection.LEFT or RIGHT. Set the split position to the center so the screenshot clearly shows a day-versus-night comparison across the same geography. Do not use IonImageryProvider or ImageryLayer.fromWorldImagery.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

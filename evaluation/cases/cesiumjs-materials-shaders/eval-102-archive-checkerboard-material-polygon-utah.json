@@ -1,0 +1,104 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses Checkerboard material/property",
+      "id": "pattern_present_02",
+      "pattern": "Checkerboard",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets even/odd colors",
+      "id": "pattern_present_03",
+      "pattern": "(?:evenColor|oddColor)",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses NAVY for one color",
+      "id": "pattern_present_04",
+      "pattern": "Color\\.NAVY",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses WHITE for other color",
+      "id": "pattern_present_05",
+      "pattern": "Color\\.WHITE",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses polygon graphics",
+      "id": "pattern_present_06",
+      "pattern": "(?:polygon|rectangle)",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets repeat for cell count",
+      "id": "pattern_present_07",
+      "pattern": "repeat",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Add a large rectangular polygon over Utah and apply a CheckerboardMaterialProperty (or Fabric JSON Checkerboard type) so the polygon is rendered with a clear checkerboard pattern of two contrasting colours. Tests Fabric material assignment via the Entity API.",
+  "id": "eval-102",
+  "name": "archive-checkerboard-material-polygon-utah",
+  "notes": "Imported from optimization/scenarios/cesiumjs-materials-shaders/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "easy",
+    "expected_behaviors": [
+      "Adds 1 polygon entity covering Utah (bounded roughly by the listed corners)",
+      "Uses CheckerboardMaterialProperty (or equivalent Fabric Checkerboard material)",
+      "Sets evenColor and oddColor to two contrasting colours (NAVY and WHITE)",
+      "Sets a repeat that produces a visible multi-cell pattern (at least 4x4)",
+      "Frames the camera over Utah (around 39.5 N, -111.5 W) at ~1-2 million m altitude",
+      "Camera pitch is straight down or close to it"
+    ],
+    "landmark": "Utah \u2014 large rectangular polygon",
+    "perspective": "state-level overview with checkerboard-textured polygon",
+    "source": "optimization/scenarios",
+    "source_name": "checkerboard-material-polygon-utah",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "A top-down camera view of Utah showing a large rectangular polygon with a clear repeating checkerboard pattern of navy-blue and white squares, covering the state. The pattern should have multiple cells visible."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Add a single polygon entity covering Utah as a rectangle from (-114.0, 37.0) to (-109.0, 42.0). Assign a CheckerboardMaterialProperty (or new Material with Fabric type 'Checkerboard') with evenColor Color.NAVY and oddColor Color.WHITE and repeat new Cartesian2(6, 4) so the pattern is clearly visible. Frame the camera over Utah at around 39.5 N, -111.5 W from 1,500,000 m altitude looking straight down.",
+  "schema_version": 1,
+  "skill": "cesiumjs-materials-shaders",
+  "timeout_ms": 5000
+}

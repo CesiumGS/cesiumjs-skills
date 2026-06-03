@@ -1,0 +1,77 @@
+{
+  "id": "eval-003",
+  "name": "ground-primitive-state-polygon",
+  "landmark": "Colorado \u2014 coloured state polygon",
+  "perspective": "draped polygon over terrain",
+  "difficulty": "medium",
+  "description": "Use a GroundPrimitive (not GroundPolylinePrimitive) to drape a single PolygonGeometry over Colorado's approximate rectangular borders with a solid royal-blue PerInstanceColorAppearance. Tests GroundPrimitive draping on the globe and per-instance polygon color without ion terrain entitlement.",
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion terrain/defaults. Build a PolygonGeometry with `polygonHierarchy: new PolygonHierarchy(Cartesian3.fromDegreesArray([-109.0, 41.0, -102.0, 41.0, -102.0, 37.0, -109.0, 37.0]))`. Wrap in a GeometryInstance with `attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.ROYALBLUE.withAlpha(0.75)) }`. Add `new GroundPrimitive({ geometryInstances: instance, appearance: new PerInstanceColorAppearance({ flat: true, translucent: true }) })` to viewer.scene.primitives. Frame Colorado: `viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-105.5, 35.5, 1200000), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-50), roll: 0 } })` — at 1,200,000 m looking north over Colorado. Do not use CesiumTerrainProvider.fromIonAssetId or Terrain.fromWorldTerrain.",
+  "expected_behaviors": [
+    "Uses a public viewer without ion terrain",
+    "Constructs PolygonGeometry with a polygonHierarchy whose positions outline Colorado's rectangle",
+    "Wraps the geometry in a GeometryInstance with ColorGeometryInstanceAttribute",
+    "Constructs a new GroundPrimitive({ geometryInstances, appearance })",
+    "Appearance is PerInstanceColorAppearance with flat: true",
+    "Adds GroundPrimitive to viewer.scene.primitives",
+    "Frames the camera over Colorado (around 39 N, -105.5 W) at 1-3 million m altitude",
+    "Camera pitch is moderately downward (-30 to -60 degrees)"
+  ],
+  "visual_expectations": "A regional view of Colorado with a large semi-transparent royal-blue rectangular polygon clearly draped over the globe, with the OSM basemap visible underneath the blue overlay.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?GroundPrimitive",
+      "description": "Uses GroundPrimitive"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "PolygonGeometry",
+      "description": "Uses PolygonGeometry"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "polygonHierarchy",
+      "description": "Specifies polygonHierarchy"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ColorGeometryInstanceAttribute",
+      "description": "Uses per-instance color"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "PerInstanceColorAppearance",
+      "description": "Uses PerInstanceColorAppearance"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.ROYALBLUE",
+      "description": "Uses ROYALBLUE"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "CesiumTerrainProvider\\.fromIonAssetId|Terrain\\.fromWorldTerrain",
+      "description": "Avoids ion terrain"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 7000,
+      "description": "Colorado with royal-blue draped polygon"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "GroundPrimitive",
+    "Built-in Geometry Types (31)"
+  ]
+}

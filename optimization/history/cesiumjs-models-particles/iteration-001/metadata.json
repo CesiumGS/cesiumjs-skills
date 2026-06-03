@@ -1,0 +1,9 @@
+{
+  "iteration": "001",
+  "decision": "KEEP",
+  "timestamp_utc": "2026-05-26T21:23:41.148673+00:00",
+  "runs_dir": "evals/runs/cesiumjs-models-particles/001",
+  "candidate_dir": "evals/candidates/cesiumjs-models-particles/001",
+  "generated_dir": "evals/generated/cesiumjs-models-particles/001",
+  "journal": "evals/history/cesiumjs-models-particles/iteration-001/journal.jsonl"
+}

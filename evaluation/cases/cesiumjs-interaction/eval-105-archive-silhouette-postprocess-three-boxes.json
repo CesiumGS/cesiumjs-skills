@@ -1,0 +1,122 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses edge-detection stage factory",
+      "id": "pattern_present_02",
+      "pattern": "createEdgeDetectionStage",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses silhouette composite factory",
+      "id": "pattern_present_03",
+      "pattern": "createSilhouetteStage",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Assigns to a .selected array",
+      "id": "pattern_present_04",
+      "pattern": "\\.selected\\s*=",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses YELLOW",
+      "id": "pattern_present_05",
+      "pattern": "Color\\.YELLOW",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses CYAN",
+      "id": "pattern_present_06",
+      "pattern": "Color\\.CYAN",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses MAGENTA",
+      "id": "pattern_present_07",
+      "pattern": "Color\\.MAGENTA",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses box graphics",
+      "id": "pattern_present_08",
+      "pattern": "box",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Hawaii longitude",
+      "id": "pattern_present_09",
+      "pattern": "-156\\.",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Add three large box-shape entities (one yellow, one cyan, one magenta) over Hawaii, then add a silhouette PostProcessStage with a bright orange edge and pre-populate its selected array with all three entities so each box has a visible outline. Tests PostProcessStageLibrary.createEdgeDetectionStage + createSilhouetteStage with a directly-assigned .selected array (no runtime picking needed \u2014 predictable + fast).",
+  "id": "eval-105",
+  "name": "archive-silhouette-postprocess-three-boxes",
+  "notes": "Imported from optimization/scenarios/cesiumjs-interaction/eval-005. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Adds 3 viewer.entities with box graphics in the Hawaiian islands chain",
+      "Each box has dimensions Cartesian3 with non-trivial size (>= 5000m)",
+      "Each box has a distinct material color (YELLOW, CYAN, MAGENTA)",
+      "Constructs an edge-detection stage via PostProcessStageLibrary.createEdgeDetectionStage()",
+      "Sets uniforms.color and uniforms.length on the edge stage",
+      "Directly assigns silhouetteEdge.selected to an array of the 3 entities",
+      "Wraps with createSilhouetteStage and adds to scene.postProcessStages",
+      "Frames the Hawaiian islands (around -156.5 W, 20.5 N) at 1-2 million m altitude"
+    ],
+    "landmark": "Three coloured box entities with silhouette outlines over the Pacific",
+    "perspective": "regional view with silhouette-highlighted entities",
+    "source": "optimization/scenarios",
+    "source_name": "silhouette-postprocess-three-boxes",
+    "source_scenario_id": "eval-005",
+    "visual_expectations": "A regional view of the Hawaiian islands chain with three distinct box shapes visible \u2014 yellow over Oahu, cyan over Maui, magenta over Big Island \u2014 each clearly outlined with a bright orange silhouette edge."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Add three viewer.entities, each with box graphics: entity A at (-157.85, 21.30) (Honolulu) with box.dimensions new Cartesian3(20000, 20000, 20000), material Color.YELLOW; entity B at (-156.30, 20.80) (Maui) with same dims, material Color.CYAN; entity C at (-155.50, 19.60) (Big Island) with same dims, material Color.MAGENTA. Construct silhouetteEdge = PostProcessStageLibrary.createEdgeDetectionStage(); set silhouetteEdge.uniforms.color = Color.fromCssColorString('#ff8800'); silhouetteEdge.uniforms.length = 0.5. Push the three entities to silhouetteEdge.selected directly: silhouetteEdge.selected = [entityA, entityB, entityC]. Add scene.postProcessStages.add(PostProcessStageLibrary.createSilhouetteStage([silhouetteEdge])). Frame the Hawaiian islands: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-156.5, 20.5, 1200000) }).",
+  "schema_version": 1,
+  "skill": "cesiumjs-interaction",
+  "timeout_ms": 5000
+}

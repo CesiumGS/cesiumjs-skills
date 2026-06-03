@@ -4,7 +4,7 @@ description: "CesiumJS core utilities and networking - Resource, Color, Event, R
 ---
 # CesiumJS Core Utilities & Networking
 
-Version baseline: CesiumJS v1.139+ (ES module imports, `defaultValue` removed in v1.134)
+Version baseline: CesiumJS v1.142+ (ES module imports, `defaultValue` removed in v1.134)
 
 ## Breaking Change: defaultValue Removed (v1.134)
 
@@ -32,6 +32,10 @@ import { Resource } from "cesium";
 
 // Static shorthand: accepts a URL string or options object
 const jsonData = await Resource.fetchJson({ url: "https://api.example.com/data.json" });
+
+// data: URIs work with Resource.fetchJson -- useful for inline GeoJSON or test fixtures
+const dataUrl = "data:application/json," + encodeURIComponent(JSON.stringify(geojson));
+const parsed = await Resource.fetchJson({ url: dataUrl });
 
 // Instance-based: construct once, reuse for multiple fetches
 const resource = new Resource({
@@ -107,7 +111,7 @@ const result = await resource.post(JSON.stringify({ name: "test" }), {
 
 ## Color
 
-RGBA components as floats [0.0, 1.0]. Over 140 named constants as frozen static properties (e.g., `Color.RED`, `Color.CORNFLOWERBLUE`, `Color.TRANSPARENT`).
+RGBA components as floats [0.0, 1.0]. Over 140 named constants as frozen static properties covering standard CSS color names in PascalCase (e.g., `Color.RED`, `Color.ORANGE`, `Color.YELLOW`, `Color.GREEN`, `Color.BLUE`, `Color.CORNFLOWERBLUE`, `Color.ROYALBLUE`, `Color.FORESTGREEN`, `Color.CRIMSON`, `Color.TRANSPARENT`).
 
 ### Creating Colors
 
@@ -115,6 +119,10 @@ RGBA components as floats [0.0, 1.0]. Over 140 named constants as frozen static 
 import { Color } from "cesium";
 
 const red = Color.RED;                                        // frozen constant
+const orange = Color.ORANGE;                                  // frozen constant
+const royalBlue = Color.ROYALBLUE;                           // frozen constant
+const forestGreen = Color.FORESTGREEN;                       // frozen constant
+const crimson = Color.CRIMSON;                               // frozen constant
 const custom = new Color(0.2, 0.6, 0.8, 1.0);               // float constructor
 const blue = Color.fromCssColorString("#3498db");             // hex string
 const semiRed = Color.fromCssColorString("rgba(255,0,0,0.5)"); // CSS rgba()
@@ -169,13 +177,42 @@ const helper = new EventHelper();
 helper.add(viewer.selectedEntityChanged, (entity) => {
   console.log("Selected:", entity?.name);
 });
+
+// clock.onTick fires every animation frame; enable the clock with shouldAnimate
+viewer.clock.shouldAnimate = true;
 helper.add(viewer.clock.onTick, (clock) => { /* per-frame logic */ });
+
 helper.add(viewer.scene.globe.tileLoadProgressEvent, (queueLength) => {
   console.log("Tiles loading:", queueLength);
 });
 
 // Remove all listeners at once (e.g., in a destroy method)
 helper.removeAll();
+```
+
+Live-updating label via clock tick:
+
+```js
+import { EventHelper, Color, Cartesian3 } from "cesium";
+
+let tickCount = 0;
+const label = viewer.entities.add({
+  position: Cartesian3.fromDegrees(-30.0, 30.0),
+  label: {
+    text: "Ticks: 0",
+    showBackground: true,
+    backgroundColor: Color.BLACK.withAlpha(0.7),
+    fillColor: Color.WHITE,
+    font: "24px monospace",
+  },
+});
+
+const helper = new EventHelper();
+viewer.clock.shouldAnimate = true;
+helper.add(viewer.clock.onTick, () => {
+  tickCount++;
+  label.label.text = "Ticks: " + tickCount;
+});
 ```
 
 ## RequestScheduler Configuration
@@ -315,10 +352,25 @@ const textPin = pin.fromText("A", Color.BLUE, 48);                   // text lab
 const iconPin = await pin.fromMakiIconId("hospital", Color.GREEN, 48); // maki icon
 const urlPin = await pin.fromUrl("/icons/custom.png", Color.YELLOW, 48);
 
+// Named color constants work directly -- any PascalCase CSS color name is valid
 viewer.entities.add({
   position: Cartesian3.fromDegrees(-75.17, 39.95),
   billboard: {
     image: pin.fromText("1", Color.ROYALBLUE, 48),
+    verticalOrigin: VerticalOrigin.BOTTOM,
+  },
+});
+viewer.entities.add({
+  position: Cartesian3.fromDegrees(-73.78, 40.64),
+  billboard: {
+    image: pin.fromText("2", Color.FORESTGREEN, 48),
+    verticalOrigin: VerticalOrigin.BOTTOM,
+  },
+});
+viewer.entities.add({
+  position: Cartesian3.fromDegrees(-118.41, 33.94),
+  billboard: {
+    image: pin.fromText("3", Color.CRIMSON, 48),
     verticalOrigin: VerticalOrigin.BOTTOM,
   },
 });

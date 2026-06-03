@@ -1,0 +1,137 @@
+name: Baseline Audit (deterministic + qualitative)
+
+# Two-lane baseline audit. The deterministic lane is the binding PR gate and
+# runs over tracked evidence fixtures (no secrets, fast). The qualitative lane
+# (static 0-10 visual judge) needs rendered baselines, which live under the
+# gitignored optimization/runs/ — so it renders them first and runs nightly /
+# on demand, posting an advisory result. Both lanes share ONE entrypoint:
+# evaluation/scripts/run-baseline-audit.py.
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+      - 'evaluation/**'
+      - 'optimization/scenarios/**'
+      - '.github/workflows/baseline-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'evaluation/**'
+  workflow_dispatch:
+    inputs:
+      skills:
+        description: "Skills to audit ('all' or comma-separated)"
+        required: false
+        default: 'all'
+      judge_model:
+        description: 'Judge model alias'
+        required: false
+        default: 'sonnet'
+      n_judges:
+        description: 'Panel size'
+        required: false
+        default: '3'
+  schedule:
+    - cron: '0 3 * * *'   # nightly qualitative audit
+
+jobs:
+  # ----- Lane 1: deterministic (blocking PR gate, no secrets) -----
+  deterministic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Enforce eval/optimization import boundary
+        run: python3 evaluation/scripts/validate-evaluation.py
+      - name: Unit tests (judge + audit, FakeAdapter; CI-safe)
+        run: python3 -m pytest -q evaluation/tests
+      - name: Deterministic baseline audit over tracked evidence (binding gate)
+        run: |
+          python3 evaluation/scripts/run-baseline-audit.py \
+            --skills "${{ github.event.inputs.skills || 'all' }}" \
+            --no-judge \
+            --output-dir evaluation/artifacts/audits/ci-deterministic
+      - name: Upload deterministic scorecard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-audit-deterministic-${{ github.run_number }}
+          path: evaluation/artifacts/audits/ci-deterministic/**/scorecard.*
+
+  # ----- Lane 2: qualitative (nightly / dispatch, advisory) -----
+  qualitative:
+    needs: deterministic
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: |
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code && claude --version
+      - name: Validate secrets
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          test -n "$CESIUM_ION_TOKEN" || { echo "CESIUM_ION_TOKEN missing"; exit 1; }
+          test -n "$ANTHROPIC_API_KEY" || { echo "ANTHROPIC_API_KEY missing"; exit 1; }
+      - name: Render current-best baselines (gitignored; needed for the visual lane)
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # The optimization loop's baseline guard renders skills/<skill>/SKILL.md
+          # into optimization/runs/<skill>/baseline (1 iteration is enough to
+          # establish the baseline bundle the audit judges).
+          SKILLS="${{ github.event.inputs.skills || 'all' }}"
+          python3 optimization/scripts/run-all-evals.py --skills "$SKILLS" --max-iterations 1 --stop-on max || true
+      - name: Qualitative + deterministic baseline audit (advisory)
+        id: audit
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 evaluation/scripts/run-baseline-audit.py \
+            --skills "${{ github.event.inputs.skills || 'all' }}" \
+            --judge-model "${{ github.event.inputs.judge_model || 'sonnet' }}" \
+            --n-judges "${{ github.event.inputs.n_judges || '3' }}" \
+            --output-dir evaluation/artifacts/audits/ci
+      - name: Sanitize before upload
+        if: always()
+        run: |
+          python3 optimization/scripts/check-public-artifacts.py
+          bash optimization/scripts/check-secrets.sh
+          find optimization/runs/ evaluation/artifacts/ -name '*.html' -delete || true
+      - name: Build audit dashboard
+        if: always()
+        run: |
+          SC=$(ls -t evaluation/artifacts/audits/ci/*/scorecard.json 2>/dev/null | head -1)
+          if [ -n "$SC" ]; then python3 evaluation/scripts/build-audit-ui.py "$SC" --output evaluation/artifacts/audits/ci/audit.html; fi
+      - name: Upload audit scorecard + dashboard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-audit-qualitative-${{ github.run_number }}
+          path: |
+            evaluation/artifacts/audits/ci/**/scorecard.*
+            evaluation/artifacts/audits/ci/audit.html

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "click-event-contract",
+  "skill": "cesiumjs-interaction",
+  "source": "synthetic-fixture",
+  "expected_result": "pass",
+  "execution": {
+    "success": true
+  },
+  "before": {
+    "entities": {
+      "alpha": {
+        "position_cartographic": {
+          "longitude_deg": -75,
+          "latitude_deg": 40,
+          "altitude_m": 0
+        }
+      },
+      "beta": {
+        "position_cartographic": {
+          "longitude_deg": -75.01,
+          "latitude_deg": 40,
+          "altitude_m": 0
+        }
+      }
+    },
+    "events": {
+      "click_log": []
+    }
+  },
+  "after": {
+    "entities": {
+      "alpha": {
+        "position_cartographic": {
+          "longitude_deg": -75,
+          "latitude_deg": 40,
+          "altitude_m": 0
+        }
+      },
+      "beta": {
+        "position_cartographic": {
+          "longitude_deg": -75.01,
+          "latitude_deg": 40,
+          "altitude_m": 0
+        }
+      }
+    },
+    "events": {
+      "click_log": [
+        {
+          "type": "LEFT_CLICK",
+          "pickedId": "alpha"
+        }
+      ]
+    }
+  },
+  "errors": []
+}

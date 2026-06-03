@@ -1,0 +1,82 @@
+{
+  "id": "eval-003",
+  "name": "production-viewer-public-tileset",
+  "difficulty": "medium",
+  "description": "A realistic production setup: viewer with a public base layer, a public URL-backed 3D Tiles sample, and camera positioning. Tests the skill's ability to combine viewer options, async tileset loading, and camera framing without private ion entitlements.",
+  "prompt": "In the eval page, build a production CesiumJS viewer with OpenStreetMap as the explicit base layer (`maximumLevel: 18`) and no ion defaults. Disable the animation and timeline widgets since this is a static visualization. Load the public Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` using `Cesium.Cesium3DTileset.fromUrl`, add it to scene.primitives, await readiness if needed, and frame it at a slight oblique angle so the sample 3D Tiles content is clearly visible. The Cesium global object and cesiumContainer element are already configured by the runner. Do not use world terrain, createOsmBuildingsAsync, Google Photorealistic 3D Tiles, or ion asset helpers.",
+  "expected_behaviors": [
+    "Does not hardcode or reset Ion.defaultAccessToken",
+    "Creates Cesium.Viewer with an explicit public base layer",
+    "Disables animation and timeline widgets",
+    "Calls Cesium3DTileset.fromUrl() and adds result to scene.primitives",
+    "Frames the public tileset at an inspectable oblique angle",
+    "Sets heading/pitch for angled view (not straight down)",
+    "Uses await for async operations"
+  ],
+  "visual_expectations": "A production-style viewer with no animation/timeline widgets and a clearly visible public 3D Tiles sample. The screenshot should prove the viewer, async tileset load, and camera framing all work without ion-backed assets.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JavaScript errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "Code executes without throwing"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "Ion\\.defaultAccessToken",
+      "description": "Generated code does not hardcode or reset the Ion token"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Public URL-backed 3D Tiles factory is used"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "primitives\\.add",
+      "description": "Buildings tileset is added to scene"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Public CesiumGS sample tileset is used"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "OpenStreetMapImageryProvider",
+      "description": "Public OSM base layer is configured"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "animation:\\s*false",
+      "description": "Animation widget disabled as requested"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "timeline:\\s*false",
+      "description": "Timeline widget disabled as requested"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createOsmBuildingsAsync|createGooglePhotorealistic3DTileset|fromIonAssetId|fromWorldTerrain",
+      "description": "Entitlement-backed assets are not used"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Initial load - public globe should be visible"
+    },
+    {
+      "timing": "after_animation",
+      "delay_ms": 10000,
+      "description": "After camera framing - public 3D Tiles sample should be fully rendered"
+    }
+  ],
+  "regression_critical": true,
+  "notes": "This is the public 'hero' scenario for viewer setup. Common failures: (1) forgetting to await the tileset load path, (2) accidentally using ion-backed defaults, (3) camera framing too far away or too close, (4) leaving timeline/animation visible.",
+  "runner_mode": "global-js"
+}

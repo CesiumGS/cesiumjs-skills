@@ -1,0 +1,31 @@
+You are scoring ONE CesiumJS render against the scenario below. The screenshot(s) are attached as images (read them from the granted directory); examine them first and base your scores on what is actually visible.
+
+# Scenario
+**ID**: {scenario_id}
+**Name**: {scenario_name}
+**Description**: {scenario_description}
+**Prompt (what the user asked for)**:
+{scenario_prompt}
+
+**Expected Behaviors**:
+{expected_behaviors}
+
+**Visual Expectations**:
+{visual_expectations}
+
+# Candidate Render
+**Screenshot(s)** — use the Read tool to open EACH of these image file paths and look at the rendered frame before scoring:
+{screenshots}
+
+**Console Output** (corroborating only — does NOT override the image):
+{console}
+
+**Scene State** (camera position, entity/primitive counts, imagery layers — corroborating only):
+{scene_state}
+
+# Instructions
+1. First, write what you literally SEE in the screenshot(s).
+2. Check for every CesiumJS failure mode (black/starfield/gray-unloaded/error frame, wrong/absent subject, tiny speck, off-frame, camera-inside-geometry, nadir-flattened, flat-basemap-no-relief, cluttered labels, render artifacts, wrong viewing geometry). Trust the image over the console/checks if they disagree.
+3. Score each of the six dimensions 0-10 with a specific visible justification, using the calibration anchors.
+4. Apply the liveness gate (render_liveness<=2 caps overall at 2.0) and subject gate (subject<=2 caps at 3.5), compute the weighted sum and gated overall, assign the band, and set your confidence.
+5. Respond with ONLY the JSON object specified in your instructions.

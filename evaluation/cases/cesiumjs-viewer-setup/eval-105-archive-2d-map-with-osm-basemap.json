@@ -1,0 +1,87 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JavaScript errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "Code executes without throwing",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "2D scene mode is configured",
+      "id": "pattern_present_02",
+      "pattern": "SceneMode\\.SCENE2D|sceneMode.*SCENE2D",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "OSM imagery provider is used",
+      "id": "pattern_present_03",
+      "pattern": "OpenStreetMapImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Base layer picker disabled (required for custom base layer)",
+      "id": "pattern_present_04",
+      "pattern": "baseLayerPicker:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Custom base layer is provided in constructor",
+      "id": "pattern_present_05",
+      "pattern": "baseLayer:",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Create a 2D map view with a custom OpenStreetMap base layer. Tests scene mode configuration AND the dependency between baseLayer and baseLayerPicker \u2014 you must disable baseLayerPicker when providing a custom baseLayer.",
+  "id": "eval-105",
+  "name": "archive-2d-map-with-osm-basemap",
+  "notes": "Imported from optimization/scenarios/cesiumjs-viewer-setup/eval-005. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Sets sceneMode to SceneMode.SCENE2D",
+      "Creates a custom baseLayer using OpenStreetMapImageryProvider",
+      "Sets baseLayerPicker to false (REQUIRED when using custom baseLayer)",
+      "Uses the correct OSM tile URL",
+      "Uses the global Cesium namespace rather than ES module imports"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "2d-map-with-osm-basemap",
+    "source_scenario_id": "eval-005",
+    "visual_expectations": "A flat, top-down 2D map showing OpenStreetMap tiles \u2014 the characteristic OSM cartographic style with road labels, building outlines, and pastel colors. No 3D globe curvature. The view should be zoomable and pannable as a flat map."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "In the eval page, create a CesiumJS viewer that shows a flat 2D map (not a 3D globe) using OpenStreetMap tiles as the base layer. I don't need the base layer picker widget. The Cesium global object and cesiumContainer element are already configured by the runner.",
+  "schema_version": 1,
+  "skill": "cesiumjs-viewer-setup",
+  "timeout_ms": 5000
+}

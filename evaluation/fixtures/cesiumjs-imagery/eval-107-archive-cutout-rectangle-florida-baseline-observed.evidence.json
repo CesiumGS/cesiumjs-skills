@@ -1,0 +1,167 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 8,
+        "total": 8
+      },
+      "source_scenario_id": "eval-007"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-107",
+  "case_name": "cutout-rectangle-florida",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-imagery/baseline/eval-007-cutout-rectangle-florida/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n      credit: 'OpenStreetMap contributors',\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// NASA GIBS VIIRS CityLights 2012 -- WMTS REST endpoint served via UrlTemplate.\n// {z} => TileMatrix, {y} => TileRow, {x} => TileCol (epsg3857 / GoogleMapsCompatible)\nconst cityLightsProvider = new Cesium.UrlTemplateImageryProvider({\n  url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg',\n  maximumLevel: 8,\n  credit: 'NASA GIBS / VIIRS City Lights 2012',\n});\n\nconst cityLightsLayer = new Cesium.ImageryLayer(cityLightsProvider, {\n  alpha: 0.9,\n  brightness: 1.1,\n});\n\n// Cut a rectangular hole over the Florida peninsula so the OSM base layer\n// shows through while the dark night-lights overlay covers the surroundings.\n// Bounds: roughly the Florida peninsula (panhandle excluded to isolate peninsula).\ncityLightsLayer.cutoutRectangle = Cesium.Rectangle.fromDegrees(\n  -82.0,  // west\n   24.4,  // south\n  -79.8,  // east\n   30.8   // north\n);\n\nviewer.imageryLayers.add(cityLightsLayer);\n\n// Frame: Florida peninsula + northern Caribbean, top-down map view\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-81.0, 25.5, 2600000),\n  orientation: {\n    heading: 0.0,\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "3a63703492cedc79c1a0d06b5929bb14116894bfce49618d6b251b5b434f7530",
+      "programmatic_checks": "92bb3288f798d764afe5f05d531977e26012672825e7bbb08178e5d6b5247430",
+      "scene_state": "c82b86b6db3c8f6ad5b884d03d87db7872561affa1b7675d3d22ab082f81a68b",
+      "screenshot_quality": "80520f12b84f844f484234c48c22d1e0d33be2331c6d4d0674cea963aa5b054b",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "d06b58b97992cd43b3e9f83fe0ce6eab25966e18982b966a9115377e873acd99"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "8842ef0c98540713f1e9e72185baaf59d58e01470c00fea45cb75fe21337e13e",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "a3f3df78de00e442b8b2e154f04c8ace24fc39da66ff2a33504c9e9ca8641112",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:04:47.240843+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses cutout rectangle property",
+        "detail": "Pattern matched: 'cutoutRectangle'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Creates rectangle from degrees",
+        "detail": "Pattern matched: 'Rectangle.fromDegrees'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses public GIBS night imagery",
+        "detail": "Pattern matched: 'gibs.earthdata'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Targets Florida region",
+        "detail": "Pattern matched: '24.'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_6",
+        "description": "Avoids ion imagery helpers",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-007",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 8,
+      "total": 8
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-imagery/baseline/eval-007-cutout-rectangle-florida",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 1268231.2599848513,
+        "y": -8007297.038687592,
+        "z": 3848499.399568441
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 2,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-007",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2664,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 620856,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 247.19,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-imagery/eval-007-screenshot.png"
+  ],
+  "skill": "cesiumjs-imagery",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-imagery/baseline/eval-007.js"
+}

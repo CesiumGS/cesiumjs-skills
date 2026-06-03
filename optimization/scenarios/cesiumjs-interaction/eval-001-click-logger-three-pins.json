@@ -1,0 +1,72 @@
+{
+  "id": "eval-001",
+  "name": "click-logger-three-pins",
+  "landmark": "Three colored pins over US west coast",
+  "perspective": "regional overview with three interactive pins",
+  "difficulty": "easy",
+  "description": "Place three large coloured point entities at known west-coast cities (Seattle, San Francisco, Los Angeles) and register a LEFT_CLICK handler on a new ScreenSpaceEventHandler that logs the picked entity's name and id whenever one is clicked. The test verifies the handler is wired up (programmatic checks) and the three pins are visible (screenshot).",
+  "prompt": "Place three large point entities at Seattle (47.6062, -122.3321), San Francisco (37.7749, -122.4194), and Los Angeles (34.0522, -118.2437). Give them names 'Seattle', 'San Francisco', and 'Los Angeles' and distinct colours (CYAN, MAGENTA, LIME) with pixelSize 25. Then construct a new ScreenSpaceEventHandler on viewer.scene.canvas and register a LEFT_CLICK input action that picks the scene at event.position and console.logs the picked entity's id.name when one was hit. Frame the camera over the US west coast (around 40 N, -122 W, 2,500,000 m altitude).",
+  "expected_behaviors": [
+    "Adds 3 viewer.entities with point graphics at Seattle, San Francisco, Los Angeles",
+    "Each entity has a name and a distinct large point (pixelSize >= 20)",
+    "Constructs a new ScreenSpaceEventHandler(viewer.scene.canvas)",
+    "Calls handler.setInputAction with a callback and ScreenSpaceEventType.LEFT_CLICK",
+    "Callback invokes viewer.scene.pick(event.position)",
+    "Callback console.logs the picked entity's id.name when a hit occurs",
+    "Frames the camera over the US west coast (around 38 N, -122 W) at ~1-3 million m altitude"
+  ],
+  "visual_expectations": "A west-coast camera view of the US with three distinct large coloured points clearly visible: cyan in the Pacific Northwest, magenta in central California, lime green in southern California. The points should form a roughly vertical line down the coast.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?ScreenSpaceEventHandler",
+      "description": "Constructs handler"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ScreenSpaceEventType\\.LEFT_CLICK",
+      "description": "Uses LEFT_CLICK event type"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "setInputAction",
+      "description": "Registers an input action"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "scene\\.pick",
+      "description": "Picks the scene in the callback"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:Seattle|47\\.60)",
+      "description": "References Seattle"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:Angeles|34\\.05)",
+      "description": "References Los Angeles"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "West-coast view with three coloured pins"
+    }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": [
+    "ScreenSpaceEventHandler",
+    "ScreenSpaceEventType Reference",
+    "Recipes \u2014 Entity Selection with Click"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "globe-terrain-contract",
+  "skill": "cesiumjs-terrain-environment",
+  "source": "synthetic-fixture",
+  "expected_result": "fail",
+  "execution": {
+    "success": true
+  },
+  "before": {
+    "entities": {},
+    "globe": {
+      "show": true,
+      "depthTestAgainstTerrain": false,
+      "enableLighting": false
+    },
+    "terrain": {
+      "provider": "EllipsoidTerrainProvider",
+      "requiresIonToken": false
+    }
+  },
+  "after": {
+    "entities": {},
+    "globe": {
+      "show": true,
+      "depthTestAgainstTerrain": true,
+      "enableLighting": true
+    },
+    "terrain": {
+      "provider": "CesiumTerrainProvider",
+      "requiresIonToken": true
+    }
+  },
+  "errors": []
+}

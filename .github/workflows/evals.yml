@@ -1,0 +1,82 @@
+name: Public Eval Checks
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "optimization/**"
+      - "evaluation/**"
+      - "docs/**"
+      - "optimization/scripts/validate-evals.py"
+      - "evaluation/scripts/validate-evaluation.py"
+      - "optimization/scripts/check-canonical-eval-surface.py"
+      - "optimization/scripts/check-public-artifacts.py"
+      - "optimization/scripts/check-secrets.sh"
+      - "optimization/scripts/run-public-eval.py"
+      - "optimization/scripts/run-all-evals.py"
+      - ".architecture/**"
+      - "wiki/**"
+      - ".github/workflows/evals.yml"
+  push:
+    branches: [ main, wiki-acd-sync ]
+    paths:
+      - "optimization/**"
+      - "evaluation/**"
+      - "docs/**"
+      - "optimization/scripts/validate-evals.py"
+      - "evaluation/scripts/validate-evaluation.py"
+      - "optimization/scripts/check-canonical-eval-surface.py"
+      - "optimization/scripts/check-public-artifacts.py"
+      - "optimization/scripts/check-secrets.sh"
+      - "optimization/scripts/run-public-eval.py"
+      - "optimization/scripts/run-all-evals.py"
+      - ".architecture/**"
+      - "wiki/**"
+      - ".github/workflows/evals.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for gitleaks scan
+
+      - name: Install gitleaks
+        run: |
+          wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz
+          tar -xzf gitleaks_8.18.2_linux_x64.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile Python eval tooling
+        run: python3 -m compileall -q optimization/scripts optimization/framework optimization/tests evaluation
+
+      - name: Run unit tests
+        run: pytest -q optimization/tests evaluation/tests
+
+      - name: Validate public eval manifests
+        run: python3 optimization/scripts/validate-evals.py
+
+      - name: Validate deterministic evaluation cases
+        run: python3 evaluation/scripts/validate-evaluation.py
+
+      - name: Check canonical eval surface
+        run: python3 optimization/scripts/check-canonical-eval-surface.py
+
+      - name: Scan public docs and eval artifacts
+        run: python3 optimization/scripts/check-public-artifacts.py
+
+      - name: Check for secrets in tracked content
+        run: bash optimization/scripts/check-secrets.sh

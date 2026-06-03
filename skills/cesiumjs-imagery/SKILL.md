@@ -4,7 +4,7 @@ description: "CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLa
 ---
 # CesiumJS Imagery Layers
 
-> CesiumJS v1.139 -- Imagery providers supply raster tile data rendered on the Globe
+> CesiumJS v1.142 -- Imagery providers supply raster tile data rendered on the Globe
 > or draped over a Cesium3DTileset. The three core abstractions are **ImageryProvider**
 > (fetches tiles), **ImageryLayer** (display settings), and
 > **ImageryLayerCollection** (ordered stack on the globe).
@@ -27,10 +27,15 @@ in position immediately — `flyTo` animates and may not finish before your code
 continues.
 
 ```js
-import { Viewer, ImageryLayer, IonImageryProvider, IonWorldImageryStyle, Math as CesiumMath } from "cesium";
+import { Viewer, ImageryLayer, OpenStreetMapImageryProvider, UrlTemplateImageryProvider, Math as CesiumMath } from "cesium";
 
 // Clean viewer -- disable widgets that distract from imagery
 const viewer = new Viewer("cesiumContainer", {
+  baseLayer: new ImageryLayer(new OpenStreetMapImageryProvider({
+    url: "https://tile.openstreetmap.org/",
+    maximumLevel: 18,
+  })),
+  baseLayerPicker: false,
   animation: false,
   timeline: false,
   navigationHelpButton: false,
@@ -47,25 +52,20 @@ viewer.camera.setView({
   },
 });
 
-// Explicit base layer choice
-const viewer2 = new Viewer("cesiumContainer", {
-  baseLayer: ImageryLayer.fromWorldImagery(),
-});
-
-// fromProviderAsync -- wraps any async provider; returns ImageryLayer immediately
-const nightLayer = ImageryLayer.fromProviderAsync(
-  IonImageryProvider.fromAssetId(3812), // Earth at Night
-);
+// Public URL-backed overlay
+const nightLayer = new ImageryLayer(new UrlTemplateImageryProvider({
+  url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+  maximumLevel: 8,
+  credit: "NASA GIBS",
+}));
 nightLayer.alpha = 0.5;
 nightLayer.brightness = 2.0;
 viewer.imageryLayers.add(nightLayer);
-
-// fromWorldImagery with style override
-const roadLayer = ImageryLayer.fromWorldImagery({
-  style: IonWorldImageryStyle.ROAD,
-});
-viewer.imageryLayers.add(roadLayer);
 ```
+
+Use `IonImageryProvider` and `ImageryLayer.fromWorldImagery` only when the
+runtime has the required Cesium ion entitlement. For public/no-token examples,
+prefer OpenStreetMap, ArcGIS, NASA GIBS, WMS, WMTS, or URL-template providers.
 
 ### Camera Height Reference for Imagery Scenes
 
@@ -166,6 +166,9 @@ viewer.imageryLayers.add(osmLayer, 0);
 
 ### IonImageryProvider
 
+Requires Cesium ion asset access. Do not use in public/no-token examples unless
+the caller explicitly asks for an ion imagery asset.
+
 ```js
 // Always use fromAssetId (async factory); never call constructor directly
 const layer = ImageryLayer.fromProviderAsync(
@@ -256,6 +259,13 @@ const wmts = new WebMapTileServiceImageryProvider({
 viewer.imageryLayers.addImageryProvider(wmts);
 ```
 
+**GetFeatureInfo (1.140+, #13196):** `WebMapTileServiceImageryProvider` now supports
+`pickFeatures` for both KVP and RESTful WMTS services. Enable it with the new
+constructor options `enablePickFeatures`, `getFeatureInfoFormats`,
+`getFeatureInfoUrl`, and `getFeatureInfoParameters`; then call
+`provider.pickFeatures(x, y, level, longitude, latitude)` (the same signature WMS
+uses) to query attributes at a location.
+
 ### ArcGisMapServerImageryProvider
 
 ```js
@@ -320,13 +330,21 @@ const logo = ImageryLayer.fromProviderAsync(
 viewer.imageryLayers.add(logo);
 ```
 
+> **1.140+ (#13297):** `OffscreenCanvas` is now an accepted `ImageryTypes` value,
+> so you can feed a worker-rendered or dynamically-drawn `OffscreenCanvas`
+> wherever an image source is expected -- useful for procedurally generated or
+> live-updating overlays without round-tripping through a data URL.
+
 ## Split-Screen Comparison
 
 ```js
-import { ImageryLayer, IonImageryProvider, SplitDirection } from "cesium";
+import { ImageryLayer, SplitDirection, UrlTemplateImageryProvider } from "cesium";
 
 // Add an overlay that only appears on the left side of the split
-const nightLayer = ImageryLayer.fromProviderAsync(IonImageryProvider.fromAssetId(3812));
+const nightLayer = new ImageryLayer(new UrlTemplateImageryProvider({
+  url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+  maximumLevel: 8,
+}));
 nightLayer.splitDirection = SplitDirection.LEFT;
 viewer.imageryLayers.add(nightLayer);
 
@@ -414,12 +432,18 @@ layer.errorEvent.addEventListener((error) => {
 });
 
 // Provider resolved -- listen for per-tile errors
-layer.readyEvent.addEventListener((provider) => {
-  provider.errorEvent.addEventListener((tileError) => {
-    console.warn("Tile error:", tileError.message);
+if (layer.readyEvent) {
+  layer.readyEvent.addEventListener((provider) => {
+    provider.errorEvent.addEventListener((tileError) => {
+      console.warn("Tile error:", tileError.message);
+    });
   });
-});
+}
 ```
+
+Only wait on `readyEvent` when you need explicit readiness/error wiring. For
+ordinary static map scenes, add the layer and frame the camera immediately so
+missing or version-specific readiness events do not break the render path.
 
 ## Time-Dynamic WMTS
 

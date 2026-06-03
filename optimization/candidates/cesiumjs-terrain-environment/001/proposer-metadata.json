@@ -1,0 +1,22 @@
+{
+  "skill": "cesiumjs-terrain-environment",
+  "iteration": "001",
+  "model_id": "claude-sonnet-4-6",
+  "temperature": 1.0,
+  "prompt_version": "propose-v1",
+  "timestamp_utc": "2026-05-26T21:14:01.696691+00:00",
+  "current_skill_hash": "3342be717537b46acf22586ca87686bf0c97bb30bbcf86a10c51aba13ec7227c",
+  "candidate_skill_hash": "deaf762021358cfff207a92255d4449b2ebbd274e285717ac456e69868e4739a",
+  "decision_summary": {
+    "decision": "BASELINE",
+    "rule_fired": "initial",
+    "counts": {
+      "wins": 0,
+      "losses": 0,
+      "ties": 0
+    }
+  },
+  "history_iterations": 0,
+  "uncovered_sections_count": 12,
+  "uncovered_apis_count": 22
+}

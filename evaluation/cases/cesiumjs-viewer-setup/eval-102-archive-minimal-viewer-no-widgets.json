@@ -1,0 +1,126 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JavaScript errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "Code executes without throwing",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Generated code does not hardcode or reset the Ion token",
+      "id": "pattern_absent_02",
+      "pattern": "Ion\\.defaultAccessToken",
+      "type": "pattern_absent"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Animation widget disabled",
+      "id": "pattern_present_03",
+      "pattern": "animation:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Timeline widget disabled",
+      "id": "pattern_present_04",
+      "pattern": "timeline:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Geocoder widget disabled",
+      "id": "pattern_present_05",
+      "pattern": "geocoder:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Home button disabled",
+      "id": "pattern_present_06",
+      "pattern": "homeButton:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Info box disabled",
+      "id": "pattern_present_07",
+      "pattern": "infoBox:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Navigation help disabled",
+      "id": "pattern_present_08",
+      "pattern": "navigationHelpButton:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Does not explicitly enable baseLayerPicker (it would conflict with custom baseLayer if one is set)",
+      "id": "pattern_absent_09",
+      "pattern": "baseLayerPicker:\\s*true",
+      "type": "pattern_absent"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Ion-backed default terrain/imagery helpers are not used",
+      "id": "pattern_absent_10",
+      "pattern": "Terrain\\.fromWorldTerrain|fromIonAssetId|ImageryLayer\\.fromWorldImagery",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": true,
+  "description": "Create a clean, widget-free viewer. Tests whether the skill correctly communicates ALL the widget toggles that need to be disabled and any dependencies between options (e.g., baseLayerPicker must be false to use a custom baseLayer).",
+  "id": "eval-102",
+  "name": "archive-minimal-viewer-no-widgets",
+  "notes": "Imported from optimization/scenarios/cesiumjs-viewer-setup/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Disables ALL widget options: animation, baseLayerPicker, fullscreenButton, geocoder, homeButton, infoBox, sceneModePicker, selectionIndicator, timeline, navigationHelpButton",
+      "Does NOT disable 'projectionPicker' or 'vrButton' (they are already false by default \u2014 setting them explicitly is harmless but unnecessary)",
+      "Does not hardcode or reset the Ion token",
+      "Configures a public base layer and assigns the viewer to window.viewer"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "minimal-viewer-no-widgets",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "A full-window 3D globe with NO UI chrome whatsoever. No timeline bar at bottom, no animation controls at bottom-left, no buttons in top-right corner, no search bar. Just the globe with terrain and imagery."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "In the eval page, create a completely clean CesiumJS globe with no UI widgets at all \u2014 no timeline, no animation controls, no home button, no search bar, nothing. Use OpenStreetMap as the explicit public base layer (`maximumLevel: 18`) and do not use ion terrain, default ion imagery, or ImageryLayer.fromWorldImagery. The Cesium global object and cesiumContainer element are already configured by the runner.",
+  "schema_version": 1,
+  "skill": "cesiumjs-viewer-setup",
+  "timeout_ms": 5000
+}

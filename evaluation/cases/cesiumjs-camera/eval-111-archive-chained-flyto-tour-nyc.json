@@ -1,0 +1,96 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses flyTo",
+      "id": "pattern_present_02",
+      "pattern": "flyTo",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses complete callback for chaining",
+      "id": "pattern_present_03",
+      "pattern": "complete",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Statue of Liberty longitude",
+      "id": "pattern_present_04",
+      "pattern": "-74\\.04",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Empire State longitude",
+      "id": "pattern_present_05",
+      "pattern": "-73\\.98",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses easing function",
+      "id": "pattern_present_06",
+      "pattern": "EasingFunction|LINEAR_NONE",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Chain two flyTo animations using the complete callback. Tests the callback-based flight chaining pattern and EasingFunction usage.",
+  "id": "eval-111",
+  "name": "archive-chained-flyto-tour-nyc",
+  "notes": "Imported from optimization/scenarios/cesiumjs-camera/eval-011. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Two camera.flyTo calls",
+      "Uses complete callback to chain them (NOT await, NOT setTimeout)",
+      "First stop: Statue of Liberty coordinates, 800m, 3s duration",
+      "Second stop: Empire State Building coordinates, 600m, 2s duration",
+      "Second flight uses EasingFunction.LINEAR_NONE",
+      "Both have negative pitch for downward angle"
+    ],
+    "landmark": "New York City",
+    "perspective": "multi-stop animated tour",
+    "source": "optimization/scenarios",
+    "source_name": "chained-flyto-tour-nyc",
+    "source_scenario_id": "eval-011",
+    "visual_expectations": "After ~5 seconds total, camera should be positioned over Midtown Manhattan near the Empire State Building, showing the urban grid from a moderate altitude."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create a two-stop camera tour of New York City. First, fly to the Statue of Liberty (40.6892 N, 74.0445 W) at 800 meters altitude with a 35-degree downward angle in 3 seconds. After arriving, automatically fly to the Empire State Building (40.7484 N, 73.9857 W) at 600 meters altitude with a 30-degree downward angle in 2 seconds. Use a linear easing function for the second flight.",
+  "schema_version": 1,
+  "skill": "cesiumjs-camera",
+  "timeout_ms": 5000
+}

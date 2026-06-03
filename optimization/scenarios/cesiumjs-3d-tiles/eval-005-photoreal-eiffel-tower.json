@@ -1,0 +1,30 @@
+{
+  "id": "eval-005",
+  "name": "public-tileset-oblique-closeup",
+  "landmark": "Cesium 3D Tiles sample dragon",
+  "perspective": "public 3D Tiles oblique close-up",
+  "difficulty": "medium",
+  "description": "Load a public Cesium 3D Tiles sample and frame it from a different oblique close-up angle. This keeps 3D Tiles coverage runnable without Google Photorealistic 3D Tiles entitlement.",
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion defaults. Load the public Cesium Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` using `Cesium.Cesium3DTileset.fromUrl`, add it to `viewer.scene.primitives`, wait for readiness if needed, and frame it with `viewer.flyTo(tileset, { duration: 0, offset: new Cesium.HeadingPitchRange(Cesium.Math.toRadians(70), Cesium.Math.toRadians(-18), tileset.boundingSphere.radius * 2.4) })` or an equivalent camera so the dragon is visibly centered over the map. Do not call createGooglePhotorealistic3DTileset, createOsmBuildingsAsync, Terrain.fromWorldTerrain, or ion asset helpers.",
+  "expected_behaviors": [
+    "Calls Cesium3DTileset.fromUrl with the public CesiumGS sample URL",
+    "Adds the returned tileset to viewer.scene.primitives",
+    "Frames the tileset close enough that the dragon content is visible",
+    "Avoids Google Photorealistic 3D Tiles and other entitlement-backed helpers"
+  ],
+  "visual_expectations": "A visible public 3D Tiles dragon sample, centered and large enough to inspect. The screenshot should prove that URL-backed 3D Tiles content loaded successfully.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "Cesium3DTileset\\.fromUrl", "description": "Uses URL-backed 3D Tiles factory" },
+    { "type": "pattern_present", "pattern": "TilesetWithDiscreteLOD", "description": "Uses public CesiumGS sample tileset" },
+    { "type": "pattern_present", "pattern": "scene\\.primitives\\.add", "description": "Adds tileset to scene primitives" },
+    { "type": "pattern_present", "pattern": "zoomTo|flyTo|HeadingPitchRange|setView", "description": "Frames the tileset" },
+    { "type": "pattern_absent", "pattern": "createGooglePhotorealistic3DTileset|createOsmBuildingsAsync|fromIonAssetId", "description": "Avoids private entitlement-backed assets" }
+  ],
+  "screenshots": [
+    { "timing": "after_tiles_load", "delay_ms": 10000, "description": "Public 3D Tiles dragon sample framed clearly" }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": ["Loading a Tileset"]
+}

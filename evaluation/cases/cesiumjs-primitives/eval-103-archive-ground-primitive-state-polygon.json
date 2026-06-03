@@ -1,0 +1,114 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses GroundPrimitive",
+      "id": "pattern_present_02",
+      "pattern": "new (?:Cesium\\.)?GroundPrimitive",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses PolygonGeometry",
+      "id": "pattern_present_03",
+      "pattern": "PolygonGeometry",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Specifies polygonHierarchy",
+      "id": "pattern_present_04",
+      "pattern": "polygonHierarchy",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses per-instance color",
+      "id": "pattern_present_05",
+      "pattern": "ColorGeometryInstanceAttribute",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses PerInstanceColorAppearance",
+      "id": "pattern_present_06",
+      "pattern": "PerInstanceColorAppearance",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses ROYALBLUE",
+      "id": "pattern_present_07",
+      "pattern": "Color\\.ROYALBLUE",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids ion terrain",
+      "id": "pattern_absent_08",
+      "pattern": "CesiumTerrainProvider\\.fromIonAssetId|Terrain\\.fromWorldTerrain",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Use a GroundPrimitive (not GroundPolylinePrimitive) to drape a single PolygonGeometry over Colorado's approximate rectangular borders with a solid royal-blue PerInstanceColorAppearance. Tests GroundPrimitive draping on the globe and per-instance polygon color without ion terrain entitlement.",
+  "id": "eval-103",
+  "name": "archive-ground-primitive-state-polygon",
+  "notes": "Imported from optimization/scenarios/cesiumjs-primitives/eval-003. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Uses a public viewer without ion terrain",
+      "Constructs PolygonGeometry with a polygonHierarchy whose positions outline Colorado's rectangle",
+      "Wraps the geometry in a GeometryInstance with ColorGeometryInstanceAttribute",
+      "Constructs a new GroundPrimitive({ geometryInstances, appearance })",
+      "Appearance is PerInstanceColorAppearance with flat: true",
+      "Adds GroundPrimitive to viewer.scene.primitives",
+      "Frames the camera over Colorado (around 39 N, -105.5 W) at 1-3 million m altitude",
+      "Camera pitch is moderately downward (-30 to -60 degrees)"
+    ],
+    "landmark": "Colorado \u2014 coloured state polygon",
+    "perspective": "draped polygon over terrain",
+    "source": "optimization/scenarios",
+    "source_name": "ground-primitive-state-polygon",
+    "source_scenario_id": "eval-003",
+    "visual_expectations": "A regional view of Colorado with a large semi-transparent royal-blue rectangular polygon clearly draped over the globe, with the OSM basemap visible underneath the blue overlay."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion terrain/defaults. Build a PolygonGeometry with `polygonHierarchy: new PolygonHierarchy(Cartesian3.fromDegreesArray([-109.0, 41.0, -102.0, 41.0, -102.0, 37.0, -109.0, 37.0]))`. Wrap in a GeometryInstance with `attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.ROYALBLUE.withAlpha(0.75)) }`. Add `new GroundPrimitive({ geometryInstances: instance, appearance: new PerInstanceColorAppearance({ flat: true, translucent: true }) })` to viewer.scene.primitives. Frame Colorado: `viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-105.5, 35.5, 1200000), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-50), roll: 0 } })` \u2014 at 1,200,000 m looking north over Colorado. Do not use CesiumTerrainProvider.fromIonAssetId or Terrain.fromWorldTerrain.",
+  "schema_version": 1,
+  "skill": "cesiumjs-primitives",
+  "timeout_ms": 5000
+}

@@ -1,0 +1,121 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses fromDegreesArray batch helper",
+      "id": "pattern_present_02",
+      "pattern": "Cartesian3\\.fromDegreesArray",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses PointPrimitiveCollection",
+      "id": "pattern_present_03",
+      "pattern": "new (?:Cesium\\.)?PointPrimitiveCollection",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Adds collection to scene",
+      "id": "pattern_present_04",
+      "pattern": "scene\\.primitives\\.add",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses LIME color",
+      "id": "pattern_present_05",
+      "pattern": "Color\\.LIME",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets outlineColor on point primitives",
+      "id": "pattern_present_06",
+      "pattern": "outlineColor",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Configures point appearance",
+      "id": "pattern_present_07",
+      "pattern": "(?:pixelSize|outlineWidth)",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "References Washington DC longitude",
+      "id": "pattern_present_08",
+      "pattern": "-77\\.0",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "References Tokyo longitude",
+      "id": "pattern_present_09",
+      "pattern": "139\\.6",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": true,
+  "description": "Use Cartesian3.fromDegreesArray (NOT entity-by-entity construction) to convert a flat [lng1, lat1, lng2, lat2, ...] array of 6 world capitals into Cartesian3 positions, then add them all to a single PointPrimitiveCollection at viewer.scene.primitives. Tests the batch coordinate-conversion helper and PointPrimitiveCollection.",
+  "id": "eval-102",
+  "name": "archive-fromdegrees-capitals-grid",
+  "notes": "Imported from optimization/scenarios/cesiumjs-spatial-math/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "easy",
+    "expected_behaviors": [
+      "Constructs a flat number array of 12 floats representing 6 (lng, lat) pairs",
+      "Calls Cartesian3.fromDegreesArray on the flat array",
+      "Constructs a new PointPrimitiveCollection()",
+      "Adds the collection to viewer.scene.primitives",
+      "Iterates the returned Cartesian3 positions and calls collection.add for each",
+      "Uses pixelSize >= 20 and a distinctive colour (LIME) with an outline",
+      "Frames the camera for a global view that includes Washington through Tokyo"
+    ],
+    "landmark": "Cartesian3.fromDegreesArray of 6 capitals",
+    "perspective": "global overview with batched point primitives",
+    "source": "optimization/scenarios",
+    "source_name": "fromdegrees-capitals-grid",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "A global Earth view with 6 distinct large lime-green points (with black outlines) visible at the listed capitals, roughly forming a band across the Northern Hemisphere from North America (Washington DC) eastward through Europe (London, Paris, Moscow) to East Asia (Beijing, Tokyo)."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Build a flat array of degrees for 6 capitals: Washington DC (-77.0369, 38.9072), London (-0.1278, 51.5074), Paris (2.3522, 48.8566), Moscow (37.6173, 55.7558), Beijing (116.4074, 39.9042), Tokyo (139.6917, 35.6895). Pass it to Cartesian3.fromDegreesArray to get an array of Cartesian3 positions. Construct a new PointPrimitiveCollection() and add it to viewer.scene.primitives. For each position, call collection.add({ position, pixelSize: 24, color: Color.LIME, outlineColor: Color.BLACK, outlineWidth: 2 }). Frame the camera for a Eurasia-centred global view (40 N, 60 E, 20,000,000 m altitude).",
+  "schema_version": 1,
+  "skill": "cesiumjs-spatial-math",
+  "timeout_ms": 5000
+}

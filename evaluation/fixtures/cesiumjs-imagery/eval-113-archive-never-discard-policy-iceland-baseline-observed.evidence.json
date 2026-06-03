@@ -1,0 +1,153 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6
+      },
+      "source_scenario_id": "eval-013"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-113",
+  "case_name": "never-discard-policy-iceland",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-imagery/baseline/eval-013-never-discard-policy-iceland/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer(\"cesiumContainer\", {\n  baseLayer: false,\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// UrlTemplateImageryProvider with explicit NeverTileDiscardPolicy\nconst osmProvider = new Cesium.UrlTemplateImageryProvider({\n  url: \"https://tile.openstreetmap.org/{z}/{x}/{y}.png\",\n  maximumLevel: 19,\n  credit: \"OpenStreetMap contributors\",\n  tileDiscardPolicy: new Cesium.NeverTileDiscardPolicy(),\n});\n\nconst baseLayer = new Cesium.ImageryLayer(osmProvider, {\n  // Iceland bounding rectangle -- provider still fetches global tiles\n  // but we frame the camera here; NeverTileDiscardPolicy is the focus\n});\n\nviewer.imageryLayers.add(baseLayer);\n\n// Frame camera on Iceland\n// Iceland center ~65\u00b0N, 18.5\u00b0W; altitude ~1,100 km gives full island view\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-19.0, 64.9, 1_100_000),\n  orientation: {\n    heading: Cesium.Math.toRadians(0),\n    pitch: Cesium.Math.toRadians(-90), // top-down map view\n    roll: 0.0,\n  },\n});\n",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "e774eb652c8271c512afb66a1ea2fed80d761d260158440625da2245cc706748",
+      "programmatic_checks": "8ee994a68eb3682a9dfce4a95a346b8ac66aadd3b6fa90c1684b72e184bb658e",
+      "scene_state": "91432c98120cc4b0d4152bf9f0163bd7b4318ba4d926301440aa296e7f389946",
+      "screenshot_quality": "0472f25fa311a78f76248e39739b52a911755ebacd06c3ef53e51003cf3a6c03",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "e5d2e02ca265d566a4de7a897c3795d82610f840f9769ac21b96758a9f48c28e"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "8842ef0c98540713f1e9e72185baaf59d58e01470c00fea45cb75fe21337e13e",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "418e2d9aecded9e6adb7bae543149ed1723b56a6813eaafd04a3bac8d22c2715",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:18:14.209014+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses explicit tile discard policy",
+        "detail": "Pattern matched: 'NeverTileDiscardPolicy'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses URL template provider",
+        "detail": "Pattern matched: 'UrlTemplateImageryProvider'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Targets Iceland",
+        "detail": "Pattern matched: '-19'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-013",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 6,
+      "total": 6
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-imagery/baseline/eval-013-never-discard-policy-iceland",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 3006445.2449445277,
+        "y": -1035202.1156778121,
+        "z": 6749114.855396792
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-013",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 740,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 212678,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 130.46,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-imagery/eval-013-screenshot.png"
+  ],
+  "skill": "cesiumjs-imagery",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-imagery/baseline/eval-013.js"
+}

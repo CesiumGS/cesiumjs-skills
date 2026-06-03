@@ -1,0 +1,12 @@
+{
+  "decision": "REJECT",
+  "rule_fired": "rule_4_more_losses",
+  "counts": {
+    "wins": 0,
+    "losses": 2,
+    "ties": 3,
+    "critical_failures": 0
+  },
+  "rationale": "REJECT: Baseline won 2 scenarios vs 0 candidate wins",
+  "rebaseline_required": []
+}

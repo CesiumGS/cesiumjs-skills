@@ -4,7 +4,7 @@ description: "CustomShader authoring — vertexShaderText and fragmentShaderText
 ---
 # CesiumJS CustomShader
 
-Version baseline: CesiumJS 1.139 (includes 1.139.1 patch). All imports use ES module style.
+Version baseline: CesiumJS 1.142. All imports use ES module style.
 
 `CustomShader` injects user GLSL into the `Model` / `Cesium3DTileset` / `VoxelPrimitive` rendering pipeline. It exposes glTF attributes, feature IDs, and `EXT_structural_metadata` to per-vertex and per-fragment code, and returns values through the built-in `czm_modelVertexOutput` and `czm_modelMaterial` structs.
 
@@ -30,7 +30,6 @@ const shader = new CustomShader({
   fragmentShaderText: `
     void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
       material.diffuse = vec3(1.0, 0.0, 0.0);
-      material.alpha = 0.8;
     }
   `,
 });
@@ -38,6 +37,8 @@ const shader = new CustomShader({
 const model = await Model.fromGltfAsync({ url: "./aircraft.glb", customShader: shader });
 viewer.scene.primitives.add(model);
 ```
+
+> **Note:** Writing `material.alpha` requires `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` — see "Translucency" below. On opaque models with the default `INHERIT` mode, alpha writes are silently ignored.
 
 ## Applying a CustomShader
 
@@ -166,7 +167,23 @@ Pair `REPLACE_MATERIAL` + `UNLIT` for pure procedural flat shading (no material 
 - `OPAQUE` — force opaque pass.
 - `TRANSLUCENT` — force translucent pass.
 
-**Pitfall:** writing `material.alpha` on an opaque model with `INHERIT` silently does nothing. Set `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` to make alpha writes effective. See `examples/04-translucent-override.js`.
+**Pitfall:** writing `material.alpha` on an opaque model with `INHERIT` silently does nothing. Set `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` to make alpha writes effective.
+
+```js
+import { CustomShader, CustomShaderTranslucencyMode } from "cesium";
+
+const shader = new CustomShader({
+  translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT,
+  fragmentShaderText: `
+    void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+      material.diffuse = vec3(0.2, 0.6, 1.0);
+      material.alpha = 0.5;   // honored because translucencyMode is TRANSLUCENT
+    }
+  `,
+});
+```
+
+See `examples/04-translucent-override.js`.
 
 ## Attributes
 
@@ -276,6 +293,7 @@ Reduced struct availability:
 Assigning `customShader = undefined` falls back to `VoxelPrimitive.DefaultCustomShader`. See `examples/07-voxel-shader.js`. For `VoxelPrimitive` setup (provider, shape, modelMatrix, nearestSampling), see `cesiumjs-3d-tiles`.
 
 > **1.130 breaking change (#12636):** `fsInput.voxel.positionUv | positionShapeUv | positionLocal` were removed. Use `fsInput.attributes.positionEC` instead. `fsInput.voxel.surfaceNormal` → `fsInput.attributes.normalEC`.
+> **1.142 fix (#13517):** the built-in default voxel shader handles common metadata types more robustly. Keep a custom shader only when you need explicit classification, coloring, filtering, or raymarch-step logic.
 
 ## Common patterns
 
@@ -289,7 +307,7 @@ Assigning `customShader = undefined` falls back to `VoxelPrimitive.DefaultCustom
 | `examples/06-metadata-ramp.js` | Cesium3DTileset | `fsInput.metadata.<prop>` + `metadataStatistics` normalization |
 | `examples/07-voxel-shader.js` | VoxelPrimitive | FS-only subset, per-voxel metadata |
 
-## CesiumJS 1.139 version notes
+## CesiumJS 1.139-1.142 version notes
 
 Verbatim from upstream `CHANGES.md`:
 
@@ -306,9 +324,13 @@ Verbatim from upstream `CHANGES.md`:
 
 **Fix (1.139.1, #13247):** NGA-GPM local extension + custom shader regression fix.
 
-**Breaking (1.130, #12636):** Voxel `FragmentInput` restructured (see VoxelPrimitive section).
+**Fix (1.140, #13258):** Custom shaders are no longer disabled for primitives with missing metadata when the metadata exists on the class definition.
 
-**Looking ahead (1.140):** #13258 stops disabling custom shaders on primitives with missing metadata when the class definition carries the property; #13323 adds limited double-precision metadata support via downcasting. Neither is available in 1.139.
+**Addition (1.140, #13323):** Limited double-precision metadata support via downcasting.
+
+**Fix (1.142, #13517):** Improved default voxel shader for common metadata types.
+
+**Breaking (1.130, #12636):** Voxel `FragmentInput` restructured (see VoxelPrimitive section).
 
 ## Gotchas & pitfalls
 
@@ -319,7 +341,7 @@ Verbatim from upstream `CHANGES.md`:
 5. **`SAMPLER_CUBE` rejected at construction.** Use `SAMPLER_2D` only.
 6. **Parameter-name contract.** `vsInput`, `vsOutput`, `fsInput`, `material` are scanned by regex — renaming breaks codegen.
 7. **`TextureUniform` URL-vs-typedArray XOR.** Supplying both or neither throws. `typedArray` requires `width` + `height`.
-8. **Alpha writes on opaque models are silently ignored under `INHERIT`.** Set `translucencyMode: TRANSLUCENT`.
+8. **Alpha writes on opaque models are silently ignored under `INHERIT`.** Set `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` — do not just write `material.alpha` and expect it to work.
 9. **`customShader.destroy()` required.** Call when disposing of a shader that holds texture uniforms — otherwise its `TextureManager` leaks GPU resources.
 10. **`vsOutput.pointSize` overrides `Cesium3DTileStyle` point sizing.** Don't set it unless intended.
 11. **Metadata property IDs are sanitized.** Non-alphanumeric → `_`; leading `gl_` stripped; collisions are undefined behavior.

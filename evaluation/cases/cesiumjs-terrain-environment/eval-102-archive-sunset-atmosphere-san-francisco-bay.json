@@ -1,0 +1,121 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Enables globe lighting",
+      "id": "pattern_present_02",
+      "pattern": "enableLighting",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets a specific clock time",
+      "id": "pattern_present_03",
+      "pattern": "JulianDate\\.fromIso8601",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Configures skyAtmosphere",
+      "id": "pattern_present_04",
+      "pattern": "skyAtmosphere",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Enables ground atmosphere",
+      "id": "pattern_present_05",
+      "pattern": "showGroundAtmosphere",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Freezes the clock",
+      "id": "pattern_present_06",
+      "pattern": "shouldAnimate\\s*=\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets SF latitude",
+      "id": "pattern_present_07",
+      "pattern": "37\\.7",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets SF longitude",
+      "id": "pattern_present_08",
+      "pattern": "-122\\.4",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids ion terrain helpers",
+      "id": "pattern_absent_09",
+      "pattern": "fromIonAssetId|fromWorldTerrain",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Configure scene lighting with a specific JulianDate that simulates sunset and view the San Francisco Bay area with SkyAtmosphere visible and showGroundAtmosphere true. The screenshot should show warm sunset-coloured atmosphere without requiring ion terrain entitlement.",
+  "id": "eval-102",
+  "name": "archive-sunset-atmosphere-san-francisco-bay",
+  "notes": "Imported from optimization/scenarios/cesiumjs-terrain-environment/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Enables viewer.scene.globe.enableLighting",
+      "Sets viewer.clock.currentTime to a sunset JulianDate (around 03:30 UTC = 20:30 PDT-ish)",
+      "Sets viewer.shouldAnimate = false to freeze the clock",
+      "Enables viewer.scene.skyAtmosphere.show",
+      "Enables viewer.scene.globe.showGroundAtmosphere",
+      "Positions camera over San Francisco Bay (around 37.77 N, -122.42 W) at 15-60 km altitude",
+      "Camera heading is around 270 (west) and pitch is moderately downward (-15 to -30)"
+    ],
+    "landmark": "San Francisco Bay at sunset",
+    "perspective": "regional sunset over the bay",
+    "source": "optimization/scenarios",
+    "source_name": "sunset-atmosphere-san-francisco-bay",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "A regional San Francisco Bay view with the horizon visible and the sky showing warm sunset colours (orange/red near the horizon, blue above). Terrain lighting should reflect the low sun angle with long shadows. The bay's distinctive coastline (Golden Gate, peninsula) should be visible."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer and no ion terrain/defaults. Enable `viewer.scene.globe.enableLighting = true`. Set viewer.clock.currentTime = Cesium.JulianDate.fromIso8601('2026-05-20T03:30:00Z') (sunset Pacific). Set viewer.shouldAnimate = false. Configure scene.skyAtmosphere.brightnessShift = -0.2 and scene.globe.showGroundAtmosphere = true. Frame from above the East Bay looking west across the Bay at the sunset: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-122.42, 37.75, 22000), orientation: { heading: Cesium.Math.toRadians(270), pitch: Cesium.Math.toRadians(-12), roll: 0 } }). The bay, Golden Gate, and warm horizon should all be in frame. Do not use CesiumTerrainProvider.fromIonAssetId or Terrain.fromWorldTerrain.",
+  "schema_version": 1,
+  "skill": "cesiumjs-terrain-environment",
+  "timeout_ms": 5000
+}

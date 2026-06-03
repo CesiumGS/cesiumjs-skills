@@ -1,0 +1,26 @@
+{
+  "id": "eval-003",
+  "name": "eiffel-tower-from-south",
+  "landmark": "Eiffel Tower, Paris",
+  "perspective": "mid-altitude from south",
+  "difficulty": "medium",
+  "description": "View the Eiffel Tower from the south at medium altitude, looking north. Tests heading control (heading 0 = north means camera faces north, so camera is TO THE SOUTH of the target).",
+  "prompt": "Position the camera to view the Eiffel Tower from the south side, at about 1000 meters altitude, looking north toward the tower. I want to see the tower with the Trocadéro and Seine behind it. Use lookAt to lock onto the tower. Eiffel Tower: 48.8584 N, 2.2945 E.",
+  "expected_behaviors": [
+    "Uses lookAt with HeadingPitchRange",
+    "Heading ~0 degrees (facing north = camera is south of target)",
+    "Pitch around -20 to -35 degrees (looking down at moderate angle)",
+    "Range 1000-3000m"
+  ],
+  "visual_expectations": "The Eiffel Tower area viewed from the south. The Seine River and Trocadéro plaza should be behind/beyond the tower location. The camera is at medium altitude with an angled view, not straight down.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "lookAt", "description": "Uses lookAt for orbital lock"},
+    {"type": "pattern_present", "pattern": "HeadingPitchRange", "description": "Uses HeadingPitchRange for offset"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 5000, "description": "Eiffel Tower from south, looking north"}
+  ],
+  "regression_critical": false
+}

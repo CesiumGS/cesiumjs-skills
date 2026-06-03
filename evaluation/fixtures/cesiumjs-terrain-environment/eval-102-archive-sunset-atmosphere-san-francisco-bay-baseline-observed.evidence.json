@@ -1,0 +1,188 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 11,
+        "total": 11
+      },
+      "source_scenario_id": "eval-002"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-102",
+  "case_name": "sunset-atmosphere-san-francisco-bay",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-terrain-environment/baseline/eval-002-sunset-atmosphere-san-francisco-bay/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n  terrainProvider: new Cesium.EllipsoidTerrainProvider(),\n}));\n\n// Clock / time\nviewer.clock.currentTime = Cesium.JulianDate.fromIso8601('2026-05-20T03:30:00Z');\nviewer.shouldAnimate = false;\n\n// Lighting\nviewer.scene.globe.enableLighting = true;\n\n// Atmosphere\nviewer.scene.skyAtmosphere.show = true;\nviewer.scene.skyAtmosphere.brightnessShift = -0.2;\nviewer.scene.globe.showGroundAtmosphere = true;\nviewer.scene.globe.dynamicAtmosphereLighting = true;\nviewer.scene.globe.dynamicAtmosphereLightingFromSun = true;\n\n// Sun / Moon\nviewer.scene.sun = new Cesium.Sun();\nviewer.scene.sun.show = true;\nviewer.scene.moon.show = true;\n\n// Frame: above East Bay looking west at the Bay and Golden Gate\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-122.42, 37.75, 22000),\n  orientation: {\n    heading: Cesium.Math.toRadians(270),\n    pitch: Cesium.Math.toRadians(-12),\n    roll: 0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "8f58beffd38e096370c1d1b90acb61ffa8d720dd31b2baa2311fb5e450e83e77",
+      "programmatic_checks": "12aa138d020fb8155cf21a9d2f4132215ba98ae1e8d83925731d3c84a3e2b49f",
+      "scene_state": "9c8e0b131e3beda05263988bcdc5053eab2279b8324e1f6741854f0b5dff7020",
+      "screenshot_quality": "f9094eb448f8d700e5efde6dc84168956d79ac6522f03852285592ed328af898",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "9865bf70963f0bdeb63729a4a870086e0b263b55cc639372442860945d4ff5e6"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "3342be717537b46acf22586ca87686bf0c97bb30bbcf86a10c51aba13ec7227c",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "404af11c88921fe82183b9884565d4a87eb084e657b208339b2cd116da06b0e5",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:12:00.294008+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Enables globe lighting",
+        "detail": "Pattern matched: 'enableLighting'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Sets a specific clock time",
+        "detail": "Pattern matched: 'JulianDate.fromIso8601'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Configures skyAtmosphere",
+        "detail": "Pattern matched: 'skyAtmosphere'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Enables ground atmosphere",
+        "detail": "Pattern matched: 'showGroundAtmosphere'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Freezes the clock",
+        "detail": "Pattern matched: 'shouldAnimate = false'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Targets SF latitude",
+        "detail": "Pattern matched: '37.7'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "Targets SF longitude",
+        "detail": "Pattern matched: '-122.4'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_9",
+        "description": "Avoids ion terrain helpers",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-002",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 11,
+      "total": 11
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-terrain-environment/baseline/eval-002-sunset-atmosphere-san-francisco-bay",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 4.712388980384686,
+      "pitch": -0.20943951023934582,
+      "position": {
+        "x": -2716452.757090937,
+        "y": -4277143.798488906,
+        "z": 3897009.40877351
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-002",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2869,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 339515,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 249.57,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-terrain-environment/eval-002-screenshot.png"
+  ],
+  "skill": "cesiumjs-terrain-environment",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-terrain-environment/baseline/eval-002.js"
+}

@@ -1,8 +1,11 @@
 ---
+
 name: cesiumjs-models-particles
-description: "CesiumJS models, glTF, and particle effects - Model, ModelAnimation, ModelNode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata."
+description: "CesiumJS models, glTF, and particle effects - Model, EdgeDisplayMode, ModelAnimation, ModelNode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, controlling edge rendering, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata."
 ---
 # CesiumJS Models, glTF & Particle Effects
+
+Version baseline: CesiumJS v1.142.
 
 ## Quick Reference
 
@@ -13,6 +16,7 @@ description: "CesiumJS models, glTF, and particle effects - Model, ModelAnimatio
 | `ModelAnimationCollection` | Collection at `model.activeAnimations` |
 | `ModelNode` | Named node with modifiable transform |
 | `ModelFeature` | Per-feature styling/picking for feature-ID models |
+| `EdgeDisplayMode` | Controls draft glTF edge-visibility rendering on Model/Cesium3DTileset |
 | `ParticleSystem` | Billboard-based particle manager (fire, smoke, rain) |
 | `Particle` | Single particle with position, velocity, life |
 | `ParticleBurst` | Scheduled burst of particles |
@@ -34,6 +38,16 @@ const model = await Model.fromGltfAsync({ url: "path/to/model.glb" });
 viewer.scene.primitives.add(model);
 ```
 
+### Public Sample Models
+
+CesiumJS ships sample models usable without ion tokens:
+
+```
+https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb
+https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMan/Cesium_Man.glb
+https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMilkTruck/CesiumMilkTruck.glb
+```
+
 ### Positioned Model with Heading
 
 ```js
@@ -50,6 +64,14 @@ const model = await Model.fromGltfAsync({
 viewer.scene.primitives.add(model);
 ```
 
+### Avoiding Distorted Model Appearance
+
+Models can appear stretched or warped when scale is applied non-uniformly or when the orientation matrix is built incorrectly. Common pitfalls:
+
+- **Always use `Transforms.headingPitchRollToFixedFrame` (or the Entity API's `headingPitchRollQuaternion`) for ground-aligned orientation.** Hand-rolled quaternions often invert pitch/roll axes and produce vertically stretched silhouettes.
+- **Use `scale` (uniform) for size, not a non-uniform `Matrix4.fromScale`.** A non-uniform scale baked into `modelMatrix` will distort the model. Reserve `Matrix4.fromScale` for per-node tweaks (e.g., stretching a single turret), not the whole model.
+- **Pair `minimumPixelSize` with a sensible `maximumScale`.** Without a cap, distant small models can balloon to fill the frame and look elongated when the camera is close.
+
 ### Key `Model.fromGltfAsync` Options
 
 | Option | Type | Default |
@@ -61,6 +83,7 @@ viewer.scene.primitives.add(model);
 | `maximumScale` | `number` | -- |
 | `show` | `boolean` | `true` |
 | `color` / `colorBlendMode` / `colorBlendAmount` | `Color` / `ColorBlendMode` / `number` | -- / `HIGHLIGHT` / `0.5` |
+| `edgeDisplayMode` | `EdgeDisplayMode` | `SURFACES_ONLY` |
 | `silhouetteColor` / `silhouetteSize` | `Color` / `number` | `RED` / `0.0` |
 | `shadows` | `ShadowMode` | `ENABLED` |
 | `heightReference` | `HeightReference` | `NONE` |
@@ -116,6 +139,8 @@ model.readyEvent.addEventListener(() => {
 
 Additional `add` options: `index`, `reverse`, `startTime`, `stopTime`, `delay`, `removeOnStop`, `animationTime` (custom time callback).
 
+**Animations require `viewer.clock.shouldAnimate = true` to advance.** A walking character will appear frozen mid-pose (or distorted if at the seam between keyframes) if the clock is stopped.
+
 ### Animation Events
 
 ```js
@@ -161,6 +186,25 @@ model.silhouetteColor = Cesium.Color.YELLOW;
 model.silhouetteSize = 2.0;
 ```
 
+### Edge Display Mode (Experimental, 1.142+)
+
+For glTF assets using the draft `EXT_mesh_primitive_edge_visibility` extension,
+`EdgeDisplayMode` controls whether extension-provided edges are hidden, composited
+over surfaces, or rendered alone. Models without the extension are unaffected.
+
+```js
+import { EdgeDisplayMode, Model } from "cesium";
+
+const model = await Model.fromGltfAsync({
+  url: "/models/cad-part.glb",
+  edgeDisplayMode: EdgeDisplayMode.SURFACES_AND_EDGES,
+});
+viewer.scene.primitives.add(model);
+
+model.edgeDisplayMode = EdgeDisplayMode.EDGES_ONLY;       // CAD-style wireframe
+model.edgeDisplayMode = EdgeDisplayMode.SURFACES_ONLY;    // default
+```
+
 When a glTF has `EXT_mesh_features` or `EXT_structural_metadata`, picking returns a `ModelFeature`:
 
 ```js
@@ -203,10 +247,24 @@ Values: `NONE`, `CLAMP_TO_GROUND`, `RELATIVE_TO_GROUND`, `CLAMP_TO_TERRAIN`, `RE
 
 `ParticleSystem` renders billboard-based effects. Position with `modelMatrix` (world) and `emitterModelMatrix` (local offset).
 
+**Always set `viewer.clock.shouldAnimate = true` before adding a particle system** -- particles only move when the clock is running. A stopped clock produces a static "blob" at the emitter origin rather than a directional plume.
+
+### Producing a Legible Vertical Plume
+
+A common failure mode is rendering a diffuse spherical blob instead of a recognizable rising column. To make plumes read as vertical:
+
+- **Use `CircleEmitter` or a narrow `ConeEmitter`** for upward-biased velocity. `SphereEmitter` and `BoxEmitter` radiate in all directions and produce blob-like shapes.
+- **Bias velocity strongly upward** -- emitters' local +Z is up in the `modelMatrix` frame; set `modelMatrix` via `Transforms.eastNorthUpToFixedFrame` so +Z is local up.
+- **Use a multi-second `minimumParticleLife` / `maximumParticleLife`** (e.g., 1.5–4.0) so particles travel far enough to form a visible column before fading.
+- **Scale particles over their lifetime** (`startScale` small, `endScale` 3–6x larger) so the plume widens with height, matching real smoke.
+- **Wait for several seconds of simulation time before screenshotting** -- the plume needs to develop. Advance the clock or use `viewer.clock.shouldAnimate = true` and wait.
+
 ### Smoke Trail
 
 ```js
 import { ParticleSystem, CircleEmitter, Color, Cartesian2, Transforms, Cartesian3 } from "cesium";
+
+viewer.clock.shouldAnimate = true; // required -- particles don't move on a stopped clock
 
 const smokeSystem = new ParticleSystem({
   image: "smoke.png",
@@ -285,6 +343,33 @@ const system = new ParticleSystem({
 viewer.scene.primitives.add(system);
 ```
 
+### Framing Particle Effects So the Map Is Visible
+
+Particle effects should stand out against the map underneath, **not** against the sky or a featureless background. Two common framing failures:
+
+1. **Camera too close + shallow pitch** → the plume fills the frame and the map disappears behind it.
+2. **Camera too far + no pitch** → the plume becomes a tiny dot in a sea of imagery.
+
+Use `viewer.camera.lookAt` with `HeadingPitchRange` to anchor on the emitter and dial in an oblique-to-overhead view that keeps the map context visible:
+
+```js
+const position = Cartesian3.fromDegrees(-122.1944, 46.1914, 2549);
+viewer.camera.lookAt(
+  position,
+  new Cesium.HeadingPitchRange(
+    Cesium.Math.toRadians(45),   // heading
+    Cesium.Math.toRadians(-45),  // steeper pitch keeps street/terrain visible below
+    3000                         // range in meters (1500–5000 typical)
+  )
+);
+```
+
+Guidelines:
+- **Pitch in the −35° to −60° range** for top-down-with-context framing (e.g., fountains over a street grid).
+- **Pitch in the −10° to −25° range** for tall plumes where vertical extent matters (e.g., volcanic columns).
+- **Verify the marker/source is in-frame** by including a billboard or point at the emitter location; if the camera is wrong, the marker will be missing from the screenshot and the issue is obvious.
+- **Reset `viewer.trackedEntity = undefined`** before `lookAt`, or the tracked entity's reference frame will override your camera transform.
+
 ---
 
 ## Attaching Particles to a Moving Model
@@ -325,22 +410,44 @@ viewer.scene.preUpdate.addEventListener((scene, time) => {
 
 ## Canvas-Based Particle Images
 
-Generate particle textures dynamically instead of loading image files.
+Generate particle textures dynamically instead of loading image files. A radial gradient produces soft, realistic edges for smoke and water effects.
 
 ```js
-function createCircleImage() {
+// Soft radial-gradient particle (smoke, water, fog)
+function createRadialParticle(size = 32, colorStop = "rgba(200,200,200,0.9)") {
   const c = document.createElement("canvas");
-  c.width = c.height = 20;
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const half = size / 2;
+  const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+  grad.addColorStop(0, colorStop);
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  return c;
+}
+
+// Solid circle (high-contrast, fireworks, sparks)
+function createCircleImage(size = 20) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
   const ctx = c.getContext("2d");
   ctx.beginPath();
-  ctx.arc(10, 10, 10, 0, Math.PI * 2);
+  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
   ctx.fillStyle = "#fff";
   ctx.fill();
   return c;
 }
 
 // Pass canvas directly as image
-new ParticleSystem({ image: createCircleImage(), /* ...other options */ });
+new ParticleSystem({ image: createRadialParticle(), /* ...other options */ });
+```
+
+Use `Color.fromCssColorString` for specific particle colors when named colors don't suffice:
+
+```js
+startColor: Cesium.Color.fromCssColorString("#66ccff").withAlpha(0.95),
+endColor: Cesium.Color.WHITE.withAlpha(0.0),
 ```
 
 ---
@@ -368,6 +475,8 @@ const entity = viewer.entities.add({
 viewer.trackedEntity = entity;
 ```
 
+**Framing trade-off with `viewer.trackedEntity`:** tracking centers the model but uses an auto-computed range derived from the bounding sphere, which often produces a too-close, low-context shot. For prompts that ask for both the model and map context (terrain, landmarks, labels), prefer `viewer.camera.flyTo` / `lookAt` to a manually chosen position and clear `viewer.trackedEntity = undefined` first.
+
 ---
 
 ## GPM Extension (NGA_gpm_local)
@@ -384,7 +493,7 @@ CesiumJS experimentally supports the NGA Geospatial Positioning Metadata glTF ex
 4. **Set `minimumPixelSize` carefully** -- large values force enlargement of distant models, increasing draw cost.
 5. **Limit silhouettes** -- extra rendering pass per silhouetted model; more than 256 may cause stencil artifacts.
 6. **Reuse scratch `Matrix4` objects** -- avoid allocating every frame when syncing particle systems to moving entities.
-7. **Keep emission rates low** -- each particle is a billboard; rates above 200/s can hurt frame rate. Use bursts for short effects.
+7. **Match emission rate to effect density** -- dense jets (fountains, fire) may need rates of 200-1000/s; diffuse smoke works well at 10-60/s. Profile on target hardware.
 8. **Prefer pixel-sized particles** (`sizeInMeters: false`, default) -- meter-sized particles are expensive at close range.
 9. **Set finite `lifetime`** on particle systems -- `Number.MAX_VALUE` (default) prevents pool cleanup.
 10. **Disable picking for decorations** -- `allowPicking: false` saves GPU memory on models that need no interaction.

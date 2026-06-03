@@ -1,0 +1,181 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 10,
+        "total": 10
+      },
+      "source_scenario_id": "eval-004"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-104",
+  "case_name": "drillpick-stacked-polygons",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-interaction/baseline/eval-004-drillpick-stacked-polygons/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Top polygon: (-88.5, 44.5) to (-86.0, 42.5)\nviewer.entities.add({\n  name: 'Top',\n  polygon: {\n    hierarchy: new Cesium.PolygonHierarchy(\n      Cesium.Cartesian3.fromDegreesArray([\n        -88.5, 44.5,\n        -86.0, 44.5,\n        -86.0, 42.5,\n        -88.5, 42.5\n      ])\n    ),\n    material: Cesium.Color.CRIMSON.withAlpha(0.45),\n    classificationType: Cesium.ClassificationType.TERRAIN\n  }\n});\n\n// Middle polygon: (-87.5, 45.5) to (-85.0, 43.5)\nviewer.entities.add({\n  name: 'Middle',\n  polygon: {\n    hierarchy: new Cesium.PolygonHierarchy(\n      Cesium.Cartesian3.fromDegreesArray([\n        -87.5, 45.5,\n        -85.0, 45.5,\n        -85.0, 43.5,\n        -87.5, 43.5\n      ])\n    ),\n    material: Cesium.Color.DODGERBLUE.withAlpha(0.45),\n    classificationType: Cesium.ClassificationType.TERRAIN\n  }\n});\n\n// Bottom polygon: (-88.0, 43.5) to (-85.5, 41.5)\nviewer.entities.add({\n  name: 'Bottom',\n  polygon: {\n    hierarchy: new Cesium.PolygonHierarchy(\n      Cesium.Cartesian3.fromDegreesArray([\n        -88.0, 43.5,\n        -85.5, 43.5,\n        -85.5, 41.5,\n        -88.0, 41.5\n      ])\n    ),\n    material: Cesium.Color.LIMEGREEN.withAlpha(0.45),\n    classificationType: Cesium.ClassificationType.TERRAIN\n  }\n});\n\n// drillPick handler\nconst handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);\n\nhandler.setInputAction((event) => {\n  const all = viewer.scene.drillPick(event.position, 5);\n  console.log('drillPick:', all.map(p => p.id && p.id.name).join(', '));\n}, Cesium.ScreenSpaceEventType.LEFT_CLICK);\n\n// Frame camera over Lake Michigan\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-86.5, 43.5, 1500000)\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "84b3846e03a7b1cadee924d136f76f5a6651acdaf4071fb23d1e533ef0929fed",
+      "programmatic_checks": "39984d0a43d3443e647513074eab75e39fff1983a64b8a8205223365382120cd",
+      "scene_state": "bfe326632eb1f999920139a0e864e48c7f910bc1886c33a240466b501f83c533",
+      "screenshot_quality": "a48cad467b9bda9337a4d16c705de0a08dfe47d2fae3c65246a0297606cc5b52",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "5ead8d9231cb800e195e5a0dea9eb3ce0c611a4f25de575b03a2c0172c014f60"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "2cea6744a906c6b9f9bef6adf6652539c2ac975128743b0803fcb6dadbf5d7a5",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "8036558dae35bee60e75656a7a6b346366b78d3fe13413fe1ff2fbeb99fa5ac9",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:06:46.468088+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses scene.drillPick",
+        "detail": "Pattern matched: 'drillPick'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Constructs handler",
+        "detail": "Pattern matched: 'new Cesium.ScreenSpaceEventHandler'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses LEFT_CLICK",
+        "detail": "Pattern matched: 'ScreenSpaceEventType.LEFT_CLICK'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Uses CRIMSON",
+        "detail": "Pattern matched: 'Color.CRIMSON'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Uses DODGERBLUE",
+        "detail": "Pattern matched: 'Color.DODGERBLUE'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Uses LIMEGREEN",
+        "detail": "Pattern matched: 'Color.LIMEGREEN'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "Polygons are semi-transparent",
+        "detail": "Pattern matched: 'withAlpha'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-004",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 10,
+      "total": 10
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-interaction/baseline/eval-004-drillpick-stacked-polygons",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 349316.92818446935,
+        "y": -5711281.29117116,
+        "z": 5400493.628566506
+      },
+      "roll": 0
+    },
+    "entity_count": 3,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-004",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 3375,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 1128872,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 191.15,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-interaction/eval-004-screenshot.png"
+  ],
+  "skill": "cesiumjs-interaction",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-interaction/baseline/eval-004.js"
+}

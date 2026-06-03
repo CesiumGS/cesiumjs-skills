@@ -1,0 +1,9 @@
+{
+  "iteration": "002",
+  "decision": "REJECT",
+  "timestamp_utc": "2026-05-27T21:46:20.928646+00:00",
+  "runs_dir": "optimization/runs/cesiumjs-spatial-math/002",
+  "candidate_dir": "optimization/candidates/cesiumjs-spatial-math/002",
+  "generated_dir": "optimization/generated/cesiumjs-spatial-math/002",
+  "journal": "optimization/history/cesiumjs-spatial-math/iteration-002/journal.jsonl"
+}

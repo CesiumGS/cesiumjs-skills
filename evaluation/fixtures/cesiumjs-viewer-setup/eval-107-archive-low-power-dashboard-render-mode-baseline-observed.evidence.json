@@ -1,0 +1,181 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 10,
+        "total": 10
+      },
+      "source_scenario_id": "eval-007"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-107",
+  "case_name": "low-power-dashboard-render-mode",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-viewer-setup/baseline/eval-007-low-power-dashboard-render-mode/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer(\"cesiumContainer\", {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: \"https://tile.openstreetmap.org/\",\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n  terrainProvider: new Cesium.EllipsoidTerrainProvider(),\n  requestRenderMode: true,\n  scene3DOnly: true,\n  maximumRenderTimeChange: Infinity,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Headquarters marker \u2014 San Francisco\nviewer.entities.add({\n  name: \"Headquarters\",\n  position: Cesium.Cartesian3.fromDegrees(-122.4194, 37.7749),\n  point: {\n    pixelSize: 14,\n    color: Cesium.Color.CYAN,\n    outlineColor: Cesium.Color.WHITE,\n    outlineWidth: 2,\n    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,\n  },\n  label: {\n    text: \"HQ\",\n    font: \"bold 14px sans-serif\",\n    fillColor: Cesium.Color.WHITE,\n    outlineColor: Cesium.Color.BLACK,\n    outlineWidth: 2,\n    style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n    pixelOffset: new Cesium.Cartesian2(0, -24),\n    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,\n  },\n});\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-122.4194, 37.7749, 180000),\n  orientation: {\n    heading: Cesium.Math.toRadians(0),\n    pitch: Cesium.Math.toRadians(-45),\n    roll: 0,\n  },\n});\n\n// Trigger one render after setup so the scene is visible\nviewer.scene.requestRender();\n",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "522f1d62a6a4274a3de0d89d06009e33826d610434945c201b0e6743f7c22520",
+      "programmatic_checks": "2a48795bf746eaab7477a8b3fabe287abdee815601334c90245b6b57e6602f76",
+      "scene_state": "0dc5c5bb16a94dbb1786392cebe4641b0f3a8d338a5d11549fce09d488fed5fe",
+      "screenshot_quality": "bad6fe974826d27ef1494e260a3cc539ab02262036c024d224f0cf2ba988ab65",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "52877db04b8ad375292e38e233df65884c385c41d375b1a3b7008c9309260d24"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "1a1739a1d20b80517ea349676b5f7923de5bb717a34fd816310fdab4a8e74ccc",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "583a3793ea5918c8e6d80c61aa375a972bd99d498d313c156559d84cdd08b77e",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:19:12.203667+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JavaScript errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "Code executes without throwing",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_absent_2",
+        "description": "Generated code does not hardcode or reset the Ion token",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Request render mode enabled",
+        "detail": "Pattern matched: 'requestRenderMode: true'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Locked to 3D mode for GPU savings",
+        "detail": "Pattern matched: 'scene3DOnly: true'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Entity is added",
+        "detail": "Pattern matched: 'viewer.entities'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Latitude for SF headquarters is correct",
+        "detail": "Pattern matched: '37.77'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Longitude for SF is negative (west)",
+        "detail": "Pattern matched: '-122.4'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_8",
+        "description": "Ion-backed default terrain/imagery helpers are not used",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-007",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 10,
+      "total": 10
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-viewer-setup/baseline/eval-007-low-power-dashboard-render-mode",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 8.881784197001252e-16,
+      "pitch": -0.7853981633974478,
+      "position": {
+        "x": -2782450.92705955,
+        "y": -4381161.45418183,
+        "z": 3995986.442232883
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 1,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-007",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2538,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 887136,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 175.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-viewer-setup/eval-007-screenshot.png"
+  ],
+  "skill": "cesiumjs-viewer-setup",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-viewer-setup/baseline/eval-007.js"
+}

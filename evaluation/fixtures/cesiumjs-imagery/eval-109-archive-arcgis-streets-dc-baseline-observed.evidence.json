@@ -1,0 +1,153 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6
+      },
+      "source_scenario_id": "eval-009"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-109",
+  "case_name": "arcgis-streets-dc",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-imagery/baseline/eval-009-arcgis-streets-dc/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: false,\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Add ArcGIS World Street Map as explicit base layer at index 0\nconst streetMapLayer = Cesium.ImageryLayer.fromProviderAsync(\n  Cesium.ArcGisMapServerImageryProvider.fromUrl(\n    \"https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer\"\n  )\n);\nviewer.imageryLayers.add(streetMapLayer, 0);\n\n// Position camera over Washington DC / National Mall\n// Center roughly on the Mall between the Capitol and Lincoln Memorial\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-77.033, 38.889, 18000),\n  orientation: {\n    heading: Cesium.Math.toRadians(0),\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "d3be51087d680a965d60d3d4068d2f47eeb4a8fa551e6ddf0ae12291510b4ea5",
+      "programmatic_checks": "9526328da59d6de93487e5066681eee64711cf8fa1f4f6e2081ed8c551fb2555",
+      "scene_state": "f25b0f81934076179c22698f2acb3399eeab602aae69358f93a5fb8e7004e5b8",
+      "screenshot_quality": "434e90f793bd0548d82de88dec28286f98c6ca5679e65124a7d7ece243386aa7",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "52c14c314ff39774ba313a9be00d15f4945c53e628355457c60ed823215cd9e5"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "8842ef0c98540713f1e9e72185baaf59d58e01470c00fea45cb75fe21337e13e",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "1516d5403183e791779afd212d9207f50e7d6c2c40eaf744cf81ebd821cdccfd",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:04:47.240843+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses ArcGIS provider",
+        "detail": "Pattern matched: 'ArcGisMapServerImageryProvider'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses ArcGIS World Street Map URL",
+        "detail": "Pattern matched: 'MapServer'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Targets DC coordinates",
+        "detail": "Pattern matched: '-77.0'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-009",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 6,
+      "total": 6
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-imagery/baseline/eval-009-arcgis-streets-dc",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 1118601.9830285183,
+        "y": -4857961.175871001,
+        "z": 3994033.7028638944
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-009",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 5888,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 1719362,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 240.43,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-imagery/eval-009-screenshot.png"
+  ],
+  "skill": "cesiumjs-imagery",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-imagery/baseline/eval-009.js"
+}

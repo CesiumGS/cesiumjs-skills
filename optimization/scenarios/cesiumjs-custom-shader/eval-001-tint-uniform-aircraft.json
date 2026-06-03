@@ -1,0 +1,76 @@
+{
+  "id": "eval-001",
+  "name": "tint-uniform-aircraft",
+  "landmark": "CesiumAir sample model over the Pacific",
+  "perspective": "framed model with shader-tinted body",
+  "difficulty": "medium",
+  "description": "Load the public Cesium Air glb sample model and apply a CustomShader whose fragmentShaderText multiplies material.diffuse by a magenta tint sourced from a VEC3 uniform. The aircraft body should appear visibly magenta-tinted vs its default colours. Tests CustomShader uniforms, VEC3 type, and MODIFY_MATERIAL mode.",
+  "prompt": "Load the public Cesium Air sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb using Model.fromGltfAsync. Apply a CustomShader with a VEC3 uniform u_tint set to (1.0, 0.2, 0.9) (magenta) and fragmentShaderText that multiplies material.diffuse by u_tint. Position the model at -120.0 longitude, 35.0 latitude, 30000 m altitude with a Transforms.eastNorthUpToFixedFrame model matrix. Frame the camera so the aircraft fills most of the screen against the ocean.",
+  "expected_behaviors": [
+    "Calls Model.fromGltfAsync with the public CesiumAir glb URL",
+    "Constructs a CustomShader with uniforms: { u_tint: { type: UniformType.VEC3, value: new Cartesian3(1.0, 0.2, 0.9) } }",
+    "fragmentShaderText defines fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) and multiplies material.diffuse by u_tint",
+    "Positions the model via modelMatrix from Transforms.eastNorthUpToFixedFrame at roughly -120 long, 35 lat, 30000 m altitude",
+    "Frames the camera so the aircraft is clearly the dominant visible element",
+    "Adds the model to viewer.scene.primitives"
+  ],
+  "visual_expectations": "The Cesium Air aircraft visible against ocean or sky, with its fuselage and wings visibly tinted toward magenta/pink rather than the default white/blue. The aircraft silhouette should be recognizable.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Model\\.fromGltfAsync",
+      "description": "Uses Model.fromGltfAsync"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?CustomShader",
+      "description": "Constructs CustomShader"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "UniformType\\.VEC3",
+      "description": "Declares VEC3 uniform type"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "u_tint",
+      "description": "Defines the u_tint uniform name"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "fragmentMain",
+      "description": "Defines fragmentMain function"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "material\\.diffuse",
+      "description": "Writes to material.diffuse"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Transforms\\.eastNorthUpToFixedFrame",
+      "description": "Uses ENU local frame for positioning"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Magenta-tinted Cesium Air aircraft framed in view"
+    }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": [
+    "Minimal example",
+    "Uniforms",
+    "Modes & lighting"
+  ]
+}

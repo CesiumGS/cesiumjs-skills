@@ -10,18 +10,62 @@ Reference for bootstrapping CesiumJS applications: Viewer, CesiumWidget, Ion/Goo
 ## Quick Start
 
 ```js
-import { Ion, Viewer, Terrain } from "cesium";
+import { Viewer, ImageryLayer, OpenStreetMapImageryProvider } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
-// Always set your Ion token before any other Cesium calls
-Ion.defaultAccessToken = "YOUR_CESIUM_ION_ACCESS_TOKEN";
-
 const viewer = new Viewer("cesiumContainer", {
-  terrain: Terrain.fromWorldTerrain(),
+  baseLayer: new ImageryLayer(new OpenStreetMapImageryProvider({
+    url: "https://tile.openstreetmap.org/",
+    maximumLevel: 18,
+  })),
+  baseLayerPicker: false,
 });
 ```
 
 Required HTML: `<div id="cesiumContainer" style="width:100%;height:100vh"></div>`
+
+Use Cesium ion defaults (`Terrain.fromWorldTerrain`,
+`ImageryLayer.fromWorldImagery`, `createOsmBuildingsAsync`, Google
+Photorealistic 3D Tiles) only when the target runtime has the required ion or
+Google entitlement. For public/no-token examples, choose explicit public
+providers and URL-backed 3D Tiles.
+
+## Framing Loaded Content (Critical)
+
+**After adding a tileset, model, or data source, you must explicitly frame it.**
+A `Viewer` constructed with default options starts the camera at a fixed view
+of Earth -- it does NOT auto-zoom to primitives you add. Forgetting this is
+the most common cause of "I see only gray surface" or "the asset is a speck
+in the corner" failures.
+
+```js
+const tileset = await Cesium3DTileset.fromUrl(url);
+viewer.scene.primitives.add(tileset);
+
+// Pick ONE of:
+await viewer.zoomTo(tileset);                 // instant fit to bounding sphere
+await viewer.flyTo(tileset, { duration: 0 }); // animated; duration 0 = instant
+```
+
+`viewer.zoomTo` / `viewer.flyTo` accept `Entity`, `Entity[]`, `EntityCollection`,
+`DataSource`, `ImageryLayer`, `Cesium3DTileset`, `VoxelPrimitive`, `Model`, or
+`TimeDynamicPointCloud`. They use the target's bounding sphere, which works for
+tilesets with arbitrary local coordinate systems where computing an ECEF
+camera position by hand will miss the asset entirely.
+
+When you do need an explicit camera position (e.g., to satisfy a heading/pitch
+specification), still use `viewer.zoomTo(target, headingPitchRange)` so the
+range is derived from the bounding sphere rather than guessed:
+
+```js
+import { HeadingPitchRange, Math as CesiumMath } from "cesium";
+
+await viewer.zoomTo(tileset, new HeadingPitchRange(
+  CesiumMath.toRadians(45),   // heading
+  CesiumMath.toRadians(-30),  // pitch
+  /* range omitted -> auto-fit */
+));
+```
 
 ## Ion & Platform Configuration
 
@@ -42,6 +86,7 @@ import { IonResource, Cesium3DTileset } from "cesium";
 const resource = await IonResource.fromAssetId(96188);
 const tileset = await Cesium3DTileset.fromUrl(resource);
 viewer.scene.primitives.add(tileset);
+await viewer.zoomTo(tileset);
 ```
 
 ### Google Maps Platform
@@ -68,6 +113,14 @@ import { ITwinPlatform, ITwinData } from "cesium";
 
 ITwinPlatform.defaultAccessToken = "YOUR_ITWIN_TOKEN";
 const tileset = await ITwinData.createTilesetForIModel(viewer, "imodel-id");
+
+// 1.140+ (#13208): Reality Data of type GaussianSplat3DTiles is now supported
+const splats = await ITwinData.createTilesetForRealityDataId(
+  iTwinId,
+  realityDataId,
+  ITwinPlatform.RealityDataType.GaussianSplat3DTiles,
+);
+viewer.scene.primitives.add(splats);
 ```
 
 ## Viewer Constructor Options
@@ -96,7 +149,7 @@ const tileset = await ITwinData.createTilesetForIModel(viewer, "imodel-id");
 | Option | Default | Purpose |
 |--------|---------|---------|
 | `sceneMode` | `SceneMode.SCENE3D` | Initial scene mode |
-| `scene3DOnly` | `false` | Lock to 3D, saves GPU memory |
+| `scene3DOnly` | `false` | Lock to 3D, saves GPU memory per geometry instance |
 | `shadows` | `false` | Shadow casting |
 | `terrainShadows` | `ShadowMode.RECEIVE_ONLY` | Terrain shadow mode |
 | `requestRenderMode` | `false` | Render only on changes |
@@ -104,6 +157,10 @@ const tileset = await ITwinData.createTilesetForIModel(viewer, "imodel-id");
 | `msaaSamples` | `4` | MSAA (1 to disable) |
 | `orderIndependentTranslucency` | `true` | Translucent ordering |
 | `mapMode2D` | `MapMode2D.INFINITE_SCROLL` | 2D scroll behavior |
+
+Pair `requestRenderMode: true` with `scene3DOnly: true` for low-power /
+dashboard apps -- both are commonly required together when the scenario calls
+for GPU savings.
 
 ### Layers & Terrain
 
@@ -119,15 +176,17 @@ const tileset = await ITwinData.createTilesetForIModel(viewer, "imodel-id");
 ### Minimal Viewer (No Widgets)
 
 ```js
-import { Viewer, Ion, Terrain } from "cesium";
-Ion.defaultAccessToken = "YOUR_TOKEN";
+import { Viewer, ImageryLayer, OpenStreetMapImageryProvider } from "cesium";
 
 const viewer = new Viewer("cesiumContainer", {
+  baseLayer: new ImageryLayer(new OpenStreetMapImageryProvider({
+    url: "https://tile.openstreetmap.org/",
+    maximumLevel: 18,
+  })),
   animation: false, baseLayerPicker: false, fullscreenButton: false,
   geocoder: false, homeButton: false, infoBox: false,
   sceneModePicker: false, selectionIndicator: false,
   timeline: false, navigationHelpButton: false,
-  terrain: Terrain.fromWorldTerrain(),
 });
 ```
 
@@ -329,7 +388,7 @@ viewer.extend(viewerVoxelInspectorMixin);             // voxel debug panel
 
 ```js
 await viewer.flyTo(entity, { duration: 3.0, offset: headingPitchRange }); // animated
-await viewer.zoomTo(tileset);   // instant
+await viewer.zoomTo(tileset);   // instant; uses bounding sphere
 viewer.destroy();               // free all resources
 ```
 
@@ -366,6 +425,29 @@ viewer.scene.camera.flyTo({
 });
 ```
 
+### Loading and Framing a Sample 3D Tileset
+
+When the tileset's local coordinate frame is unknown (sample assets,
+discrete-LOD demos), do NOT hand-compute an ECEF camera position -- you will
+miss the asset and render a blank gray surface. Use `viewer.zoomTo` with a
+`HeadingPitchRange` to derive a fitted view from the tileset's bounding sphere.
+
+```js
+import { Cesium3DTileset, HeadingPitchRange, Math as CesiumMath } from "cesium";
+
+const tileset = await Cesium3DTileset.fromUrl(url);
+viewer.scene.primitives.add(tileset);
+
+await viewer.zoomTo(
+  tileset,
+  new HeadingPitchRange(
+    CesiumMath.toRadians(45),
+    CesiumMath.toRadians(-30),
+    // omit range -> Cesium auto-fits the bounding sphere
+  ),
+);
+```
+
 ### Space Scene (No Globe)
 
 ```js
@@ -374,11 +456,18 @@ const viewer = new Viewer("cesiumContainer", {
 });
 ```
 
-### Explicit Render Mode (Low Power)
+### Explicit Render Mode (Low Power Dashboard)
+
+Pair with `scene3DOnly: true` when 2D/Columbus View is not needed -- this is
+the canonical low-GPU configuration.
 
 ```js
 const viewer = new Viewer("cesiumContainer", {
-  requestRenderMode: true, maximumRenderTimeChange: Infinity,
+  requestRenderMode: true,
+  maximumRenderTimeChange: Infinity,
+  scene3DOnly: true,
+  animation: false,
+  timeline: false,
 });
 // Call viewer.scene.requestRender() after programmatic changes
 ```
@@ -409,7 +498,7 @@ const viewer = new Viewer("cesiumContainer", {
 ## Performance Tips
 
 1. **Set `requestRenderMode: true`** for mostly-static apps. Reduces CPU/GPU and battery drain. Call `scene.requestRender()` after changes.
-2. **Use `scene3DOnly: true`** when 2D/Columbus View is not needed. Saves GPU memory per geometry instance.
+2. **Use `scene3DOnly: true`** when 2D/Columbus View is not needed. Saves GPU memory per geometry instance. Commonly required alongside `requestRenderMode` for dashboard/low-power scenarios.
 3. **Disable unused widgets** (`animation: false`, `timeline: false`) to reduce DOM overhead.
 4. **Set `msaaSamples: 1`** on low-power devices. Default `4` balances quality.
 5. **Lower `resolutionScale`** (e.g., `0.75`) on HiDPI displays for better frame rates.
@@ -417,6 +506,15 @@ const viewer = new Viewer("cesiumContainer", {
 7. **Enable `requestVertexNormals: true`** on terrain for proper lighting at negligible cost.
 8. **Call `viewer.destroy()`** when removing from DOM to free WebGL contexts.
 9. **Limit imagery layers** to 2-3. Each adds a texture lookup per fragment.
+
+## Framing Checklist (Avoid Blank / Off-Frame Renders)
+
+Before declaring a viewer-setup task complete, verify:
+
+1. After adding any tileset, model, GeoJSON/KML/CZML data source, or entity collection: `await viewer.zoomTo(target)` or `await viewer.flyTo(target)` was called.
+2. For tilesets with unknown local frames, the camera is derived from the bounding sphere (`HeadingPitchRange`), not a hand-picked `Cartesian3.fromDegrees(...)`.
+3. If the scenario specifies a heading/pitch, those are passed via `HeadingPitchRange` to `zoomTo`/`flyTo` rather than set on `camera.flyTo` with a guessed destination.
+4. A required base imagery layer is actually present (count == 1) when the scenario expects a visible map under the asset.
 
 ## See Also
 

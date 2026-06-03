@@ -1,0 +1,22 @@
+{
+  "skill": "cesiumjs-custom-shader",
+  "iteration": "001",
+  "model_id": "claude-sonnet-4-6",
+  "temperature": 1.0,
+  "prompt_version": "propose-v1",
+  "timestamp_utc": "2026-05-26T21:04:07.476196+00:00",
+  "current_skill_hash": "6f4f5cc1746ef10e5116229ed5c5ae9e22a592550f193cab569254492a8c4ee4",
+  "candidate_skill_hash": "faae5befe6f9c685fbbff3f3c770472237e87a474728325f8199154d19108c1a",
+  "decision_summary": {
+    "decision": "BASELINE",
+    "rule_fired": "initial",
+    "counts": {
+      "wins": 0,
+      "losses": 0,
+      "ties": 0
+    }
+  },
+  "history_iterations": 0,
+  "uncovered_sections_count": 9,
+  "uncovered_apis_count": 3
+}

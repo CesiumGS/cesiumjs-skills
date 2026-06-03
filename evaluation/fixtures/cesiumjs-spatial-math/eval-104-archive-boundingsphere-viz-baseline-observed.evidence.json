@@ -1,0 +1,174 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 9,
+        "total": 9
+      },
+      "source_scenario_id": "eval-004"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-104",
+  "case_name": "boundingsphere-viz",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-spatial-math/baseline/eval-004-boundingsphere-viz/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// 5 SW US cities: [lon, lat, ...]\nconst cityCoords = [\n  { name: 'Los Angeles',   lon: -118.2437, lat: 34.0522 },\n  { name: 'Phoenix',       lon: -112.0740, lat: 33.4484 },\n  { name: 'Las Vegas',     lon: -115.1398, lat: 36.1699 },\n  { name: 'Denver',        lon: -104.9903, lat: 39.7392 },\n  { name: 'Albuquerque',   lon: -106.6504, lat: 35.0844 },\n];\n\n// Build positions array via fromDegreesArray\nconst degreesFlat = cityCoords.flatMap(c => [c.lon, c.lat]);\nconst positions = Cesium.Cartesian3.fromDegreesArray(degreesFlat);\n\n// Compute bounding sphere\nconst bs = Cesium.BoundingSphere.fromPoints(positions);\n\n// Convert bs.center -> Cartographic -> Cartesian3.fromRadians (round-trip as required)\nconst centerCarto = Cesium.Cartographic.fromCartesian(bs.center);\nconst centerPosition = Cesium.Cartesian3.fromRadians(\n  centerCarto.longitude,\n  centerCarto.latitude,\n  centerCarto.height\n);\n\n// Add ellipsoid entity at bounding sphere center\nviewer.entities.add({\n  name: 'BoundingSphere',\n  position: centerPosition,\n  ellipsoid: {\n    radii: new Cesium.Cartesian3(bs.radius, bs.radius, bs.radius),\n    material: Cesium.Color.YELLOW.withAlpha(0.3),\n    outline: true,\n    outlineColor: Cesium.Color.YELLOW,\n    outlineWidth: 2,\n  }\n});\n\n// Add 5 cyan point entities at city positions\ncityCoords.forEach((city, i) => {\n  viewer.entities.add({\n    name: city.name,\n    position: positions[i],\n    point: {\n      pixelSize: 18,\n      color: Cesium.Color.CYAN,\n      outlineColor: Cesium.Color.WHITE,\n      outlineWidth: 2,\n    },\n    label: {\n      text: city.name,\n      font: '13px sans-serif',\n      fillColor: Cesium.Color.WHITE,\n      outlineColor: Cesium.Color.BLACK,\n      outlineWidth: 2,\n      style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n      pixelOffset: new Cesium.Cartesian2(0, -12),\n    }\n  });\n});\n\n// Frame camera to show entire bounding sphere region\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-110, 36, 8000000),\n  orientation: {\n    heading: 0.0,\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0\n  }\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "2532e2fc8a98aed2b4e85c8b84e0f3b9e26fbab38803885e5ae0105ea1606868",
+      "programmatic_checks": "4bc3f4e1125bc8247f29c90051a8eabd21adb0cc167d62f7bcf02e96a80e4a35",
+      "scene_state": "80cc9f949c0f00d79a81b6d3c47b7c4dd64e0eac545b3d7e2fa2f9a300db9815",
+      "screenshot_quality": "bbf30f696d51c6357dfa4739ebb0b13168f8b2e3b15676fcc0ea4059b8d643a0",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "2ce0bdf907aa21b4addedff727bf314b105df1d20f82b5f640e11b4d1376ad73"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "1a69244d712199b8653571a3ab970d7a7aee2cb6317513be291153fc928e08f8",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "cd5d67d7cd8486191354672612e3e4009e4af5ff5810d457b3dbcdf0f6e93d27",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:11:15.920550+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses BoundingSphere.fromPoints",
+        "detail": "Pattern matched: 'BoundingSphere.fromPoints'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses ellipsoid graphics",
+        "detail": "Pattern matched: 'ellipsoid'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses YELLOW for sphere material",
+        "detail": "Pattern matched: 'Color.YELLOW'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Builds Cartesian3 positions from degrees",
+        "detail": "Pattern matched: 'fromDegreesArray'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "References LA longitude",
+        "detail": "Pattern matched: '-118.24'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "References Denver longitude",
+        "detail": "Pattern matched: '-104.99'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-004",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 9,
+      "total": 9
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-spatial-math/baseline/eval-004-boundingsphere-viz",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": -3980476.509256567,
+        "y": -10936269.327851977,
+        "z": 8430473.694171077
+      },
+      "roll": 0
+    },
+    "entity_count": 6,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-004",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 1059,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 499089,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 255.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-spatial-math/eval-004-screenshot.png"
+  ],
+  "skill": "cesiumjs-spatial-math",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-spatial-math/baseline/eval-004.js"
+}

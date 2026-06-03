@@ -1,0 +1,95 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Polygon graphics defined",
+      "id": "pattern_present_02",
+      "pattern": "polygon:",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Polygon is extruded",
+      "id": "pattern_present_03",
+      "pattern": "extrudedHeight",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Semi-transparency applied",
+      "id": "pattern_present_04",
+      "pattern": "withAlpha",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Colorado longitudes are negative",
+      "id": "pattern_present_05",
+      "pattern": "-102|-109",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses fromDegreesArray for coordinates",
+      "id": "pattern_present_06",
+      "pattern": "fromDegreesArray",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": true,
+  "description": "Create an extruded polygon (3D shape rising from the ground). Tests polygon hierarchy, extrusion, and material/alpha handling.",
+  "id": "eval-102",
+  "name": "archive-polygon-with-extrusion",
+  "notes": "Imported from optimization/scenarios/cesiumjs-entities/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Creates a polygon entity with correct Colorado coordinates",
+      "Uses Cartesian3.fromDegreesArray for the polygon hierarchy",
+      "Sets extrudedHeight to 100000",
+      "Uses Color.BLUE.withAlpha() for semi-transparency",
+      "Longitudes are negative (western hemisphere)"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "polygon-with-extrusion",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "A tall, semi-transparent blue 3D column over the rectangular shape of Colorado, rising from the terrain. The terrain and globe should be visible through the translucent faces."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Draw a semi-transparent blue polygon over the state of Colorado (roughly a rectangle from 37N to 41N, 102W to 109W) and extrude it upward to 100,000 meters to create a 3D column. Make it semi-transparent so the terrain is visible through it.",
+  "schema_version": 1,
+  "skill": "cesiumjs-entities",
+  "timeout_ms": 5000
+}

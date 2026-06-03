@@ -1,0 +1,115 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JavaScript errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "Code executes without throwing",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Generated code does not hardcode or reset the Ion token",
+      "id": "pattern_absent_02",
+      "pattern": "Ion\\.defaultAccessToken",
+      "type": "pattern_absent"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Request render mode enabled",
+      "id": "pattern_present_03",
+      "pattern": "requestRenderMode:\\s*true",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Locked to 3D mode for GPU savings",
+      "id": "pattern_present_04",
+      "pattern": "scene3DOnly:\\s*true",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Entity is added",
+      "id": "pattern_present_05",
+      "pattern": "entities\\.add|viewer\\.entities",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Latitude for SF headquarters is correct",
+      "id": "pattern_present_06",
+      "pattern": "37\\.77",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Longitude for SF is negative (west)",
+      "id": "pattern_present_07",
+      "pattern": "-122\\.4",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Ion-backed default terrain/imagery helpers are not used",
+      "id": "pattern_absent_08",
+      "pattern": "Terrain\\.fromWorldTerrain|fromIonAssetId|ImageryLayer\\.fromWorldImagery",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Create a performance-optimized viewer for embedding in a dashboard. Tests the skill's performance tips section \u2014 specifically requestRenderMode, scene3DOnly, widget reduction, and the critical detail that requestRender() must be called after programmatic changes.",
+  "id": "eval-107",
+  "name": "archive-low-power-dashboard-render-mode",
+  "notes": "Imported from optimization/scenarios/cesiumjs-viewer-setup/eval-007. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Enables requestRenderMode: true (key performance optimization)",
+      "Sets maximumRenderTimeChange: Infinity (only render on explicit request)",
+      "Enables scene3DOnly: true (since 2D/CV not needed, saves GPU memory)",
+      "Disables unnecessary widgets (at minimum: animation, timeline)",
+      "Does not hardcode or reset Ion.defaultAccessToken",
+      "Configures a public base layer without ion terrain",
+      "Adds a point entity at the specified coordinates",
+      "Calls viewer.scene.requestRender() after adding the entity OR uses the entity API which auto-triggers renders",
+      "May reduce msaaSamples for additional power savings"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "low-power-dashboard-render-mode",
+    "source_scenario_id": "eval-007",
+    "visual_expectations": "A 3D globe with a visible point/marker entity near San Francisco (37.77N, 122.42W). Minimal UI chrome. The scene should be static (not continuously animating)."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "In the eval page, create a CesiumJS globe for a monitoring dashboard that shows mostly static data. It'll be running on a tablet with limited battery. Optimize the viewer for minimum power consumption \u2014 the globe will only update when new data arrives, not continuously. Use OpenStreetMap as the explicit public base layer (`maximumLevel: 18`) and no ion terrain/defaults. Also add a single point entity for our headquarters at coordinates 37.7749 N, 122.4194 W to verify the setup works. The Cesium global object and cesiumContainer element are already configured by the runner.",
+  "schema_version": 1,
+  "skill": "cesiumjs-viewer-setup",
+  "timeout_ms": 5000
+}

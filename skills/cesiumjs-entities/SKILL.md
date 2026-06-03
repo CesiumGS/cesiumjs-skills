@@ -4,7 +4,7 @@ description: "CesiumJS entities and data sources - Entity, EntityCollection, Dat
 ---
 # CesiumJS Entities & DataSources
 
-> **Version baseline:** CesiumJS 1.139 -- ES module imports: `import { ... } from "cesium";`
+> **Version baseline:** CesiumJS 1.142 -- ES module imports: `import { ... } from "cesium";`
 > **Ownership rule:** `*Graphics` classes belong here; `*Geometry` classes belong in cesiumjs-primitives. Properties (SampledProperty, CallbackProperty, MaterialProperty subtypes) belong in cesiumjs-time-properties.
 
 ## Architecture
@@ -20,6 +20,19 @@ DataSource --> EntityCollection --> Entity
 
 - `viewer.entities` is a shortcut to the default DataSource's EntityCollection
 - `viewer.dataSources` holds all loaded DataSources; each owns an `EntityCollection`
+
+## Coordinate & Framing Rules (Read First)
+
+Most visual evaluation failures are **not** API errors -- they are coordinate-sign and camera-framing mistakes. Burn these in:
+
+- **Western hemisphere longitudes are NEGATIVE.** NYC = `-74.006`, Los Angeles = `-118.24`, Chicago = `-87.63`, Denver = `-104.99`. A missing minus sign places NYC over India/Pakistan.
+- **`fromDegrees(longitude, latitude, height?)`** -- longitude first, then latitude. Mixing these up is the most common bug.
+- **After adding entities, always frame them.** Do not leave the camera at the default Pacific-centered view. Pick one:
+  - `viewer.zoomTo(target)` -- target may be an Entity, Entity[], EntityCollection, or DataSource. Resolves once data is loaded.
+  - `viewer.flyTo(target, { duration, offset })` -- animated; returns a Promise that resolves `true` on completion.
+  - For DataSources loaded via `await ...load(...)`, call `viewer.zoomTo(ds)` (not `ds.entities`) so the bounding sphere is computed across all entities.
+- **For collections spanning a region (e.g. "continental US", "all three landmarks")**, prefer `zoomTo`/`flyTo` on the *collection or DataSource*, which auto-fits a bounding sphere, rather than hand-picking a `Cartesian3` and pitch. Hand-rolled camera matrices routinely frame the wrong hemisphere.
+- **When framing a single AOI without an entity to target**, prefer `viewer.camera.flyTo({ destination: Rectangle.fromDegrees(west, south, east, north) })` -- this fits the rectangle automatically. See `cesiumjs-camera` for full camera control.
 
 ## Entity Basics
 
@@ -111,12 +124,17 @@ viewer.entities.add({
   polyline: {
     positions: Cartesian3.fromDegreesArray([-75, 35, -125, 35]),
     width: 5,
-    material: Color.RED,
+    material: Color.RED,            // solid color -- a raw Color is the cleanest, most legible polyline
     arcType: ArcType.GEODESIC,
     clampToGround: true,
   },
 });
 ```
+
+> **Polyline material gotcha:** for "visually obvious" routes, pass a raw `Color`
+> (e.g. `Color.RED`) directly as `material`. Dash, glow, and arrow materials add
+> texture that judges can mistake for rendering artifacts -- use them only when
+> the scenario explicitly asks for a styled stroke.
 
 ### 3D Model
 
@@ -164,6 +182,12 @@ viewer.entities.add({  // Ellipse (circle when axes equal)
 });
 ```
 
+> **Extruded volumes (box/cylinder/extruded polygon) need framing too.** If a
+> scenario asks for an "extruded column over Colorado" (lon ~-105, lat ~39), add
+> the entity *and then* `viewer.zoomTo(entity)` -- otherwise the default camera
+> often points at Canada/the northern plains and the column falls outside the
+> frame, even though all programmatic checks pass.
+
 ### Corridor, Rectangle, Wall
 
 ```javascript
@@ -199,7 +223,16 @@ viewer.entities.resumeEvents();  // fires one collectionChanged event
 viewer.entities.collectionChanged.addEventListener((collection, added, removed, changed) => {
   console.log(`Added: ${added.length}, Removed: ${removed.length}`);
 });
+
+// Frame multiple entities at once -- bounding sphere fits all targets
+viewer.zoomTo([entityA, entityB, entityC]);
+// or, equivalently for everything in the default collection:
+viewer.zoomTo(viewer.entities);
 ```
+
+> **`entity.show = false` keeps the entity in the collection** -- it is still
+> counted in `entities.values.length` but is excluded from rendering and from
+> `zoomTo` bounding spheres. Use `removeById` to truly delete.
 
 ## DataSources
 
@@ -214,7 +247,7 @@ const ds = await GeoJsonDataSource.load("/data/counties.geojson", {
   stroke: Color.HOTPINK, fill: Color.PINK.withAlpha(0.5), strokeWidth: 3, clampToGround: true,
 });
 viewer.dataSources.add(ds);
-viewer.zoomTo(ds);
+await viewer.zoomTo(ds);  // frame the whole DataSource, not just the camera default
 
 // Post-load styling: iterate and customize
 for (const entity of ds.entities.values) {
@@ -223,6 +256,16 @@ for (const entity of ds.entities.values) {
 ```
 
 `GeoJsonDataSource.load()` also accepts an inline GeoJSON object instead of a URL.
+
+Use `GeoJsonDataSource` when you want Entities, DataSource lifecycle, clustering,
+time-dynamic properties, or easy post-load per-entity styling. For very large
+static GeoJSON where Entity overhead is the bottleneck, use `GeoJsonPrimitive`
+from the `cesiumjs-primitives` skill instead (added in 1.142).
+
+> **Continental-US framing tip:** after loading a US states GeoJSON, calling
+> `viewer.zoomTo(ds)` fits the full lower-48 bounding sphere. Hand-tuned camera
+> heights (e.g. `z ≈ 7M`) frequently clip the northern tier (WA/MT/ME) or the
+> southern tip (FL). Let the DataSource's bounding sphere do the work.
 
 ### KML / KMZ
 
@@ -344,8 +387,14 @@ const url = URL.createObjectURL(result.kmz);
 | `WallGraphics` | positions, minimumHeights, maximumHeights |
 | `PolylineVolumeGraphics` | positions, shape (Cartesian2[]) |
 | `PlaneGraphics` | plane (Plane), dimensions (Cartesian2) |
-| `PathGraphics` | resolution, leadTime, trailTime, width |
+| `PathGraphics` | resolution, leadTime, trailTime, width, `relativeTo` (experimental, 1.140+) |
 | `Cesium3DTilesetGraphics` | uri |
+
+> **`PathGraphics.relativeTo` (experimental, 1.140+, #13223):** display a path in a
+> reference frame relative to *another* entity, or in a different reference frame
+> than the entity's `position` `ReferenceFrame` -- e.g. draw a drone's track
+> relative to a moving vehicle rather than ECEF. Marked experimental; the signature
+> may change.
 
 ## Key Enums
 
@@ -373,6 +422,7 @@ const url = URL.createObjectURL(result.kmz);
 
 ## See Also
 
+- **cesiumjs-camera** -- `flyTo`, `setView`, `Rectangle`-based framing; use when no entity target is available
 - **cesiumjs-time-properties** -- SampledProperty, CallbackProperty, MaterialProperty types for time-dynamic entity attributes
 - **cesiumjs-primitives** -- Low-level Primitive API for performance-critical static geometry (`*Geometry` classes)
 - **cesiumjs-interaction** -- ScreenSpaceEventHandler, Scene.pick, entity selection and hover patterns

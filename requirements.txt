@@ -1,0 +1,18 @@
+# Python dependencies for cesiumjs-skills evaluation framework
+#
+# All Claude calls go through the local `claude` CLI (Claude Code) — install it
+# from https://claude.com/claude-code and ensure it is on PATH. No Anthropic
+# Python SDK is required; the CLI manages authentication itself.
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=5.0.0
+pytest-timeout>=2.2.0
+pytest-mock>=3.14.0
+
+# Browser automation for evaluation runner (US-006)
+playwright>=1.40.0
+
+# JSON schema validation
+jsonschema>=4.21.0

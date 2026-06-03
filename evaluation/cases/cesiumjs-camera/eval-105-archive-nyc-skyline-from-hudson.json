@@ -1,0 +1,79 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses flyTo or setView (positioned view)",
+      "id": "pattern_present_02",
+      "pattern": "flyTo|setView",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "NYC latitude",
+      "id": "pattern_present_03",
+      "pattern": "40\\.7",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "West of Manhattan longitude",
+      "id": "pattern_present_04",
+      "pattern": "-74",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": true,
+  "description": "View the NYC skyline from across the Hudson River in New Jersey, looking east. Tests whether the skill guides positioning camera AWAY from the target for a panoramic cityscape view.",
+  "id": "eval-105",
+  "name": "archive-nyc-skyline-from-hudson",
+  "notes": "Imported from optimization/scenarios/cesiumjs-camera/eval-005. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Camera positioned west of Manhattan (longitude more negative than -74.0)",
+      "Heading ~90 degrees (facing east toward Manhattan)",
+      "Low-medium altitude (300-800m) for skyline perspective",
+      "Pitch near horizontal or slightly down (-5 to -15 degrees)",
+      "Uses flyTo or setView (not lookAt \u2014 this is a positioned view, not an orbital lock)"
+    ],
+    "landmark": "NYC Skyline",
+    "perspective": "panoramic from across Hudson River",
+    "source": "optimization/scenarios",
+    "source_name": "nyc-skyline-from-hudson",
+    "source_scenario_id": "eval-005",
+    "visual_expectations": "The Manhattan skyline viewed from the west across the Hudson River. The waterfront, piers, and city buildings should be visible. This is the classic NYC postcard view from New Jersey side."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Position the camera in the air over the Hudson River, west of Manhattan, looking east toward the NYC skyline. I want to see the full Manhattan skyline as if photographing it from across the river at about 500 meters altitude. Camera should be roughly at coordinates 40.7484 N, 74.02 W (over the Hudson), looking east.",
+  "schema_version": 1,
+  "skill": "cesiumjs-camera",
+  "timeout_ms": 5000
+}

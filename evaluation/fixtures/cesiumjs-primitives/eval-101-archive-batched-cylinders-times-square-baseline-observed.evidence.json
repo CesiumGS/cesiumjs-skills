@@ -1,0 +1,188 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 11,
+        "total": 11
+      },
+      "source_scenario_id": "eval-001"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-101",
+  "case_name": "batched-cylinders-times-square",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-primitives/baseline/eval-001-batched-cylinders-times-square/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/', maximumLevel: 18 })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst centerCart = Cesium.Cartesian3.fromDegrees(-73.9857, 40.7580);\nconst instances = [];\n\nfor (let row = 0; row < 10; row++) {\n  for (let col = 0; col < 10; col++) {\n    const xOffset = (col - 4.5) * 50;\n    const yOffset = (row - 4.5) * 50;\n\n    const modelMatrix = Cesium.Matrix4.multiply(\n      Cesium.Transforms.eastNorthUpToFixedFrame(centerCart, undefined, new Cesium.Matrix4()),\n      Cesium.Matrix4.fromTranslation(new Cesium.Cartesian3(xOffset, yOffset, 100), new Cesium.Matrix4()),\n      new Cesium.Matrix4()\n    );\n\n    instances.push(new Cesium.GeometryInstance({\n      geometry: new Cesium.CylinderGeometry({\n        length: 200,\n        topRadius: 8,\n        bottomRadius: 8,\n        vertexFormat: Cesium.PerInstanceColorAppearance.FLAT_VERTEX_FORMAT,\n      }),\n      modelMatrix: modelMatrix,\n      id: `cylinder_${row}_${col}`,\n      attributes: {\n        color: Cesium.ColorGeometryInstanceAttribute.fromColor(\n          Cesium.Color.fromRandom({ alpha: 1.0 })\n        ),\n      },\n    }));\n  }\n}\n\nviewer.scene.primitives.add(new Cesium.Primitive({\n  geometryInstances: instances,\n  appearance: new Cesium.PerInstanceColorAppearance({ flat: true }),\n  allowPicking: false,\n}));\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-73.985, 40.756, 800),\n  orientation: {\n    heading: Cesium.Math.toRadians(15),\n    pitch: Cesium.Math.toRadians(-45),\n    roll: 0.0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "b3a8a2b5ea4ae396183bbaed639bae9000afeb3ff3a606c1388d0a5cc6232b9d",
+      "programmatic_checks": "b9c33a7f24da10c62cf6cbef578dc9686766fb2057ab05d12f7485ccfd374c86",
+      "scene_state": "7b6a7434aa8dcddc38c9a929838357853a9ba0f04f52f2443de122aa3eb639ad",
+      "screenshot_quality": "f65465b84fec3320a1cadd4acf3f8221c16f2faf8d5a9447b40ae40395b8351c",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "88e4d14565e0f7c189880a523c6773ca3cfcf054cb7cd35f5f4a9829d0c4d7cf"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "dcd0eeb9bcc8ed6d97d62f6ced517ac92d66208ab51c1c6a8d714f109d74898f",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "03a24463ca1004ec58e99ca4d747dfe7dc6bec91060b8c4ac556f42549c4b391",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:10:22.523693+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Constructs a Primitive",
+        "detail": "Pattern matched: 'new Cesium.Primitive'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Creates GeometryInstance objects",
+        "detail": "Pattern matched: 'GeometryInstance'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses CylinderGeometry",
+        "detail": "Pattern matched: 'CylinderGeometry'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Uses PerInstanceColorAppearance",
+        "detail": "Pattern matched: 'PerInstanceColorAppearance'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Uses per-instance color attribute",
+        "detail": "Pattern matched: 'ColorGeometryInstanceAttribute'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Adds primitive to scene",
+        "detail": "Pattern matched: 'scene.primitives.add'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "Uses ENU frame",
+        "detail": "Pattern matched: 'Transforms.eastNorthUpToFixedFrame'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_9",
+        "description": "Targets Times Square longitude",
+        "detail": "Pattern matched: '-73.9'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-001",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 11,
+      "total": 11
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-primitives/baseline/eval-001-batched-cylinders-times-square",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 0.26179938779914824,
+      "pitch": -0.7853981633974487,
+      "position": {
+        "x": 1335007.6806765602,
+        "y": -4651129.069294106,
+        "z": 4142457.6343008326
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-001",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 3569,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 1254555,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 246.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-primitives/eval-001-screenshot.png"
+  ],
+  "skill": "cesiumjs-primitives",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-primitives/baseline/eval-001.js"
+}

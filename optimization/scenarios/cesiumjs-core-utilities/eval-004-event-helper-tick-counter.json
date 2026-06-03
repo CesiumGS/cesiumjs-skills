@@ -1,0 +1,33 @@
+{
+  "id": "eval-004",
+  "name": "event-helper-tick-counter",
+  "landmark": "Animated entity counter via EventHelper over Atlantic",
+  "perspective": "global view with on-screen tick counter label",
+  "difficulty": "medium",
+  "description": "Use EventHelper to subscribe to viewer.clock.onTick and update a label entity's text to show the elapsed tick count. Verifies EventHelper batch subscription, clock.onTick wiring, and live label updates. Screenshot captures the label after the clock has ticked several times.",
+  "prompt": "Add a single label entity positioned at (-30.0, 30.0) over the central Atlantic with initial text 'Ticks: 0', showBackground true, font '24px monospace', fillColor Color.WHITE, backgroundColor Color.BLACK.withAlpha(0.7). Construct a new EventHelper(). Use helper.add(viewer.clock.onTick, () => { tickCount++; label.label.text = 'Ticks: ' + tickCount; }) to wire a counter that updates the label every clock tick. Initialize tickCount as 0 at module scope. Set viewer.clock.shouldAnimate = true. Frame the camera for a global Atlantic view: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-30, 30, 20000000) }).",
+  "expected_behaviors": [
+    "Adds 1 label entity over the central Atlantic (around -30 E, 30 N)",
+    "Label has showBackground: true and a readable font (>= 18px)",
+    "Constructs a new EventHelper()",
+    "Uses helper.add(viewer.clock.onTick, callback) to subscribe",
+    "Callback increments a counter and updates label.label.text",
+    "Sets viewer.clock.shouldAnimate = true",
+    "Frames the camera for a global view (10-25 million m altitude)"
+  ],
+  "visual_expectations": "A global Atlantic-centered view of Earth with a prominent text label visible mid-screen reading 'Ticks: N' (where N is a positive non-zero integer, since the screenshot is taken after the clock has ticked).",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "new (?:Cesium\\.)?EventHelper", "description": "Uses EventHelper" },
+    { "type": "pattern_present", "pattern": "helper\\.add", "description": "Uses helper.add to subscribe" },
+    { "type": "pattern_present", "pattern": "clock\\.onTick", "description": "Subscribes to clock.onTick" },
+    { "type": "pattern_present", "pattern": "shouldAnimate", "description": "Enables clock animation" },
+    { "type": "pattern_present", "pattern": "label", "description": "Uses label graphics" }
+  ],
+  "screenshots": [
+    { "timing": "after_ticks", "delay_ms": 5000, "description": "Global Atlantic view with tick-counter label" }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": ["Event System", "EventHelper for Batch Cleanup"]
+}

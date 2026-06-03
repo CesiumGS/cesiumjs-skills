@@ -4,7 +4,7 @@ description: "CesiumJS materials and post-processing — Material, Fabric JSON, 
 ---
 # CesiumJS Materials, Shaders & Post-Processing
 
-Version baseline: CesiumJS 1.139 (March 2026). All imports use ES module style.
+Version baseline: CesiumJS 1.142 (June 2026). All imports use ES module style.
 
 ## Material System (Fabric JSON)
 
@@ -16,7 +16,7 @@ Version baseline: CesiumJS 1.139 (March 2026). All imports use ES module style.
 
 **Patterns:** `Grid` (color, cellAlpha, lineCount, lineThickness), `Stripe` (evenColor, oddColor, repeat), `Checkerboard` (lightColor, darkColor, repeat), `Dot` (lightColor, darkColor, repeat).
 
-**Effects:** `Water` (baseWaterColor, normalMap, frequency, animationSpeed), `RimLighting` (color, rimColor, width), `Fade` (fadeInColor, fadeOutColor, maximumDistance).
+**Effects:** `Water` (baseWaterColor, blendColor, normalMap, frequency, animationSpeed, amplitude), `RimLighting` (color, rimColor, width), `Fade` (fadeInColor, fadeOutColor, maximumDistance).
 
 **Terrain:** `ElevationContour` (color, spacing, width), `ElevationRamp` (image, minimumHeight, maximumHeight).
 
@@ -41,6 +41,11 @@ const gridMat = new Material({
 // Async loading -- awaits textures before first frame, no flicker
 const imageMat = await Material.fromTypeAsync("Image", { image: "./textures/facade.png" });
 ```
+
+Fabric materials are for primitive appearances. Do not use non-existent entity
+constructors such as `WaterMaterialProperty`; for the built-in water material,
+create `Material.fromType("Water", ...)` and apply it through
+`MaterialAppearance` on a `Primitive`.
 
 ### Custom Fabric with GLSL Source
 
@@ -126,7 +131,7 @@ viewer.scene.primitives.add(model);
 Controls PBR image-based lighting for `Model` and `Cesium3DTileset`. `imageBasedLightingFactor` (Cartesian2) scales diffuse (x) and specular (y) from 0 to 1. Diffuse comes from `sphericalHarmonicCoefficients` (array of 9 Cartesian3, L0-L2). Specular comes from `specularEnvironmentMaps` (URL to KTX2 cube map).
 
 ```js
-import { ImageBasedLighting, Cartesian2, Cartesian3 } from "cesium";
+import { ImageBasedLighting, Model, Cartesian2, Cartesian3 } from "cesium";
 
 const coefficients = [ // 9 Cartesian3 values for L0..L2 bands
   new Cartesian3(0.35, 0.35, 0.38), new Cartesian3(0.11, 0.11, 0.11),
@@ -140,7 +145,7 @@ const ibl = new ImageBasedLighting({
   sphericalHarmonicCoefficients: coefficients,
   specularEnvironmentMaps: "./environment/specular.ktx2",
 });
-const model = await Cesium.Model.fromGltfAsync({ url: "./helmet.glb", imageBasedLighting: ibl });
+const model = await Model.fromGltfAsync({ url: "./helmet.glb", imageBasedLighting: ibl });
 viewer.scene.primitives.add(model);
 // Disable: model.imageBasedLighting.imageBasedLightingFactor = new Cartesian2(0.0, 0.0);
 ```
@@ -151,16 +156,47 @@ Screen-space pipeline via `viewer.scene.postProcessStages` (`PostProcessStageCol
 
 ### Built-in Effects (PostProcessStageLibrary)
 
-`createBlurStage()` (delta, sigma, stepSize), `createDepthOfFieldStage()` (focalDistance, delta, sigma, stepSize), `createEdgeDetectionStage()` (color, length), `createSilhouetteStage()` (color, length), `createBlackAndWhiteStage()` (gradations), `createBrightnessStage()` (brightness), `createNightVisionStage()`, `createLensFlareStage()` (intensity, distortion, ghostDispersal, haloWidth).
+All factory functions return stage composites that must be added via `viewer.scene.postProcessStages.add()`.
+
+`createBloomStage()` (contrast, brightness, glowOnly, delta, sigma, stepSize), `createBlurStage()` (delta, sigma, stepSize), `createDepthOfFieldStage()` (focalDistance, delta, sigma, stepSize), `createEdgeDetectionStage()` (color, length), `createSilhouetteStage([edgeStage])` (wraps an edge detection stage into a silhouette composite), `createBlackAndWhiteStage()` (gradations), `createBrightnessStage()` (brightness), `createNightVisionStage()`, `createLensFlareStage()` (intensity, distortion, ghostDispersal, haloWidth).
+
+**Bloom via factory** (use this to add a distinct bloom instance via `postProcessStages.add`):
+
+```js
+import { PostProcessStageLibrary } from "cesium";
+
+const bloom = viewer.scene.postProcessStages.add(
+  PostProcessStageLibrary.createBloomStage()
+);
+bloom.enabled = true;
+bloom.uniforms.contrast = 128.0;
+bloom.uniforms.brightness = -0.3;
+bloom.uniforms.glowOnly = false;
+bloom.uniforms.delta = 1.0;
+bloom.uniforms.sigma = 3.78;
+bloom.uniforms.stepSize = 5.0;
+```
+
+**Silhouette via factory** (pass an edge detection stage into the silhouette composite):
+
+```js
+import { PostProcessStageLibrary, Color } from "cesium";
+
+const edgeStage = PostProcessStageLibrary.createEdgeDetectionStage();
+edgeStage.uniforms.color = Color.YELLOW;
+edgeStage.uniforms.length = 0.25;
+const silhouette = PostProcessStageLibrary.createSilhouetteStage([edgeStage]);
+viewer.scene.postProcessStages.add(silhouette);
+```
 
 ### Collection Stages (Bloom, AO, FXAA, Tonemapping)
 
-Bloom, ambient occlusion, and FXAA are accessed directly on the collection (not via the library). Tonemapping defaults to `PBR_NEUTRAL`.
+The collection exposes always-present built-in composites for bloom, ambient occlusion, and FXAA — these do not require `add()`. Tonemapping defaults to `PBR_NEUTRAL`.
 
 ```js
 import { Tonemapper, PostProcessStageLibrary } from "cesium";
 
-// Bloom
+// Bloom (collection shortcut — always present, no add() needed)
 viewer.scene.postProcessStages.bloom.enabled = true;
 viewer.scene.postProcessStages.bloom.uniforms.contrast = 128.0;
 viewer.scene.postProcessStages.bloom.uniforms.brightness = -0.3;

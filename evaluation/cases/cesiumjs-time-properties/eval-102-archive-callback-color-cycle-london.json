@@ -1,0 +1,113 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses CallbackProperty",
+      "id": "pattern_present_02",
+      "pattern": "new (?:Cesium\\.)?CallbackProperty",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses ColorMaterialProperty",
+      "id": "pattern_present_03",
+      "pattern": "ColorMaterialProperty",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Cycles hue via Color.fromHsl",
+      "id": "pattern_present_04",
+      "pattern": "Color\\.fromHsl",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Reads elapsed seconds",
+      "id": "pattern_present_05",
+      "pattern": "JulianDate\\.secondsDifference",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Animates the clock",
+      "id": "pattern_present_06",
+      "pattern": "shouldAnimate\\s*=\\s*true",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Polygon entity",
+      "id": "pattern_present_07",
+      "pattern": "polygon",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets London latitude",
+      "id": "pattern_present_08",
+      "pattern": "51\\.5",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Create a large polygon entity over central London whose material is a ColorMaterialProperty backed by a CallbackProperty that returns Color.fromHsl((seconds % 8) / 8, 0.8, 0.5) \u2014 cycling through the full hue range every 8 seconds. Set viewer.clock to run at multiplier 1, shouldAnimate true, and rely on the runner's screenshot delay to capture a non-default-hue colour.",
+  "id": "eval-102",
+  "name": "archive-callback-color-cycle-london",
+  "notes": "Imported from optimization/scenarios/cesiumjs-time-properties/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Adds 1 polygon entity covering central London",
+      "Polygon.material is a ColorMaterialProperty(new CallbackProperty(...))",
+      "CallbackProperty's function computes a colour from time",
+      "Uses Color.fromHsl for hue cycling",
+      "Sets viewer.clock.shouldAnimate = true",
+      "Sets viewer.clock.startTime and currentTime to specific JulianDate values",
+      "Frames the camera over central London (around 51.51 N, -0.13 W) at 15,000-50,000 m altitude"
+    ],
+    "landmark": "London pulsing marker entity",
+    "perspective": "city view with colour-cycling entity",
+    "source": "optimization/scenarios",
+    "source_name": "callback-color-cycle-london",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "A top-down view of central London with a large rectangular polygon overlay coloured with a vivid saturated colour (orange, yellow, green, blue, purple, or pink \u2014 any one of the HSL ramp), partially transparent. The Thames should be visible underneath."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Add a polygon entity covering central London as a rectangle from (-0.18, 51.48) to (-0.08, 51.54). Assign its polygon.material to new ColorMaterialProperty(new CallbackProperty((time, result) => { const seconds = JulianDate.secondsDifference(time, viewer.clock.startTime); const hue = (seconds % 8) / 8; return Color.fromHsl(hue, 0.8, 0.5, 0.8, result); }, false)). Set viewer.clock.shouldAnimate = true. Set viewer.clock.startTime = JulianDate.fromIso8601('2026-05-20T12:00:00Z') and currentTime = JulianDate.addSeconds(startTime, 3, new JulianDate()). Frame the camera over central London (51.51 N, -0.13 W) at 25,000 m altitude looking straight down.",
+  "schema_version": 1,
+  "skill": "cesiumjs-time-properties",
+  "timeout_ms": 5000
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvaluationResult",
+  "description": "Deterministic evaluation result emitted by evaluation.runner.",
+  "type": "object",
+  "required": ["case_id", "case_name", "skill", "result", "duration_ms", "error", "checks"],
+  "additionalProperties": false,
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "pattern": "^eval-[0-9]{3}$"
+    },
+    "case_name": {
+      "type": "string"
+    },
+    "skill": {
+      "type": "string"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "error": {
+      "type": ["string", "null"]
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/check_result"
+      }
+    }
+  },
+  "definitions": {
+    "check_result": {
+      "type": "object",
+      "required": [
+        "check_id",
+        "type",
+        "result",
+        "category",
+        "critical",
+        "weight",
+        "tolerance",
+        "actual",
+        "expected",
+        "detail",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "check_id": { "type": "string" },
+        "type": { "type": "string" },
+        "result": { "type": "string", "enum": ["pass", "fail"] },
+        "category": { "type": "string" },
+        "critical": { "type": "boolean" },
+        "weight": { "type": "number", "minimum": 0 },
+        "tolerance": {},
+        "actual": {},
+        "expected": {},
+        "detail": { "type": "string" },
+        "metadata": { "type": "object" }
+      }
+    }
+  }
+}

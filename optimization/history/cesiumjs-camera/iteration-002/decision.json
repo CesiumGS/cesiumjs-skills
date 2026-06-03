@@ -1,0 +1,13 @@
+{
+  "decision": "KEEP",
+  "rule_fired": "rule_3_more_wins",
+  "counts": {
+    "wins": 8,
+    "losses": 2,
+    "ties": 4,
+    "critical_failures": 0,
+    "check_failures": 0
+  },
+  "rationale": "KEEP: Candidate won 8 scenarios vs 2 baseline wins",
+  "rebaseline_required": []
+}

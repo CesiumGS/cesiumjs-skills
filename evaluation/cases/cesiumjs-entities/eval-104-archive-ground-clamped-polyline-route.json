@@ -1,0 +1,96 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Polyline graphics defined",
+      "id": "pattern_present_02",
+      "pattern": "polyline:",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Clamped to ground",
+      "id": "pattern_present_03",
+      "pattern": "clampToGround.*true|clampToGround:\\s*true",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "LA longitude",
+      "id": "pattern_present_04",
+      "pattern": "-118",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "NYC longitude",
+      "id": "pattern_present_05",
+      "pattern": "-74",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "City labels present",
+      "id": "pattern_present_06",
+      "pattern": "label:",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Draw a ground-clamped polyline between cities. Tests polyline creation, clampToGround, and multi-point paths. The route must be visually obvious in the screenshot.",
+  "id": "eval-104",
+  "name": "archive-ground-clamped-polyline-route",
+  "notes": "Imported from optimization/scenarios/cesiumjs-entities/eval-004. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Creates a polyline entity with positions for all 4 cities",
+      "Sets clampToGround to true",
+      "Sets width high enough to be visible from the screenshot camera",
+      "Sets material to red",
+      "Adds point + label entities at each city",
+      "All longitudes are negative (US cities)"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "ground-clamped-polyline-route",
+    "source_scenario_id": "eval-004",
+    "visual_expectations": "A bright red line connecting LA to Denver to Chicago to NYC across the US, following terrain. Four large labeled city markers should be visible at each endpoint."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Draw a high-contrast red polyline route on the globe connecting these cities in order: Los Angeles (-118.2437, 34.0522), Denver (-104.9903, 39.7392), Chicago (-87.6298, 41.8781), New York (-74.0060, 40.7128). The line should follow the ground (clamped to terrain), be at least 8 pixels wide, and use a red color or red glow material. Add a large labeled point at each city. Frame the camera top-down over the continental US so the full red route and all four markers are visible; avoid a tilted globe view where the route disappears.",
+  "schema_version": 1,
+  "skill": "cesiumjs-entities",
+  "timeout_ms": 5000
+}

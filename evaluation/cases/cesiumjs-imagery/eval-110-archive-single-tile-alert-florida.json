@@ -1,0 +1,78 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses single-tile provider",
+      "id": "pattern_present_02",
+      "pattern": "SingleTileImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets overlay rectangle",
+      "id": "pattern_present_03",
+      "pattern": "Rectangle\\.fromDegrees",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Generates or uses in-memory image data",
+      "id": "pattern_present_04",
+      "pattern": "toDataURL|data:image",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Create a generated single-image overlay and drape it over Florida. Tests the single-tile provider without depending on a local asset file.",
+  "id": "eval-110",
+  "name": "archive-single-tile-alert-florida",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-010. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Creates a canvas-generated image or other in-memory image URL",
+      "Uses SingleTileImageryProvider.fromUrl",
+      "Sets a Rectangle.fromDegrees extent over Florida",
+      "Adds the single-tile imagery layer to the viewer"
+    ],
+    "landmark": "Florida, USA",
+    "perspective": "regional generated image overlay",
+    "source": "optimization/scenarios",
+    "source_name": "single-tile-alert-florida",
+    "source_scenario_id": "eval-010",
+    "visual_expectations": "Florida should show a visible tinted overlay region stretched across the peninsula, making the single-tile overlay obvious against the normal base imagery."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create a CesiumJS viewer centered on Florida. Programmatically generate a simple semi-transparent alert overlay image using an HTML canvas, convert it to a data URL, and use SingleTileImageryProvider.fromUrl to drape that single image over a rectangle covering most of the Florida peninsula. The screenshot should clearly show the red or orange tinted alert overlay stretched over Florida.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

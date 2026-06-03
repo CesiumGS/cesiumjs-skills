@@ -1,0 +1,9 @@
+{
+  "iteration": "002",
+  "decision": "REJECT",
+  "timestamp_utc": "2026-05-27T20:52:04.953180+00:00",
+  "runs_dir": "optimization/runs/cesiumjs-entities/002",
+  "candidate_dir": "optimization/candidates/cesiumjs-entities/002",
+  "generated_dir": "optimization/generated/cesiumjs-entities/002",
+  "journal": "optimization/history/cesiumjs-entities/iteration-002/journal.jsonl"
+}

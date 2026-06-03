@@ -1,0 +1,181 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 10,
+        "total": 10
+      },
+      "source_scenario_id": "eval-002"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-102",
+  "case_name": "mouse-coord-readout-label",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-interaction/baseline/eval-002-mouse-coord-readout-label/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst initialLon = 25.0;\nconst initialLat = 37.5;\n\nconst coordLabel = viewer.entities.add({\n  position: Cesium.Cartesian3.fromDegrees(initialLon, initialLat),\n  label: {\n    text: `Lon: ${initialLon.toFixed(2)} Lat: ${initialLat.toFixed(2)}`,\n    show: true,\n    showBackground: true,\n    font: '14px monospace',\n    horizontalOrigin: Cesium.HorizontalOrigin.LEFT,\n    verticalOrigin: Cesium.VerticalOrigin.TOP,\n    pixelOffset: new Cesium.Cartesian2(15, 0)\n  }\n});\n\nconst handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);\n\nhandler.setInputAction((movement) => {\n  const cartesian = viewer.camera.pickEllipsoid(\n    movement.endPosition,\n    viewer.scene.globe.ellipsoid\n  );\n  if (Cesium.defined(cartesian)) {\n    const c = Cesium.Cartographic.fromCartesian(cartesian);\n    const lonDeg = Cesium.Math.toDegrees(c.longitude);\n    const latDeg = Cesium.Math.toDegrees(c.latitude);\n    coordLabel.position = cartesian;\n    coordLabel.label.text =\n      `Lon: ${lonDeg.toFixed(2)} Lat: ${latDeg.toFixed(2)}`;\n  }\n}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(25.0, 37.0, 1500000),\n  orientation: {\n    heading: 0.0,\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0\n  }\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "d067bd967521e23d927e6b166f299ab288216d0d13eaa62dd32d4297f120fb31",
+      "programmatic_checks": "fb76d236fbd653e95ed53147bd496cf8b04fd320563ed905276e2eb12dd73335",
+      "scene_state": "c0a874b077464bb22b2eb4facc6be898efa3f4ea927bc03ee2a191762147fa17",
+      "screenshot_quality": "4133d9d46c2f725196098f44561f0dc3719a2faff8fbf82a75ab7c70b594271d",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "377bd403de22b8bc74be0d3656d2578206d6e2fb103d4f86bd306ee782a4e2c5"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "2cea6744a906c6b9f9bef6adf6652539c2ac975128743b0803fcb6dadbf5d7a5",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "6df92a5849ef55b2546ad8dae89e0d3ac2187bd8a0fd0e549bd56017af799ef9",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:06:46.468088+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Constructs handler",
+        "detail": "Pattern matched: 'new Cesium.ScreenSpaceEventHandler'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses MOUSE_MOVE event type",
+        "detail": "Pattern matched: 'ScreenSpaceEventType.MOUSE_MOVE'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses camera.pickEllipsoid",
+        "detail": "Pattern matched: 'pickEllipsoid'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Converts to cartographic",
+        "detail": "Pattern matched: 'Cartographic.fromCartesian'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Converts radians to degrees",
+        "detail": "Pattern matched: 'Cesium.Math.toDegrees'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Label has showBackground",
+        "detail": "Pattern matched: 'showBackground'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "Uses label graphics",
+        "detail": "Pattern matched: 'Label'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-002",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 10,
+      "total": 10
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-interaction/baseline/eval-002-mouse-coord-readout-label",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 5707877.84877653,
+        "y": 2661627.1526977746,
+        "z": 4720115.6950762365
+      },
+      "roll": 0
+    },
+    "entity_count": 1,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-002",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2492,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 767655,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 201.14,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-interaction/eval-002-screenshot.png"
+  ],
+  "skill": "cesiumjs-interaction",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-interaction/baseline/eval-002.js"
+}

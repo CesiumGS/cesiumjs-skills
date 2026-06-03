@@ -1,0 +1,96 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses Fabric Water material",
+      "id": "pattern_present_02",
+      "pattern": "Material\\.fromType\\(\\s*['\"]Water['\"]|type:\\s*['\"]Water['\"]",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Configures water colour parameters",
+      "id": "pattern_present_03",
+      "pattern": "(?:baseWaterColor|blendColor)",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets animation speed",
+      "id": "pattern_present_04",
+      "pattern": "animationSpeed",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets wave amplitude",
+      "id": "pattern_present_05",
+      "pattern": "amplitude",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses polygon primitive geometry",
+      "id": "pattern_present_06",
+      "pattern": "PolygonGeometry|PolygonHierarchy",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Apply Cesium's Fabric 'Water' material to a primitive polygon covering the western Mediterranean (Italy/Sardinia area) so the surface renders as animated water with visible waves and normals. Tests fabric material assignment and water-specific parameters.",
+  "id": "eval-104",
+  "name": "archive-water-material-polygon-mediterranean",
+  "notes": "Imported from optimization/scenarios/cesiumjs-materials-shaders/eval-004. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Adds 1 primitive polygon over western Mediterranean",
+      "Uses Cesium.Material.fromType('Water') or equivalent Fabric Water material",
+      "Configures baseWaterColor (or equivalent) to a blue tone",
+      "Configures animationSpeed > 0 and amplitude > 0 so the water visibly animates",
+      "Frames the camera over Italy/Mediterranean (around 11 E, 40 N) at 1-3 million m altitude",
+      "Camera pitch is straight down or near-vertical"
+    ],
+    "landmark": "Animated water material over Italy and the western Mediterranean",
+    "perspective": "regional view with shimmering water-textured polygon",
+    "source": "optimization/scenarios",
+    "source_name": "water-material-polygon-mediterranean",
+    "source_scenario_id": "eval-004",
+    "visual_expectations": "A top-down camera view of Italy and the western Mediterranean with the sea region rendered as visibly textured blue water \u2014 wave normals and varying color across the surface should be apparent vs a flat blue colour."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Add a single primitive polygon covering the western Mediterranean as a rectangle from (4.0, 36.0) to (16.0, 43.0). Use PolygonGeometry with a PolygonHierarchy built from Cartesian3.fromDegreesArray, wrap it in a GeometryInstance, and render it with MaterialAppearance whose material is Cesium.Material.fromType('Water', { baseWaterColor: Cesium.Color.fromBytes(30, 70, 130, 220), blendColor: Cesium.Color.fromBytes(0, 100, 150, 255), frequency: 1000, animationSpeed: 0.05, amplitude: 7.0 }). Do not use a basic Color material. Frame the camera over Italy: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(11.0, 40.0, 1800000) }) looking straight down at ~1,800,000 m altitude so the polygon covers a meaningful portion of the screen.",
+  "schema_version": 1,
+  "skill": "cesiumjs-materials-shaders",
+  "timeout_ms": 5000
+}

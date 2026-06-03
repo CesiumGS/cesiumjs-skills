@@ -1,0 +1,36 @@
+{
+  "id": "eval-004",
+  "name": "czml-satellite-orbit",
+  "landmark": "Inline CZML satellite orbiting Earth",
+  "perspective": "global view of an animated satellite path",
+  "difficulty": "hard",
+  "description": "Build an inline CZML packet for a satellite with a SampledPositionProperty arc over 90 minutes circling Earth, load it via CzmlDataSource.load, set up the clock to play the orbit, advance to the midpoint, and frame globally so the path arc is fully visible.",
+  "prompt": "Build an inline CZML document array containing: (1) a document packet with id 'document', name 'satellite', version '1.0', clock { interval: '2026-05-20T00:00:00Z/2026-05-20T01:30:00Z', currentTime: '2026-05-20T00:45:00Z', multiplier: 60, range: 'LOOP_STOP' }; (2) a satellite packet with id 'sat', name 'SAT', position with epoch '2026-05-20T00:00:00Z' and cartographicDegrees [seconds, lon, lat, alt] samples spaced ~600s apart covering one orbit: e.g., [0, 0, 0, 700000], [600, 22.5, 30, 700000], [1200, 45, 50, 700000], [1800, 90, 30, 700000], ... continuing around (use 12 samples around the globe). Add a visible point graphic or a billboard with a small inline data URL only; do not reference /Apps/SampleData or any local sample image path. Add a path with width 4, leadTime 5400, trailTime 5400, material as solid color with Color.LIME. Load via const ds = await Cesium.CzmlDataSource.load(czml); viewer.dataSources.add(ds). Set viewer.clock.shouldAnimate = true. Frame globally: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(45, 30, 25000000) }).",
+  "expected_behaviors": [
+    "Defines an inline CZML array with a document packet AND at least one satellite/object packet",
+    "Document packet sets clock.interval (or similar) over a non-zero time range",
+    "Satellite packet has position with cartographicDegrees samples (lon, lat, alt) or cartographicRadians",
+    "Includes at least 8 samples spaced around an orbit",
+    "Includes a billboard or point graphic for the satellite",
+    "Includes a path graphic with leadTime + trailTime",
+    "Loads via CzmlDataSource.load and adds to viewer.dataSources",
+    "Sets viewer.clock.shouldAnimate = true",
+    "Frames globally (10M+ m altitude)"
+  ],
+  "visual_expectations": "A global view of Earth with a visible coloured orbital path arc curving around the planet, with a satellite billboard somewhere along the arc indicating its current position.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "CzmlDataSource", "description": "Uses CzmlDataSource" },
+    { "type": "pattern_present", "pattern": "cartographicDegrees", "description": "Uses cartographicDegrees position samples" },
+    { "type": "pattern_present", "pattern": "(?:clock|interval)", "description": "CZML defines clock or interval" },
+    { "type": "pattern_present", "pattern": "(?:leadTime|trailTime)", "description": "Path has leadTime/trailTime" },
+    { "type": "pattern_present", "pattern": "viewer\\.dataSources", "description": "Adds to dataSources" },
+    { "type": "pattern_present", "pattern": "shouldAnimate", "description": "Animates the clock" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 6000, "description": "Global view with orbital arc and satellite billboard" }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": ["CZML Temporal Data", "Property System -- Time-Varying Values"]
+}

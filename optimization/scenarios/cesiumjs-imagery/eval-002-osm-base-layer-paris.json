@@ -1,0 +1,32 @@
+{
+  "id": "eval-002",
+  "name": "osm-base-layer-paris",
+  "landmark": "Paris, France",
+  "perspective": "top-down city map",
+  "section_coverage": [
+    "Swapping the Base Layer",
+    "OpenStreetMapImageryProvider"
+  ],
+  "difficulty": "easy",
+  "description": "Create a viewer with OpenStreetMap as the explicit base layer and center the camera on Paris. Tests public base-layer configuration without first loading Cesium ion defaults.",
+  "prompt": "Create a CesiumJS viewer with `baseLayer: false` (or an explicit OpenStreetMap base layer) so the code does not first load default ion imagery. Add OpenStreetMap tiles from `https://tile.openstreetmap.org/` with `maximumLevel: 18` as the base imagery layer, and set the camera to a top-down map view over central Paris. The result should clearly show OpenStreetMap cartography around the Seine and the Eiffel Tower area. Do not use ImageryLayer.fromWorldImagery or ion defaults.",
+  "expected_behaviors": [
+    "Avoids the default ion base layer by using baseLayer false or an explicit OpenStreetMap base layer",
+    "Creates an OpenStreetMapImageryProvider",
+    "Adds the replacement imagery layer at base-layer index 0",
+    "Positions the camera over Paris"
+  ],
+  "visual_expectations": "A top-down cartographic map of Paris with recognizable OpenStreetMap styling, road labels, and the Seine river visible.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "OpenStreetMapImageryProvider", "description": "Uses OSM provider" },
+    { "type": "pattern_present", "pattern": "baseLayer:\\s*false|imageryLayers\\.remove|OpenStreetMapImageryProvider", "description": "Avoids or replaces the default base layer" },
+    { "type": "pattern_present", "pattern": "imageryLayers\\.add\\([^\\n]*,\\s*0\\)|imageryLayers\\.addImageryProvider|baseLayer:\\s*new\\s+Cesium\\.ImageryLayer|baseLayer:\\s*new\\s+ImageryLayer", "description": "Adds or configures OSM as the base layer" },
+    { "type": "pattern_present", "pattern": "2\\.29|48\\.85", "description": "Targets Paris coordinates" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 5000, "description": "OSM base map over Paris" }
+  ],
+  "regression_critical": true
+}

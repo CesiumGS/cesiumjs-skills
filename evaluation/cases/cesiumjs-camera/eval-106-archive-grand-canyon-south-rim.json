@@ -1,0 +1,80 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Grand Canyon latitude",
+      "id": "pattern_present_02",
+      "pattern": "36\\.0",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Grand Canyon longitude negative",
+      "id": "pattern_present_03",
+      "pattern": "-112",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses a camera method",
+      "id": "pattern_present_04",
+      "pattern": "flyTo|setView|lookAt",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "View the Grand Canyon from the south rim, looking north across a no-token procedural canyon terrain surface. Tests near-ground camera positioning with a horizontal perspective over visible terrain relief.",
+  "id": "eval-106",
+  "name": "archive-grand-canyon-south-rim",
+  "notes": "Imported from optimization/scenarios/cesiumjs-camera/eval-006. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Camera near the south rim coordinates",
+      "Uses no-token procedural terrain or another public terrain source so relief is visible",
+      "Very low altitude (50-200m above terrain)",
+      "Pitch near horizontal (-5 to -15 degrees) to see across the canyon",
+      "Heading ~0 (facing north, across the canyon)",
+      "Should convey the depth and scale of the canyon"
+    ],
+    "landmark": "Grand Canyon",
+    "perspective": "south rim perspective looking across",
+    "source": "optimization/scenarios",
+    "source_name": "grand-canyon-south-rim",
+    "source_scenario_id": "eval-006",
+    "visual_expectations": "A dramatic public no-token view from the south rim looking north across the Grand Canyon. The screenshot should have visible canyon relief cues such as rim walls, a river line, or procedural terrain displacement rather than a flat pale basemap."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer and no ion defaults. Use a no-token Cesium.CustomHeightmapTerrainProvider with exaggerated canyon-like ridges/trenches and add simple public canyon guide geometry if needed (for example translucent orange wall entities for the rims and a blue river polyline) so this public eval visibly shows canyon relief without Cesium World Terrain entitlement. Position the camera at the south rim of the Grand Canyon (approximately 36.06 N, 112.14 W), looking north across the canyon at about 100 meters above the rim. I want to see the canyon depth and the north rim in the distance. Use a near-horizontal pitch to see across the canyon.",
+  "schema_version": 1,
+  "skill": "cesiumjs-camera",
+  "timeout_ms": 5000
+}

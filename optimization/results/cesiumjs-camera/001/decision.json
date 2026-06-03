@@ -1,0 +1,13 @@
+{
+  "decision": "REJECT",
+  "rule_fired": "rule_1_check_failure",
+  "counts": {
+    "wins": 2,
+    "losses": 0,
+    "ties": 0,
+    "critical_failures": 0,
+    "check_failures": 1
+  },
+  "rationale": "REJECT: Programmatic check failed on scenario eval-003",
+  "rebaseline_required": []
+}

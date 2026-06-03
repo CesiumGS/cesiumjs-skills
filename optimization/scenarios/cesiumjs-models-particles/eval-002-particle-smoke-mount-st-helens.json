@@ -1,0 +1,72 @@
+{
+  "id": "eval-002",
+  "name": "particle-smoke-mount-st-helens",
+  "landmark": "Mount St. Helens, Washington",
+  "perspective": "framed mountain with smoke plume rising from the crater",
+  "difficulty": "hard",
+  "description": "Place a ParticleSystem at Mount St. Helens' crater that emits an upward smoke plume. Particles should use a high-contrast translucent grey image, animate the clock, and be framed close enough that the plume is clearly visible in a public no-terrain browser run. Tests ParticleSystem construction, emitters, lifecycle, and Transforms-based modelMatrix.",
+  "prompt": "Construct a Cesium ParticleSystem at Mount St. Helens' crater (-122.1944 longitude, 46.1914 latitude, 2549 m altitude). Use a translucent grey particle image (a small radial-gradient canvas or data URL works). Set viewer.clock.shouldAnimate = true. Configure: emissionRate around 60, particleLife around 6s, minimumParticleLife 4, maximumParticleLife 8, minimumSpeed 8, maximumSpeed 16, startScale 1.4, endScale 8.0, imageSize new Cartesian2(30, 30), emitter new CircleEmitter(4.0). Use modelMatrix Transforms.eastNorthUpToFixedFrame at the crater position so particles rise upward in local up. Add the system to viewer.scene.primitives. Add a small dark crater marker entity or ellipse at the same coordinates so the source is visible without Ion terrain. Frame the camera with viewer.camera.lookAt(craterPosition, new Cesium.HeadingPitchRange(...)) from an oblique above-ground angle looking directly at the plume; avoid horizon-only views and avoid zooming so close that the plume becomes a full-screen blob.",
+  "expected_behaviors": [
+    "Constructs a new ParticleSystem with constructor options object",
+    "Provides a particle image (canvas, data URL, or URL)",
+    "Sets emissionRate between 20 and 50",
+    "Sets a particle lifetime between 3 and 8 seconds",
+    "Uses a CircleEmitter, BoxEmitter, ConeEmitter, or SphereEmitter",
+    "modelMatrix is built from Transforms.eastNorthUpToFixedFrame (or headingPitchRollToFixedFrame) at the crater coordinates",
+    "Adds the particle system to viewer.scene.primitives",
+    "Frames the camera so the crater marker and rising plume are visible"
+  ],
+  "visual_expectations": "An oblique public no-terrain view centered on Mount St. Helens with a dark crater marker and a clearly visible upward-rising column of translucent grey particles emerging from the marker.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?ParticleSystem",
+      "description": "Constructs ParticleSystem"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "emissionRate",
+      "description": "Sets emissionRate"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:CircleEmitter|BoxEmitter|ConeEmitter|SphereEmitter)",
+      "description": "Uses an emitter type"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Transforms\\.(?:eastNorthUpToFixedFrame|headingPitchRollToFixedFrame)",
+      "description": "Uses local frame for modelMatrix"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-122\\.1",
+      "description": "Targets Mount St. Helens longitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "46\\.1",
+      "description": "Targets Mount St. Helens latitude"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 8000,
+      "description": "Mount St. Helens with rising smoke plume"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "Particle Systems",
+    "Attaching Particles to a Moving Model"
+  ]
+}

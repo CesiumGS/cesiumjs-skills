@@ -1,0 +1,114 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Constructs handler",
+      "id": "pattern_present_02",
+      "pattern": "new (?:Cesium\\.)?ScreenSpaceEventHandler",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses MOUSE_MOVE event type",
+      "id": "pattern_present_03",
+      "pattern": "ScreenSpaceEventType\\.MOUSE_MOVE",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses camera.pickEllipsoid",
+      "id": "pattern_present_04",
+      "pattern": "pickEllipsoid",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Converts to cartographic",
+      "id": "pattern_present_05",
+      "pattern": "Cartographic\\.fromCartesian",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Converts radians to degrees",
+      "id": "pattern_present_06",
+      "pattern": "(?:CesiumMath|Cesium\\.Math)\\.toDegrees",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Label has showBackground",
+      "id": "pattern_present_07",
+      "pattern": "showBackground",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses label graphics",
+      "id": "pattern_present_08",
+      "pattern": "label",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": true,
+  "description": "Add a fixed-position coordinate readout label entity over the eastern Mediterranean and register a MOUSE_MOVE handler that updates the label text from viewer.camera.pickEllipsoid + Cartographic.fromCartesian. Verifies the wiring of MOUSE_MOVE, pickEllipsoid, and live label updates. To make the screenshot meaningful, initialize the label with a sample coordinate string so it is visible even without a real mouse move.",
+  "id": "eval-102",
+  "name": "archive-mouse-coord-readout-label",
+  "notes": "Imported from optimization/scenarios/cesiumjs-interaction/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Adds a label entity at (25.0, 37.5) with initial text containing 'Lon:' and 'Lat:'",
+      "Label uses showBackground: true and a monospace font",
+      "Constructs a new ScreenSpaceEventHandler",
+      "Calls handler.setInputAction with ScreenSpaceEventType.MOUSE_MOVE",
+      "Callback uses viewer.camera.pickEllipsoid",
+      "Callback uses Cartographic.fromCartesian and Cesium.Math.toDegrees (or CesiumMath.toDegrees in module-style code)",
+      "Callback updates label.text to a formatted Lon/Lat string",
+      "Frames camera over the eastern Mediterranean at ~37 N, 25 E"
+    ],
+    "landmark": "Eastern Mediterranean \u2014 Greece islands",
+    "perspective": "regional view with on-screen coordinate label",
+    "source": "optimization/scenarios",
+    "source_name": "mouse-coord-readout-label",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "An eastern-Mediterranean camera view (Greece, Turkey coast, Aegean islands clearly visible) with a labelled text box on the screen showing 'Lon:' and 'Lat:' values, anchored over the Aegean Sea."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create a label entity positioned at 25.0 longitude, 37.5 latitude (over the Aegean Sea) with text initialized to 'Lon: 25.00 Lat: 37.50' so the readout is visible before any pointer interaction. Style the label with showBackground true, font '14px monospace', horizontalOrigin LEFT, verticalOrigin TOP, and a pixelOffset of (15, 0). Construct a ScreenSpaceEventHandler on viewer.scene.canvas, register a MOUSE_MOVE input action that calls viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid), converts to Cartographic, and updates the label text to 'Lon: X.XX Lat: Y.YY'. Frame the camera over the eastern Mediterranean (around 37 N, 25 E, 1,500,000 m altitude).",
+  "schema_version": 1,
+  "skill": "cesiumjs-interaction",
+  "timeout_ms": 5000
+}

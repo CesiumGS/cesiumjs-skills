@@ -1,0 +1,28 @@
+{
+  "id": "eval-005",
+  "name": "nyc-skyline-from-hudson",
+  "landmark": "NYC Skyline",
+  "perspective": "panoramic from across Hudson River",
+  "difficulty": "hard",
+  "description": "View the NYC skyline from across the Hudson River in New Jersey, looking east. Tests whether the skill guides positioning camera AWAY from the target for a panoramic cityscape view.",
+  "prompt": "Position the camera in the air over the Hudson River, west of Manhattan, looking east toward the NYC skyline. I want to see the full Manhattan skyline as if photographing it from across the river at about 500 meters altitude. Camera should be roughly at coordinates 40.7484 N, 74.02 W (over the Hudson), looking east.",
+  "expected_behaviors": [
+    "Camera positioned west of Manhattan (longitude more negative than -74.0)",
+    "Heading ~90 degrees (facing east toward Manhattan)",
+    "Low-medium altitude (300-800m) for skyline perspective",
+    "Pitch near horizontal or slightly down (-5 to -15 degrees)",
+    "Uses flyTo or setView (not lookAt — this is a positioned view, not an orbital lock)"
+  ],
+  "visual_expectations": "The Manhattan skyline viewed from the west across the Hudson River. The waterfront, piers, and city buildings should be visible. This is the classic NYC postcard view from New Jersey side.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "flyTo|setView", "description": "Uses flyTo or setView (positioned view)"},
+    {"type": "pattern_present", "pattern": "40\\.7", "description": "NYC latitude"},
+    {"type": "pattern_present", "pattern": "-74", "description": "West of Manhattan longitude"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 6000, "description": "NYC skyline from Hudson River, looking east"}
+  ],
+  "regression_critical": true
+}

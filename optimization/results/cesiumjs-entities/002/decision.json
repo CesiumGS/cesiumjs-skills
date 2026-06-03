@@ -1,0 +1,13 @@
+{
+  "decision": "REJECT",
+  "rule_fired": "rule_2_critical_judge_loss",
+  "counts": {
+    "wins": 0,
+    "losses": 1,
+    "ties": 0,
+    "critical_failures": 0,
+    "check_failures": 0
+  },
+  "rationale": "REJECT: Judge loss on regression-critical scenario eval-001",
+  "rebaseline_required": []
+}

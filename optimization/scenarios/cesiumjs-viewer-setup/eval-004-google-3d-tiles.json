@@ -1,0 +1,60 @@
+{
+  "id": "eval-004",
+  "name": "public-3d-tiles-viewer",
+  "difficulty": "hard",
+  "description": "Set up a viewer with a public URL-backed 3D Tiles source. This verifies the viewer setup skill can bootstrap a 3D Tiles scene in the public eval runtime without Google/Ion entitlements.",
+  "prompt": "In the eval page, create a CesiumJS viewer with OpenStreetMap as the explicit base layer and no ion defaults. Load the public Cesium Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` using `Cesium.Cesium3DTileset.fromUrl`, add it to scene.primitives, and frame it clearly with `viewer.flyTo` and an oblique `HeadingPitchRange` far enough back to show the whole dragon and surrounding map context. The dragon should be bright and inspectable, not an extreme close-up of one surface. The Cesium global object and cesiumContainer element are already configured by the runner. Do not call createGooglePhotorealistic3DTileset, createOsmBuildingsAsync, IonGeocodeProviderType.GOOGLE, or ion asset helpers.",
+  "expected_behaviors": [
+    "Does not hardcode or reset Ion.defaultAccessToken",
+    "Creates the Cesium.Viewer with an explicit public base layer",
+    "Calls Cesium.Cesium3DTileset.fromUrl()",
+    "Adds the tileset to scene.primitives",
+    "Frames the public 3D Tiles sample clearly without cropping it into an extreme close-up"
+  ],
+  "visual_expectations": "A visible public 3D Tiles sample inside a correctly initialized viewer. The screenshot should show the whole dragon or most of it with surrounding map context, proving URL-backed 3D Tiles can load and be framed without Google/Ion entitlements.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JavaScript errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "Code executes without throwing"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "Ion\\.defaultAccessToken",
+      "description": "Generated code does not hardcode or reset the Ion token"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Uses URL-backed 3D Tiles factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public dragon tileset"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createGooglePhotorealistic3DTileset|IonGeocodeProviderType\\.GOOGLE|fromIonAssetId",
+      "description": "Google/Ion entitlement-backed helpers are not used"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Initial load"
+    },
+    {
+      "timing": "after_animation",
+      "delay_ms": 12000,
+      "description": "After camera framing - public 3D Tiles dragon should be visible"
+    }
+  ],
+  "regression_critical": false,
+  "notes": "This keeps the viewer setup coverage focused on a runnable public 3D Tiles scene. Google Photorealistic 3D Tiles remain documented in the skill, but they are not part of the public baseline eval because they require external entitlement.",
+  "runner_mode": "global-js"
+}

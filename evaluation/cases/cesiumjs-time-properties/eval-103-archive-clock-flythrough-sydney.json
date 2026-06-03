@@ -1,0 +1,122 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses ISO clock time",
+      "id": "pattern_present_02",
+      "pattern": "JulianDate\\.fromIso8601",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Advances JulianDate",
+      "id": "pattern_present_03",
+      "pattern": "JulianDate\\.addSeconds",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Computes interval fraction",
+      "id": "pattern_present_04",
+      "pattern": "JulianDate\\.secondsDifference",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Registers a clock tick listener",
+      "id": "pattern_present_05",
+      "pattern": "clock\\.onTick",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Interpolates camera destination",
+      "id": "pattern_present_06",
+      "pattern": "Cartesian3\\.lerp",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Calls camera.setView",
+      "id": "pattern_present_07",
+      "pattern": "camera\\.setView",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Sydney longitude",
+      "id": "pattern_present_08",
+      "pattern": "151\\.2",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Sydney latitude",
+      "id": "pattern_present_09",
+      "pattern": "-33\\.8",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Configure viewer.clock for a 30-second flythrough between two known camera vantages over Sydney Harbour, drive a CallbackProperty-based camera position update from clock.onTick, and set currentTime to halfway through so the screenshot captures the camera mid-interpolation, near the Sydney Opera House.",
+  "id": "eval-103",
+  "name": "archive-clock-flythrough-sydney",
+  "notes": "Imported from optimization/scenarios/cesiumjs-time-properties/eval-003. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Configures viewer.clock.startTime, stopTime, currentTime via JulianDate.fromIso8601 + JulianDate.addSeconds",
+      "Sets viewer.clock.currentTime to startTime + 15 seconds (the midpoint)",
+      "Registers a clock.onTick.addEventListener",
+      "Listener computes a fraction via JulianDate.secondsDifference and clamps to [0,1]",
+      "Listener calls viewer.camera.setView with destination from Cartesian3.lerp",
+      "Calls viewer.clock.tick() at least once to advance the camera",
+      "Uses CesiumMath.toRadians for orientation values",
+      "Frames somewhere over Sydney Harbour (around -33.86 S, 151.21 E)"
+    ],
+    "landmark": "Sydney Harbour timed flythrough",
+    "perspective": "mid-flight oblique view of Sydney Harbour",
+    "source": "optimization/scenarios",
+    "source_name": "clock-flythrough-sydney",
+    "source_scenario_id": "eval-003",
+    "visual_expectations": "A mid-altitude view of Sydney Harbour with the Opera House's distinctive sail-shaped roofs visible, the Sydney Harbour Bridge, or both. The camera should be at an oblique angle (pitched downward) showing the harbour clearly framed."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Configure viewer.clock with startTime JulianDate.fromIso8601('2026-05-20T12:00:00Z'), stopTime JulianDate.addSeconds(startTime, 30, new JulianDate()), currentTime startTime + 15 seconds, multiplier 1, shouldAnimate false (so the time stays at the midpoint we set). Define two view positions: start = Cartesian3.fromDegrees(151.2153, -33.8588, 800), end = Cartesian3.fromDegrees(151.2153, -33.8588, 200). Register a clock.onTick listener that computes t = JulianDate.secondsDifference(currentTime, startTime) / 30, clamps t to 0..1, and calls viewer.camera.setView({ destination: Cartesian3.lerp(start, end, t, new Cartesian3()), orientation: { heading: 0, pitch: -30, roll: 0 } }) \u2014 note heading/pitch in radians via CesiumMath.toRadians. Tick the clock once manually via viewer.clock.tick() before screenshot.",
+  "schema_version": 1,
+  "skill": "cesiumjs-time-properties",
+  "timeout_ms": 5000
+}

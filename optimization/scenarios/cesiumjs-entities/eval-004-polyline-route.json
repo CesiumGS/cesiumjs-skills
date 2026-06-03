@@ -1,0 +1,29 @@
+{
+  "id": "eval-004",
+  "name": "ground-clamped-polyline-route",
+  "difficulty": "medium",
+  "description": "Draw a ground-clamped polyline between cities. Tests polyline creation, clampToGround, and multi-point paths. The route must be visually obvious in the screenshot.",
+  "prompt": "Draw a high-contrast red polyline route on the globe connecting these cities in order: Los Angeles (-118.2437, 34.0522), Denver (-104.9903, 39.7392), Chicago (-87.6298, 41.8781), New York (-74.0060, 40.7128). The line should follow the ground (clamped to terrain), be at least 8 pixels wide, and use a red color or red glow material. Add a large labeled point at each city. Frame the camera top-down over the continental US so the full red route and all four markers are visible; avoid a tilted globe view where the route disappears.",
+  "expected_behaviors": [
+    "Creates a polyline entity with positions for all 4 cities",
+    "Sets clampToGround to true",
+    "Sets width high enough to be visible from the screenshot camera",
+    "Sets material to red",
+    "Adds point + label entities at each city",
+    "All longitudes are negative (US cities)"
+  ],
+  "visual_expectations": "A bright red line connecting LA to Denver to Chicago to NYC across the US, following terrain. Four large labeled city markers should be visible at each endpoint.",
+  "programmatic_checks": [
+    {"type": "no_console_errors", "description": "No JS errors"},
+    {"type": "code_runs", "description": "No runtime exceptions"},
+    {"type": "pattern_present", "pattern": "polyline:", "description": "Polyline graphics defined"},
+    {"type": "pattern_present", "pattern": "clampToGround.*true|clampToGround:\\s*true", "description": "Clamped to ground"},
+    {"type": "pattern_present", "pattern": "-118", "description": "LA longitude"},
+    {"type": "pattern_present", "pattern": "-74", "description": "NYC longitude"},
+    {"type": "pattern_present", "pattern": "label:", "description": "City labels present"}
+  ],
+  "screenshots": [
+    {"timing": "after_load", "delay_ms": 6000, "description": "Red line across US with city labels"}
+  ],
+  "regression_critical": false
+}

@@ -1,0 +1,181 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 10,
+        "total": 10
+      },
+      "source_scenario_id": "eval-003"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-103",
+  "case_name": "ground-primitive-state-polygon",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-primitives/baseline/eval-003-ground-primitive-state-polygon/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n  terrainProvider: new Cesium.EllipsoidTerrainProvider(),\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst instance = new Cesium.GeometryInstance({\n  geometry: new Cesium.PolygonGeometry({\n    polygonHierarchy: new Cesium.PolygonHierarchy(\n      Cesium.Cartesian3.fromDegreesArray([\n        -109.0, 41.0,\n        -102.0, 41.0,\n        -102.0, 37.0,\n        -109.0, 37.0,\n      ])\n    ),\n  }),\n  attributes: {\n    color: Cesium.ColorGeometryInstanceAttribute.fromColor(\n      Cesium.Color.ROYALBLUE.withAlpha(0.75)\n    ),\n  },\n});\n\nviewer.scene.primitives.add(\n  new Cesium.GroundPrimitive({\n    geometryInstances: instance,\n    appearance: new Cesium.PerInstanceColorAppearance({\n      flat: true,\n      translucent: true,\n    }),\n  })\n);\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-105.5, 35.5, 1200000),\n  orientation: {\n    heading: 0,\n    pitch: Cesium.Math.toRadians(-50),\n    roll: 0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "f44f527fe7f263375a237cf9a5a08c9269950a61916aa2c5be0487f569d05ba1",
+      "programmatic_checks": "8438ad4c4d2cab93c09fa66890ce4ee75bcf7a03c2781bea1e26aa084e49385a",
+      "scene_state": "94ec53de90e327d04db47ea62ff710042055ffbef6c01bd22a73ee9bef9eceb1",
+      "screenshot_quality": "0adc9ba88451f81809f12374d3b412683d534b95e871a55fb23b703e4d1a8caf",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "48a31fd28304bfa44bfa60292c8880386e080c1daf2253b9b6957c92dbaf1a35"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "dcd0eeb9bcc8ed6d97d62f6ced517ac92d66208ab51c1c6a8d714f109d74898f",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "55dba37ff62edceaea263f4a5b1a6d64067227ae8b7c8b7572d2c31893e5bf14",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:10:22.523693+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses GroundPrimitive",
+        "detail": "Pattern matched: 'new Cesium.GroundPrimitive'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses PolygonGeometry",
+        "detail": "Pattern matched: 'PolygonGeometry'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Specifies polygonHierarchy",
+        "detail": "Pattern matched: 'polygonHierarchy'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Uses per-instance color",
+        "detail": "Pattern matched: 'ColorGeometryInstanceAttribute'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Uses PerInstanceColorAppearance",
+        "detail": "Pattern matched: 'PerInstanceColorAppearance'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Uses ROYALBLUE",
+        "detail": "Pattern matched: 'Color.ROYALBLUE'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_8",
+        "description": "Avoids ion terrain",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-003",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 10,
+      "total": 10
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-primitives/baseline/eval-003-ground-primitive-state-polygon",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -0.8726646259971651,
+      "position": {
+        "x": -1650290.459688902,
+        "y": -5950755.153257613,
+        "z": 4380011.525396005
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-003",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2172,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 741671,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 255.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-primitives/eval-003-screenshot.png"
+  ],
+  "skill": "cesiumjs-primitives",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-primitives/baseline/eval-003.js"
+}

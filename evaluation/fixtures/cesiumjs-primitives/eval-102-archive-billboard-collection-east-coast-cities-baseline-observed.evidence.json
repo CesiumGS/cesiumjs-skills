@@ -1,0 +1,181 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 10,
+        "total": 10
+      },
+      "source_scenario_id": "eval-002"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-102",
+  "case_name": "billboard-collection-east-coast-cities",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-primitives/baseline/eval-002-billboard-collection-east-coast-cities/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18,\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst cities = [\n  { name: 'Boston',       lat: 42.3601, lng: -71.0589 },\n  { name: 'New York',     lat: 40.7128, lng: -74.0060 },\n  { name: 'Philadelphia', lat: 39.9526, lng: -75.1652 },\n  { name: 'Washington DC',lat: 38.9072, lng: -77.0369 },\n  { name: 'Charlotte',    lat: 35.2271, lng: -80.8431 },\n  { name: 'Atlanta',      lat: 33.7490, lng: -84.3880 },\n  { name: 'Charleston',   lat: 32.7765, lng: -79.9311 },\n  { name: 'Miami',        lat: 25.7617, lng: -80.1918 },\n];\n\nconst pinBuilder = new Cesium.PinBuilder();\nconst billboards = viewer.scene.primitives.add(new Cesium.BillboardCollection({ scene: viewer.scene }));\n\ncities.forEach((city, index) => {\n  const color = Cesium.Color.fromHsl(index / 8, 0.8, 0.5);\n  const canvas = pinBuilder.fromColor(color, 48);\n  billboards.add({\n    position: Cesium.Cartesian3.fromDegrees(city.lng, city.lat),\n    image: canvas,\n    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n  });\n});\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-78.0, 35.0, 3000000),\n  orientation: {\n    heading: Cesium.Math.toRadians(0),\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "b81b3a68d65fc6db84eb1fba09ca3c2098a3f2b5646568c4440dcb5134b76636",
+      "programmatic_checks": "cee0127258e70944137803daec20846fa92731287d9c8d41a39e2292ff061da9",
+      "scene_state": "8a39bfdb316ab58b602ddf3ed58d1bed3915361c48a842e49a63fbde6fc6ee7a",
+      "screenshot_quality": "010868c91ec5797289fe0eba26646ab99d4c2002f9f1db0b99469a694649ebef",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "006b9f1330847b0cb3482a0d0c126bb25fe0633ba0800b30e932dc5baaa94791"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "dcd0eeb9bcc8ed6d97d62f6ced517ac92d66208ab51c1c6a8d714f109d74898f",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "3404b998cd657d8f51bdcc18ce52ff93755c5c9bf344f395702e938b5fda2a2f",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:10:22.523693+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses BillboardCollection (not entity API)",
+        "detail": "Pattern matched: 'new Cesium.BillboardCollection'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Adds collection to scene",
+        "detail": "Pattern matched: 'scene.primitives.add'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses PinBuilder factory",
+        "detail": "Pattern matched: 'fromColor'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Uses PinBuilder for marker images",
+        "detail": "Pattern matched: 'pinBuilder'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Pins anchored at bottom",
+        "detail": "Pattern matched: 'VerticalOrigin.BOTTOM'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Uses Cartesian3.fromDegrees",
+        "detail": "Pattern matched: 'fromDegrees'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_8",
+        "description": "Does NOT use entity API (must use BillboardCollection)",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-002",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 10,
+      "total": 10
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-primitives/baseline/eval-002-billboard-collection-east-coast-cities",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 1598400.747739493,
+        "y": -7519884.284828089,
+        "z": 5358596.2184312325
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-002",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 1514,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 504093,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 204.21,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-primitives/eval-002-screenshot.png"
+  ],
+  "skill": "cesiumjs-primitives",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-primitives/baseline/eval-002.js"
+}

@@ -1,0 +1,96 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Queries entities by ID",
+      "id": "pattern_present_02",
+      "pattern": "getById|entities\\.getById",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Hides an entity",
+      "id": "pattern_present_03",
+      "pattern": "show.*false|\\.show\\s*=\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Removes an entity",
+      "id": "pattern_present_04",
+      "pattern": "removeById|remove\\(",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "JFK color changed to magenta",
+      "id": "pattern_present_05",
+      "pattern": "MAGENTA|magenta|Color\\.MAGENTA",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "JFK ID used",
+      "id": "pattern_present_06",
+      "pattern": "\"JFK\"|'JFK'",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Add entities then query and modify them by ID. Tests EntityCollection.getById, property modification after creation, and the show/remove patterns.",
+  "id": "eval-105",
+  "name": "archive-entity-collection-query-and-modify",
+  "notes": "Imported from optimization/scenarios/cesiumjs-entities/eval-005. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Creates 5 entities with explicit IDs",
+      "Uses viewer.entities.getById to retrieve specific entities",
+      "Sets LHR entity show to false",
+      "Changes JFK point color to magenta",
+      "Removes NRT entity via viewer.entities.removeById or .remove()",
+      "Only 3 entities should be visible at the end (JFK magenta, LAX, ORD)"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "entity-collection-query-and-modify",
+    "source_scenario_id": "eval-005",
+    "visual_expectations": "Three visible airport markers: JFK (magenta, eastern US), LAX (western US), and ORD (central US). LHR and NRT should NOT be visible."
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create 5 point entities representing major airports: JFK (-73.7781, 40.6413), LAX (-118.4085, 33.9416), ORD (-87.9073, 41.9742), LHR (-0.4614, 51.4700), NRT (140.3929, 35.7720). Give each an ID matching its airport code. Then hide the LHR entity by setting show to false, and change JFK's point color from its original color to bright magenta. Finally, remove the NRT entity entirely.",
+  "schema_version": 1,
+  "skill": "cesiumjs-entities",
+  "timeout_ms": 5000
+}

@@ -1,0 +1,188 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 11,
+        "total": 11
+      },
+      "source_scenario_id": "eval-002"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-102",
+  "case_name": "fromdegrees-capitals-grid",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-spatial-math/baseline/eval-002-fromdegrees-capitals-grid/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst degreesArray = [\n  -77.0369, 38.9072,  // Washington DC\n  -0.1278,  51.5074,  // London\n   2.3522,  48.8566,  // Paris\n  37.6173,  55.7558,  // Moscow\n 116.4074,  39.9042,  // Beijing\n 139.6917,  35.6895   // Tokyo\n];\n\nconst positions = Cesium.Cartesian3.fromDegreesArray(degreesArray);\n\nconst collection = new Cesium.PointPrimitiveCollection();\nviewer.scene.primitives.add(collection);\n\nfor (const position of positions) {\n  collection.add({\n    position,\n    pixelSize: 24,\n    color: Cesium.Color.LIME,\n    outlineColor: Cesium.Color.BLACK,\n    outlineWidth: 2\n  });\n}\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(60.0, 40.0, 20000000.0),\n  orientation: {\n    heading: 0.0,\n    pitch: Cesium.Math.toRadians(-90.0),\n    roll: 0.0\n  }\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "b438c53e98f10855e7fb9afe02cea09a5626dd61a659672c3516fe8d536c9eb8",
+      "programmatic_checks": "62001f8e5c7c4fff47bd0bed37c433479cf27237c0851410e60d5f2bffe4452f",
+      "scene_state": "4bab8e703ad707b35c75522f112b9b99c274bde099d3ddc8ff42033916cca8c6",
+      "screenshot_quality": "0fdaa8935aeb15f632527895be07b17a7035f7a7b1735e85f87933fba51eee20",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "ef1f5d3712e95f33c52c6ab86e01463bae08457a248ec465bc64caf277c5f9c0"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "1a69244d712199b8653571a3ab970d7a7aee2cb6317513be291153fc928e08f8",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "7877f8ef46698d8184462b6d60b27cb336ba7682ce5df8ffdbe49dea208babde",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:11:15.920550+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses fromDegreesArray batch helper",
+        "detail": "Pattern matched: 'Cartesian3.fromDegreesArray'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses PointPrimitiveCollection",
+        "detail": "Pattern matched: 'new Cesium.PointPrimitiveCollection'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Adds collection to scene",
+        "detail": "Pattern matched: 'scene.primitives.add'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Uses LIME color",
+        "detail": "Pattern matched: 'Color.LIME'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Sets outlineColor on point primitives",
+        "detail": "Pattern matched: 'outlineColor'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Configures point appearance",
+        "detail": "Pattern matched: 'pixelSize'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "References Washington DC longitude",
+        "detail": "Pattern matched: '-77.0'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_9",
+        "description": "References Tokyo longitude",
+        "detail": "Pattern matched: '139.6'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-002",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 11,
+      "total": 11
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-spatial-math/baseline/eval-002-fromdegrees-capitals-grid",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 10106798.23122613,
+        "y": 17505488.038330913,
+        "z": 16933737.76593116
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-002",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 566,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 665615,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 255.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-spatial-math/eval-002-screenshot.png"
+  ],
+  "skill": "cesiumjs-spatial-math",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-spatial-math/baseline/eval-002.js"
+}

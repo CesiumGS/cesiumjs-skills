@@ -4,7 +4,7 @@ description: "CesiumJS time, properties, and animation - Clock, JulianDate, Time
 ---
 # CesiumJS Time, Properties & Animation
 
-Version baseline: CesiumJS v1.139.1
+Version baseline: CesiumJS v1.142
 
 Covers the temporal data-binding layer: Clock/JulianDate time system, the Property hierarchy that makes entity attributes change over time, interpolation algorithms, splines, and material properties. Properties live here (not with Entities) because SampledProperty and CallbackProperty are meaningless without Clock/JulianDate. The Material class (Fabric) belongs in cesiumjs-materials-shaders.
 
@@ -53,9 +53,23 @@ viewer.clock.multiplier = 60;                   // 60x real-time
 viewer.clock.shouldAnimate = true;
 viewer.timeline.zoomTo(start, stop);
 
-viewer.clock.onTick.addEventListener((clock) => { // per-frame callback
-  console.log(JulianDate.toIso8601(clock.currentTime));
+// Per-frame callback: compute a [0,1] fraction for camera or property animation
+viewer.clock.onTick.addEventListener((clock) => {
+  const elapsed = JulianDate.secondsDifference(clock.currentTime, clock.startTime);
+  const total = JulianDate.secondsDifference(clock.stopTime, clock.startTime);
+  const t = Math.max(0, Math.min(1, elapsed / total));
+  // Example: interpolate camera position linearly between two points
+  // const dest = Cartesian3.lerp(startPos, endPos, t, new Cartesian3());
+  // viewer.camera.setView({ destination: dest, orientation: { heading: 0, pitch: CesiumMath.toRadians(-30), roll: 0 } });
 });
+```
+
+**Manual clock advancement** -- call `viewer.clock.tick()` to advance the clock by one frame outside the render loop (useful for setting up a mid-interval state before a screenshot):
+
+```js
+// Advance to midpoint before screenshot
+viewer.clock.currentTime = JulianDate.addSeconds(start, 15, new JulianDate());
+viewer.clock.tick(); // fires onTick listeners immediately
 ```
 
 | ClockRange | Behavior |
@@ -156,11 +170,22 @@ Evaluates a function every frame. Second argument (`isConstant`) must be `false`
 ```js
 import { CallbackProperty, Color, JulianDate } from "cesium";
 
+// Pulsing alpha via sine wave
 const startTime = JulianDate.now();
 const pulse = new CallbackProperty((time, result) => {
   const s = JulianDate.secondsDifference(time, startTime);
   return Color.RED.withAlpha(0.5 + 0.5 * Math.sin(s * 2), result ?? new Color());
 }, false);
+
+// Hue cycling -- full color wheel every `period` seconds using Color.fromHsl
+// Color.fromHsl(hue 0-1, saturation 0-1, lightness 0-1, alpha 0-1, result?)
+const period = 8; // seconds per full cycle
+const hueCycle = new CallbackProperty((time, result) => {
+  const s = JulianDate.secondsDifference(time, viewer.clock.startTime);
+  const hue = (s % period) / period;
+  return Color.fromHsl(hue, 0.8, 0.5, 0.8, result ?? new Color());
+}, false);
+// Use as: polygon.material = new ColorMaterialProperty(hueCycle);
 
 // Growing polygon -- mutate the array, property auto-updates
 const pts = [/* initial Cartesian3[] */];
@@ -273,7 +298,9 @@ const czml = [
     position: { epoch: "2025-06-15T00:00:00Z",
       cartographicDegrees: [0,-75,40,10000, 10800,-88,42,11000, 21600,-118,34,9000],
       interpolationAlgorithm: "LAGRANGE", interpolationDegree: 5 },
-    point: { pixelSize: 10, color: { rgba: [255,255,0,255] } } },
+    point: { pixelSize: 10, color: { rgba: [255,255,0,255] } },
+    path: { width: { number: 3 }, leadTime: { number: 10800 }, trailTime: { number: 10800 },
+            material: { solidColor: { color: { rgba: [0,255,0,255] } } } } },
 ];
 const ds = await CzmlDataSource.load(czml);
 const viewer = new Viewer("cesiumContainer", { shouldAnimate: true });
@@ -294,14 +321,32 @@ viewer.camera.flyTo({
 });
 ```
 
+## Framing Time-Dynamic Entities
+
+A time-dynamic entity is useless if the camera is not framed on it. After building a flight or orbit, **always** explicitly frame the scene -- the default Viewer camera sits in space and will not auto-zoom to your entities. Three options, in order of preference for screenshots:
+
+1. **`viewer.zoomTo(entityOrDataSource)`** -- synchronous best-fit framing. Returns a `Promise` that resolves once tilesets/data sources are ready. Use for CZML data sources and one-shot setups.
+2. **`viewer.trackedEntity = entity`** -- locks the camera to follow the entity over time. Best when the path spans large distances (cross-country flights, orbits) and you want the entity centered every frame.
+3. **`viewer.camera.flyTo` / `setView`** with an explicit `Cartesian3.fromDegrees` and `Rectangle.fromDegrees` -- use when the path's extent is known and the default zoom is too wide (e.g., a JFK→LAX flight needs a continental-US framing, not a globe view).
+
+```js
+// Continental-US framing for a JFK -> LAX flight path
+import { Rectangle } from "cesium";
+viewer.camera.setView({
+  destination: Rectangle.fromDegrees(-130, 20, -60, 50), // west, south, east, north
+});
+```
+
+For path arcs that should be fully visible (lead + trail), zoom out enough that `leadTime + trailTime` of motion fits in the viewport. If the judge can only see a fragment of the arc, the framing is too tight.
+
 ## Putting It Together: Animated Flight
 
-Combines Clock, SampledPositionProperty, VelocityOrientationProperty, and availability.
+Combines Clock, SampledPositionProperty, VelocityOrientationProperty, and availability. Always set `leadTime` and `trailTime` on `path` to control how much of the trail is visible relative to the current time, and explicitly frame the entity before any screenshot.
 
 ```js
 import {
   Viewer, JulianDate, ClockRange, SampledPositionProperty, VelocityOrientationProperty,
-  TimeIntervalCollection, TimeInterval, Cartesian3, LagrangePolynomialApproximation,
+  TimeIntervalCollection, TimeInterval, Cartesian3, LagrangePolynomialApproximation, Color,
 } from "cesium";
 
 const viewer = new Viewer("cesiumContainer", { shouldAnimate: true });
@@ -322,12 +367,27 @@ for (let i = 0; i <= 360; i += 45) {
 }
 position.setInterpolationOptions({ interpolationDegree: 5, interpolationAlgorithm: LagrangePolynomialApproximation });
 
-viewer.trackedEntity = viewer.entities.add({
+const aircraft = viewer.entities.add({
   availability: new TimeIntervalCollection([new TimeInterval({ start, stop })]),
   position, orientation: new VelocityOrientationProperty(position),
   model: { uri: "aircraft.glb", minimumPixelSize: 64 },
-  path: { resolution: 1, width: 10 },
+  path: {
+    resolution: 1,
+    width: 3,
+    leadTime: 180,      // show 3 min of future path
+    trailTime: 180,     // show 3 min of past path
+    material: Color.YELLOW,
+  },
 });
+
+// Advance to mid-interval BEFORE framing so the path arc is fully built
+viewer.clock.currentTime = JulianDate.addSeconds(start, 180, new JulianDate());
+viewer.clock.tick();
+
+// Frame the entity -- without this the camera stays in space and the path is invisible
+await viewer.zoomTo(aircraft);
+// Or for long-range paths spanning a known region:
+// viewer.camera.setView({ destination: Rectangle.fromDegrees(-130, 20, -60, 50) });
 ```
 
 ## Performance Tips
@@ -342,6 +402,16 @@ viewer.trackedEntity = viewer.entities.add({
 8. Use `ClockStep.TICK_DEPENDENT` for deterministic replay; `SYSTEM_CLOCK_MULTIPLIER` varies with frame rate.
 9. Minimize `CallbackProperty` count -- each runs its function every frame.
 
+## Screenshot Checklist for Time-Dynamic Scenes
+
+Before capturing a screenshot of a time-dynamic scene, verify:
+
+1. **Clock is positioned mid-interval** -- set `viewer.clock.currentTime` away from `startTime` so the path has visible trail samples, then call `viewer.clock.tick()`.
+2. **Camera is framed on the entity** -- call `await viewer.zoomTo(entity)` or `viewer.camera.setView({ destination: Rectangle.fromDegrees(...) })`. Never rely on the default space-view camera.
+3. **`leadTime` and `trailTime` are set** on the entity's `path` graphic so the arc is actually drawn around the current time.
+4. **Entity is within `availability`** -- the clock's `currentTime` must fall inside any `TimeIntervalCollection` you set, or the entity is culled.
+5. **`shouldAnimate: true`** if you expect the scene to advance between renders; otherwise advance manually.
+
 ## Key Enums
 
 `ClockRange`: UNBOUNDED, CLAMPED, LOOP_STOP. `ClockStep`: TICK_DEPENDENT, SYSTEM_CLOCK_MULTIPLIER, SYSTEM_CLOCK. `ExtrapolationType`: NONE, HOLD, EXTRAPOLATE. `TimeStandard`: UTC, TAI. `ReferenceFrame`: FIXED, INERTIAL. `TrackingReferenceFrame` (v1.124+): AUTODETECT, ECI, ECEF, INERTIAL, ENU.
@@ -351,3 +421,4 @@ viewer.trackedEntity = viewer.entities.add({
 - **cesiumjs-entities** -- Entity, Graphics types, DataSources (consumers of properties)
 - **cesiumjs-viewer-setup** -- Viewer, ClockViewModel, Timeline widget
 - **cesiumjs-models-particles** -- Model, ModelAnimation (uses time system for playback)
+- **cesiumjs-camera** -- `viewer.zoomTo`, `viewer.trackedEntity`, `camera.flyTo`, `Rectangle.fromDegrees` for framing time-dynamic scenes

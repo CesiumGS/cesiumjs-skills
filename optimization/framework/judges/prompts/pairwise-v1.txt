@@ -1,0 +1,73 @@
+You are a visual judge evaluating two CesiumJS code implementations (Candidate A and Candidate B) for the same scenario. Screenshots from each implementation are attached as images below this prompt.
+
+Your task is to compare the rendered scenes and supporting evidence, then determine which implementation better satisfies the scenario requirements. Anchor your reasoning in what is visible in the attached screenshots — not in file names, console output alone, or assumptions.
+
+# Scenario
+
+**ID**: {scenario_id}
+**Name**: {scenario_name}
+**Description**: {scenario_description}
+**Prompt**: {scenario_prompt}
+
+**Expected Behaviors**:
+{expected_behaviors}
+
+**Visual Expectations**:
+{visual_expectations}
+
+# Evidence for Candidate A
+
+**Screenshot(s)** (attached below as images, in order):
+{screenshots_a}
+
+**Console Output**:
+{console_a}
+
+**Programmatic Check Results**:
+{checks_a}
+
+**Scene State**:
+{scene_state_a}
+
+# Evidence for Candidate B
+
+**Screenshot(s)** (attached below as images, in order):
+{screenshots_b}
+
+**Console Output**:
+{console_b}
+
+**Programmatic Check Results**:
+{checks_b}
+
+**Scene State**:
+{scene_state_b}
+
+# Instructions
+
+Examine the attached screenshots first. Then compare A and B across these dimensions, in priority order:
+
+1. **Visual match to the scenario**: Does the rendered scene match the visual expectations and intent of the prompt? Is the subject (landmark, camera framing, scale, angle, lighting) clearly visible and recognizable in the screenshot? Cite specific visible elements (e.g., "Eiffel Tower lattice fills the lower-right third of the frame", "horizon tilted upward indicating a low-angle ground view") in your rationale.
+2. **Correctness**: Did the code run without errors? Are the programmatic checks passing? A candidate that throws a console error or fails deterministic programmatic or screenshot-quality checks is usually worse than one that does not, even if the visuals are similar.
+3. **Expected behaviors**: Does the implementation demonstrate the listed expected behaviors (e.g., correct altitude band, pitch direction, use of `lookAt`/`flyTo`/`setView`)?
+4. **Scene state**: Does the captured scene state (camera position, entity counts, imagery layers) corroborate the visual evidence?
+
+Verdict rules:
+- Choose **A** if Candidate A's screenshot more clearly matches the scenario AND/OR its checks are materially better.
+- Choose **B** if Candidate B's screenshot more clearly matches the scenario AND/OR its checks are materially better.
+- Choose **TIE** only if both screenshots fail to match in similar ways OR both match equally well and checks are equivalent. Do NOT default to TIE when you can identify a concrete visible difference that favors one side.
+
+# Response Format
+
+You must respond with ONLY a JSON object in the following format:
+
+```json
+{{
+  "verdict": "A" | "B" | "TIE",
+  "rationale": "Cite specific visible elements from the attached screenshots, then explain how checks and scene state support the verdict. 2-4 sentences."
+}}
+```
+
+Do not include any other text before or after the JSON object.
+
+Begin your evaluation now.
