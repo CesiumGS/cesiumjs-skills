@@ -4,7 +4,7 @@ description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSp
 ---
 # CesiumJS Camera & Navigation
 
-> **Baseline:** CesiumJS v1.139 -- ES module imports (`import { ... } from "cesium";`)
+> **Baseline:** CesiumJS v1.142 -- ES module imports (`import { ... } from "cesium";`)
 
 ## Camera Fundamentals
 

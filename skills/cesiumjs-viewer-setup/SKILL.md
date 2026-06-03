@@ -68,6 +68,14 @@ import { ITwinPlatform, ITwinData } from "cesium";
 
 ITwinPlatform.defaultAccessToken = "YOUR_ITWIN_TOKEN";
 const tileset = await ITwinData.createTilesetForIModel(viewer, "imodel-id");
+
+// 1.140+ (#13208): Reality Data of type GaussianSplat3DTiles is now supported
+const splats = await ITwinData.createTilesetForRealityDataId(
+  iTwinId,
+  realityDataId,
+  ITwinPlatform.RealityDataType.GaussianSplat3DTiles,
+);
+viewer.scene.primitives.add(splats);
 ```
 
 ## Viewer Constructor Options

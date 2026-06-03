@@ -1,8 +1,10 @@
 ---
 name: cesiumjs-models-particles
-description: "CesiumJS models, glTF, and particle effects - Model, ModelAnimation, ModelNode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata."
+description: "CesiumJS models, glTF, and particle effects - Model, EdgeDisplayMode, ModelAnimation, ModelNode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, controlling edge rendering, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata."
 ---
 # CesiumJS Models, glTF & Particle Effects
+
+Version baseline: CesiumJS v1.142.
 
 ## Quick Reference
 
@@ -13,6 +15,7 @@ description: "CesiumJS models, glTF, and particle effects - Model, ModelAnimatio
 | `ModelAnimationCollection` | Collection at `model.activeAnimations` |
 | `ModelNode` | Named node with modifiable transform |
 | `ModelFeature` | Per-feature styling/picking for feature-ID models |
+| `EdgeDisplayMode` | Controls draft glTF edge-visibility rendering on Model/Cesium3DTileset |
 | `ParticleSystem` | Billboard-based particle manager (fire, smoke, rain) |
 | `Particle` | Single particle with position, velocity, life |
 | `ParticleBurst` | Scheduled burst of particles |
@@ -61,6 +64,7 @@ viewer.scene.primitives.add(model);
 | `maximumScale` | `number` | -- |
 | `show` | `boolean` | `true` |
 | `color` / `colorBlendMode` / `colorBlendAmount` | `Color` / `ColorBlendMode` / `number` | -- / `HIGHLIGHT` / `0.5` |
+| `edgeDisplayMode` | `EdgeDisplayMode` | `SURFACES_ONLY` |
 | `silhouetteColor` / `silhouetteSize` | `Color` / `number` | `RED` / `0.0` |
 | `shadows` | `ShadowMode` | `ENABLED` |
 | `heightReference` | `HeightReference` | `NONE` |
@@ -159,6 +163,25 @@ model.colorBlendMode = Cesium.ColorBlendMode.MIX;
 model.colorBlendAmount = 0.5;
 model.silhouetteColor = Cesium.Color.YELLOW;
 model.silhouetteSize = 2.0;
+```
+
+### Edge Display Mode (Experimental, 1.142+)
+
+For glTF assets using the draft `EXT_mesh_primitive_edge_visibility` extension,
+`EdgeDisplayMode` controls whether extension-provided edges are hidden, composited
+over surfaces, or rendered alone. Models without the extension are unaffected.
+
+```js
+import { EdgeDisplayMode, Model } from "cesium";
+
+const model = await Model.fromGltfAsync({
+  url: "/models/cad-part.glb",
+  edgeDisplayMode: EdgeDisplayMode.SURFACES_AND_EDGES,
+});
+viewer.scene.primitives.add(model);
+
+model.edgeDisplayMode = EdgeDisplayMode.EDGES_ONLY;       // CAD-style wireframe
+model.edgeDisplayMode = EdgeDisplayMode.SURFACES_ONLY;    // default
 ```
 
 When a glTF has `EXT_mesh_features` or `EXT_structural_metadata`, picking returns a `ModelFeature`:

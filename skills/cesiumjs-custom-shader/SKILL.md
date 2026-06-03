@@ -4,7 +4,7 @@ description: "CustomShader authoring — vertexShaderText and fragmentShaderText
 ---
 # CesiumJS CustomShader
 
-Version baseline: CesiumJS 1.139 (includes 1.139.1 patch). All imports use ES module style.
+Version baseline: CesiumJS 1.142. All imports use ES module style.
 
 `CustomShader` injects user GLSL into the `Model` / `Cesium3DTileset` / `VoxelPrimitive` rendering pipeline. It exposes glTF attributes, feature IDs, and `EXT_structural_metadata` to per-vertex and per-fragment code, and returns values through the built-in `czm_modelVertexOutput` and `czm_modelMaterial` structs.
 
@@ -276,6 +276,7 @@ Reduced struct availability:
 Assigning `customShader = undefined` falls back to `VoxelPrimitive.DefaultCustomShader`. See `examples/07-voxel-shader.js`. For `VoxelPrimitive` setup (provider, shape, modelMatrix, nearestSampling), see `cesiumjs-3d-tiles`.
 
 > **1.130 breaking change (#12636):** `fsInput.voxel.positionUv | positionShapeUv | positionLocal` were removed. Use `fsInput.attributes.positionEC` instead. `fsInput.voxel.surfaceNormal` → `fsInput.attributes.normalEC`.
+> **1.142 fix (#13517):** the built-in default voxel shader handles common metadata types more robustly. Keep a custom shader only when you need explicit classification, coloring, filtering, or raymarch-step logic.
 
 ## Common patterns
 
@@ -289,7 +290,7 @@ Assigning `customShader = undefined` falls back to `VoxelPrimitive.DefaultCustom
 | `examples/06-metadata-ramp.js` | Cesium3DTileset | `fsInput.metadata.<prop>` + `metadataStatistics` normalization |
 | `examples/07-voxel-shader.js` | VoxelPrimitive | FS-only subset, per-voxel metadata |
 
-## CesiumJS 1.139 version notes
+## CesiumJS 1.139-1.142 version notes
 
 Verbatim from upstream `CHANGES.md`:
 
@@ -306,9 +307,13 @@ Verbatim from upstream `CHANGES.md`:
 
 **Fix (1.139.1, #13247):** NGA-GPM local extension + custom shader regression fix.
 
-**Breaking (1.130, #12636):** Voxel `FragmentInput` restructured (see VoxelPrimitive section).
+**Fix (1.140, #13258):** Custom shaders are no longer disabled for primitives with missing metadata when the metadata exists on the class definition.
 
-**Looking ahead (1.140):** #13258 stops disabling custom shaders on primitives with missing metadata when the class definition carries the property; #13323 adds limited double-precision metadata support via downcasting. Neither is available in 1.139.
+**Addition (1.140, #13323):** Limited double-precision metadata support via downcasting.
+
+**Fix (1.142, #13517):** Improved default voxel shader for common metadata types.
+
+**Breaking (1.130, #12636):** Voxel `FragmentInput` restructured (see VoxelPrimitive section).
 
 ## Gotchas & pitfalls
 

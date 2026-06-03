@@ -4,7 +4,7 @@ description: "CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLa
 ---
 # CesiumJS Imagery Layers
 
-> CesiumJS v1.139 -- Imagery providers supply raster tile data rendered on the Globe
+> CesiumJS v1.142 -- Imagery providers supply raster tile data rendered on the Globe
 > or draped over a Cesium3DTileset. The three core abstractions are **ImageryProvider**
 > (fetches tiles), **ImageryLayer** (display settings), and
 > **ImageryLayerCollection** (ordered stack on the globe).
@@ -256,6 +256,13 @@ const wmts = new WebMapTileServiceImageryProvider({
 viewer.imageryLayers.addImageryProvider(wmts);
 ```
 
+**GetFeatureInfo (1.140+, #13196):** `WebMapTileServiceImageryProvider` now supports
+`pickFeatures` for both KVP and RESTful WMTS services. Enable it with the new
+constructor options `enablePickFeatures`, `getFeatureInfoFormats`,
+`getFeatureInfoUrl`, and `getFeatureInfoParameters`; then call
+`provider.pickFeatures(x, y, level, longitude, latitude)` (the same signature WMS
+uses) to query attributes at a location.
+
 ### ArcGisMapServerImageryProvider
 
 ```js
@@ -319,6 +326,11 @@ const logo = ImageryLayer.fromProviderAsync(
 );
 viewer.imageryLayers.add(logo);
 ```
+
+> **1.140+ (#13297):** `OffscreenCanvas` is now an accepted `ImageryTypes` value,
+> so you can feed a worker-rendered or dynamically-drawn `OffscreenCanvas`
+> wherever an image source is expected -- useful for procedurally generated or
+> live-updating overlays without round-tripping through a data URL.
 
 ## Split-Screen Comparison
 

@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-interaction
-description: "CesiumJS interaction and picking - ScreenSpaceEventHandler, Scene.pick, Scene.drillPick, Scene.pickPosition, mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, implementing hover effects, or building drag-based interactions."
+description: "CesiumJS interaction and picking - ScreenSpaceEventHandler, multi-key KeyboardEventModifier input actions, Scene.pick, Scene.drillPick, Scene.pickPosition, mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, registering modifier-key shortcuts, implementing hover effects, or building drag-based interactions."
 ---
 # CesiumJS Interaction & Picking
 
-Version baseline: CesiumJS v1.139 (ES module imports, Ion token required).
+Version baseline: CesiumJS v1.142 (ES module imports, Ion token required).
 
 ## ScreenSpaceEventHandler
 
@@ -14,7 +14,7 @@ Central class for mouse, touch, and pointer events on the Cesium canvas.
 import { ScreenSpaceEventHandler, ScreenSpaceEventType,
   KeyboardEventModifier, defined } from "cesium";
 
-const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+let handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 
 // Register a click handler
 handler.setInputAction((event) => {
@@ -26,9 +26,28 @@ handler.setInputAction((event) => {
   console.log("Shift+Click at", event.position);
 }, ScreenSpaceEventType.LEFT_CLICK, KeyboardEventModifier.SHIFT);
 
+// With multiple modifiers (Ctrl+Shift+Click, 1.142+)
+handler.setInputAction((event) => {
+  console.log("Ctrl+Shift+Click at", event.position);
+}, ScreenSpaceEventType.LEFT_CLICK, [
+  KeyboardEventModifier.CTRL,
+  KeyboardEventModifier.SHIFT,
+]);
+
 // Query or remove actions
-const action = handler.getInputAction(ScreenSpaceEventType.LEFT_CLICK);
+const clickAction = handler.getInputAction(ScreenSpaceEventType.LEFT_CLICK);
+const ctrlShiftClickAction = handler.getInputAction(ScreenSpaceEventType.LEFT_CLICK, [
+  KeyboardEventModifier.SHIFT,
+  KeyboardEventModifier.CTRL, // order does not matter
+]);
+if (defined(clickAction) && defined(ctrlShiftClickAction)) {
+  console.log("Click handlers registered");
+}
 handler.removeInputAction(ScreenSpaceEventType.LEFT_CLICK);
+handler.removeInputAction(ScreenSpaceEventType.LEFT_CLICK, [
+  KeyboardEventModifier.CTRL,
+  KeyboardEventModifier.SHIFT,
+]);
 
 // Always destroy when done to avoid memory leaks
 handler = handler && handler.destroy();
@@ -50,7 +69,11 @@ The Viewer also has a built-in handler at `viewer.screenSpaceEventHandler` -- us
 | `PINCH_END` | `()` | Two-finger touch ends |
 | `PINCH_MOVE` | `({ distance, angleAndHeight })` | Two-finger move |
 
-`KeyboardEventModifier`: `SHIFT`, `CTRL`, `ALT` -- optional third argument to `setInputAction`.
+`KeyboardEventModifier`: `SHIFT`, `CTRL`, `ALT` -- optional third argument to
+`setInputAction`, `getInputAction`, and `removeInputAction`. In 1.142+, pass a
+single modifier or an array of modifiers. Modifier arrays are order-independent
+but exact: a handler registered for `[CTRL, SHIFT]` does not fire when `ALT` is
+also held.
 
 ## Scene Picking Methods
 

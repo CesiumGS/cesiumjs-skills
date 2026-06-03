@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-3d-tiles
-description: "CesiumJS 3D Tiles - Cesium3DTileset, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets, styling building features, querying metadata properties, working with voxels or point clouds, or clipping spatial data."
+description: "CesiumJS 3D Tiles - Cesium3DTileset, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets or Mapbox Vector Tiles as runtime 3D Tiles, styling building/vector features, querying metadata properties, working with voxels or point clouds, or clipping spatial data."
 ---
 # CesiumJS 3D Tiles
 
-Version baseline: CesiumJS v1.139 (ES module imports, async factory methods).
+Version baseline: CesiumJS v1.142 (ES module imports, async factory methods).
 
 ## Loading a Tileset
 
@@ -65,6 +65,65 @@ viewer.scene.primitives.add(osmBuildings);
 | `preloadFlightDestinations` | true | Prefetch tiles at flight target |
 | `featureIdLabel` | "featureId_0" | EXT_mesh_features ID set label |
 | `backFaceCulling` | true | Cull back faces per glTF material |
+| `edgeDisplayMode` | EdgeDisplayMode.SURFACES_ONLY | Render glTF edge-visibility data when present |
+
+## Mapbox Vector Tiles as Runtime 3D Tiles (Experimental, 1.142+)
+
+`MVTDataProvider` loads `{z}/{x}/{y}` Mapbox Vector Tile `.mvt`/`.pbf`
+templates and converts tile payloads into runtime 3D Tiles. Use it when vector
+data is naturally tiled and you want 3D Tiles styling, metadata picking, and LOD
+instead of a single GeoJSON primitive.
+
+For one in-memory or URL-backed GeoJSON object, prefer `GeoJsonPrimitive` in
+`cesiumjs-primitives`. For Entity/DataSource conveniences, prefer
+`GeoJsonDataSource` in `cesiumjs-entities`.
+
+```js
+import {
+  Cesium3DTileStyle,
+  MVTDataProvider,
+  Rectangle,
+} from "cesium";
+
+const provider = await MVTDataProvider.fromUrl(
+  "https://example.com/tiles/{z}/{x}/{y}.pbf",
+  {
+    minZoom: 4,
+    maxZoom: 14,
+    extent: Rectangle.fromDegrees(-125, 24, -66, 50),
+    featureIdProperty: "id",
+  },
+);
+
+viewer.scene.primitives.add(provider);
+
+// The provider owns a generated Cesium3DTileset.
+provider.tileset.style = new Cesium3DTileStyle({
+  color: {
+    conditions: [
+      ["${kind} === 'park'", "color('seagreen', 0.65)"],
+      ["${kind} === 'water'", "color('steelblue', 0.55)"],
+      ["true", "color('white', 0.45)"],
+    ],
+  },
+});
+```
+
+Feature properties are encoded as `EXT_structural_metadata`, so standard
+3D Tiles styling and picking patterns apply:
+
+```js
+const picked = viewer.scene.pick(windowPosition);
+if (picked && typeof picked.getProperty === "function") {
+  console.log(picked.getProperty("name"));
+}
+```
+
+Notes:
+- URL templates must contain `{z}`, `{x}`, and `{y}` placeholders; tile URLs are parsed from `/z/x/y`.
+- Empty 204/404 tiles are treated as missing instead of hard failures.
+- `provider.show` proxies visibility to the generated tileset.
+- Runtime vector glTF content uses draft `EXT_mesh_polygon` and `3DTILES_content_gltf_vector` support; treat this path as experimental.
 
 ## Tileset Events
 
@@ -160,6 +219,27 @@ tileset.style = undefined; // reset to default appearance
 import { Cesium3DTileColorBlendMode } from "cesium";
 tileset.colorBlendMode = Cesium3DTileColorBlendMode.REPLACE; // HIGHLIGHT | REPLACE | MIX
 tileset.colorBlendAmount = 0.5; // only used with MIX
+```
+
+### Edge Display Mode (Experimental, 1.142+)
+
+`edgeDisplayMode` controls edges contributed by the draft glTF
+`EXT_mesh_primitive_edge_visibility` extension. Tiles without that extension
+render normally regardless of this setting.
+
+```js
+import { Cesium3DTileset, EdgeDisplayMode } from "cesium";
+
+const tileset = await Cesium3DTileset.fromUrl("/cad/tileset.json", {
+  edgeDisplayMode: EdgeDisplayMode.SURFACES_AND_EDGES,
+});
+viewer.scene.primitives.add(tileset);
+
+// CAD-style wireframe for content that carries edge-visibility data.
+tileset.edgeDisplayMode = EdgeDisplayMode.EDGES_ONLY;
+
+// Default rendering: hide extension-provided edges.
+tileset.edgeDisplayMode = EdgeDisplayMode.SURFACES_ONLY;
 ```
 
 ## Feature Picking and Properties

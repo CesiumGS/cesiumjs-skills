@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-primitives
-description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static geometry, creating custom shapes, batching draw calls, or using low-level billboard, label, and point collections."
+description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, BufferPrimitive collections, GeoJsonPrimitive, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static or vector geometry, loading GeoJSON without entities, creating custom shapes, batching draw calls, or using low-level collections."
 ---
 # CesiumJS Primitives & Geometry
 
-> **Applies to:** CesiumJS v1.139+ (ES module imports, `??` instead of `defaultValue`)
+> **Applies to:** CesiumJS v1.142+ (ES module imports, `??` instead of `defaultValue`)
 
 ## Architecture
 
@@ -121,6 +121,113 @@ group.add(new LabelCollection());
 scene.primitives.add(group);
 group.show = false; // toggle all children
 ```
+
+## Choosing a Vector Data Path
+
+| Need | Use |
+|---|---|
+| Entity lifecycle, clustering, per-entity styling, time-dynamic values | `GeoJsonDataSource` in `cesiumjs-entities` |
+| One large GeoJSON object with low overhead and primitive-level performance | `GeoJsonPrimitive` in this skill |
+| Tiled vector data, 3D Tiles LOD, metadata styling, feature picking | `MVTDataProvider` in `cesiumjs-3d-tiles` |
+| Fully manual high-throughput point/polyline/polygon buffers | `BufferPointCollection`, `BufferPolylineCollection`, `BufferPolygonCollection` |
+
+## Buffer Primitive Collections (Experimental, 1.140+)
+
+Use `BufferPointCollection`, `BufferPolylineCollection`, and `BufferPolygonCollection`
+for very large vector datasets where Entity/DataSource overhead is too high. These
+APIs were introduced in 1.140 (#13212) and refined through 1.142; they are
+experimental and use flyweight primitive objects: reuse one `BufferPoint`,
+`BufferPolyline`, or `BufferPolygon` when adding or iterating thousands of items.
+
+```js
+import {
+  BlendOption,
+  BoundingSphere,
+  BufferPoint,
+  BufferPointCollection,
+  BufferPointMaterial,
+  Cartesian3,
+  Color,
+} from "cesium";
+
+const positions = [
+  Cartesian3.fromDegrees(-75.16, 39.95),
+  Cartesian3.fromDegrees(-73.98, 40.75),
+];
+
+const points = scene.primitives.add(new BufferPointCollection({
+  primitiveCountMax: positions.length,
+  allowPicking: true,
+  blendOption: BlendOption.TRANSLUCENT,
+  boundingVolume: BoundingSphere.fromPoints(positions), // world space in 1.142+
+}));
+
+const point = new BufferPoint();
+const material = new BufferPointMaterial({
+  color: Color.CYAN.withAlpha(0.65),
+  outlineColor: Color.WHITE.withAlpha(0.9),
+  outlineWidth: 2,
+  size: 10,
+});
+
+positions.forEach((position, featureId) => {
+  points.add({
+    position,
+    featureId,
+    material,
+  }, point);
+});
+
+const picked = scene.pick(windowPosition);
+if (picked?.collection === points) {
+  console.log(picked.index, picked.primitive.featureId);
+}
+```
+
+> **Breaking change (1.141, #13448):** `BufferPrimitiveCollection.modelMatrix`,
+> `boundingVolume`, and `boundingVolumeWC` are now **readonly** -- you may mutate
+> the object in place, but reassigning the property (`collection.modelMatrix = ...`)
+> throws. Update the existing matrix/volume instead of swapping in a new one.
+
+1.142 notes:
+- `boundingVolume` is now world-space, not local/model-space. If you provide it manually, include the collection `modelMatrix` transform yourself.
+- Providing `boundingVolume` skips automatic recomputation; this helps large animated collections but makes you responsible for keeping the volume valid.
+- `blendOption` is supported on all three buffer collections and enables alpha from `BufferPrimitiveMaterial#color`; `BufferPointCollection` also honors `outlineColor.alpha`.
+- Use `BlendOption.OPAQUE` only when every material is fully opaque; use `TRANSLUCENT` or mixed blending when alpha varies.
+
+## GeoJsonPrimitive (Experimental, 1.142+)
+
+`GeoJsonPrimitive` loads GeoJSON directly into buffer primitive collections,
+bypassing `GeoJsonDataSource` and the Entity layer. Prefer it for large static
+or bulk-updated vector datasets. Keep using `GeoJsonDataSource` when you need
+Entity conveniences, time-dynamic properties, clustering, or DataSource lifecycle
+integration.
+
+```js
+import { GeoJsonPrimitive } from "cesium";
+
+const counties = await GeoJsonPrimitive.fromUrl("/data/counties.geojson", {
+  allowPicking: true,
+});
+scene.primitives.add(counties);
+
+console.log(counties.featureCount);
+console.log(counties.points);    // BufferPointCollection | undefined
+console.log(counties.polylines); // BufferPolylineCollection | undefined
+console.log(counties.polygons);  // BufferPolygonCollection | undefined
+
+// Picking returns the GeoJsonPrimitive pick object, including source properties.
+const picked = scene.pick(windowPosition);
+if (picked?.parentPrimitive === counties) {
+  const featureId = picked.primitive.featureId;
+  console.log(counties.getId(featureId));
+  console.log(counties.getProperties(featureId));
+}
+```
+
+`GeoJsonPrimitive.fromGeoJson(parsedObject)` is available when the GeoJSON is
+already in memory. Source feature IDs are exposed through `ids`/`getId()`, and
+source properties through `properties`/`getProperties()`.
 
 ## Built-in Geometry Types (31)
 
@@ -295,6 +402,12 @@ scene.primitives.add(new ClassificationPrimitive({
 
 GPU-efficient viewport-aligned images -- far more performant than entities at scale.
 
+> **Breaking change (1.140, #13253):** `BillboardCollection` and `LabelCollection`
+> now require WebGL 2, or WebGL 1 with `ANGLE_instanced_arrays` and
+> `MAX_VERTEX_TEXTURE_IMAGE_UNITS > 0`. On unsupported devices they no longer
+> render -- gate on `scene.context.webgl2` (or feature-detect the extension) if you
+> still target legacy WebGL 1 hardware.
+
 ```js
 import { BillboardCollection, Cartesian3, Color, NearFarScalar,
   HeightReference, HorizontalOrigin, VerticalOrigin } from "cesium";
@@ -409,13 +522,16 @@ scene.primitives.add(new Primitive({
 5. **Keep `asynchronous: true`** (default). Check `primitive.ready` before accessing instance attributes.
 6. **Prefer fewer large collections** for Billboard, Label, and PointPrimitive. Group by update frequency.
 7. **Use `BlendOption.OPAQUE`** on BillboardCollection/PointPrimitiveCollection when all items are opaque (up to 2x gain).
-8. **Use GroundPrimitive** for terrain draping instead of entity `heightReference`.
-9. **Separate fill and outline** into two Primitives -- they cannot share a draw call.
-10. **Match `vertexFormat` exactly** to the appearance to skip unused vertex attribute computation.
-11. **Use `EllipsoidSurfaceAppearance`** over `MaterialAppearance` for surface geometry -- fewer vertex attributes.
+8. **Use buffer primitive collections** for large vector data when flyweight updates are acceptable.
+9. **Precompute buffer collection bounding volumes** for large animated collections, but remember they are world-space in 1.142+.
+10. **Use GroundPrimitive** for terrain draping instead of entity `heightReference`.
+11. **Separate fill and outline** into two Primitives -- they cannot share a draw call.
+12. **Match `vertexFormat` exactly** to the appearance to skip unused vertex attribute computation.
+13. **Use `EllipsoidSurfaceAppearance`** over `MaterialAppearance` for surface geometry -- fewer vertex attributes.
 
 ## See Also
 
 - **cesiumjs-entities** -- High-level Entity API wrapping primitives with time-dynamic properties.
+- **cesiumjs-3d-tiles** -- Use `MVTDataProvider` for tiled vector data as runtime 3D Tiles.
 - **cesiumjs-materials-shaders** -- Material (Fabric) system consumed by Appearances, post-processing.
 - **cesiumjs-spatial-math** -- Cartesian3, Matrix4, Transforms, coordinate conversions for positioning geometry.
