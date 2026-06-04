@@ -8,22 +8,22 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ## Domain Summary
 
-| # | Skill Name | Entries | Ownership focus |
-|---|-----------|---------|-----------------|
-| 1 | `cesiumjs-viewer-setup` | ~70 | Viewer, widgets, platform services, scene setup, factory helpers, credits, and geocoder services. |
-| 2 | `cesiumjs-camera` | ~10 | Camera, navigation controller, camera event aggregation, camera flight/view methods, and camera event enums. |
-| 3 | `cesiumjs-entities` | ~60 | Entity API, data sources, graphics classes, visualizers, geometry updaters, and entity-display enums. |
-| 4 | `cesiumjs-3d-tiles` | ~48 | 3D Tiles runtime objects, MVTDataProvider, styles, metadata, voxels, I3S, clipping, and 3D Tiles terrain bridge. |
-| 5 | `cesiumjs-imagery` | ~30 | Imagery providers, imagery layers, provider utilities, tile discard policies, and imagery enums. |
-| 6 | `cesiumjs-terrain-environment` | ~35 | Terrain providers/data, globe, atmosphere, sky, fog, lighting, shadows, panoramas, and terrain/environment enums. |
-| 7 | `cesiumjs-primitives` | ~82 | Primitive API, geometry, appearances, instance attributes, primitive collections/items, and low-level geometry enums. |
-| 8 | `cesiumjs-materials-shaders` | ~20 | Fabric materials, image-based lighting, post-processing, render-state enums, texture filters, and shader-adjacent utilities. |
-| 9 | `cesiumjs-time-properties` | ~57 | Clock/time primitives, property interfaces, value properties, material properties, splines, interpolation, and time enums. |
-| 10 | `cesiumjs-spatial-math` | ~55 | Vectors, matrices, rotations, transforms, ellipsoids, bounding volumes, projections, intersections, and math utilities. |
-| 11 | `cesiumjs-interaction` | ~8 | Screen-space events, picking helpers, scene picking methods, and interaction patterns. |
-| 12 | `cesiumjs-models-particles` | ~21 | Model API, model animations/features/nodes, particle systems and emitters, GPM extension types, and model enums. |
-| 13 | `cesiumjs-core-utilities` | ~46 | Resource/request helpers, workers, colors, events, errors, data structures, feature detection, globals, and core enums. |
-| 14 | `cesiumjs-custom-shader` | ~7 | CustomShader, TextureUniform, CustomShader enums, and shader-authoring rules for models, tilesets, and voxels. |
+| # | Skill Name | Entries | Description (passive activation) |
+|---|-----------|---------|----------------------------------|
+| 1 | `cesiumjs-viewer-setup` | ~70 | CesiumJS viewer setup - Viewer, CesiumWidget, widgets, Ion token, Scene configuration, SceneMode, factory helpers, geocoders, platform services. Use when initializing a CesiumJS application, configuring viewer widgets, setting Ion access tokens, creating default terrain or imagery, or bootstrapping a 3D globe. |
+| 2 | `cesiumjs-camera` | ~10 | CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, tracking entities, or converting between screen and world coordinates. |
+| 3 | `cesiumjs-entities` | ~60 | CesiumJS entities and data sources - Entity, EntityCollection, DataSource, GeoJsonDataSource, KmlDataSource, CzmlDataSource, Graphics types, Visualizers. Use when adding points, labels, models, polygons, or polylines to the map, loading GeoJSON/KML/CZML/GPX data, or working with the high-level Entity API. |
+| 4 | `cesiumjs-3d-tiles` | ~48 | CesiumJS 3D Tiles - Cesium3DTileset, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets or Mapbox Vector Tiles as runtime 3D Tiles, styling building/vector features, querying metadata properties, working with voxels or point clouds, or clipping spatial data. |
+| 5 | `cesiumjs-imagery` | ~30 | CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLayerCollection, WMS, WMTS, Bing, OpenStreetMap, ArcGIS, Mapbox, tile discard policies. Use when adding or swapping base map layers, configuring imagery providers, layering multiple map sources, or creating split-screen imagery comparisons. |
+| 6 | `cesiumjs-terrain-environment` | ~35 | CesiumJS terrain, globe, and environment - TerrainProvider, Globe, sampleTerrain, atmosphere, sky, fog, lighting, shadows, panoramas. Use when configuring terrain providers, querying terrain heights, customizing atmosphere or sky rendering, adding panoramas, or adjusting scene lighting and shadows. |
+| 7 | `cesiumjs-primitives` | ~82 | CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, BufferPrimitive collections, GeoJsonPrimitive, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static/vector geometry, loading GeoJSON without entities, creating custom shapes, batching draw calls, or using low-level collections. |
+| 8 | `cesiumjs-materials-shaders` | ~20 | CesiumJS materials and post-processing - Material, Fabric JSON, MaterialAppearance, ImageBasedLighting, PostProcessStage, PostProcessStageLibrary, bloom, depth of field, ambient occlusion, FXAA, tonemapping, BlendingState. Use when defining Fabric materials for entities or primitives, configuring PBR image-based lighting, or adding screen-space post-processing effects. |
+| 9 | `cesiumjs-time-properties` | ~57 | CesiumJS time, properties, and animation - Clock, JulianDate, TimeInterval, Property, SampledProperty, CallbackProperty, interpolation, splines, CZML temporal data. Use when making entity attributes time-dynamic, configuring the simulation clock, interpolating positions over time, or working with sampled or callback properties. |
+| 10 | `cesiumjs-spatial-math` | ~55 | CesiumJS spatial math - Cartesian3, Cartographic, Matrix4, Quaternion, Transforms, Ellipsoid, BoundingSphere, projections, coordinate conversions. Use when converting between coordinate systems, computing positions on the ellipsoid, performing spatial intersection tests, building model matrices, or working with geographic projections. |
+| 11 | `cesiumjs-interaction` | ~8 | CesiumJS interaction and picking - ScreenSpaceEventHandler, Scene.pick, Scene.drillPick, Scene.pickPosition, mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, registering multi-key-modifier input actions, implementing hover effects, or building drag-based interactions. |
+| 12 | `cesiumjs-models-particles` | ~21 | CesiumJS models, glTF, and particle effects - Model, ModelAnimation, ModelNode, EdgeDisplayMode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, controlling edge rendering, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata. |
+| 13 | `cesiumjs-core-utilities` | ~46 | CesiumJS core utilities and networking - Resource, Color, Event, Request, RequestScheduler, error handling, helper functions, feature detection. Use when fetching remote data, managing HTTP requests, working with colors, handling events, debugging errors, or using utility functions like defined, clone, or buildModuleUrl. |
+| 14 | `cesiumjs-custom-shader` | ~7 | CustomShader authoring - vertexShaderText and fragmentShaderText against VertexInput, FragmentInput, FeatureIds, Metadata, czm_modelMaterial. Use when reading EXT_mesh_features or EXT_structural_metadata property textures/tables, vertex displacement, or shading VoxelPrimitive. |
 
 ---
 
