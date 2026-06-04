@@ -1,9 +1,0 @@
-{
-  "iteration": "002",
-  "decision": "KEEP",
-  "timestamp_utc": "2026-05-27T21:35:49.518548+00:00",
-  "runs_dir": "optimization/runs/cesiumjs-camera/002",
-  "candidate_dir": "optimization/candidates/cesiumjs-camera/002",
-  "generated_dir": "optimization/generated/cesiumjs-camera/002",
-  "journal": "optimization/history/cesiumjs-camera/iteration-002/journal.jsonl"
-}

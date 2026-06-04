@@ -1,7 +1,0 @@
-{"current_best": "skills/cesiumjs-core-utilities/SKILL.md", "event": "baseline_check_started", "expected_bundle_count": 4, "iteration": "baseline", "skill": "cesiumjs-core-utilities", "timestamp_utc": "2026-05-26T17:37:57.882580+00:00"}
-{"event": "baseline_check_completed", "iteration": "baseline", "reused": true, "runs_dir": "evals/runs/cesiumjs-core-utilities/baseline", "skill": "cesiumjs-core-utilities", "timestamp_utc": "2026-05-26T17:37:57.883393+00:00"}
-{"current_best": "skills/cesiumjs-core-utilities/SKILL.md", "event": "baseline_check_started", "expected_bundle_count": 4, "iteration": "baseline", "skill": "cesiumjs-core-utilities", "timestamp_utc": "2026-05-26T20:57:27.298319+00:00"}
-{"current_best": "skills/cesiumjs-core-utilities/SKILL.md", "event": "baseline_generation_started", "iteration": "baseline", "skill": "cesiumjs-core-utilities", "timestamp_utc": "2026-05-26T20:57:27.298919+00:00"}
-{"event": "baseline_generation_completed", "iteration": "baseline", "result": {"error": null, "generated_count": 4, "success": true}, "skill": "cesiumjs-core-utilities", "timestamp_utc": "2026-05-26T20:58:27.413717+00:00"}
-{"event": "baseline_browser_eval_started", "iteration": "baseline", "skill": "cesiumjs-core-utilities", "timestamp_utc": "2026-05-26T20:58:27.413809+00:00"}
-{"event": "baseline_browser_eval_completed", "iteration": "baseline", "result": {"error": null, "runs_dir": "evals/runs/cesiumjs-core-utilities/baseline", "success": true}, "skill": "cesiumjs-core-utilities", "timestamp_utc": "2026-05-26T20:59:37.349244+00:00"}

@@ -1,9 +1,0 @@
-{
-  "iteration": "001",
-  "decision": "REJECT",
-  "timestamp_utc": "2026-05-26T21:23:32.797586+00:00",
-  "runs_dir": "evals/runs/cesiumjs-terrain-environment/001",
-  "candidate_dir": "evals/candidates/cesiumjs-terrain-environment/001",
-  "generated_dir": "evals/generated/cesiumjs-terrain-environment/001",
-  "journal": "evals/history/cesiumjs-terrain-environment/iteration-001/journal.jsonl"
-}

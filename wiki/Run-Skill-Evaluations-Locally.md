@@ -91,7 +91,9 @@ Each run directory includes:
 - `scene-state.json` - serialized scene state (camera, entities, imagery layers).
 - `metadata.json` - reproducibility metadata (hashes, versions, timestamps).
 
-Only sanitized summaries should be committed to `optimization/results/`.
+Only compact aggregate summaries should be committed under
+`optimization/results/*.json`. Per-run bundles and per-iteration summaries are
+local or CI artifacts by default.
 
 ## Run Full Autonomous Loop
 
@@ -158,7 +160,10 @@ Each iteration produces:
 
 On KEEP decisions, the candidate skill replaces `skills/<skill>/SKILL.md`.
 
-All iterations are archived to `optimization/history/<skill>/iteration-NNN/` for reproducibility.
+The candidate, decision, summary, and history folders are ignored local outputs.
+CI uploads them as workflow artifacts when the visual workflow runs. The
+repository keeps only the promoted skill change and compact aggregate result
+state.
 
 ### Coverage Analysis
 
@@ -172,22 +177,22 @@ Output is written to `optimization/results/coverage.json` with per-skill section
 
 The proposer uses this coverage data to prioritize gaps when suggesting skill revisions.
 
-## Reproduce a Public Decision
+## Reproduce a Workflow Artifact Decision
 
-To reproduce a decision from a published iteration:
+To reproduce a decision from a visual workflow artifact:
 
-1. Check out the repository at the commit referenced in the decision's `metadata.json`
-2. Locate the archived iteration under `optimization/history/<skill>/iteration-NNN/`
+1. Check out the repository at the commit referenced in the artifact metadata.
+2. Download the evaluation report artifact from the visual workflow run.
 3. Verify scenario hashes match the recorded baselines in `optimization/results/baselines.json`
-4. Re-run the decision engine with archived artifacts:
+4. Re-run the decision engine with the artifact's check, judge, and scenario metadata files:
 
 ```bash
 python3 optimization/scripts/make-decision.py \
   cesiumjs-camera \
   001 \
-  --check-results optimization/history/cesiumjs-camera/iteration-001/check-results.json \
-  --judge-results optimization/history/cesiumjs-camera/iteration-001/judge-results.json \
-  --scenario-meta optimization/history/cesiumjs-camera/iteration-001/scenario-meta.json \
+  --check-results path/to/artifact/check-results.json \
+  --judge-results path/to/artifact/judge-results.json \
+  --scenario-meta path/to/artifact/scenario-meta.json \
   --baselines optimization/results/baselines.json
 ```
 
@@ -211,7 +216,7 @@ Until re-baselined, changed scenarios are excluded from win/loss counts and tagg
 
 ## Local Artifact Safety
 
-Before committing any results to `optimization/results/`, ensure they pass public safety checks:
+Before committing aggregate result updates, ensure they pass public safety checks:
 
 ```bash
 python3 optimization/scripts/check-canonical-eval-surface.py
@@ -219,4 +224,4 @@ python3 optimization/scripts/check-public-artifacts.py
 bash optimization/scripts/check-secrets.sh
 ```
 
-The runner and report generator automatically validate outputs before writing tracked files.
+The runner and report generator validate public outputs before writing them.

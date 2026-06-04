@@ -52,12 +52,12 @@ def signal_handler(sig, frame):
     _stop_requested = True
 
 
-# Redaction patterns for secrets that leak into tracked journals/history.
+# Redaction patterns for secrets that leak into persisted journals/history.
 # Subprocess tracebacks captured into result dicts (e.g. "Proposer failed: <stderr>")
 # routinely embed the developer's home-directory paths and local dev-server URLs.
-# Because _json_safe() serializes those result dicts verbatim into tracked
-# optimization/results/.../journal.jsonl and optimization/history/..., we scrub
-# every persisted string here at the single serialization choke point.
+# Because _json_safe() serializes those result dicts verbatim into local or CI
+# artifacts, we scrub every persisted string here at the single serialization
+# choke point.
 #   - User-home paths: /Users/<name>/, /home/<name>/, C:\Users\<name>\
 #   - Local dev URLs:  http(s)://localhost:<port> and http(s)://127.0.0.1:<port>
 _HOME_PATH_RE = re.compile(r"(?:/Users/|/home/|C:\\Users\\)[^/\\\s:'\"]+[/\\]")
@@ -86,7 +86,7 @@ def _json_safe(value: Any) -> Any:
         return [_json_safe(v) for v in value]
     if isinstance(value, str):
         # Redact every persisted string (e.g. subprocess tracebacks) so local
-        # paths and dev-server URLs never reach tracked journals/history.
+        # paths and dev-server URLs never reach persisted journals/history.
         return _redact_secrets(value)
     return value
 

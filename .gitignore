@@ -14,13 +14,21 @@ demo/index.html
 # Historical local tuning workspaces are not part of the active pipeline.
 tuning/
 
-# Optimization local inputs and raw run outputs. Scenario manifests and
-# sanitized summaries under optimization/scenarios and optimization/results
-# are tracked.
+# Optimization local inputs and run outputs. Scenario manifests are tracked.
+# Aggregate public summaries at optimization/results/*.json are tracked; the
+# per-skill iteration folders are local or CI artifacts.
 optimization/generated/
 optimization/runs/
 optimization/tmp/
-optimization/candidates/*/*/raw/
+optimization/candidates/
+optimization/dashboard/
+optimization/history/
+optimization/results/*/
+
+# Keep the compact, reviewable result state in the repository.
+!optimization/results/baselines.json
+!optimization/results/coverage.json
+!optimization/results/public-status.json
 
 # Pure evaluation scratch/output artifacts are local-only by default. Test
 # cases, schemas, and framework code under evaluation/ are tracked.

@@ -1,7 +1,0 @@
-{"current_best": "skills/cesiumjs-imagery/SKILL.md", "event": "baseline_check_started", "expected_bundle_count": 15, "iteration": "baseline", "skill": "cesiumjs-imagery", "timestamp_utc": "2026-05-26T17:45:18.402733+00:00"}
-{"event": "baseline_check_completed", "iteration": "baseline", "reused": true, "runs_dir": "evals/runs/cesiumjs-imagery/baseline", "skill": "cesiumjs-imagery", "timestamp_utc": "2026-05-26T17:45:18.404382+00:00"}
-{"current_best": "skills/cesiumjs-imagery/SKILL.md", "event": "baseline_check_started", "expected_bundle_count": 15, "iteration": "baseline", "skill": "cesiumjs-imagery", "timestamp_utc": "2026-05-26T20:57:30.316366+00:00"}
-{"current_best": "skills/cesiumjs-imagery/SKILL.md", "event": "baseline_generation_started", "iteration": "baseline", "skill": "cesiumjs-imagery", "timestamp_utc": "2026-05-26T20:57:30.316912+00:00"}
-{"event": "baseline_generation_completed", "iteration": "baseline", "result": {"error": null, "generated_count": 15, "success": true}, "skill": "cesiumjs-imagery", "timestamp_utc": "2026-05-26T21:04:46.969381+00:00"}
-{"event": "baseline_browser_eval_started", "iteration": "baseline", "skill": "cesiumjs-imagery", "timestamp_utc": "2026-05-26T21:04:46.969468+00:00"}
-{"event": "baseline_browser_eval_completed", "iteration": "baseline", "result": {"error": null, "runs_dir": "evals/runs/cesiumjs-imagery/baseline", "success": true}, "skill": "cesiumjs-imagery", "timestamp_utc": "2026-05-26T21:09:14.368391+00:00"}

@@ -1,9 +1,0 @@
-{
-  "iteration": "001",
-  "decision": "REJECT",
-  "timestamp_utc": "2026-05-26T21:45:18.643870+00:00",
-  "runs_dir": "evals/runs/cesiumjs-imagery/001",
-  "candidate_dir": "evals/candidates/cesiumjs-imagery/001",
-  "generated_dir": "evals/generated/cesiumjs-imagery/001",
-  "journal": "evals/history/cesiumjs-imagery/iteration-001/journal.jsonl"
-}

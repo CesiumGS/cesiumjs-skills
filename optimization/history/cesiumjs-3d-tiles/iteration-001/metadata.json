@@ -1,9 +1,0 @@
-{
-  "iteration": "001",
-  "decision": "KEEP",
-  "timestamp_utc": "2026-05-26T21:09:32.401242+00:00",
-  "runs_dir": "evals/runs/cesiumjs-3d-tiles/001",
-  "candidate_dir": "evals/candidates/cesiumjs-3d-tiles/001",
-  "generated_dir": "evals/generated/cesiumjs-3d-tiles/001",
-  "journal": "evals/history/cesiumjs-3d-tiles/iteration-001/journal.jsonl"
-}

@@ -1,9 +1,0 @@
-{
-  "iteration": "001",
-  "decision": "KEEP",
-  "timestamp_utc": "2026-05-26T21:12:29.077407+00:00",
-  "runs_dir": "evals/runs/cesiumjs-materials-shaders/001",
-  "candidate_dir": "evals/candidates/cesiumjs-materials-shaders/001",
-  "generated_dir": "evals/generated/cesiumjs-materials-shaders/001",
-  "journal": "evals/history/cesiumjs-materials-shaders/iteration-001/journal.jsonl"
-}

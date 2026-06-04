@@ -168,9 +168,10 @@ jobs:
           BRANCH_NAME="optimization/visual-results-${{ steps.determine-skill.outputs.skill }}-${TIMESTAMP}"
           git checkout -b "${BRANCH_NAME}"
 
-          # Stage result files only (not runs or generated artifacts)
-          git add optimization/results/ ':!optimization/results/baselines.json' || true
-          git add optimization/history/ || true
+          # Stage compact aggregate result files only. Full per-iteration
+          # reports, candidate snapshots, history archives, generated code, and
+          # screenshots remain workflow artifacts.
+          git add optimization/results/public-status.json optimization/results/coverage.json || true
 
           # Commit if there are changes
           if git diff --staged --quiet; then

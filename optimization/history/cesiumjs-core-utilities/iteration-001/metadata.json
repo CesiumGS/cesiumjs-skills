@@ -1,9 +1,0 @@
-{
-  "iteration": "001",
-  "decision": "KEEP",
-  "timestamp_utc": "2026-05-26T21:08:06.305805+00:00",
-  "runs_dir": "evals/runs/cesiumjs-core-utilities/001",
-  "candidate_dir": "evals/candidates/cesiumjs-core-utilities/001",
-  "generated_dir": "evals/generated/cesiumjs-core-utilities/001",
-  "journal": "evals/history/cesiumjs-core-utilities/iteration-001/journal.jsonl"
-}

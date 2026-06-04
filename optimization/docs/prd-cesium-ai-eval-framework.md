@@ -102,7 +102,7 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 
 **Acceptance Criteria:**
 - [ ] `.gitignore` excludes `optimization/runs/`, `optimization/generated/`, raw HTML, raw screenshots before curation.
-- [ ] Public-safe artifacts (`optimization/scenarios/`, `optimization/results/`, ADRs, wiki) remain tracked.
+- [ ] Public-safe source and aggregate artifacts (`optimization/scenarios/`, `optimization/results/*.json`, ADRs, wiki) remain tracked.
 - [ ] `optimization/scripts/check-public-artifacts.py` scans all tracked eval files for: Ion token patterns, absolute filesystem paths, email addresses, private URLs, and other configurable patterns; exits non-zero on any hit.
 - [ ] `optimization/scripts/check-secrets.sh` runs a secret scanner on the staged diff before publication.
 
@@ -131,7 +131,7 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 - [ ] Proposer receives: current best skill content, last decision record, all per-scenario verdicts + rationales for last N iterations, coverage report, recent failure taxonomy.
 - [ ] Proposer outputs: a candidate skill file (full content), a `hypothesis.md` explaining the change, the specific scenario evidence the change addresses.
 - [ ] Proposer is a pure function of inputs (same inputs → reproducible candidate, or a recorded seed/temperature).
-- [ ] Candidate is written to `optimization/candidates/<skill>/<iteration>/` and ready for the runner without manual edits.
+- [ ] Candidate is written to ignored local output under `optimization/candidates/<skill>/<iteration>/` and ready for the runner without manual edits.
 
 ### US-013: Autonomous iteration loop
 **Description:** As an operator, I want to start the framework and have it run iteration after iteration without intervention until a stopping condition is met.
@@ -143,7 +143,7 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 - [ ] If decision is REJECT: candidate is discarded; next proposer call sees the rejection and rationale.
 - [ ] Loop terminates on: max iterations reached, plateau (N consecutive ties), unrecoverable runner error, or operator signal.
 - [ ] No prompt for confirmation, no maintainer-blocking gate, no interactive pause anywhere in the loop.
-- [ ] Full iteration history persisted under `optimization/history/<skill>/iteration-NNN/`.
+- [ ] Full iteration history persisted as ignored local output and uploaded as a workflow artifact when run in CI.
 
 ### US-014: PR CI workflow (deterministic gates only)
 **Description:** As a contributor, I want fast PR feedback that doesn't burn LLM judge cost.
@@ -185,7 +185,7 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 **Acceptance Criteria:**
 - [ ] `wiki/Run-Skill-Evaluations-Locally.md` covers: install, token setup, single-scenario run, full skill loop run.
 - [ ] All commands in the wiki are copy-paste runnable from a clean checkout (verified by a smoke-test script).
-- [ ] Local runner respects the same public-safety scans before any artifact is moved into the tracked `optimization/results/` tree.
+- [ ] Local runner respects the same public-safety scans before aggregate result files are staged for publication.
 
 ## 4. Functional Requirements
 
@@ -224,9 +224,10 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 - **Repo layout** (build on existing v1):
   - `optimization/scenarios/<skill>/*.json` — manifests (tracked)
   - `optimization/schemas/*.json` — schemas (tracked)
-  - `optimization/results/` — sanitized summaries and decision records (tracked)
-  - `optimization/history/<skill>/iteration-NNN/` — per-iteration archive (tracked, sanitized)
-  - `optimization/candidates/<skill>/<iteration>/` — candidate skill files (tracked)
+  - `optimization/results/*.json` — aggregate baselines, public status, and coverage reports (tracked)
+  - `optimization/results/<skill>/<iteration>/` — per-iteration summaries and decisions (gitignored; CI artifact)
+  - `optimization/history/<skill>/iteration-NNN/` — per-iteration archive (gitignored; CI artifact)
+  - `optimization/candidates/<skill>/<iteration>/` — candidate skill files (gitignored; CI artifact)
   - `optimization/generated/`, `optimization/runs/` — raw outputs (gitignored)
   - `optimization/scripts/` — self-optimization CLIs: `validate-evals.py`, `check-public-artifacts.py`, `check-secrets.sh`, `run-public-eval.py`, `run-loop.py`
   - `evaluation/scripts/` — pure deterministic evaluation CLIs.

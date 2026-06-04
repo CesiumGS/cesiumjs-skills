@@ -1,9 +1,9 @@
 # Optimization Pipeline Source of Truth
 
 `optimization/` is the supported source of truth for the CesiumJS skills
-self-optimization pipeline. Live optimization scenario manifests, public
-summaries, baselines, schemas, candidate artifacts, decisions, and sanitized
-result artifacts belong under `optimization/`.
+self-optimization pipeline. Live optimization scenario manifests, aggregate
+public summaries, baselines, schemas, scripts, and tests belong under
+`optimization/`.
 
 Pure deterministic evaluation is intentionally separate. New unit-test-like
 evaluation cases and scene-state assertions belong under `evaluation/`, where
@@ -35,6 +35,11 @@ needed in this cleanup.
 - Add new self-optimization scenarios only under `optimization/scenarios/<skill>/`.
 - Keep raw generated code and browser run outputs under ignored local paths such
   as `optimization/generated/` and `optimization/runs/`.
+- Keep candidate snapshots, per-iteration decision folders, generated dashboards,
+  and history archives local or as CI artifacts. Commit only compact aggregate
+  result state such as `optimization/results/baselines.json`,
+  `optimization/results/public-status.json`, and
+  `optimization/results/coverage.json`.
 - Use the current public runner, `optimization/framework/` implementation modules, and
   report outputs; do not restore old local tuning helpers as active code.
 - Do not put deterministic unit-style evaluation cases here. Put them in

@@ -1,4 +1,0 @@
-{"current_best": "skills/cesiumjs-3d-tiles/SKILL.md", "event": "baseline_check_started", "expected_bundle_count": 5, "iteration": "baseline", "skill": "cesiumjs-3d-tiles", "timestamp_utc": "2026-05-26T17:45:17.385053+00:00"}
-{"event": "baseline_check_completed", "iteration": "baseline", "reused": true, "runs_dir": "evals/runs/cesiumjs-3d-tiles/baseline", "skill": "cesiumjs-3d-tiles", "timestamp_utc": "2026-05-26T17:45:17.385925+00:00"}
-{"current_best": "skills/cesiumjs-3d-tiles/SKILL.md", "event": "baseline_check_started", "expected_bundle_count": 5, "iteration": "baseline", "skill": "cesiumjs-3d-tiles", "timestamp_utc": "2026-05-26T20:57:25.292418+00:00"}
-{"event": "baseline_check_completed", "iteration": "baseline", "reused": true, "runs_dir": "evals/runs/cesiumjs-3d-tiles/baseline", "skill": "cesiumjs-3d-tiles", "timestamp_utc": "2026-05-26T20:57:25.294072+00:00"}

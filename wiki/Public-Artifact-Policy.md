@@ -5,7 +5,7 @@ The evaluation framework is public-facing. Artifacts committed to the repository
 ## Allowed by Default
 
 - Scenario manifests under `optimization/scenarios/`.
-- Sanitized evaluation summaries under `optimization/results/`.
+- Aggregate evaluation summaries under `optimization/results/*.json`.
 - Architecture docs and ADRs.
 - Public wiki pages.
 - Programmatic check summaries that use relative paths and no credentials.
@@ -15,7 +15,10 @@ The evaluation framework is public-facing. Artifacts committed to the repository
 
 - Generated JavaScript snippets under `optimization/generated/`.
 - Raw browser runs under `optimization/runs/`.
-- Generated HTML pages.
+- Generated candidate skill snapshots under `optimization/candidates/`.
+- Generated HTML pages, including the dashboard at `optimization/dashboard/index.html` (rebuild locally with `optimization/scripts/build-dashboard.py`).
+- Per-skill iteration output under `optimization/results/<skill>/<iteration>/`.
+- The `optimization/history/` archive.
 - Console logs from local browser runs.
 - Raw screenshots before review.
 - Model prompts or raw model transcripts.

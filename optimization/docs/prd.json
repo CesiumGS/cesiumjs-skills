@@ -24,7 +24,7 @@
       "title": "Add public-safety partition and scanners",
       "description": "As a maintainer, I need raw evidence kept out of git and tracked files scanned for tokens/paths so the repo stays public-safe.",
       "acceptanceCriteria": [
-        "Update .gitignore to exclude optimization/runs/, optimization/generated/, optimization/candidates/<skill>/<iteration>/raw/, *.eval.html, raw console captures",
+        "Update .gitignore to exclude optimization/runs/, optimization/generated/, optimization/candidates/, optimization/history/, per-iteration optimization/results/<skill>/<iteration>/ folders, generated dashboards, *.eval.html, raw console captures",
         "Create optimization/scripts/check-public-artifacts.py that scans tracked files under optimization/ for Ion-token patterns, absolute filesystem paths (/Users/, /home/), email addresses, and configurable regex list; exits non-zero on any hit",
         "Create optimization/scripts/check-secrets.sh that wraps a secret scanner over the staged diff",
         "Document the configurable pattern list location at top of check-public-artifacts.py",
@@ -271,7 +271,7 @@
         "Create .github/workflows/evals-visual.yml triggered on workflow_dispatch, on cron schedule (nightly), and on release tags",
         "Runs the full pipeline: adapter -> runner -> checks -> three-judge panel -> decision -> report",
         "Reads CESIUM_ION_TOKEN, ANTHROPIC_API_KEY, and any judge model keys from CI secrets; never echoes them",
-        "Uploads sanitized report as a workflow artifact and commits it back to optimization/results/ via PR or push branch (configurable)",
+        "Uploads full sanitized reports as workflow artifacts and commits only compact aggregate result files under optimization/results/*.json via PR or push branch (configurable)",
         "Typecheck passes"
       ],
       "priority": 17,
@@ -286,7 +286,7 @@
         "Update wiki/Run-Skill-Evaluations-Locally.md to cover: install (Playwright + Python deps), token setup (CESIUM_ION_TOKEN, ANTHROPIC_API_KEY), single-scenario run via run-public-eval.py, full skill loop via run-loop.py",
         "All commands are copy-paste runnable from a clean checkout",
         "Create optimization/scripts/smoke-test-docs.sh that executes each documented command (using a tiny scenario set) and exits non-zero on any failure",
-        "Local runner respects check-public-artifacts.py before any artifact is moved into tracked optimization/results/",
+        "Local runner respects check-public-artifacts.py before any aggregate result file is staged for publication",
         "Typecheck passes"
       ],
       "priority": 18,

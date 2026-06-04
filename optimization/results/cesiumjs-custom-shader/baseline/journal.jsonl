@@ -1,7 +1,0 @@
-{"current_best": "skills/cesiumjs-custom-shader/SKILL.md", "event": "baseline_check_started", "expected_bundle_count": 4, "iteration": "baseline", "skill": "cesiumjs-custom-shader", "timestamp_utc": "2026-05-26T17:39:15.196391+00:00"}
-{"event": "baseline_check_completed", "iteration": "baseline", "reused": true, "runs_dir": "evals/runs/cesiumjs-custom-shader/baseline", "skill": "cesiumjs-custom-shader", "timestamp_utc": "2026-05-26T17:39:15.197110+00:00"}
-{"current_best": "skills/cesiumjs-custom-shader/SKILL.md", "event": "baseline_check_started", "expected_bundle_count": 4, "iteration": "baseline", "skill": "cesiumjs-custom-shader", "timestamp_utc": "2026-05-26T20:57:28.302737+00:00"}
-{"current_best": "skills/cesiumjs-custom-shader/SKILL.md", "event": "baseline_generation_started", "iteration": "baseline", "skill": "cesiumjs-custom-shader", "timestamp_utc": "2026-05-26T20:57:28.303338+00:00"}
-{"event": "baseline_generation_completed", "iteration": "baseline", "result": {"error": null, "generated_count": 4, "success": true}, "skill": "cesiumjs-custom-shader", "timestamp_utc": "2026-05-26T20:59:28.500901+00:00"}
-{"event": "baseline_browser_eval_started", "iteration": "baseline", "skill": "cesiumjs-custom-shader", "timestamp_utc": "2026-05-26T20:59:28.500998+00:00"}
-{"event": "baseline_browser_eval_completed", "iteration": "baseline", "result": {"error": null, "runs_dir": "evals/runs/cesiumjs-custom-shader/baseline", "success": true}, "skill": "cesiumjs-custom-shader", "timestamp_utc": "2026-05-26T21:00:51.182471+00:00"}
