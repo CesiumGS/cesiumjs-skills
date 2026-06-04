@@ -1,0 +1,51 @@
+{
+  "name": "@cesium/cesiumjs-skills",
+  "version": "0.3.0",
+  "description": "Agent Skills for CesiumJS development, covering CesiumJS v1.143 domain workflows.",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/CesiumGS/cesiumjs-skills#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CesiumGS/cesiumjs-skills.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CesiumGS/cesiumjs-skills/issues"
+  },
+  "keywords": [
+    "agent-skills",
+    "skills",
+    "cesium",
+    "cesiumjs",
+    "3d",
+    "geospatial",
+    "gis",
+    "maps",
+    "claude-code",
+    "codex",
+    "cursor"
+  ],
+  "files": [
+    "skills/",
+    "docs/",
+    ".claude-plugin/",
+    ".mcp.json",
+    "hooks/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "skills:list": "npx --yes skills@1.5.10 add . --list",
+    "test": "npm run test:skills && npm run test:npm-sync",
+    "test:skills": "node scripts/validate-skills-package.mjs",
+    "test:npm-sync": "node scripts/smoke-test-npm-sync.mjs",
+    "pack:check": "npm pack --dry-run",
+    "prepack": "npm run test:skills"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -28,7 +28,7 @@ This directory contains Cesium ecosystem agent skills organized into two categor
 
 ### CesiumJS Domain Skills (Baked-In Reference)
 
-Self-contained, domain-level skills that passively activate when developers ask CesiumJS questions. Each skill provides a Quick Start, API reference, runnable code examples, performance tips, and cross-references. Based on CesiumJS v1.142.x.
+Self-contained, domain-level skills that passively activate when developers ask CesiumJS questions. Each skill provides a Quick Start, API reference, runnable code examples, performance tips, and cross-references. Based on CesiumJS v1.143.x.
 
 | # | Skill | Description |
 |---|-------|-------------|
@@ -55,6 +55,31 @@ If you're using an AI assistant that supports Agent Skills (like GitHub Copilot 
 
 Skills are typically stored as `SKILL.md` files within their respective directories, along with any supporting resources.
 
+### Install with the Skills CLI
+
+```bash
+npx skills add CesiumGS/cesiumjs-skills
+```
+
+To inspect the available skills first:
+
+```bash
+npx skills add CesiumGS/cesiumjs-skills --list
+```
+
+To install through npm dependency sync:
+
+```bash
+npm install --save-dev github:CesiumGS/cesiumjs-skills
+npx skills experimental_sync --agent claude-code -y
+```
+
+After `@cesium/cesiumjs-skills` is published to npm, replace the GitHub
+dependency with the scoped package name.
+
+See [INSTALLATION.md](./INSTALLATION.md) for requirements, agent targets,
+publishing notes, and local verification commands.
+
 ## 🤝 Contributing New Skills
 
 To add a new Cesium agent skill:
@@ -69,6 +94,7 @@ To add a new Cesium agent skill:
 
 - [Agent Skills Homepage](https://agentskills.io/)
 - [Agent Skills Specification](https://agentskills.io/specification)
+- [Skills CLI Documentation](https://www.skills.sh/docs/cli)
 - [Example Skills Repository](https://github.com/anthropics/skills)
 - [Cesium Documentation](https://cesium.com/docs/)
 - [Cesium ion](https://cesium.com/platform/cesium-ion/)
