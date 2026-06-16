@@ -151,7 +151,8 @@ viewer.camera.lookAt(
 **Key patterns:**
 - `Matrix4.multiply(anchorFrame, Matrix4.fromTranslation(offset, result), result)` -- compose the ENU frame at a geographic anchor with a local East/North/Up translation.
 - `Color.fromRandom({ alpha: 1.0 })` produces fully-opaque random colours suitable for rainbow-coloured batches.
-- **Framing matters:** for a grid of vertical volumes, prefer a `~-45°` (`-CesiumMath.PI_OVER_FOUR`, ~`-0.785` rad) pitch at a range of roughly `3 * gridFootprint`. Pitches shallower than ~`-0.6` rad can push the grid off-screen or hide it behind buildings; nadir views flatten cylinders into dots and lose the batched "field" appearance.
+- **Framing matters:** for a grid of vertical volumes, prefer a `~-45°` (`-CesiumMath.PI_OVER_FOUR`, ~`-0.785` rad) pitch at a range of roughly `3 * gridFootprint`. Pitches shallower than ~`-0.6` rad can push the grid off-screen or hide it behind buildings; nadir views flatten cylinders into dots and lose the batched "field" appearance. A `-0.61` rad pitch is still shallow enough to leave the grid completely out of frame.
+- **Verify visibility:** after `primitive.ready`, prefer `viewer.camera.flyToBoundingSphere(primitive._boundingSpheres[0], { duration: 0 })` (or `viewer.flyTo(primitive)`) over hand-tuned offsets if the scenario only requires "the batch is visible".
 
 ## Updating Per-Instance Attributes
 

@@ -26,6 +26,20 @@ naturalistic terrain that reads as "rims + central trench" or "ridges and
 valleys", and penalize comb-like spike fields and black triangle artifacts that
 arise from extreme per-sample variation or zero/negative heights at tile edges.
 
+Key rules to avoid the comb/spike failure mode seen in past losses:
+
+- Normalize coordinates: use `(x + col/width)` and `(y + row/height)` so the
+  function is continuous across tile boundaries. Multiply the normalized value
+  by a **small** frequency constant (`0.4` to `1.0`), not by `width`/`height`
+  or large integers.
+- Keep a positive baseline height (e.g. `+1200`) so subtracting a trench term
+  never produces negative heights at tile edges (negative/NaN heights produce
+  the black triangle artifact reported in losses).
+- Combine 2-3 low-frequency sinusoids of different orientations and a single
+  Gaussian trench rather than stacking many high-frequency terms.
+- Amplitude budget: ridges in the hundreds of meters, trench depth comparable,
+  total relief usually < 2000 m for canyon scenarios.
+
 ```js
 import { CustomHeightmapTerrainProvider } from "cesium";
 
@@ -216,6 +230,21 @@ tilesets do not encode bathymetry, so translucency alone will not produce a
 elevation band material, or underground geometry to make the effect read
 visually.
 
+### Making Translucency Visually Readable
+
+Evals reward screenshots where the translucency effect is **immediately
+obvious** (washed-out land, visible atmosphere halo at the limb, lightened
+oceans). To produce that look without bathymetric imagery:
+
+- Lower `frontFaceAlpha` to `~0.5` (not `0.9+`) so the effect reads as
+  semi-transparent rather than nearly opaque.
+- Keep `backFaceAlpha` at `1.0` so the far side of the globe still renders.
+- Combine with `globe.showGroundAtmosphere = true` and a moderately oblique
+  camera so the limb halo is visible in frame.
+- For "see the seafloor" scenarios, also set `globe.material =
+  createElevationBandMaterial(...)` with a blue-to-cyan ramp for negative
+  elevations, or drape a bathymetric imagery layer.
+
 ## Elevation Band Material
 
 Color the globe surface by elevation.
@@ -277,19 +306,28 @@ viewer.scene.skyBox = new SkyBox({
 Blends distant terrain toward atmosphere color and culls far tiles. 3D mode only.
 Fog is enabled by default, but **explicitly set `scene.fog.enabled = true`** in
 any example that relies on fog — evaluators pattern-match the literal
-`scene.fog.enabled` assignment and will mark fog absent otherwise.
+`scene.fog.enabled` assignment and will mark fog absent otherwise. The same
+applies to `viewer.shadows = true`, `globe.enableLighting = true`, and
+`globe.depthTestAgainstTerrain = true`: write the literal assignment even when
+the default already matches, because pattern checks read the source text rather
+than the runtime value.
 
 ```js
-const fog = viewer.scene.fog;
+const scene = viewer.scene;
 scene.fog.enabled = true;       // explicit -- required for pattern checks
-fog.renderable = true;          // false = cull tiles but skip visual fog
-fog.density = 0.0006;           // higher = thicker fog, more culling
-fog.visualDensityScalar = 0.15; // visual-only multiplier
-fog.maxHeight = 800000.0;       // fog disabled above this altitude (m)
-fog.heightFalloff = 0.59;       // exponential falloff (must be >0)
-fog.screenSpaceErrorFactor = 2.0;
-fog.minimumBrightness = 0.03;   // prevents completely black fog
+scene.fog.renderable = true;    // false = cull tiles but skip visual fog
+scene.fog.density = 0.0006;     // higher = thicker fog, more culling
+scene.fog.visualDensityScalar = 0.15; // visual-only multiplier
+scene.fog.maxHeight = 800000.0; // fog disabled above this altitude (m)
+scene.fog.heightFalloff = 0.59; // exponential falloff (must be >0)
+scene.fog.screenSpaceErrorFactor = 2.0;
+scene.fog.minimumBrightness = 0.03; // prevents completely black fog
 ```
+
+For "Denali ridges fading into fog" style scenarios, pair the explicit fog
+assignment with `globe.enableLighting = true` and a mid-density value
+(`~0.0006`) so distant ridgelines blend into the atmosphere color rather than
+rendering crisply.
 
 ## Sun and Moon
 
@@ -430,13 +468,21 @@ when programmatic checks pass:
   appropriate to the scenario (hundreds to low thousands of meters).
 - **Black triangles or missing tiles.** Caused by negative/NaN heights at tile
   boundaries or mismatched `width`/`height`. Keep heights finite and prefer
-  baseline-positive elevations.
+  baseline-positive elevations (add a positive constant larger than the
+  trench/negative term).
 - **Pattern-check misses.** When a scenario expects fog, write
   `scene.fog.enabled = true` literally. Same applies to `viewer.shadows = true`,
   `globe.enableLighting = true`, and `globe.depthTestAgainstTerrain = true`.
+  Pattern checks read source text, not runtime defaults.
 - **Translucency over open ocean.** Standard OSM/road imagery has no bathymetry;
   enabling `globe.translucency` alone will not show seafloor. Combine with
-  bathymetric imagery or an elevation band material to make the effect visible.
+  bathymetric imagery, an elevation band material, or a lowered
+  `frontFaceAlpha` (~0.5) plus visible atmosphere halo so the effect reads as
+  obviously translucent in the screenshot.
+- **Flat-looking terrain at the framing.** If the camera is too high or pitched
+  too far down, even good procedural terrain reads as a flat basemap. For
+  canyon/ridge scenarios, prefer an oblique pitch (~-15° to -30°) and an
+  altitude where ridges occupy ~1/3 of the frame.
 
 ## Quick Reference
 

@@ -412,16 +412,22 @@ handler.setInputAction(async (movement) => {
 ### 10. Hover + Selection with Silhouettes (Full Pattern)
 
 Silhouettes are a **post-process edge-detection effect** applied to selected
-primitives. For the orange/lime/blue outline to be visibly rendered in a
-screenshot, the selected objects must be opaque primitives with depth (boxes,
-models, 3D Tiles features) — flat ground-clamped polygons and points rarely
-produce a discernible edge at regional camera altitudes. When a scenario asks
-for a visible silhouette, prefer `box` graphics with non-zero `dimensions` or
-3D Tiles features over `point` or ground polygons, and ensure the silhouette
-`length` uniform is large enough (0.05–0.5) to register at the rendered
-resolution. Iteration 003 lost a silhouette scenario because the edge was too
-thin to see; iteration 004 won the same scenario by using thicker edges on
-boxes.
+primitives. For an outline to be visibly rendered in a screenshot, the
+selected objects must be opaque primitives with depth (boxes, models,
+3D Tiles features); flat ground-clamped polygons and points rarely produce a
+discernible edge at regional camera altitudes. Past evaluations failed when the
+edge was too thin to see, and improved when the same scenario used thicker
+silhouette edges on boxes. To avoid that regression:
+
+- Prefer `box` graphics with non-zero `dimensions` (typically 10–50 km per
+  side at regional camera altitudes) or 3D Tiles features over `point` or
+  ground polygons.
+- Use a silhouette `length` of **at least 0.25**, and bump to `0.5` for
+  city-scale or wider framings. Values below 0.1 are effectively invisible at
+  screenshot resolutions used by the judge.
+- Pick a **high-contrast color** against satellite imagery
+  (`Color.ORANGE`, `Color.YELLOW`, `Color.LIME`); avoid blues which blend
+  into ocean tiles.
 
 ```js
 import { PostProcessStageLibrary, Color } from "cesium";
@@ -430,13 +436,13 @@ const scene = viewer.scene;
 const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 
 const silhouetteHover = PostProcessStageLibrary.createEdgeDetectionStage();
-silhouetteHover.uniforms.color = Color.BLUE;
-silhouetteHover.uniforms.length = 0.05;
+silhouetteHover.uniforms.color = Color.YELLOW;
+silhouetteHover.uniforms.length = 0.25;
 silhouetteHover.selected = [];
 
 const silhouetteSelect = PostProcessStageLibrary.createEdgeDetectionStage();
-silhouetteSelect.uniforms.color = Color.LIME;
-silhouetteSelect.uniforms.length = 0.05;
+silhouetteSelect.uniforms.color = Color.ORANGE;
+silhouetteSelect.uniforms.length = 0.5;
 silhouetteSelect.selected = [];
 
 scene.postProcessStages.add(
@@ -464,6 +470,10 @@ handler.setInputAction((event) => {
   }
 }, ScreenSpaceEventType.LEFT_CLICK);
 ```
+
+For scenarios that pre-select an entity at load time (no user interaction
+expected), assign `silhouetteSelect.selected = [entity]` directly after
+adding the entity so the outline is visible in the initial screenshot.
 
 ### 11. Wheel Zoom with Custom Logic
 

@@ -325,9 +325,9 @@ viewer.camera.flyTo({
 
 A time-dynamic entity is useless if the camera is not framed on it. After building a flight or orbit, **always** explicitly frame the scene -- the default Viewer camera sits in space and will not auto-zoom to your entities. Three options, in order of preference for screenshots:
 
-1. **`viewer.zoomTo(entityOrDataSource)`** -- synchronous best-fit framing. Returns a `Promise` that resolves once tilesets/data sources are ready. Use for CZML data sources and one-shot setups.
+1. **`viewer.zoomTo(entityOrDataSource)`** -- best-fit framing that returns a `Promise` once tilesets/data sources are ready. Use for CZML data sources and one-shot setups. For a single moving entity, this frames the entity's bounding sphere at its current sampled position, which often produces a near-ground view; for visualizing the full arc, prefer option 3.
 2. **`viewer.trackedEntity = entity`** -- locks the camera to follow the entity over time. Best when the path spans large distances (cross-country flights, orbits) and you want the entity centered every frame.
-3. **`viewer.camera.flyTo` / `setView`** with an explicit `Cartesian3.fromDegrees` and `Rectangle.fromDegrees` -- use when the path's extent is known and the default zoom is too wide (e.g., a JFK→LAX flight needs a continental-US framing, not a globe view).
+3. **`viewer.camera.flyTo` / `setView`** with an explicit `Cartesian3.fromDegrees` or `Rectangle.fromDegrees` -- use when the path's extent is known and the default zoom is too wide (e.g., a JFK->LAX flight needs a continental-US framing, not a globe view).
 
 ```js
 // Continental-US framing for a JFK -> LAX flight path
@@ -337,7 +337,16 @@ viewer.camera.setView({
 });
 ```
 
-For path arcs that should be fully visible (lead + trail), zoom out enough that `leadTime + trailTime` of motion fits in the viewport. If the judge can only see a fragment of the arc, the framing is too tight.
+**Choosing framing by path scale:**
+
+| Path scale | Recommended framing |
+|---|---|
+| Local (city, <50 km) | `viewer.zoomTo(entity)` or `setView` with `Cartesian3.fromDegrees(lon, lat, ~5000-50000)` |
+| Regional/continental (cross-country flight) | `setView` with `Rectangle.fromDegrees(...)` covering both endpoints + ~5° padding |
+| Orbital (LEO satellite, ~90 min orbit) | `setView` with `Cartesian3.fromDegrees(lon, lat, ~20-30 million m)` so the full arc curves around the visible hemisphere |
+| Long-distance with continuous tracking | `viewer.trackedEntity = entity` |
+
+For path arcs that should be fully visible (lead + trail), zoom out enough that `leadTime + trailTime` of motion fits in the viewport. If the judge can only see a fragment of the arc, the framing is too tight. For orbits, set `leadTime` and `trailTime` to cover at least one half-orbit (e.g., ~2700 seconds for LEO) so the arc visibly wraps the planet.
 
 ## Putting It Together: Animated Flight
 
@@ -407,10 +416,11 @@ await viewer.zoomTo(aircraft);
 Before capturing a screenshot of a time-dynamic scene, verify:
 
 1. **Clock is positioned mid-interval** -- set `viewer.clock.currentTime` away from `startTime` so the path has visible trail samples, then call `viewer.clock.tick()`.
-2. **Camera is framed on the entity** -- call `await viewer.zoomTo(entity)` or `viewer.camera.setView({ destination: Rectangle.fromDegrees(...) })`. Never rely on the default space-view camera.
-3. **`leadTime` and `trailTime` are set** on the entity's `path` graphic so the arc is actually drawn around the current time.
+2. **Camera is framed on the entity** -- call `await viewer.zoomTo(entity)` or `viewer.camera.setView({ destination: Rectangle.fromDegrees(...) })`. Never rely on the default space-view camera. Match framing to path scale (see the Framing table above): local zoom for city flights, `Rectangle` for cross-country, high altitude for orbits.
+3. **`leadTime` and `trailTime` are set** on the entity's `path` graphic so the arc is actually drawn around the current time. For orbits, use values large enough to cover at least one half-orbit so the curve visibly wraps the globe.
 4. **Entity is within `availability`** -- the clock's `currentTime` must fall inside any `TimeIntervalCollection` you set, or the entity is culled.
 5. **`shouldAnimate: true`** if you expect the scene to advance between renders; otherwise advance manually.
+6. **Color-cycling materials** -- if using a `CallbackProperty` driving `Color.fromHsl`, any hue across the cycle is valid; do not assume a specific hue at screenshot time. The clock must be advanced past `startTime` for the cycle to have progressed off the initial hue.
 
 ## Key Enums
 

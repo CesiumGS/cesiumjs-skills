@@ -34,7 +34,7 @@ providers and URL-backed 3D Tiles.
 
 **After adding a tileset, model, or data source, you must explicitly frame it.**
 A `Viewer` constructed with default options starts the camera at a fixed view
-of Earth -- it does NOT auto-zoom to primitives you add. Forgetting this is
+of Earth. It does NOT auto-zoom to primitives you add. Forgetting this is
 the most common cause of "I see only gray surface" or "the asset is a speck
 in the corner" failures.
 
@@ -159,7 +159,7 @@ viewer.scene.primitives.add(splats);
 | `mapMode2D` | `MapMode2D.INFINITE_SCROLL` | 2D scroll behavior |
 
 Pair `requestRenderMode: true` with `scene3DOnly: true` for low-power /
-dashboard apps -- both are commonly required together when the scenario calls
+dashboard apps; both are commonly required together when the scenario calls
 for GPU savings.
 
 ### Layers & Terrain
@@ -235,6 +235,14 @@ scene.postProcessStages;
 
 scene.requestRender();  // trigger frame in requestRenderMode
 ```
+
+**Important: never touch `scene.globe.*` or `scene.skyAtmosphere.*` when the
+matching constructor option was set to `false`.** Disabling these in the
+`Viewer` options leaves the corresponding property as `undefined` on the
+scene, and accessing `.enableLighting`, `.depthTestAgainstTerrain`,
+`.show`, or any other field throws `TypeError: Cannot set properties of
+undefined`. For space scenes, configure once in the constructor and do not
+mutate those properties afterward (see "Space Scene" below).
 
 ## Factory Helpers
 
@@ -428,7 +436,7 @@ viewer.scene.camera.flyTo({
 ### Loading and Framing a Sample 3D Tileset
 
 When the tileset's local coordinate frame is unknown (sample assets,
-discrete-LOD demos), do NOT hand-compute an ECEF camera position -- you will
+discrete-LOD demos), do NOT hand-compute an ECEF camera position; you will
 miss the asset and render a blank gray surface. Use `viewer.zoomTo` with a
 `HeadingPitchRange` to derive a fitted view from the tileset's bounding sphere.
 
@@ -450,15 +458,34 @@ await viewer.zoomTo(
 
 ### Space Scene (No Globe)
 
+Disable the globe and atmosphere via constructor options only. The scene's
+`globe` and `skyAtmosphere` properties become `undefined`, so any later
+`viewer.scene.globe.<anything> = ...` or `viewer.scene.skyAtmosphere.show =
+false` will throw `Cannot set properties of undefined`. Configure lighting,
+depth-test-against-terrain, atmosphere visibility, and similar options in the
+constructor or skip them entirely for a space scene.
+
 ```js
 const viewer = new Viewer("cesiumContainer", {
-  globe: false, skyAtmosphere: false, baseLayerPicker: false,
+  globe: false,           // viewer.scene.globe will be undefined
+  skyAtmosphere: false,   // viewer.scene.skyAtmosphere will be undefined
+  baseLayerPicker: false,
+  baseLayer: false,       // no imagery layer is needed without a globe
 });
+
+// Safe post-construction tweaks (skyBox/sun/moon remain defined):
+viewer.scene.skyBox.show = true;  // default star field
+viewer.scene.sun.show = false;
+viewer.scene.moon.show = false;
+
+// DO NOT do this, throws because globe/skyAtmosphere are undefined:
+// viewer.scene.globe.enableLighting = true;
+// viewer.scene.skyAtmosphere.show = false;
 ```
 
 ### Explicit Render Mode (Low Power Dashboard)
 
-Pair with `scene3DOnly: true` when 2D/Columbus View is not needed -- this is
+Pair with `scene3DOnly: true` when 2D/Columbus View is not needed; this is
 the canonical low-GPU configuration.
 
 ```js
@@ -502,7 +529,7 @@ const viewer = new Viewer("cesiumContainer", {
 3. **Disable unused widgets** (`animation: false`, `timeline: false`) to reduce DOM overhead.
 4. **Set `msaaSamples: 1`** on low-power devices. Default `4` balances quality.
 5. **Lower `resolutionScale`** (e.g., `0.75`) on HiDPI displays for better frame rates.
-6. **Prefer `Terrain.fromWorldTerrain()`** over `await createWorldTerrainAsync()` -- non-blocking with error events.
+6. **Prefer `Terrain.fromWorldTerrain()`** over `await createWorldTerrainAsync()`; it is non-blocking and exposes error events.
 7. **Enable `requestVertexNormals: true`** on terrain for proper lighting at negligible cost.
 8. **Call `viewer.destroy()`** when removing from DOM to free WebGL contexts.
 9. **Limit imagery layers** to 2-3. Each adds a texture lookup per fragment.
@@ -515,6 +542,7 @@ Before declaring a viewer-setup task complete, verify:
 2. For tilesets with unknown local frames, the camera is derived from the bounding sphere (`HeadingPitchRange`), not a hand-picked `Cartesian3.fromDegrees(...)`.
 3. If the scenario specifies a heading/pitch, those are passed via `HeadingPitchRange` to `zoomTo`/`flyTo` rather than set on `camera.flyTo` with a guessed destination.
 4. A required base imagery layer is actually present (count == 1) when the scenario expects a visible map under the asset.
+5. When `globe: false` or `skyAtmosphere: false` is set in constructor options, no later code accesses `viewer.scene.globe.*` or `viewer.scene.skyAtmosphere.*`; both are `undefined` and will throw.
 
 ## See Also
 
