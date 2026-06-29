@@ -56,6 +56,15 @@ Choose altitude and pitch to match the **scale of the feature** you want to show
 > screenshot goal honest by using a higher-altitude map/marker view. Pitch too
 > horizontal (-5) at moderate altitude shows a flat grid, not a skyline.
 
+> **Public visual eval rule for landmarks:** OpenStreetMap imagery alone does
+> not render the Eiffel Tower, Empire State Building, Statue of Liberty, or a
+> skyline as recognizable 3D subjects. When a public/no-token scenario asks for
+> an identifiable landmark or skyline, add an explicit visual surrogate at the
+> target: a tall cylinder/box/polyline tower, colored mast, skyline bar cluster,
+> or large labeled marker. Frame that surrogate so it is inspectable, roughly
+> one-third to two-thirds of the frame height for landmark views. Do not rely on
+> a map label or 10 px point as the subject.
+
 > **Canyon / cliff rim views**: pitch -15 to -25. Near-horizontal pitch (-5 to
 > -8) looks flat across terrain and misses the vertical drop. Always add entity
 > overlays (rim wall polygons, river polyline) so the canyon structure is

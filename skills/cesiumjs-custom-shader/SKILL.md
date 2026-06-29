@@ -40,6 +40,13 @@ viewer.scene.primitives.add(model);
 
 > **Note:** Writing `material.alpha` requires `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` — see "Translucency" below. On opaque models with the default `INHERIT` mode, alpha writes are silently ignored.
 
+> **Visual eval framing:** after adding a shadered `Model`, wait until the model
+> is ready enough to render, then frame a known target point explicitly. Do not
+> rely on the first post-load frame or on a tiny default-scale model. For public
+> model evals, set `minimumPixelSize` (usually 256-400), use a moderate `scale`,
+> and add a silhouette or strong color tint when the shader effect is the thing
+> being judged.
+
 ## Applying a CustomShader
 
 **Model** — constructor option or mutable property:

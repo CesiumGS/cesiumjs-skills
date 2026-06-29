@@ -40,6 +40,12 @@ Most visual evaluation failures are **not** API errors -- they are coordinate-si
   await viewer.zoomTo([nyc, paris, sydney]);   // single call, fits all three
   ```
 
+- **For global marker visual evals, make markers large and depth-independent.**
+  Use `point.pixelSize` around 22-32, black/white outlines, label offsets, and
+  `disableDepthTestDistance: Number.POSITIVE_INFINITY` on both point and label
+  when available. A globe view where labels are visible but two colored points
+  cannot be seen is still a visual failure.
+
 - **When framing a single AOI without an entity to target**, prefer `viewer.camera.flyTo({ destination: Rectangle.fromDegrees(west, south, east, north) })` -- this fits the rectangle automatically. See `cesiumjs-camera` for full camera control.
 
 ## Entity Basics

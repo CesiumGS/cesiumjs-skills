@@ -207,6 +207,14 @@ viewer.scene.verticalExaggerationRelativeHeight = 0.0; // relative to sea level
 
 Makes the globe see-through for underground/subsurface visualization.
 
+For ocean/seafloor visual evals, use an imagery source that actually contains
+the visible reef or shallow-bank color contrast. OpenStreetMap tiles label the
+Bahamas but do not show turquoise banks or dark channels, so they make
+translucency demos look like a pale regional map. Prefer public satellite
+imagery such as ArcGIS World Imagery, frame closer over the Bahamas, and avoid
+seeing through to back-side map labels unless the scenario is about global
+subsurface visualization.
+
 ```js
 const globe = viewer.scene.globe;
 globe.translucency.enabled = true;

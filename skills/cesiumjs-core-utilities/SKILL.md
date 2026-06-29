@@ -68,7 +68,7 @@ const tile = api.getDerivedResource({
 const tileImage = await tile.fetchImage();
 
 // Modify query parameters on an existing resource
-resource.setQueryParameters({ access_token: "new-token" });
+resource.setQueryParameters({ access_token: "<access-token>" });
 resource.appendQueryParameters({ extra: "param" });
 ```
 
@@ -112,6 +112,15 @@ const result = await resource.post(JSON.stringify({ name: "test" }), {
 ## Color
 
 RGBA components as floats [0.0, 1.0]. Over 140 named constants as frozen static properties covering standard CSS color names in PascalCase (e.g., `Color.RED`, `Color.ORANGE`, `Color.YELLOW`, `Color.GREEN`, `Color.BLUE`, `Color.CORNFLOWERBLUE`, `Color.ROYALBLUE`, `Color.FORESTGREEN`, `Color.CRIMSON`, `Color.TRANSPARENT`).
+
+### Visual Eval Framing for Pins
+
+When using `PinBuilder` for a visual eval, the pins must be unambiguously
+visible in the screenshot. Use 56-72 px pins for city-scale reviews, set
+`VerticalOrigin.BOTTOM`, and frame with a `Rectangle.fromDegrees(...)` or an
+altitude that leaves all pins comfortably inside the viewport. If one pin sits
+on an edge, zoom out or recenter; two visible pins out of three is a visual
+failure even if all entities exist.
 
 ### Creating Colors
 

@@ -64,6 +64,14 @@ const model = await Model.fromGltfAsync({
 viewer.scene.primitives.add(model);
 ```
 
+> **Visual eval framing:** for model screenshots, the model must be fully inside
+> the frame and recognizable, not clipped at the bottom edge. Use
+> `minimumPixelSize` 256-400 for public sample aircraft, add a subtle
+> `silhouetteColor`/`silhouetteSize`, and place the camera with explicit
+> coordinates aimed at the known model position. Avoid shallow pitches that put
+> the model below the frame or rely on `viewer.flyTo(model)`, which is
+> version-sensitive for `Model` primitives.
+
 ### Avoiding Distorted Model Appearance
 
 Models can appear stretched or warped when scale is applied non-uniformly or when the orientation matrix is built incorrectly. Common pitfalls:

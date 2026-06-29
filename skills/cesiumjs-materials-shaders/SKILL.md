@@ -220,6 +220,13 @@ dof.uniforms.focalDistance = 500.0; // meters from camera
 dof.uniforms.sigma = 3.8;
 ```
 
+> **Night/bloom visual evals:** bloom should make bright city lights glow while
+> preserving dark surrounding areas. If an OSM base layer is present beneath
+> night imagery, reduce the base layer's `alpha`/`brightness` and use restrained
+> bloom (`brightness` more negative, lower exposure) so labels and land do not
+> wash out to white. A pale daylight map with yellow haze is not a successful
+> night-lights render.
+
 ### Custom PostProcessStage
 
 Custom stages receive `colorTexture`, `depthTexture` (sampler2D) and `v_textureCoordinates` (vec2). Output via `out_FragColor`. Uniforms can be constants or functions (re-evaluated each frame).

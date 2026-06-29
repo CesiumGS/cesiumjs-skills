@@ -146,6 +146,11 @@ Two non-negotiable rules:
    For city-scale demos use 50–200 km; for state/region 1–3 Mm; for multi-state
    or archipelago 1.5–4 Mm. If pins or polygons land outside the frame, the
    judge will mark the candidate down even when programmatic checks pass.
+3. **For regional pin demos, include the full latitude span with margin.**
+   West-coast Seattle/San Francisco/Los Angeles views need a center near
+   40.8 N, -121 W and about 3.2-4.0 Mm altitude, or a fitted rectangle. At
+   2.5 Mm centered on 40 N, Seattle often lands at the top edge and fails as
+   off-frame.
 
 ```js
 import { Cartesian3, Math as CesiumMath } from "cesium";
