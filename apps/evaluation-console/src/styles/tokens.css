@@ -1,0 +1,151 @@
+/* Skill Evaluation Console design tokens — DESIGN-SPEC §8.
+   The central legibility law (P3): deterministic machine speaks STEEL + mono + %;
+   the visual judge speaks AMBER + prose + /10; a human override carries a MAGENTA
+   hairline. Color is never the sole signal — every state also carries a glyph,
+   a unit, or a shape. */
+
+:root {
+  /* ---- type ---- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* 1.250 modular scale */
+  --fs-50: 11px;
+  --fs-100: 12px;
+  --fs-200: 13px;
+  --fs-300: 15px;
+  --fs-400: 18px;
+  --fs-500: 23px;
+  --fs-600: 29px;
+  --fs-700: 37px;
+  --fw-regular: 430;
+  --fw-medium: 530;
+  --fw-semibold: 620;
+
+  /* ---- spacing (4px grid) ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* ---- radii ---- */
+  --r-1: 4px;   /* chips */
+  --r-2: 8px;   /* cards */
+  --r-3: 12px;  /* panels */
+  --r-pill: 999px;
+
+  /* ---- layout ---- */
+  --rail-w: 248px;
+  --inspector-w: 340px;
+  --topstrip-h: 50px;
+  --actionbar-h: 46px;
+  --facetbar-h: 44px;
+  --row-h: 46px;
+
+  /* ---- motion ---- */
+  --dur-1: 120ms;  /* verdict / chip confirm */
+  --dur-2: 200ms;  /* altitude flights */
+  --ease: cubic-bezier(0.22, 0.61, 0.21, 1);
+  --pulse: 1.6s;
+}
+
+/* ===================== DARK (default) ===================== */
+:root,
+[data-theme="dark"] {
+  --canvas: #0b0d10;
+  --surface: #13161b;
+  --surface-2: #1b1f26;
+  --surface-3: #232932; /* hover / raised chip */
+  --hairline: #232831;
+  --hairline-strong: #313945;
+
+  --text: #e7ebf1;
+  --text-2: #aab2bf; /* >= 7:1 */
+  --text-3: #828c9b; /* mono ids / meta, >= 4.5:1 */
+
+  /* provenance inks (P3) */
+  --ink-machine: #5bc8e8; /* steel — deterministic 0-1 / % / checks */
+  --ink-machine-bg: #0e2730;
+  --ink-eye: #e8a13b; /* amber — visual judge 0-10 / dimensions */
+  --ink-eye-bg: #2c2110;
+  --ink-human: #e26fb0; /* magenta — human override hairline */
+  --ink-human-bg: #2a1320;
+
+  /* status */
+  --pass: #3fb37f;
+  --pass-bg: #0f2a20;
+  --fail: #e5534b;
+  --fail-bg: #2a1413;
+  --crit: #ff6b5e;
+  --defer: #d9a13a;
+  --defer-bg: #2a2110;
+  --unknown: #5a6473; /* not_reviewed / needs_review — dashed slate */
+  --unknown-bg: #181c22;
+
+  /* decisions (optimize) */
+  --keep: #3fb37f;
+  --reject: #e5534b;
+  --tie: #6f7a89;
+
+  --live: #7c5cff; /* the ONE reserved accent — "running now" */
+  --live-bg: #1a1633;
+
+  /* harness — one reserved CATEGORICAL hue for the tested-harness dimension.
+     Distinct from every score ink (steel/amber/magenta) and from live; it labels
+     a category, never a 0-1 / 0-10 magnitude (P3). */
+  --harness: #8aa0ff;
+  --harness-bg: #161b2e;
+
+  --scrim: rgba(4, 6, 9, 0.66);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 14px 40px rgba(0, 0, 0, 0.5);
+  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--live);
+}
+
+/* ===================== LIGHT ===================== */
+[data-theme="light"] {
+  --canvas: #fbfcfd;
+  --surface: #f1f3f6;
+  --surface-2: #e7eaef;
+  --surface-3: #dde2e9;
+  --hairline: #e2e6ec;
+  --hairline-strong: #cdd3dc;
+
+  --text: #131720;
+  --text-2: #3c4452;
+  --text-3: #5d6675;
+
+  --ink-machine: #0e7c99;
+  --ink-machine-bg: #dcf1f8;
+  --ink-eye: #b5710a;
+  --ink-eye-bg: #f8edd8;
+  --ink-human: #b23a7e;
+  --ink-human-bg: #f8e3ef;
+
+  --pass: #1e8a5a;
+  --pass-bg: #def0e6;
+  --fail: #c13b33;
+  --fail-bg: #f9e2e0;
+  --crit: #d23a2e;
+  --defer: #9c6b12;
+  --defer-bg: #f6ecd6;
+  --unknown: #8a93a1;
+  --unknown-bg: #eef1f5;
+
+  --harness: #4a5fd0;
+  --harness-bg: #e6e9fb;
+
+  --keep: #1e8a5a;
+  --reject: #c13b33;
+  --tie: #7b8492;
+
+  --live: #5b3df5;
+  --live-bg: #eee9ff;
+
+  --scrim: rgba(20, 24, 30, 0.34);
+  --shadow-1: 0 1px 2px rgba(20, 24, 30, 0.1);
+  --shadow-2: 0 16px 40px rgba(20, 24, 30, 0.18);
+  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--live);
+}

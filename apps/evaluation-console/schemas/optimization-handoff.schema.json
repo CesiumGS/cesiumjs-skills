@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvaluationViewerOptimizationHandoff",
+  "description": "Failed evaluation cases to hand to the CesiumJS skill optimization loop.",
+  "type": "object",
+  "required": ["schema_version", "run_id", "created_at", "selection_mode", "skills", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "run_id": { "type": "string" },
+    "scorecard_path": { "type": "string" },
+    "created_at": { "type": "string" },
+    "selection_mode": { "type": "string", "enum": ["confirmed_flags", "confirmed_and_suggested"] },
+    "focus_path": { "type": "string" },
+    "command": { "type": "string" },
+    "skills": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/skill_handoff" }
+    },
+    "cases": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/case_handoff" }
+    }
+  },
+  "definitions": {
+    "skill_handoff": {
+      "type": "object",
+      "required": ["skill", "failed_cases", "categories", "priority"],
+      "additionalProperties": false,
+      "properties": {
+        "skill": { "type": "string" },
+        "failed_cases": { "type": "integer", "minimum": 0 },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "priority": { "type": "number" }
+      }
+    },
+    "case_handoff": {
+      "type": "object",
+      "required": [
+        "skill",
+        "case_id",
+        "case_name",
+        "category",
+        "deterministic_result",
+        "visual_status",
+        "priority",
+        "summary",
+        "evidence_path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "skill": { "type": "string" },
+        "case_id": { "type": "string" },
+        "case_name": { "type": "string" },
+        "category": { "type": "string" },
+        "deterministic_result": { "type": "string", "enum": ["pass", "fail"] },
+        "visual_status": { "type": "string" },
+        "priority": { "type": "number" },
+        "summary": { "type": "string" },
+        "decision_note": { "type": "string" },
+        "evidence_path": { "type": "string" },
+        "run_artifact_path": { "type": ["string", "null"] },
+        "failed_checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "selection_reason": { "type": "string" }
+      }
+    }
+  }
+}

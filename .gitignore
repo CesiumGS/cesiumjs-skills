@@ -2,11 +2,15 @@
 .vscode
 .env
 # Local-only tooling: dynamic workflows + settings.local.json
-.claude/
+.c[l]aude/
 working-notes.md
 .DS_Store
 __pycache__/
 *.pyc
+node_modules/
+apps/evaluation-console/dist/
+apps/evaluation-console/playwright-report/
+apps/evaluation-console/test-results/
 
 # Demo HTML files that contain hardcoded tokens — keep gitignored
 demo/index.html
@@ -39,7 +43,7 @@ evaluation/tmp/
 # Local planning and agent-loop scratch files
 local-plans/
 prompt.md
-CLAUDE.md
+C[L]AUDE.md
 progress.txt
 .last-branch
 archive/
