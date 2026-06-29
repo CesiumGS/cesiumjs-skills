@@ -22,7 +22,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .cli_adapter import Adapter, ClaudeCliAdapter, FakeAdapter
+from .cli_adapter import (
+    Adapter,
+    CodexCliAdapter,
+    FakeAdapter,
+    OpenCodeCliAdapter,
+    default_judge_harness,
+    default_judge_model,
+)
 
 # --- protocol constants --------------------------------------------------
 
@@ -69,17 +76,23 @@ BLOCKING_FAILURE_FLAGS = {
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
 
+def _default_adapter() -> Adapter:
+    if default_judge_harness() == "codex":
+        return CodexCliAdapter()
+    return OpenCodeCliAdapter()
+
+
 @dataclass
 class JudgeConfig:
     """Configuration for a static-judge panel run."""
 
-    adapter: Adapter = field(default_factory=ClaudeCliAdapter)
-    model: str = "sonnet"
+    adapter: Adapter = field(default_factory=_default_adapter)
+    model: str | None = field(default_factory=default_judge_model)
     n_judges: int = 3
     seeds: list[int] = field(default_factory=lambda: list(DEFAULT_SEEDS))
-    allowed_tools: list[str] = field(default_factory=lambda: ["Read"])
+    allowed_tools: list[str] = field(default_factory=list)
     repo_root: Optional[Path] = None
-    reviewer: str = "static-visual-judge"
+    reviewer: str = "screenshot-visual-judge"
 
 
 # --- helpers -------------------------------------------------------------
@@ -217,6 +230,8 @@ def _render_user_prompt(
     screenshots: list[str],
     console_text: str,
     scene_state_text: str,
+    checks_text: str,
+    screenshot_quality_text: str,
 ) -> str:
     shots_block = (
         "\n".join(f"- {name}" for name in screenshots)
@@ -233,6 +248,8 @@ def _render_user_prompt(
         screenshots=shots_block,
         console=console_text,
         scene_state=scene_state_text,
+        checks=checks_text,
+        screenshot_quality=screenshot_quality_text,
     )
 
 
@@ -258,6 +275,37 @@ def _summarize_scene_state(scene_state: Any) -> str:
     if scene_state is None:
         return "(no scene state captured)"
     return json.dumps(scene_state, indent=2)[:4000]
+
+
+def _summarize_checks(checks_data: Any) -> str:
+    if checks_data is None:
+        return "(no programmatic checks captured)"
+    if isinstance(checks_data, dict):
+        checks = checks_data.get("checks")
+        if isinstance(checks, list):
+            lines: list[str] = []
+            for check in checks:
+                if not isinstance(check, dict):
+                    continue
+                result = str(check.get("result", "?")).upper()
+                check_id = check.get("check_id") or check.get("type") or "(unknown)"
+                detail = str(check.get("detail") or check.get("description") or "").strip()
+                lines.append(f"[{result}] {check_id}: {detail[:240]}")
+            summary = checks_data.get("summary")
+            if isinstance(summary, dict):
+                lines.append(
+                    "Summary: "
+                    f"{summary.get('passed', '?')}/{summary.get('total', '?')} passed, "
+                    f"{summary.get('failed', '?')} failed"
+                )
+            return "\n".join(lines) if lines else "(programmatic checks present but empty)"
+    return json.dumps(checks_data, indent=2)[:4000]
+
+
+def _summarize_screenshot_quality(quality: Any) -> str:
+    if quality is None:
+        return "(no screenshot-quality evidence captured)"
+    return json.dumps(quality, indent=2)[:4000]
 
 
 # --- aggregation ---------------------------------------------------------
@@ -396,18 +444,23 @@ def judge_render(
     system_template = _load_text(PROMPTS_DIR / f"{PROTOCOL_VERSION}.system.txt")
     user_template = _load_text(PROMPTS_DIR / f"{PROTOCOL_VERSION}.user.txt")
 
-    # Pass ABSOLUTE screenshot paths the model can Read (cwd is the repo root,
-    # and --add-dir grants the bundle), not bare filenames.
-    screenshot_abs = [str(p.resolve()) for p in screenshots]
+    checks = _load_json_file(bundle_dir / "programmatic-checks.json")
+    screenshot_quality = _load_json_file(bundle_dir / "screenshot-quality.json")
+    checks_text = _summarize_checks(checks)
+    screenshot_quality_text = _summarize_screenshot_quality(screenshot_quality)
+
     user_prompt = _render_user_prompt(
         user_template,
         case_meta,
-        screenshot_abs,
+        screenshot_rel,
         console_text,
         scene_state_text,
+        checks_text,
+        screenshot_quality_text,
     )
 
     add_dir = str(bundle_dir.resolve())
+    screenshot_files = [str(path.resolve()) for path in screenshots]
 
     # --- run the panel ---------------------------------------------------
     per_judge_records: list[dict] = []
@@ -434,6 +487,7 @@ def judge_render(
                 config.model,
                 [add_dir],
                 list(config.allowed_tools),
+                screenshot_files,
             )
             parsed = parse_judge_json(raw)
         except Exception as exc:  # adapter/transport failure
@@ -626,6 +680,8 @@ def _build_item(
             "seeds": seeds,
             "aggregation": "median",
             "protocol_version": PROTOCOL_VERSION,
+            "screenshot_input_mode": "attached_image_files",
+            "screenshots_attached": len(screenshots),
             "band": band,
             "confidence": confidence,
             "weighted_sum": round(weighted_sum, 3),
@@ -720,6 +776,8 @@ def _not_reviewed_item(
             "seeds": seeds,
             "aggregation": "median",
             "protocol_version": PROTOCOL_VERSION,
+            "screenshot_input_mode": "attached_image_files",
+            "screenshots_attached": len(screenshots),
             "per_judge": [],
         },
     }
@@ -757,6 +815,8 @@ def _judge_unavailable_item(
             "seeds": seeds,
             "aggregation": "median",
             "protocol_version": PROTOCOL_VERSION,
+            "screenshot_input_mode": "attached_image_files",
+            "screenshots_attached": len(screenshots),
             "per_judge": per_judge,
         },
     }
@@ -789,7 +849,9 @@ def _build_adapter(name: str) -> Adapter:
             }
         )
         return FakeAdapter(canned)
-    return ClaudeCliAdapter()
+    if name == "codex":
+        return CodexCliAdapter()
+    return OpenCodeCliAdapter()
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -799,9 +861,18 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     parser.add_argument("--bundle", required=True, help="Bundle directory with screenshot.png etc.")
     parser.add_argument("--case", required=True, help="Path to the case JSON (scenario metadata).")
-    parser.add_argument("--model", default="sonnet", help="Model id/alias (default: sonnet).")
+    parser.add_argument(
+        "--model",
+        default="auto",
+        help="Judge model id/alias (default: OpenCode GPT-5.5 or Codex CLI default when adapter=codex).",
+    )
     parser.add_argument("--n-judges", type=int, default=3, help="Number of panel judges (default: 3).")
-    parser.add_argument("--adapter", default="claude", choices=["claude", "fake"], help="Adapter to use.")
+    parser.add_argument(
+        "--adapter",
+        default=default_judge_harness(),
+        choices=["opencode", "codex", "fake"],
+        help="Adapter to use.",
+    )
     parser.add_argument("--emit-item", help="Write the emitted item JSON to this path.")
     args = parser.parse_args(argv)
 

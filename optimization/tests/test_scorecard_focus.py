@@ -127,6 +127,59 @@ def test_focus_can_emit_skill_scoped_decision_record() -> None:
     assert [case["skill"] for case in decision["scorecard_focus"]["cases"]] == ["cesiumjs-camera"]
 
 
+def test_focus_includes_blocking_visual_review_failures() -> None:
+    case = _case("cesiumjs-entities", "eval-001-translate-marker-east-6m.json")
+    result = run_case(case, _evidence("cesiumjs-entities", "eval-001-pass.evidence.json"))
+    scorecard = build_scorecard(
+        [
+            ScorecardInput(
+                case=case,
+                result=result,
+                evidence_path="evaluation/fixtures/cesiumjs-entities/eval-001-pass.evidence.json",
+            )
+        ],
+        commit="abc123",
+        timestamp_utc="2026-05-27T00:00:00+00:00",
+        visual_review={
+            "schema_version": "1.0",
+            "reviewer": "screenshot-visual-judge",
+            "reviewed_at": "2026-05-27T00:00:00+00:00",
+            "items": [
+                {
+                    "skill": "cesiumjs-entities",
+                    "case_id": "eval-001",
+                    "case_name": "translate-marker-east-6m",
+                    "status": "fail",
+                    "blocking": True,
+                    "overall_score": 3.0,
+                    "summary": "The marker is visible but not translated far enough east.",
+                    "dimensions": {
+                        "prompt_and_behavior_fidelity": {
+                            "status": "fail",
+                            "score": 3.0,
+                            "note": "The marker remains near its starting point.",
+                        }
+                    },
+                }
+            ],
+        },
+        require_visual_review=True,
+    )
+
+    focus = build_focus(scorecard)
+
+    assert focus["focus_required"]
+    assert focus["categories"][0]["category"] == "visual_review"
+    assert focus["categories"][0]["failed_checks"] == 1
+    assert focus["skills"] == [{"skill": "cesiumjs-entities", "failed_checks": 1}]
+    visual_check = focus["cases"][0]["failed_checks"][0]
+    assert visual_check["check_id"] == "visual_review_fail"
+    assert visual_check["category"] == "visual_review"
+    assert visual_check["critical"] is True
+    assert "translated far enough east" in visual_check["detail"]
+    assert "prompt_and_behavior_fidelity" in visual_check["detail"]
+
+
 def test_scorecard_focus_cli_writes_markdown(tmp_path: Path) -> None:
     run_scorecard = _load_script(RUN_SCORECARD_SCRIPT, "run_scorecard_for_focus_test")
     focus_script = _load_script(SCORECARD_FOCUS_SCRIPT, "scorecard_focus_script_test")

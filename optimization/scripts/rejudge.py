@@ -10,7 +10,7 @@ decision based on those.
 
 Usage:
   python3 optimization/scripts/rejudge.py <skill> --baseline-iter 000 --candidate-iter 001 \
-    --judge-model claude-sonnet-4-6 --output-iter 001
+    --judge-model <provider/model> --output-iter 001
 """
 from __future__ import annotations
 
@@ -24,6 +24,12 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 from optimization.framework.judges.panel import judge_panel, write_judge_verdicts
+from optimization.framework.adapters.agent_cli import (
+    default_agent_harness,
+    resolve_agent_harness,
+    resolve_agent_model,
+    resolve_agent_variant,
+)
 
 
 def find_current_bundle(runs_dir: Path, scenario: dict) -> Path | None:
@@ -53,11 +59,16 @@ def main() -> int:
     ap.add_argument("skill")
     ap.add_argument("--baseline-iter", default="000")
     ap.add_argument("--candidate-iter", default="001")
-    ap.add_argument("--judge-model", default="claude-sonnet-4-6")
+    ap.add_argument("--judge-harness", default=default_agent_harness("judge"), choices=["opencode", "codex"])
+    ap.add_argument("--judge-model", default="auto")
+    ap.add_argument("--judge-variant", default="auto")
     ap.add_argument("--judge-protocol", default="pairwise-v1")
     ap.add_argument("--output-iter", default=None,
                     help="Where to write decision.json; defaults to --candidate-iter")
     args = ap.parse_args()
+    args.judge_harness = resolve_agent_harness(args.judge_harness, "judge")
+    args.judge_model = resolve_agent_model(args.judge_model, "judge", args.judge_harness)
+    args.judge_variant = resolve_agent_variant(args.judge_variant, "judge", args.judge_harness)
 
     output_iter = args.output_iter or args.candidate_iter
 
@@ -68,12 +79,18 @@ def main() -> int:
     candidate_root = REPO / "optimization" / "runs" / args.skill / args.candidate_iter
 
     judge_config = {
+        "harnesses": [args.judge_harness] * 3,
         "model_ids": [args.judge_model] * 3,
+        "model_variants": [args.judge_variant] * 3,
         "protocol_version": args.judge_protocol,
         "seeds": [42, 123, 789],
     }
 
-    print(f"== Re-judging {args.skill}: {args.baseline_iter} vs {args.candidate_iter} with {args.judge_model} ==")
+    print(
+        f"== Re-judging {args.skill}: {args.baseline_iter} vs {args.candidate_iter} "
+        f"with {args.judge_harness} model={args.judge_model or args.judge_harness + '-default'} "
+        f"variant={args.judge_variant} =="
+    )
     judge_results = []
     check_results = []
     scenario_meta = []

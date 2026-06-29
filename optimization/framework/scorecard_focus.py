@@ -16,10 +16,59 @@ def _failed_checks(case: dict[str, Any]) -> list[dict[str, Any]]:
     return [check for check in case.get("checks", []) if check.get("result") == "fail"]
 
 
+def _visual_failure_detail(visual_review: dict[str, Any]) -> str:
+    summary = str(visual_review.get("summary") or "").strip()
+    dimensions = visual_review.get("dimensions", {})
+    failing_dimensions = []
+    if isinstance(dimensions, dict):
+        for name, dimension in sorted(dimensions.items()):
+            if not isinstance(dimension, dict):
+                continue
+            status = str(dimension.get("status") or "")
+            score = dimension.get("score")
+            if status in {"fail", "needs_review"} or (isinstance(score, (int, float)) and score < 6):
+                failing_dimensions.append(name)
+    if failing_dimensions:
+        suffix = "Failing visual dimensions: " + ", ".join(failing_dimensions)
+        return f"{summary} {suffix}".strip()
+    return summary or "Visual review did not pass."
+
+
+def _visual_failed_checks(case: dict[str, Any]) -> list[dict[str, Any]]:
+    visual_review = case.get("visual_review")
+    if not isinstance(visual_review, dict):
+        return []
+    status = str(visual_review.get("status") or "not_reviewed")
+    if status in {"pass", "not_required"}:
+        return []
+    if (
+        not visual_review.get("required")
+        and not visual_review.get("blocking")
+        and str(visual_review.get("reviewer") or "unassigned") == "unassigned"
+    ):
+        return []
+    return [
+        {
+            "check_id": f"visual_review_{status}",
+            "type": "qualitative_visual_review",
+            "category": "visual_review",
+            "critical": bool(visual_review.get("blocking", True)),
+            "actual": status,
+            "expected": "pass",
+            "tolerance": None,
+            "detail": _visual_failure_detail(visual_review),
+        }
+    ]
+
+
+def _all_failed_checks(case: dict[str, Any]) -> list[dict[str, Any]]:
+    return [*_failed_checks(case), *_visual_failed_checks(case)]
+
+
 def _category_failures(scorecard: dict[str, Any]) -> Counter[str]:
     counts: Counter[str] = Counter()
     for case in scorecard.get("cases", []):
-        for check in _failed_checks(case):
+        for check in _all_failed_checks(case):
             counts[str(check.get("category", "uncategorized"))] += 1
     return counts
 
@@ -28,7 +77,22 @@ def _critical_counts(scorecard: dict[str, Any]) -> Counter[str]:
     counts: Counter[str] = Counter()
     for failure in scorecard.get("critical_failures", []):
         counts[str(failure.get("category", "uncategorized"))] += 1
+    for case in scorecard.get("cases", []):
+        for check in _visual_failed_checks(case):
+            if check.get("critical"):
+                counts[str(check.get("category", "uncategorized"))] += 1
     return counts
+
+
+def _visual_score(scorecard: dict[str, Any]) -> float:
+    summary = scorecard.get("visual_summary", {})
+    if not isinstance(summary, dict):
+        return 0.0
+    required = int(summary.get("required_count") or summary.get("total_cases") or 0)
+    if required <= 0:
+        return 1.0
+    passed = int(summary.get("pass_count") or 0)
+    return passed / required
 
 
 def build_focus(scorecard: dict[str, Any]) -> dict[str, Any]:
@@ -38,8 +102,10 @@ def build_focus(scorecard: dict[str, Any]) -> dict[str, Any]:
     category_scores = scorecard.get("category_scores", {})
 
     categories = []
-    for category, data in sorted(category_scores.items()):
-        score = float(data.get("score", 0.0))
+    category_names = set(category_scores) | set(category_failures) | set(critical_counts)
+    for category in sorted(category_names):
+        data = category_scores.get(category, {})
+        score = _visual_score(scorecard) if category == "visual_review" and category not in category_scores else float(data.get("score", 0.0))
         failed_checks = category_failures[category]
         critical_failures = critical_counts[category]
         if score >= threshold and failed_checks == 0 and critical_failures == 0:
@@ -59,7 +125,7 @@ def build_focus(scorecard: dict[str, Any]) -> dict[str, Any]:
     cases = []
     skills: Counter[str] = Counter()
     for case in scorecard.get("cases", []):
-        failed = _failed_checks(case)
+        failed = _all_failed_checks(case)
         if not failed:
             continue
         skill = str(case.get("skill", ""))

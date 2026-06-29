@@ -459,7 +459,7 @@ def test_write_outputs(tmp_path):
     metadata = {
         "skill": "test-skill",
         "iteration": "003",
-        "model_id": "claude-sonnet-4-5",
+        "model_id": "openai/gpt-5.5",
     }
 
     propose_candidate.write_outputs(output_dir, candidate_skill, hypothesis, metadata)
@@ -479,17 +479,20 @@ def test_write_outputs(tmp_path):
 def test_call_proposer_mocked():
     """Test calling proposer with mocked CLI response."""
     prompt = "Test prompt"
-    model_id = "claude-sonnet-4-6"
+    model_id = "openai/gpt-5.5"
+    model_variant = "high"
     temperature = 1.0
 
-    with patch.object(propose_candidate, "invoke_claude", return_value="# Revised Skill\nMocked response") as mock_invoke:
-        response = propose_candidate.call_proposer(prompt, model_id, temperature)
+    with patch.object(propose_candidate, "invoke_agent", return_value="# Revised Skill\nMocked response") as mock_invoke:
+        response = propose_candidate.call_proposer(prompt, model_id, model_variant, temperature)
 
         assert response == "# Revised Skill\nMocked response"
         mock_invoke.assert_called_once()
         kwargs = mock_invoke.call_args.kwargs
         assert kwargs["prompt"] == prompt
+        assert kwargs["role"] == "proposer"
         assert kwargs["model"] == model_id
+        assert kwargs["variant"] == model_variant
         assert kwargs["allowed_tools"] == ["Read", "Grep", "Glob"]
         assert set(kwargs["add_dirs"]).issubset({"skills", "optimization", "wiki"})
 
@@ -504,17 +507,18 @@ def test_proposer_prompt_requires_research_pass():
 
 
 def test_main_missing_cli(temp_workspace, monkeypatch, capsys):
-    """Test main() when the claude CLI is not on PATH."""
+    """Test main() when the selected agent CLI is not on PATH."""
     monkeypatch.chdir(temp_workspace)
 
     sys.argv = ["propose-candidate.py", "test-skill"]
 
-    with patch.object(propose_candidate, "ensure_cli_available", side_effect=propose_candidate.ClaudeCLINotFoundError("claude CLI not found on PATH")):
+    not_found = propose_candidate.AgentCLINotFoundError[-1]("agent CLI not found on PATH")
+    with patch.object(propose_candidate, "ensure_cli_available", side_effect=not_found):
         result = propose_candidate.main()
 
     assert result == 1
     captured = capsys.readouterr()
-    assert "claude CLI not found" in captured.err
+    assert "agent CLI not found" in captured.err
 
 
 def test_main_missing_template(temp_workspace, monkeypatch, capsys):
@@ -526,7 +530,7 @@ def test_main_missing_template(temp_workspace, monkeypatch, capsys):
 
     sys.argv = ["propose-candidate.py", "test-skill"]
 
-    with patch.object(propose_candidate, "ensure_cli_available", return_value="/usr/local/bin/claude"):
+    with patch.object(propose_candidate, "ensure_cli_available", return_value="/usr/local/bin/agent"):
         result = propose_candidate.main()
 
     assert result == 1
@@ -545,8 +549,8 @@ def test_main_success(temp_workspace, monkeypatch, capsys):
         "003",
     ]
 
-    with patch.object(propose_candidate, "ensure_cli_available", return_value="/usr/local/bin/claude"), \
-         patch.object(propose_candidate, "invoke_claude", return_value="---\nname: test-skill\n---\n# Revised Skill"):
+    with patch.object(propose_candidate, "ensure_cli_available", return_value="/usr/local/bin/agent"), \
+         patch.object(propose_candidate, "invoke_agent", return_value="---\nname: test-skill\n---\n# Revised Skill"):
         result = propose_candidate.main()
 
         assert result == 0

@@ -22,8 +22,8 @@ Stopping conditions:
 - regression: Stop immediately on first REJECT
 - SIGINT: Stop gracefully on Ctrl+C
 
-Requires the `claude` CLI on PATH (handles auth itself) and CESIUM_ION_TOKEN
-for the browser runner.
+Requires the selected agent CLI on PATH (handles auth itself) and
+CESIUM_ION_TOKEN for the browser runner.
 """
 
 from __future__ import annotations
@@ -40,6 +40,20 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+
+from optimization.framework.adapters.agent_cli import (  # noqa: E402
+    AgentCLINotFoundError,
+    default_agent_harness,
+    default_agent_model,
+    default_agent_variant,
+    ensure_agent_cli_available,
+    resolve_agent_harness,
+    resolve_agent_model,
+    resolve_agent_variant,
+)
 
 # Flag for graceful SIGINT handling
 _stop_requested = False
@@ -160,9 +174,13 @@ def run_proposer(skill: str, iteration: str, args: argparse.Namespace) -> dict[s
         skill,
         "--iteration", iteration,
         "--max-history", str(args.proposer_history),
-        "--model-id", args.proposer_model,
         "--temperature", str(args.proposer_temperature),
+        "--harness", getattr(args, "proposer_harness", "opencode"),
     ]
+    if args.proposer_model:
+        cmd.extend(["--model-id", args.proposer_model])
+    if args.proposer_variant:
+        cmd.extend(["--model-variant", args.proposer_variant])
     proposer_decision_path = getattr(args, "proposer_decision_path", None)
     if proposer_decision_path:
         cmd.extend(["--decision-path", str(proposer_decision_path)])
@@ -223,6 +241,8 @@ def run_skills_adapter(skill: str, iteration: str, candidate_path: Path, args: a
             skill=skill,
             iteration=iteration,
             model_id=args.eval_model,
+            model_variant=args.eval_variant,
+            harness=getattr(args, "eval_harness", "opencode"),
             temperature=args.eval_temperature
         )
     except Exception as e:
@@ -436,14 +456,19 @@ def run_judges(skill: str, iteration: str, runs_dir: Path, args: argparse.Namesp
 
     # Judge configuration
     judge_config = {
+        "harnesses": [getattr(args, "judge_harness", "opencode")] * 3,
         "model_ids": [args.judge_model] * 3,  # Use same model for all 3 judges
+        "model_variants": [args.judge_variant] * 3,
         "protocol_version": args.judge_protocol,
         "seeds": [42, 123, 789],  # Fixed seeds for reproducibility
     }
 
     # Run panel for each scenario
     judge_results = []
+    unavailable_scenarios = []
     for scenario_file in scenario_files:
+        scenario: dict[str, Any] = {}
+        scenario_id = scenario_file.stem
         try:
             scenario = json.loads(scenario_file.read_text())
             scenario_id = scenario["id"]
@@ -454,7 +479,8 @@ def run_judges(skill: str, iteration: str, runs_dir: Path, args: argparse.Namesp
             candidate_bundle_path = find_bundle(runs_dir, scenario_id, scenario_name)
 
             if baseline_bundle_path is None or candidate_bundle_path is None:
-                print(f"  ⊘ Skipped {scenario_id}: bundle not found")
+                print(f"  ✗ Failed {scenario_id}: bundle not found")
+                unavailable_scenarios.append(scenario_id)
                 judge_results.append({
                     "scenario_id": scenario_id,
                     "verdict": "TIE",
@@ -475,6 +501,9 @@ def run_judges(skill: str, iteration: str, runs_dir: Path, args: argparse.Namesp
             verdict_path = candidate_bundle_path / "judge-verdicts.json"
             write_judge_verdicts(result, verdict_path)
 
+            if result.get("judge_unavailable"):
+                unavailable_scenarios.append(scenario_id)
+
             judge_results.append({
                 "scenario_id": scenario_id,
                 "verdict": result["verdict"],
@@ -482,16 +511,26 @@ def run_judges(skill: str, iteration: str, runs_dir: Path, args: argparse.Namesp
                 "judge_unavailable": result.get("judge_unavailable", False),
             })
 
-            print(f"  ✓ {scenario_id}: {result['verdict']} (majority: {result['majority_count']}/3)")
+            marker = "✗" if result.get("judge_unavailable") else "✓"
+            print(f"  {marker} {scenario_id}: {result['verdict']} (majority: {result['majority_count']}/3)")
 
         except Exception as e:
             print(f"  ✗ Failed to judge {scenario_file.name}: {e}", file=sys.stderr)
+            unavailable_scenarios.append(scenario_id)
             judge_results.append({
-                "scenario_id": scenario.get("id", "unknown"),
+                "scenario_id": scenario_id,
                 "verdict": "TIE",
                 "judge_unavailable": True,
                 "error": str(e)
             })
+
+    if unavailable_scenarios:
+        unique = sorted(set(unavailable_scenarios))
+        return {
+            "success": False,
+            "judge_results": judge_results,
+            "error": f"Judge unavailable for {len(unique)} scenario(s): {', '.join(unique)}",
+        }
 
     return {"success": True, "judge_results": judge_results, "error": None}
 
@@ -1115,9 +1154,22 @@ def main():
 
     # Proposer configuration
     parser.add_argument(
+        "--proposer-harness",
+        default=default_agent_harness("proposer"),
+        choices=["opencode", "codex"],
+        help="Agent CLI harness for proposer (default: env or opencode)"
+    )
+
+    parser.add_argument(
         "--proposer-model",
-        default="claude-opus-4-7",
-        help="Model for proposer (default: claude-opus-4-7)"
+        default="auto",
+        help="Model for proposer (default: OpenCode GPT-5.5, or Codex CLI default when harness=codex)"
+    )
+
+    parser.add_argument(
+        "--proposer-variant",
+        default="auto",
+        help="Model variant for proposer (OpenCode default: high; ignored by Codex)"
     )
 
     parser.add_argument(
@@ -1142,9 +1194,22 @@ def main():
 
     # Eval adapter configuration
     parser.add_argument(
+        "--eval-harness",
+        default=default_agent_harness("eval"),
+        choices=["opencode", "codex"],
+        help="Agent CLI harness for code generation (default: env or opencode)"
+    )
+
+    parser.add_argument(
         "--eval-model",
-        default="claude-opus-4-7",
-        help="Model for code generation (default: claude-opus-4-7)"
+        default="auto",
+        help="Model for code generation (default: OpenCode GPT-5.5, or Codex CLI default when harness=codex)"
+    )
+
+    parser.add_argument(
+        "--eval-variant",
+        default="auto",
+        help="Model variant for code generation (OpenCode default: medium; ignored by Codex)"
     )
 
     parser.add_argument(
@@ -1156,9 +1221,22 @@ def main():
 
     # Judge configuration
     parser.add_argument(
+        "--judge-harness",
+        default=default_agent_harness("judge"),
+        choices=["opencode", "codex"],
+        help="Agent CLI harness for pairwise judges (default: env or opencode)"
+    )
+
+    parser.add_argument(
         "--judge-model",
-        default="claude-opus-4-7",
-        help="Model for judges (default: claude-opus-4-7)"
+        default="auto",
+        help="Model for judges (default: OpenCode GPT-5.5, or Codex CLI default when harness=codex)"
+    )
+
+    parser.add_argument(
+        "--judge-variant",
+        default="auto",
+        help="Model variant for judges (OpenCode default: medium; ignored by Codex)"
     )
 
     parser.add_argument(
@@ -1168,13 +1246,25 @@ def main():
     )
 
     args = parser.parse_args()
+    args.proposer_harness = resolve_agent_harness(args.proposer_harness, "proposer")
+    args.eval_harness = resolve_agent_harness(args.eval_harness, "eval")
+    args.judge_harness = resolve_agent_harness(args.judge_harness, "judge")
+    args.proposer_model = resolve_agent_model(args.proposer_model, "proposer", args.proposer_harness)
+    args.eval_model = resolve_agent_model(args.eval_model, "eval", args.eval_harness)
+    args.judge_model = resolve_agent_model(args.judge_model, "judge", args.judge_harness)
+    args.proposer_variant = resolve_agent_variant(args.proposer_variant, "proposer", args.proposer_harness)
+    args.eval_variant = resolve_agent_variant(args.eval_variant, "eval", args.eval_harness)
+    args.judge_variant = resolve_agent_variant(args.judge_variant, "judge", args.judge_harness)
 
-    # Validate environment: claude CLI for evals, Ion token for the browser runner.
+    # Validate environment: selected CLIs for agent phases, Ion token for the browser runner.
     try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from optimization.framework.adapters.claude_cli import ClaudeCLINotFoundError, ensure_cli_available
-        ensure_cli_available()
-    except ClaudeCLINotFoundError as e:
+        for harness, role in {
+            (args.proposer_harness, "proposer"),
+            (args.eval_harness, "eval"),
+            (args.judge_harness, "judge"),
+        }:
+            ensure_agent_cli_available(harness, role)
+    except AgentCLINotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 

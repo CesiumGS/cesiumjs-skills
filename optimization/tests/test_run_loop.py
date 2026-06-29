@@ -35,12 +35,15 @@ def mock_args(run_loop):
         max_iterations=5,
         stop_on="max",
         plateau_n=3,
-        proposer_model="claude-sonnet-4-5-20250929",
+        proposer_model="openai/gpt-5.5",
+        proposer_variant="high",
         proposer_temperature=1.0,
         proposer_history=3,
-        eval_model="claude-sonnet-4-5-20250929",
+        eval_model="openai/gpt-5.5",
+        eval_variant="medium",
         eval_temperature=1.0,
-        judge_model="claude-sonnet-4-5-20250929",
+        judge_model="openai/gpt-5.5",
+        judge_variant="medium",
         judge_protocol="pairwise-v1",
     )
 
@@ -335,6 +338,8 @@ class TestRunProposer:
         assert cmd[cmd.index("--iteration") + 1] == "001"
         assert "--model-id" in cmd
         assert cmd[cmd.index("--model-id") + 1] == mock_args.proposer_model
+        assert "--model-variant" in cmd
+        assert cmd[cmd.index("--model-variant") + 1] == mock_args.proposer_variant
         assert "--model" not in cmd
 
     def test_failure(self, run_loop, mock_args):

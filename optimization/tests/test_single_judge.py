@@ -177,8 +177,8 @@ class TestLabelRandomization(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir)
 
-    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/claude')
-    @patch('optimization.framework.judges.single.invoke_claude')
+    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/opencode')
+    @patch('optimization.framework.judges.single.invoke_opencode')
     def test_label_randomization_seed_1(self, mock_invoke, mock_ensure):
         """Test that seed 1 produces consistent label mapping."""
         mock_invoke.return_value = '{"verdict": "A", "rationale": "A is better"}'
@@ -196,7 +196,7 @@ class TestLabelRandomization(unittest.TestCase):
             scenario,
             {'path': str(self.baseline_dir)},
             {'path': str(self.candidate_dir)},
-            'sonnet',
+            'openai/gpt-5.5',
             'pairwise-v1',
             seed=1
         )
@@ -207,9 +207,15 @@ class TestLabelRandomization(unittest.TestCase):
         self.assertIn('B', result['label_mapping'])
         expected_verdict = result['label_mapping']['A']
         self.assertEqual(result['verdict'], expected_verdict)
+        files = mock_invoke.call_args.kwargs['files']
+        self.assertEqual(len(files), 2)
+        self.assertIn(str((self.baseline_dir / 'screenshot.png').resolve()), files)
+        self.assertIn(str((self.candidate_dir / 'screenshot.png').resolve()), files)
+        self.assertEqual(result['screenshot_input_mode'], 'attached_image_files')
+        self.assertEqual(result['screenshots_attached'], 2)
 
-    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/claude')
-    @patch('optimization.framework.judges.single.invoke_claude')
+    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/opencode')
+    @patch('optimization.framework.judges.single.invoke_opencode')
     def test_label_randomization_seed_2(self, mock_invoke, mock_ensure):
         """Test that seed 2 produces consistent but different label mapping."""
         mock_invoke.return_value = '{"verdict": "A", "rationale": "A is better"}'
@@ -227,7 +233,7 @@ class TestLabelRandomization(unittest.TestCase):
             scenario,
             {'path': str(self.baseline_dir)},
             {'path': str(self.candidate_dir)},
-            'sonnet',
+            'openai/gpt-5.5',
             'pairwise-v1',
             seed=2
         )
@@ -235,8 +241,8 @@ class TestLabelRandomization(unittest.TestCase):
         self.assertIn('label_mapping', result)
         self.assertEqual(result['seed'], 2)
 
-    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/claude')
-    @patch('optimization.framework.judges.single.invoke_claude')
+    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/opencode')
+    @patch('optimization.framework.judges.single.invoke_opencode')
     def test_multiple_calls_same_seed_consistent(self, mock_invoke, mock_ensure):
         """Test that same seed produces same label mapping across calls."""
         mock_invoke.return_value = '{"verdict": "A", "rationale": "A is better"}'
@@ -254,7 +260,7 @@ class TestLabelRandomization(unittest.TestCase):
             scenario,
             {'path': str(self.baseline_dir)},
             {'path': str(self.candidate_dir)},
-            'sonnet',
+            'openai/gpt-5.5',
             'pairwise-v1',
             seed=42
         )
@@ -262,15 +268,15 @@ class TestLabelRandomization(unittest.TestCase):
             scenario,
             {'path': str(self.baseline_dir)},
             {'path': str(self.candidate_dir)},
-            'sonnet',
+            'openai/gpt-5.5',
             'pairwise-v1',
             seed=42
         )
 
         self.assertEqual(result1['label_mapping'], result2['label_mapping'])
 
-    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/claude')
-    @patch('optimization.framework.judges.single.invoke_claude')
+    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/opencode')
+    @patch('optimization.framework.judges.single.invoke_opencode')
     def test_tie_verdict_not_remapped(self, mock_invoke, mock_ensure):
         """Test that TIE verdict is not remapped."""
         mock_invoke.return_value = '{"verdict": "TIE", "rationale": "Both equal"}'
@@ -288,7 +294,7 @@ class TestLabelRandomization(unittest.TestCase):
             scenario,
             {'path': str(self.baseline_dir)},
             {'path': str(self.candidate_dir)},
-            'sonnet',
+            'openai/gpt-5.5',
             'pairwise-v1',
             seed=1
         )
@@ -301,20 +307,20 @@ class TestJudgeFunction(unittest.TestCase):
 
     @patch('optimization.framework.judges.single.ensure_cli_available')
     def test_missing_cli(self, mock_ensure):
-        """Test that missing claude CLI raises ClaudeCLINotFoundError."""
-        from optimization.framework.adapters.claude_cli import ClaudeCLINotFoundError
-        mock_ensure.side_effect = ClaudeCLINotFoundError("claude not found")
-        with self.assertRaises(ClaudeCLINotFoundError):
+        """Test that missing opencode CLI raises OpenCodeCLINotFoundError."""
+        from optimization.framework.adapters.opencode_cli import OpenCodeCLINotFoundError
+        mock_ensure.side_effect = OpenCodeCLINotFoundError("opencode not found")
+        with self.assertRaises(OpenCodeCLINotFoundError):
             judge(
                 {},
                 {'path': '/fake/baseline'},
                 {'path': '/fake/candidate'},
-                'sonnet',
+                'openai/gpt-5.5',
                 'pairwise-v1',
                 seed=1
             )
 
-    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/claude')
+    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/opencode')
     def test_invalid_protocol_version(self, mock_ensure):
         """Test that invalid protocol version raises error."""
         with self.assertRaises(ValueError) as ctx:
@@ -322,13 +328,13 @@ class TestJudgeFunction(unittest.TestCase):
                 {},
                 {'path': '/fake/baseline'},
                 {'path': '/fake/candidate'},
-                'sonnet',
+                'openai/gpt-5.5',
                 'invalid-v99',
                 seed=1
             )
         self.assertIn('Unsupported protocol version', str(ctx.exception))
 
-    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/claude')
+    @patch('optimization.framework.judges.single.ensure_cli_available', return_value='/usr/local/bin/opencode')
     def test_missing_bundle_directory(self, mock_ensure):
         """Test that missing bundle directory raises error."""
         scenario = {
@@ -344,7 +350,7 @@ class TestJudgeFunction(unittest.TestCase):
                 scenario,
                 {'path': '/nonexistent/baseline'},
                 {'path': '/nonexistent/candidate'},
-                'sonnet',
+                'openai/gpt-5.5',
                 'pairwise-v1',
                 seed=1
             )

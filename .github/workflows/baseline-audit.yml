@@ -26,9 +26,17 @@ on:
         required: false
         default: 'all'
       judge_model:
-        description: 'Judge model alias'
+        description: 'Judge model id/alias (blank uses harness default)'
         required: false
-        default: 'sonnet'
+        default: ''
+      agent_harness:
+        description: 'Agent CLI harness for qualitative audit'
+        required: false
+        default: 'opencode'
+        type: choice
+        options:
+          - opencode
+          - codex
       n_judges:
         description: 'Panel size'
         required: false
@@ -63,7 +71,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: baseline-audit-deterministic-${{ github.run_number }}
-          path: evaluation/artifacts/audits/ci-deterministic/**/scorecard.*
+          path: |
+            evaluation/artifacts/audits/ci-deterministic/scorecard.*
+            evaluation/artifacts/audits/ci-deterministic/**/scorecard.*
 
   # ----- Lane 2: qualitative (nightly / dispatch, advisory) -----
   qualitative:
@@ -86,36 +96,81 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install Claude CLI
-        run: npm install -g @anthropic-ai/claude-code && claude --version
+      - name: Install agent CLI
+        env:
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+        run: |
+          if [ "$AGENT_HARNESS" = "codex" ]; then
+            npm install -g @openai/codex
+            codex --version
+          else
+            npm install -g opencode-ai@latest
+            opencode --version
+          fi
+      - name: Install gitleaks
+        run: |
+          GITLEAKS_VERSION=8.18.2
+          wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
       - name: Validate secrets
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
         run: |
           test -n "$CESIUM_ION_TOKEN" || { echo "CESIUM_ION_TOKEN missing"; exit 1; }
-          test -n "$ANTHROPIC_API_KEY" || { echo "ANTHROPIC_API_KEY missing"; exit 1; }
+          if [ "$AGENT_HARNESS" = "opencode" ] && [ -z "$OPENCODE_AUTH_CONTENT" ]; then
+            echo "OPENCODE_AUTH_CONTENT OpenAI auth secret missing"
+            exit 1
+          fi
       - name: Render current-best baselines (gitignored; needed for the visual lane)
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_MODEL: ${{ github.event.inputs.judge_model || vars.OPENCODE_MODEL || secrets.OPENCODE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_PROPOSER_MODEL: ${{ vars.OPENCODE_PROPOSER_MODEL || secrets.OPENCODE_PROPOSER_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_EVAL_MODEL: ${{ vars.OPENCODE_EVAL_MODEL || secrets.OPENCODE_EVAL_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || secrets.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_PROPOSER_VARIANT: ${{ vars.OPENCODE_PROPOSER_VARIANT || secrets.OPENCODE_PROPOSER_VARIANT || 'high' }}
+          OPENCODE_EVAL_VARIANT: ${{ vars.OPENCODE_EVAL_VARIANT || secrets.OPENCODE_EVAL_VARIANT || 'medium' }}
+          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
         run: |
           # The optimization loop's baseline guard renders skills/<skill>/SKILL.md
           # into optimization/runs/<skill>/baseline (1 iteration is enough to
           # establish the baseline bundle the audit judges).
           SKILLS="${{ github.event.inputs.skills || 'all' }}"
-          python3 optimization/scripts/run-all-evals.py --skills "$SKILLS" --max-iterations 1 --stop-on max || true
+          python3 optimization/scripts/run-all-evals.py \
+            --skills "$SKILLS" \
+            --proposer-harness "$AGENT_HARNESS" \
+            --eval-harness "$AGENT_HARNESS" \
+            --judge-harness "$AGENT_HARNESS" \
+            --max-iterations 1 \
+            --stop-on max || true
       - name: Qualitative + deterministic baseline audit (advisory)
         id: audit
         continue-on-error: true
+        shell: bash
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_MODEL: ${{ github.event.inputs.judge_model || vars.OPENCODE_MODEL || secrets.OPENCODE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || secrets.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
         run: |
-          python3 evaluation/scripts/run-baseline-audit.py \
+          CMD=(python3 evaluation/scripts/run-baseline-audit.py \
             --skills "${{ github.event.inputs.skills || 'all' }}" \
-            --judge-model "${{ github.event.inputs.judge_model || 'sonnet' }}" \
+            --adapter "$AGENT_HARNESS" \
             --n-judges "${{ github.event.inputs.n_judges || '3' }}" \
-            --output-dir evaluation/artifacts/audits/ci
+            --output-dir evaluation/artifacts/audits/ci)
+          if [ "$AGENT_HARNESS" = "opencode" ] && [ -n "$OPENCODE_MODEL" ]; then
+            CMD+=(--judge-model "$OPENCODE_MODEL")
+          fi
+          "${CMD[@]}"
       - name: Sanitize before upload
         if: always()
         run: |
@@ -125,7 +180,12 @@ jobs:
       - name: Build audit dashboard
         if: always()
         run: |
-          SC=$(ls -t evaluation/artifacts/audits/ci/*/scorecard.json 2>/dev/null | head -1)
+          SC=""
+          if [ -f evaluation/artifacts/audits/ci/scorecard.json ]; then
+            SC="evaluation/artifacts/audits/ci/scorecard.json"
+          else
+            SC=$(find evaluation/artifacts/audits/ci -name scorecard.json -type f -print 2>/dev/null | head -1)
+          fi
           if [ -n "$SC" ]; then python3 evaluation/scripts/build-audit-ui.py "$SC" --output evaluation/artifacts/audits/ci/audit.html; fi
       - name: Upload audit scorecard + dashboard
         if: always()
@@ -133,5 +193,6 @@ jobs:
         with:
           name: baseline-audit-qualitative-${{ github.run_number }}
           path: |
+            evaluation/artifacts/audits/ci/scorecard.*
             evaluation/artifacts/audits/ci/**/scorecard.*
             evaluation/artifacts/audits/ci/audit.html

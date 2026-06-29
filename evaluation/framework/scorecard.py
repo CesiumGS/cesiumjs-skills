@@ -119,6 +119,7 @@ def _case_score(input_item: ScorecardInput) -> dict[str, Any]:
             "difficulty": preflight.get("difficulty"),
             "expected_behaviors": list(preflight.get("expected_behaviors", [])),
             "visual_expectations": str(preflight.get("visual_expectations", "")),
+            "screenshot_mode": preflight.get("screenshot_mode"),
         },
         "result": input_item.result.result,
         "score": score_data["score"],
@@ -331,6 +332,8 @@ def build_scorecard(
     artifacts: dict[str, Any] | None = None,
     visual_review: dict[str, Any] | None = None,
     require_visual_review: bool = False,
+    harness: str | None = None,
+    harness_judge: str | None = None,
 ) -> dict[str, Any]:
     repo_root = repo_root or Path.cwd()
     timestamp_utc = timestamp_utc or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -389,7 +392,14 @@ def build_scorecard(
         if deterministic_result == "pass" and visual_result in {"pass", "not_required"}
         else "fail"
     )
-    return {
+    # The judge harness (which agent rendered the qualitative verdict) is stamped
+    # under the open `artifacts` object so it is never conflated with the codegen
+    # harness on the compare axis (the codegen harness is the real "tested with" id).
+    artifacts_out = dict(artifacts or {})
+    if harness_judge:
+        artifacts_out.setdefault("harness_judge", harness_judge)
+
+    result = {
         "schema_version": SCORECARD_SCHEMA_VERSION,
         "run_id": make_run_id(timestamp_utc, commit),
         "timestamp_utc": timestamp_utc,
@@ -402,8 +412,13 @@ def build_scorecard(
         "critical_failures": critical_failures,
         "visual_summary": visual_summary,
         "cases": cases,
-        "artifacts": artifacts or {},
+        "artifacts": artifacts_out,
     }
+    # Additive, optional: emit the codegen harness only when known so existing
+    # callers (and the ~25 historical fieldless scorecards) stay schema-valid.
+    if harness:
+        result["harness"] = harness
+    return result
 
 
 def _markdown_value(value: Any, max_length: int = 160) -> str:

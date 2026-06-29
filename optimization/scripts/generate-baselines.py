@@ -20,16 +20,35 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from optimization.framework.adapters.skills_adapter import SkillsAdapter  # noqa: E402
+from optimization.framework.adapters.agent_cli import (  # noqa: E402
+    default_agent_harness,
+    resolve_agent_harness,
+    resolve_agent_model,
+    resolve_agent_variant,
+)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skill", help="Only generate for this skill", default=None)
     parser.add_argument("--iteration", default="baseline", help="Output iteration label")
-    parser.add_argument("--model", default="claude-opus-4-7", help="Claude model id")
+    parser.add_argument("--harness", default=default_agent_harness("eval"), choices=["opencode", "codex"])
+    parser.add_argument(
+        "--model",
+        default="auto",
+        help="Model id (default: OpenCode GPT-5.5 or Codex CLI default when harness=codex)",
+    )
+    parser.add_argument(
+        "--model-variant",
+        default="auto",
+        help="Model variant/reasoning effort (OpenCode default: medium; ignored by Codex)",
+    )
     parser.add_argument("--force", action="store_true", help="Re-generate even if .js exists")
     parser.add_argument("--only", default="", help="Comma-separated scenario ids to generate")
     args = parser.parse_args()
+    args.harness = resolve_agent_harness(args.harness, "eval")
+    args.model = resolve_agent_model(args.model, "eval", args.harness)
+    args.model_variant = resolve_agent_variant(args.model_variant, "eval", args.harness)
 
     scenarios_root = REPO_ROOT / "optimization" / "scenarios"
     if args.skill:
@@ -62,6 +81,8 @@ def main() -> int:
                 skill=skill,
                 iteration=args.iteration,
                 model_id=args.model,
+                model_variant=args.model_variant,
+                harness=args.harness,
                 temperature=1.0,
             )
         except Exception as e:

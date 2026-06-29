@@ -167,6 +167,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Fail cases without a recorded qualitative visual review.",
     )
+    parser.add_argument(
+        "--harness",
+        default=None,
+        help=(
+            "Codegen harness that produced the scored evidence (the 'tested with' id "
+            "stamped into the scorecard). Omit for synthetic fixtures (stays 'unknown')."
+        ),
+    )
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     parser.add_argument("--output-dir", default=None)
     return parser.parse_args(argv)
@@ -197,6 +205,7 @@ def main(argv: list[str] | None = None) -> int:
         repo_root=REPO_ROOT,
         visual_review=visual_review,
         require_visual_review=args.require_visual_review,
+        harness=args.harness,
     )
 
     output_dir = Path(args.output_dir) if args.output_dir else DEFAULT_OUTPUT_ROOT / scorecard["run_id"]

@@ -46,7 +46,8 @@
     "artifacts": {
       "type": "object",
       "additionalProperties": true
-    }
+    },
+    "harness": { "type": "string" }
   },
   "definitions": {
     "category_score": {
@@ -186,7 +187,8 @@
           "type": "array",
           "items": { "type": "string" }
         },
-        "visual_expectations": { "type": "string" }
+        "visual_expectations": { "type": "string" },
+        "screenshot_mode": { "type": ["string", "null"] }
       }
     },
     "evidence_summary": {

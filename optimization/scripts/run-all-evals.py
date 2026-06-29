@@ -16,6 +16,9 @@ SCENARIOS_ROOT = REPO_ROOT / "optimization" / "scenarios"
 FOCUS_TMP_ROOT = REPO_ROOT / "optimization" / "tmp" / "scorecard-focus"
 
 sys.path.insert(0, str(REPO_ROOT))
+from optimization.framework.adapters.agent_cli import (  # noqa: E402
+    default_agent_harness,
+)
 from optimization.framework.scorecard_focus import build_focus, focus_to_decision  # noqa: E402
 
 
@@ -53,9 +56,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default="max",
     )
     parser.add_argument("--plateau-n", type=int, default=3)
-    parser.add_argument("--proposer-model", default="claude-opus-4-7")
-    parser.add_argument("--eval-model", default="claude-opus-4-7")
-    parser.add_argument("--judge-model", default="claude-opus-4-7")
+    parser.add_argument("--proposer-harness", default=default_agent_harness("proposer"), choices=["opencode", "codex"])
+    parser.add_argument("--proposer-model", default="auto")
+    parser.add_argument("--proposer-variant", default="auto")
+    parser.add_argument("--eval-harness", default=default_agent_harness("eval"), choices=["opencode", "codex"])
+    parser.add_argument("--eval-model", default="auto")
+    parser.add_argument("--eval-variant", default="auto")
+    parser.add_argument("--judge-harness", default=default_agent_harness("judge"), choices=["opencode", "codex"])
+    parser.add_argument("--judge-model", default="auto")
+    parser.add_argument("--judge-variant", default="auto")
     parser.add_argument(
         "--continue-on-failure",
         action="store_true",
@@ -146,13 +155,22 @@ def build_command(skill: str, args: argparse.Namespace, decision_path: Path | No
         args.stop_on,
         "--plateau-n",
         str(args.plateau_n),
-        "--proposer-model",
-        args.proposer_model,
-        "--eval-model",
-        args.eval_model,
-        "--judge-model",
-        args.judge_model,
     ]
+    if args.proposer_model:
+        cmd.extend(["--proposer-harness", args.proposer_harness])
+        cmd.extend(["--proposer-model", args.proposer_model])
+    if args.proposer_variant:
+        cmd.extend(["--proposer-variant", args.proposer_variant])
+    if args.eval_model:
+        cmd.extend(["--eval-harness", args.eval_harness])
+        cmd.extend(["--eval-model", args.eval_model])
+    if args.eval_variant:
+        cmd.extend(["--eval-variant", args.eval_variant])
+    if args.judge_model:
+        cmd.extend(["--judge-harness", args.judge_harness])
+        cmd.extend(["--judge-model", args.judge_model])
+    if args.judge_variant:
+        cmd.extend(["--judge-variant", args.judge_variant])
     if decision_path is not None:
         cmd.extend(["--proposer-decision-path", str(decision_path)])
     return cmd

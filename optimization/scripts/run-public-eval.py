@@ -549,6 +549,135 @@ def run_programmatic_checks(
     return result
 
 
+CARDINAL_PANORAMA_SHOTS: tuple[dict[str, Any], ...] = (
+    {
+        "timing": "orbit_0",
+        "heading_degrees": 0,
+        "description": "Orbit view of the subject from heading 0 deg (subject kept centered)",
+    },
+    {
+        "timing": "orbit_90",
+        "heading_degrees": 90,
+        "description": "Orbit view of the subject from heading 90 deg (subject kept centered)",
+    },
+    {
+        "timing": "orbit_180",
+        "heading_degrees": 180,
+        "description": "Orbit view of the subject from heading 180 deg (subject kept centered)",
+    },
+    {
+        "timing": "orbit_270",
+        "heading_degrees": 270,
+        "description": "Orbit view of the subject from heading 270 deg (subject kept centered)",
+    },
+)
+
+# Panorama capture: instead of rotating the settled camera IN PLACE toward cardinal
+# directions (which points away from the subject for ~3 of 4 shots), we ORBIT the
+# camera around the framed subject so it stays centered from every angle. The subject
+# is the geometry the candidate added (model / 3D tileset / primitive / entities of any
+# type); for a globe/imagery-only scene we orbit the point the settled camera looks at.
+# On shot 0 we save the settled camera so scene-state can be restored afterward.
+ORBIT_PANORAMA_PITCH_DEG = -30
+ORBIT_PANORAMA_JS = """
+({ headingDegrees, index }) => {
+  const C = Cesium;
+  if (typeof viewer === 'undefined' || !viewer || !viewer.scene) return;
+  const scene = viewer.scene, camera = scene.camera;
+  if (index === 0) {
+    const p = camera.positionWC;
+    window.__PANO_SETTLED__ = { pos: [p.x, p.y, p.z], heading: camera.heading, pitch: camera.pitch, roll: camera.roll };
+    window.__PANO_ORBIT__ = null;
+  }
+  function subjectSphere() {
+    const spheres = [];
+    try {
+      const prims = scene.primitives;
+      for (let i = 0; i < prims.length; i++) {
+        const pr = prims.get(i);
+        try {
+          const bs = pr && pr.boundingSphere;
+          if (bs && C.defined(bs.center) && isFinite(bs.radius) && bs.radius > 0 && bs.radius < 2.0e6) spheres.push(bs);
+        } catch (e) {}
+      }
+    } catch (e) {}
+    try {
+      const dsd = viewer.dataSourceDisplay, scr = new C.BoundingSphere(), now = viewer.clock ? viewer.clock.currentTime : undefined;
+      for (const e of viewer.entities.values) {
+        let got = false;
+        try {
+          const st = dsd.getBoundingSphere(e, false, scr);
+          if (st === C.BoundingSphereState.DONE && isFinite(scr.radius) && scr.radius >= 0) { spheres.push(C.BoundingSphere.clone(scr)); got = true; }
+        } catch (e2) {}
+        if (!got) { try { const pos = e.position && e.position.getValue(now); if (C.defined(pos)) spheres.push(new C.BoundingSphere(pos, 10)); } catch (e3) {} }
+      }
+    } catch (e) {}
+    if (!spheres.length) return undefined;
+    return spheres.length === 1 ? spheres[0] : C.BoundingSphere.fromBoundingSpheres(spheres);
+  }
+  if (!window.__PANO_ORBIT__) {
+    const bs = subjectSphere();
+    if (bs) {
+      window.__PANO_ORBIT__ = { mode: 'sphere', c: [bs.center.x, bs.center.y, bs.center.z], radius: bs.radius, range: Math.max(bs.radius * 3.2, bs.radius + 60) };
+    } else {
+      const px = new C.Cartesian2(scene.canvas.clientWidth / 2, scene.canvas.clientHeight / 2);
+      let t;
+      try { t = scene.pickPosition(px); } catch (e) {}
+      if (!C.defined(t) || isNaN(t.x)) { try { t = camera.pickEllipsoid(px, scene.globe.ellipsoid); } catch (e) {} }
+      if (!C.defined(t)) t = C.Cartesian3.add(camera.positionWC, C.Cartesian3.multiplyByScalar(camera.directionWC, 1500, new C.Cartesian3()), new C.Cartesian3());
+      window.__PANO_ORBIT__ = { mode: 'look', c: [t.x, t.y, t.z], range: Math.max(50, C.Cartesian3.distance(camera.positionWC, t)) };
+    }
+  }
+  const o = window.__PANO_ORBIT__;
+  const center = new C.Cartesian3(o.c[0], o.c[1], o.c[2]);
+  const hpr = new C.HeadingPitchRange(C.Math.toRadians(headingDegrees), C.Math.toRadians(%PITCH%), o.range);
+  if (o.mode === 'sphere') camera.viewBoundingSphere(new C.BoundingSphere(center, o.radius), hpr);
+  else camera.lookAt(center, hpr);
+  camera.lookAtTransform(C.Matrix4.IDENTITY);
+}
+""".replace("%PITCH%", str(ORBIT_PANORAMA_PITCH_DEG))
+
+# Restore the settled (generated) camera after the orbit so scene-state.json records
+# the candidate's framing, not the orbit position.
+ORBIT_RESTORE_JS = """
+() => {
+  const C = Cesium;
+  if (typeof viewer === 'undefined' || !viewer || !viewer.scene) return;
+  viewer.scene.camera.lookAtTransform(C.Matrix4.IDENTITY);
+  const s = window.__PANO_SETTLED__;
+  if (s) {
+    viewer.scene.camera.setView({
+      destination: new C.Cartesian3(s.pos[0], s.pos[1], s.pos[2]),
+      orientation: { heading: s.heading, pitch: s.pitch, roll: s.roll }
+    });
+  }
+}
+"""
+
+
+def screenshot_specs_for(scenario: dict[str, Any]) -> list[dict[str, Any]]:
+    specs = scenario.get(
+        "screenshots",
+        [{"delay_ms": 3000, "timing": "default", "description": "default screenshot"}],
+    )
+    if scenario.get("screenshot_mode") != "cardinal_panorama":
+        return list(specs)
+
+    settle_ms = 3000
+    if specs:
+        settle_ms = max(int(item.get("delay_ms", settle_ms)) for item in specs)
+    panorama_delay_ms = int(scenario.get("panorama_delay_ms", 750))
+    expanded: list[dict[str, Any]] = []
+    for index, shot in enumerate(CARDINAL_PANORAMA_SHOTS):
+        expanded.append({
+            **shot,
+            "delay_ms": settle_ms + (index * panorama_delay_ms),
+            "cardinal_panorama": True,
+            "index": index,
+        })
+    return expanded
+
+
 def load_runs(args: argparse.Namespace) -> list[ScenarioRun]:
     scenarios_dir = REPO_ROOT / "optimization" / "scenarios" / args.skill
     if not scenarios_dir.is_dir():
@@ -666,14 +795,26 @@ def main() -> None:
                         timeout=args.timeout_ms,
                     )
 
-                    # Capture screenshots at scenario-defined timings
-                    screenshot_specs = run.scenario.get("screenshots", [{"delay_ms": 3000, "timing": "default", "description": "default screenshot"}])
+                    # Capture screenshots at scenario-defined timings. Visual
+                    # scenarios can opt into a canonical four-shot panorama;
+                    # the runner rotates the settled camera so every candidate
+                    # is judged from north/east/south/west without requiring
+                    # generated code to implement that boilerplate.
+                    screenshot_specs = screenshot_specs_for(run.scenario)
                     screenshots_taken = []
                     screenshot_quality = []
 
                     for i, screenshot_spec in enumerate(screenshot_specs):
                         delay_ms = screenshot_spec.get("delay_ms", 1000)
                         page.wait_for_timeout(delay_ms if i == 0 else delay_ms - screenshot_specs[i-1].get("delay_ms", 0))
+                        if screenshot_spec.get("cardinal_panorama"):
+                            heading_degrees = float(screenshot_spec.get("heading_degrees", 0))
+                            shot_index = int(screenshot_spec.get("index", i))
+                            page.evaluate(
+                                ORBIT_PANORAMA_JS,
+                                {"headingDegrees": heading_degrees, "index": shot_index},
+                            )
+                            page.wait_for_timeout(250)
                         screenshot_filename = f"screenshot-{i}.png" if len(screenshot_specs) > 1 else "screenshot.png"
                         screenshot_path = run.run_dir / screenshot_filename
                         # Bump screenshot timeout from Playwright default (30s)
@@ -690,6 +831,15 @@ def main() -> None:
                         screenshot_quality.append(
                             analyze_screenshot(screenshot_path, expected_width=1280, expected_height=720)
                         )
+
+                    # If we orbited for the panorama, restore the candidate's settled
+                    # camera so scene-state.json reflects the generated framing.
+                    if any(spec.get("cardinal_panorama") for spec in screenshot_specs):
+                        try:
+                            page.evaluate(ORBIT_RESTORE_JS)
+                            page.wait_for_timeout(100)
+                        except Exception:
+                            pass
 
                     errors = page.evaluate("window.__CESIUM_EVAL_ERRORS__ || []")
                     cesium_render_error = page.evaluate("""

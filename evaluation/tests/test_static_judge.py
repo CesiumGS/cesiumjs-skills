@@ -165,6 +165,15 @@ def test_judge_render_emits_schema_valid_item(visual_item_validator) -> None:
 
     # Adapter was invoked once per judge.
     assert len(adapter.calls) == 3
+    for call in adapter.calls:
+        assert call["files"] == [str((BUNDLE_DIR / "screenshot.png").resolve())]
+        assert "Screenshot PNG file(s) are attached" in call["prompt"]
+        assert "images are not attached" not in call["prompt"]
+        assert "do not read" not in call["prompt"].lower()
+
+    assert item["reviewer"] == "screenshot-visual-judge"
+    assert item["judge"]["screenshot_input_mode"] == "attached_image_files"
+    assert item["judge"]["screenshots_attached"] == 1
 
 
 def test_overall_score_in_range_and_derived() -> None:

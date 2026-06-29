@@ -99,7 +99,7 @@ class TestAdapterContract(unittest.TestCase):
         }
         self.candidate = {
             "skill_path": "/path/to/skill.md",
-            "model_id": "claude-3",
+            "model_id": "openai/gpt-5.5",
             "temperature": 0.7
         }
 

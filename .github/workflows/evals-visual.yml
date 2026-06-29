@@ -27,6 +27,19 @@ on:
         required: false
         default: 'true'
         type: boolean
+      opencode_model:
+        description: 'Fallback OpenCode model id/alias (blank uses openai/gpt-5.5 role defaults)'
+        required: false
+        default: ''
+        type: string
+      agent_harness:
+        description: 'Agent CLI harness for proposer/eval/judge phases'
+        required: false
+        default: 'opencode'
+        type: choice
+        options:
+          - opencode
+          - codex
   schedule:
     # Run nightly at 2 AM UTC
     - cron: '0 2 * * *'
@@ -60,30 +73,46 @@ jobs:
           playwright install chromium
           playwright install-deps chromium
 
-      - name: Set up Node for Claude CLI
+      - name: Set up Node for agent CLI
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Install Claude Code CLI
+      - name: Install agent CLI
+        env:
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
         run: |
-          npm install -g @anthropic-ai/claude-code
-          claude --version
+          if [ "$AGENT_HARNESS" = "codex" ]; then
+            npm install -g @openai/codex
+            codex --version
+          else
+            npm install -g opencode-ai@latest
+            opencode --version
+          fi
+
+      - name: Install gitleaks
+        run: |
+          GITLEAKS_VERSION=8.18.2
+          wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
 
       - name: Validate environment secrets
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
         run: |
           if [ -z "$CESIUM_ION_TOKEN" ]; then
             echo "Error: CESIUM_ION_TOKEN secret is not set"
             exit 1
           fi
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "Error: ANTHROPIC_API_KEY secret is not set"
+          if [ "$AGENT_HARNESS" = "opencode" ] && [ -z "$OPENCODE_AUTH_CONTENT" ]; then
+            echo "Error: OPENCODE_AUTH_CONTENT OpenAI auth secret is not set"
             exit 1
           fi
-          echo "All required secrets are present"
+          echo "Required Cesium and agent harness secrets are present"
 
       - name: Determine skill for scheduled/tag runs
         id: determine-skill
@@ -108,21 +137,37 @@ jobs:
       - name: Run full evaluation pipeline
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_MODEL: ${{ github.event.inputs.opencode_model || vars.OPENCODE_MODEL || secrets.OPENCODE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_PROPOSER_MODEL: ${{ vars.OPENCODE_PROPOSER_MODEL || secrets.OPENCODE_PROPOSER_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_EVAL_MODEL: ${{ vars.OPENCODE_EVAL_MODEL || secrets.OPENCODE_EVAL_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || secrets.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_PROPOSER_VARIANT: ${{ vars.OPENCODE_PROPOSER_VARIANT || secrets.OPENCODE_PROPOSER_VARIANT || 'high' }}
+          OPENCODE_EVAL_VARIANT: ${{ vars.OPENCODE_EVAL_VARIANT || secrets.OPENCODE_EVAL_VARIANT || 'medium' }}
+          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
         run: |
           if [ "${{ steps.determine-skill.outputs.skill }}" = "all" ]; then
             python3 optimization/scripts/run-all-evals.py \
               --skills all \
+              --proposer-harness "$AGENT_HARNESS" \
+              --eval-harness "$AGENT_HARNESS" \
+              --judge-harness "$AGENT_HARNESS" \
               --max-iterations ${{ steps.determine-skill.outputs.max_iterations }} \
               --stop-on ${{ steps.determine-skill.outputs.stop_on }}
           else
             python3 optimization/scripts/run-loop.py \
               ${{ steps.determine-skill.outputs.skill }} \
+              --proposer-harness "$AGENT_HARNESS" \
+              --eval-harness "$AGENT_HARNESS" \
+              --judge-harness "$AGENT_HARNESS" \
               --max-iterations ${{ steps.determine-skill.outputs.max_iterations }} \
               --stop-on ${{ steps.determine-skill.outputs.stop_on }}
           fi
 
       - name: Sanitize artifacts before upload
+        if: always()
         run: |
           # Run public safety check on all eval artifacts
           python3 optimization/scripts/check-public-artifacts.py
@@ -131,9 +176,10 @@ jobs:
           bash optimization/scripts/check-secrets.sh
 
           # Raw eval.html embeds CESIUM_ION_TOKEN and must never be uploaded.
-          find optimization/runs/ -name '*.html' -delete
+          find optimization/runs/ -name '*.html' -delete 2>/dev/null || true
 
       - name: Upload evaluation report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: evaluation-report-${{ steps.determine-skill.outputs.skill }}-${{ github.run_number }}
@@ -144,6 +190,7 @@ jobs:
           retention-days: 90
 
       - name: Upload sanitized evidence bundles
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: evaluation-bundles-${{ steps.determine-skill.outputs.skill }}-${{ github.run_number }}
@@ -155,7 +202,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Commit results back to repo
-        if: steps.determine-skill.outputs.commit_results == 'true'
+        if: ${{ success() && steps.determine-skill.outputs.commit_results == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

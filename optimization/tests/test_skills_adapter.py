@@ -19,7 +19,7 @@ from optimization.framework.adapters.skills_adapter import SkillsAdapter
 
 
 class TestSkillsAdapter(unittest.TestCase):
-    """Test suite for SkillsAdapter (claude CLI-backed)."""
+    """Test suite for SkillsAdapter (opencode CLI-backed)."""
 
     def setUp(self):
         """Set up test fixtures."""
@@ -58,31 +58,31 @@ const viewer = new Cesium.Viewer('cesiumContainer');
 
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_init_without_cli(self, mock_ensure):
-        """Test that adapter raises ClaudeCLINotFoundError if the CLI isn't installed."""
-        from optimization.framework.adapters.claude_cli import ClaudeCLINotFoundError
-        mock_ensure.side_effect = ClaudeCLINotFoundError("claude CLI not found")
-        with self.assertRaises(ClaudeCLINotFoundError):
+        """Test that adapter raises OpenCodeCLINotFoundError if the CLI isn't installed."""
+        from optimization.framework.adapters.opencode_cli import OpenCodeCLINotFoundError
+        mock_ensure.side_effect = OpenCodeCLINotFoundError("opencode CLI not found")
+        with self.assertRaises(OpenCodeCLINotFoundError):
             SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
 
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_init_with_cli(self, mock_ensure):
         """Test successful initialization when the CLI is available."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         adapter = SkillsAdapter(
             skill="cesiumjs-viewer",
             iteration=1,
-            model_id="claude-sonnet-4-6",
+            model_id="openai/gpt-5.5",
             temperature=0.5
         )
         self.assertEqual(adapter.skill, "cesiumjs-viewer")
         self.assertEqual(adapter.iteration, 1)
-        self.assertEqual(adapter.model_id, "claude-sonnet-4-6")
+        self.assertEqual(adapter.model_id, "openai/gpt-5.5")
         self.assertEqual(adapter.temperature, 0.5)
 
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_prepare_validates_scenario(self, mock_ensure):
         """Test that prepare validates scenario structure."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         adapter = SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
 
         # Missing 'id' field
@@ -98,7 +98,7 @@ const viewer = new Cesium.Viewer('cesiumContainer');
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_prepare_validates_candidate(self, mock_ensure):
         """Test that prepare validates candidate structure."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         adapter = SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
 
         # Missing 'skill_path' field
@@ -114,7 +114,7 @@ const viewer = new Cesium.Viewer('cesiumContainer');
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_prepare_reads_and_hashes_skill(self, mock_ensure):
         """Test that prepare reads skill content and computes hash."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         adapter = SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
         adapter.prepare(self.test_scenario, self.test_candidate)
 
@@ -126,18 +126,18 @@ const viewer = new Cesium.Viewer('cesiumContainer');
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_invoke_requires_prepare(self, mock_ensure):
         """Test that invoke raises error if prepare was not called."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         adapter = SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
 
         with self.assertRaises(RuntimeError) as ctx:
             adapter.invoke()
         self.assertIn("prepare()", str(ctx.exception))
 
-    @patch('optimization.framework.adapters.skills_adapter.invoke_claude')
+    @patch('optimization.framework.adapters.skills_adapter.invoke_opencode')
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_invoke_calls_cli_and_writes_output(self, mock_ensure, mock_invoke):
-        """Test that invoke calls the claude CLI and writes output files."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        """Test that invoke calls the opencode CLI and writes output files."""
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         mock_invoke.return_value = "const viewer = new Cesium.Viewer('cesiumContainer');"
 
         adapter = SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
@@ -151,6 +151,7 @@ const viewer = new Cesium.Viewer('cesiumContainer');
         self.assertEqual(call_kwargs["prompt"], self.test_scenario["prompt"])
         self.assertIn(self.test_skill_content, call_kwargs["system"])
         self.assertEqual(call_kwargs["model"], adapter.model_id)
+        self.assertEqual(call_kwargs["variant"], adapter.model_variant)
         self.assertTrue(call_kwargs["disable_tools"])
 
         # Verify output files
@@ -166,11 +167,11 @@ const viewer = new Cesium.Viewer('cesiumContainer');
         self.assertIn("timestamp_utc", metadata)
         self.assertIn("skill_content_hash", metadata)
 
-    @patch('optimization.framework.adapters.skills_adapter.invoke_claude')
+    @patch('optimization.framework.adapters.skills_adapter.invoke_opencode')
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_invoke_strips_code_fences(self, mock_ensure, mock_invoke):
         """Test that fenced code blocks are stripped from CLI output."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         mock_invoke.return_value = "```javascript\nconst viewer = new Cesium.Viewer('cesiumContainer');\n```"
 
         adapter = SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
@@ -180,11 +181,11 @@ const viewer = new Cesium.Viewer('cesiumContainer');
         saved = Path(output_path).read_text()
         self.assertEqual(saved.strip(), "const viewer = new Cesium.Viewer('cesiumContainer');")
 
-    @patch('optimization.framework.adapters.skills_adapter.invoke_claude')
+    @patch('optimization.framework.adapters.skills_adapter.invoke_opencode')
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_safety_scan_blocks_ion_token(self, mock_ensure, mock_invoke):
         """Test that safety scan blocks generated code containing Ion tokens."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         mock_invoke.return_value = """
 const viewer = new Cesium.Viewer('cesiumContainer');
 Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.AAAABBBBCCCC.DDDDEEEEFFFFF';
@@ -198,11 +199,11 @@ Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.AAAABBBBCC
         self.assertIn("Ion token", str(ctx.exception))
         self.assertIn("SAFETY VIOLATION", str(ctx.exception))
 
-    @patch('optimization.framework.adapters.skills_adapter.invoke_claude')
+    @patch('optimization.framework.adapters.skills_adapter.invoke_opencode')
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_safety_scan_blocks_absolute_paths(self, mock_ensure, mock_invoke):
         """Test that safety scan blocks generated code containing absolute paths."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         mock_invoke.return_value = """
 const viewer = new Cesium.Viewer('cesiumContainer');
 // Debug: path is /Users/alice/secret/data.json
@@ -219,7 +220,7 @@ const viewer = new Cesium.Viewer('cesiumContainer');
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_collect_output_requires_invoke(self, mock_ensure):
         """Test that collect_output raises error if invoke was not called."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         adapter = SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
         adapter.prepare(self.test_scenario, self.test_candidate)
 
@@ -227,11 +228,11 @@ const viewer = new Cesium.Viewer('cesiumContainer');
             adapter.collect_output()
         self.assertIn("invoke()", str(ctx.exception))
 
-    @patch('optimization.framework.adapters.skills_adapter.invoke_claude')
+    @patch('optimization.framework.adapters.skills_adapter.invoke_opencode')
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_collect_output_returns_path_and_metadata(self, mock_ensure, mock_invoke):
         """Test that collect_output returns correct path and metadata."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         mock_invoke.return_value = "const viewer = new Cesium.Viewer('cesiumContainer');"
 
         adapter = SkillsAdapter(skill="cesiumjs-viewer", iteration=1)
@@ -252,11 +253,11 @@ const viewer = new Cesium.Viewer('cesiumContainer');
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_runtime_metadata(self, mock_ensure):
         """Test that runtime_metadata returns correct structure."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         adapter = SkillsAdapter(
             skill="cesiumjs-viewer",
             iteration=1,
-            model_id="claude-sonnet-4-6",
+            model_id="openai/gpt-5.5",
             temperature=0.7
         )
 
@@ -264,15 +265,15 @@ const viewer = new Cesium.Viewer('cesiumContainer');
 
         self.assertEqual(metadata["adapter_type"], "skills")
         self.assertIn("adapter_version", metadata)
-        self.assertEqual(metadata["runtime_name"], "claude-cli")
-        self.assertEqual(metadata["model_id"], "claude-sonnet-4-6")
+        self.assertEqual(metadata["runtime_name"], "opencode-cli")
+        self.assertEqual(metadata["model_id"], "openai/gpt-5.5")
         self.assertEqual(metadata["temperature"], 0.7)
 
-    @patch('optimization.framework.adapters.skills_adapter.invoke_claude')
+    @patch('optimization.framework.adapters.skills_adapter.invoke_opencode')
     @patch('optimization.framework.adapters.skills_adapter.ensure_cli_available')
     def test_full_workflow(self, mock_ensure, mock_invoke):
         """Test full adapter workflow: prepare -> invoke -> collect_output."""
-        mock_ensure.return_value = "/usr/local/bin/claude"
+        mock_ensure.return_value = "/usr/local/bin/opencode"
         generated_code = """const viewer = new Cesium.Viewer('cesiumContainer', {
     animation: false,
     timeline: false

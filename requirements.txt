@@ -1,8 +1,8 @@
 # Python dependencies for cesiumjs-skills evaluation framework
 #
-# All Claude calls go through the local `claude` CLI (Claude Code) — install it
-# from https://claude.com/claude-code and ensure it is on PATH. No Anthropic
-# Python SDK is required; the CLI manages authentication itself.
+# LLM calls go through a local agent CLI harness (`opencode` by default, or
+# `codex` when selected). Install the chosen CLI, ensure it is on PATH, and
+# authenticate it. No provider-specific Python SDK is required.
 
 # Testing
 pytest>=8.0.0

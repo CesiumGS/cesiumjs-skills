@@ -35,7 +35,7 @@
     },
     "model_id": {
       "type": "string",
-      "description": "Model identifier used to generate the code (e.g., claude-3-5-sonnet-20241022)"
+      "description": "Model identifier used to generate the code (e.g., openai/gpt-5.5)"
     },
     "temperature": {
       "type": "number",

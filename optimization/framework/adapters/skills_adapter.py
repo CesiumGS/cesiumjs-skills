@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""
-Skills adapter implementation for evaluating Claude (via the CLI) with CesiumJS skills.
+"""Skills adapter for generating CesiumJS scenario code through an agent CLI.
 
-This adapter invokes the local `claude` CLI with a candidate skill file and
-scenario prompt, generates JavaScript code output, and provides safety scanning
-to prevent leaking credentials or absolute paths in generated artifacts.
-The CLI handles authentication itself — no personal API key is required.
+This adapter invokes the selected agent CLI with a candidate skill file and
+scenario prompt, then writes JavaScript output and metadata sidecars. The CLI
+handles provider authentication itself.
 """
 
 import hashlib
@@ -16,12 +14,18 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from optimization.framework.adapters.base import Adapter
-from optimization.framework.adapters.claude_cli import (
-    ClaudeCLIError,
-    ClaudeCLINotFoundError,
-    ensure_cli_available,
-    invoke_claude,
+from optimization.framework.adapters.agent_cli import (
+    AgentCLIError,
+    AgentCLINotFoundError,
+    ensure_agent_cli_available,
+    resolve_agent_harness,
+    invoke_agent,
+    resolve_agent_model,
+    resolve_agent_variant,
 )
+
+ensure_cli_available = ensure_agent_cli_available
+invoke_opencode = invoke_agent
 
 
 _WRAP_FENCE_RE = re.compile(r"^```(?:javascript|js|ts|typescript)?\s*\n(.*?)\n```\s*$", re.DOTALL)
@@ -51,12 +55,12 @@ def _strip_code_fences(text: str) -> str:
 
 class SkillsAdapter(Adapter):
     """
-    Adapter for evaluating Claude API with CesiumJS skill files.
+    Adapter for evaluating Agent Skills with CesiumJS scenario prompts.
 
     This adapter:
     1. Reads a skill file from the filesystem
     2. Combines it with a scenario prompt
-    3. Calls the Claude API to generate JavaScript code
+    3. Calls the selected CLI harness to generate JavaScript code
     4. Writes the generated code to optimization/generated/<skill>/<iteration>/<eval-id>.js
     5. Writes metadata sidecar to optimization/generated/<skill>/<iteration>/<eval-id>.meta.json
     6. Performs safety scanning on the generated output
@@ -74,8 +78,15 @@ class SkillsAdapter(Adapter):
         re.IGNORECASE
     )
 
-    def __init__(self, skill: str, iteration, model_id: str = "claude-opus-4-7",
-                 temperature: float = 1.0):
+    def __init__(
+        self,
+        skill: str,
+        iteration,
+        model_id: str | None = None,
+        model_variant: str | None = None,
+        harness: str | None = None,
+        temperature: float = 1.0,
+    ):
         """
         Initialize the skills adapter.
 
@@ -85,18 +96,24 @@ class SkillsAdapter(Adapter):
                 either an int (legacy callers) or a string (preferred — preserves
                 zero-padding like "001" so directory paths line up with the
                 runner's expectations).
-            model_id: Claude model identifier or alias passed to `claude --model`
+            model_id: Optional model identifier. For Codex, ``auto`` uses the
+                Codex CLI's configured default model.
+            model_variant: Optional model variant/reasoning effort. Currently
+                only forwarded by the OpenCode harness.
+            harness: Agent CLI harness, ``opencode`` or ``codex``.
             temperature: Recorded in metadata for reproducibility. The CLI does
                 not expose a temperature flag; this is informational only.
 
         Raises:
-            ClaudeCLINotFoundError: If `claude` is not on PATH.
+            RuntimeError: If the selected CLI is not on PATH.
         """
-        ensure_cli_available()
+        self.harness = resolve_agent_harness(harness, "eval")
+        ensure_cli_available(self.harness, "eval")
 
         self.skill = skill
         self.iteration = iteration
-        self.model_id = model_id
+        self.model_id = resolve_agent_model(model_id, "eval", self.harness)
+        self.model_variant = resolve_agent_variant(model_variant, "eval", self.harness)
         self.temperature = temperature
 
         # State tracking
@@ -149,7 +166,7 @@ class SkillsAdapter(Adapter):
 
     def invoke(self) -> str:
         """
-        Invoke the `claude` CLI to generate JavaScript code.
+        Invoke the selected agent CLI to generate JavaScript code.
 
         Returns:
             str: Path to the generated JavaScript file
@@ -204,15 +221,19 @@ Output requirements:
         try:
             self._timestamp = datetime.now(timezone.utc).isoformat()
 
-            response_text = invoke_claude(
+            response_text = invoke_opencode(
                 prompt=user_prompt,
+                harness=self.harness,
+                role="eval",
                 system=system_prompt,
                 model=self.model_id,
+                variant=self.model_variant,
                 disable_tools=True,  # Pure code generation; no file access needed.
+                title=f"{self.skill} {self._scenario['id']} codegen",
             )
 
             if not response_text:
-                raise RuntimeError("claude CLI returned empty response")
+                raise RuntimeError(f"{self.harness} CLI returned empty response")
 
             self._generated_code = _strip_code_fences(response_text)
 
@@ -228,8 +249,8 @@ Output requirements:
         except ValueError:
             # Re-raise safety violations without wrapping
             raise
-        except (ClaudeCLIError, ClaudeCLINotFoundError) as e:
-            raise RuntimeError(f"claude CLI invocation failed: {e}") from e
+        except AgentCLIError as e:
+            raise RuntimeError(f"{self.harness} CLI invocation failed: {e}") from e
 
     def collect_output(self) -> tuple[str, Dict[str, Any]]:
         """
@@ -245,7 +266,9 @@ Output requirements:
             raise RuntimeError("invoke() must be called successfully before collect_output()")
 
         metadata = {
-            "model_id": self.model_id,
+            "harness": self.harness,
+            "model_id": self.model_id or f"{self.harness}-default",
+            "model_variant": self.model_variant,
             "temperature": self.temperature,
             "skill_content_hash": self._skill_content_hash,
             "timestamp_utc": self._timestamp,
@@ -266,8 +289,9 @@ Output requirements:
         return {
             "adapter_type": "skills",
             "adapter_version": self.ADAPTER_VERSION,
-            "runtime_name": "claude-cli",
-            "model_id": self.model_id,
+            "runtime_name": f"{self.harness}-cli",
+            "harness": self.harness,
+            "model_id": self.model_id or f"{self.harness}-default",
             "temperature": self.temperature,
         }
 
@@ -316,7 +340,9 @@ Output requirements:
 
         # Write metadata sidecar
         metadata = {
-            "model_id": self.model_id,
+            "harness": self.harness,
+            "model_id": self.model_id or f"{self.harness}-default",
+            "model_variant": self.model_variant,
             "temperature": self.temperature,
             "skill_content_hash": self._skill_content_hash,
             "timestamp_utc": self._timestamp,

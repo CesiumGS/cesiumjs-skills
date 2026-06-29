@@ -1,6 +1,6 @@
-You are a visual judge evaluating two CesiumJS code implementations (Candidate A and Candidate B) for the same scenario. Screenshots from each implementation are attached as images below this prompt.
+You are a CesiumJS evaluation judge comparing two code implementations (Candidate A and Candidate B) for the same scenario. Screenshot PNG files for both candidates are attached to this prompt and their artifact paths are listed for traceability.
 
-Your task is to compare the rendered scenes and supporting evidence, then determine which implementation better satisfies the scenario requirements. Anchor your reasoning in what is visible in the attached screenshots — not in file names, console output alone, or assumptions.
+Your task is to inspect the attached screenshots directly and determine which implementation better satisfies the scenario requirements. Anchor your reasoning first in visible screenshot evidence, then corroborate with deterministic programmatic checks, screenshot-quality checks, console output, scene state, and the scenario requirements.
 
 # Scenario
 
@@ -17,7 +17,7 @@ Your task is to compare the rendered scenes and supporting evidence, then determ
 
 # Evidence for Candidate A
 
-**Screenshot(s)** (attached below as images, in order):
+**Screenshot Artifact Path(s)**:
 {screenshots_a}
 
 **Console Output**:
@@ -31,7 +31,7 @@ Your task is to compare the rendered scenes and supporting evidence, then determ
 
 # Evidence for Candidate B
 
-**Screenshot(s)** (attached below as images, in order):
+**Screenshot Artifact Path(s)**:
 {screenshots_b}
 
 **Console Output**:
@@ -45,17 +45,17 @@ Your task is to compare the rendered scenes and supporting evidence, then determ
 
 # Instructions
 
-Examine the attached screenshots first. Then compare A and B across these dimensions, in priority order:
+Compare A and B across these dimensions, in priority order:
 
-1. **Visual match to the scenario**: Does the rendered scene match the visual expectations and intent of the prompt? Is the subject (landmark, camera framing, scale, angle, lighting) clearly visible and recognizable in the screenshot? Cite specific visible elements (e.g., "Eiffel Tower lattice fills the lower-right third of the frame", "horizon tilted upward indicating a low-angle ground view") in your rationale.
+1. **Scenario fidelity from visual evidence**: Do the attached screenshots show that the rendered scene matches the visual expectations and intent of the prompt? Compare visible subject, framing, camera geometry, labels, artifacts, loading failures, and required visual cues. Do not invent visual details that are not present in the screenshots or corroborating evidence.
 2. **Correctness**: Did the code run without errors? Are the programmatic checks passing? A candidate that throws a console error or fails deterministic programmatic or screenshot-quality checks is usually worse than one that does not, even if the visuals are similar.
 3. **Expected behaviors**: Does the implementation demonstrate the listed expected behaviors (e.g., correct altitude band, pitch direction, use of `lookAt`/`flyTo`/`setView`)?
-4. **Scene state**: Does the captured scene state (camera position, entity counts, imagery layers) corroborate the visual evidence?
+4. **Scene state**: Does the captured scene state (camera position, entity counts, imagery layers) corroborate the check evidence?
 
 Verdict rules:
-- Choose **A** if Candidate A's screenshot more clearly matches the scenario AND/OR its checks are materially better.
-- Choose **B** if Candidate B's screenshot more clearly matches the scenario AND/OR its checks are materially better.
-- Choose **TIE** only if both screenshots fail to match in similar ways OR both match equally well and checks are equivalent. Do NOT default to TIE when you can identify a concrete visible difference that favors one side.
+- Choose **A** if Candidate A's evidence more clearly satisfies the scenario AND/OR its checks are materially better.
+- Choose **B** if Candidate B's evidence more clearly satisfies the scenario AND/OR its checks are materially better.
+- Choose **TIE** only if both fail in similar ways OR both satisfy the available evidence equally well. Do NOT default to TIE when you can identify a concrete evidence difference that favors one side.
 
 # Response Format
 
@@ -64,7 +64,7 @@ You must respond with ONLY a JSON object in the following format:
 ```json
 {{
   "verdict": "A" | "B" | "TIE",
-  "rationale": "Cite specific visible elements from the attached screenshots, then explain how checks and scene state support the verdict. 2-4 sentences."
+  "rationale": "Cite specific visible screenshot differences first, then check results or scene-state evidence supporting the verdict. 2-4 sentences."
 }}
 ```
 

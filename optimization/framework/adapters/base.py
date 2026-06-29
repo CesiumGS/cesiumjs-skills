@@ -17,7 +17,7 @@ class Adapter(ABC):
 
     An adapter is responsible for:
     1. Preparing the evaluation environment with a scenario and candidate skill/tool
-    2. Invoking the underlying runtime (Claude API, MCP tool call, etc.)
+    2. Invoking the underlying runtime (agent CLI, MCP tool call, etc.)
     3. Collecting the generated output and associated metadata
     4. Providing runtime-specific metadata for reproducibility
 
@@ -51,7 +51,7 @@ class Adapter(ABC):
         Invoke the underlying runtime to generate output.
 
         This method executes the core evaluation task. For skills adapter,
-        this calls the Claude API with the skill and scenario prompt to generate
+        this calls the selected agent CLI with the skill and scenario prompt to generate
         JavaScript. For MCP adapter, this would orchestrate tool calls and
         capture the resulting actions.
 

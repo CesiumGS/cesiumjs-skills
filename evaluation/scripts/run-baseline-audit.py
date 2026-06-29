@@ -53,8 +53,14 @@ from evaluation.framework.judge.static_judge import (  # noqa: E402
     PROTOCOL_VERSION,
     judge_render,
 )
-from evaluation.framework.judge.cli_adapter import ClaudeCliAdapter, FakeAdapter  # noqa: E402
+from evaluation.framework.judge.cli_adapter import (  # noqa: E402
+    CodexCliAdapter,
+    FakeAdapter,
+    OpenCodeCliAdapter,
+    default_judge_harness,
+)
 from evaluation.framework.judge.static_judge import _build_adapter  # noqa: E402
+from harness.selection import default_harness as default_agent_harness  # noqa: E402
 from evaluation.framework.scorecard import (  # noqa: E402
     DEFAULT_THRESHOLD,
     ScorecardInput,
@@ -113,13 +119,18 @@ def find_case_manifest(cases_root: Path, skill: str, case_id: str) -> Path | Non
     return matches[0]
 
 
-def evidence_summary(evidence: dict[str, Any], evidence_path: Path) -> dict[str, Any]:
+def evidence_summary(
+    evidence: dict[str, Any],
+    evidence_path: Path,
+    bundle_dir: Path | None = None,
+) -> dict[str, Any]:
     after_values = (evidence.get("after") or {}).get("values") or {}
+    run_artifact_path = relative_path(bundle_dir) if bundle_dir is not None else evidence.get("run_artifact_path")
     return {
         "expected_result": evidence.get("expected_result"),
         "evidence_source": evidence.get("source"),
         "actual_source_path": evidence.get("source_path"),
-        "run_artifact_path": evidence.get("run_artifact_path"),
+        "run_artifact_path": run_artifact_path,
         "source_scenario_id": after_values.get("source_scenario_id"),
         "observed_from": (evidence.get("execution") or {}).get("observed_from"),
         "evidence_path": relative_path(evidence_path),
@@ -128,14 +139,29 @@ def evidence_summary(evidence: dict[str, Any], evidence_path: Path) -> dict[str,
     }
 
 
-def bundle_dir_for(evidence: dict[str, Any]) -> Path | None:
+def bundle_dir_for(evidence: dict[str, Any], bundle_root: Path | None = None) -> Path | None:
     rel = evidence.get("run_artifact_path")
     if not rel:
         return None
     path = Path(rel)
+    if bundle_root is not None:
+        try:
+            old_parts = path.parts
+            baseline_index = old_parts.index("baseline")
+            path = bundle_root / Path(*old_parts[baseline_index - 1 :])
+        except (ValueError, IndexError):
+            path = bundle_root / path.name
     if not path.is_absolute():
         path = REPO_ROOT / path
     return path
+
+
+def screenshot_paths_for(bundle_dir: Path | None, evidence: dict[str, Any]) -> tuple[str, ...]:
+    if bundle_dir is not None:
+        shots = sorted(bundle_dir.glob("screenshot*.png"))
+        if shots:
+            return tuple(relative_path(path) for path in shots)
+    return tuple(str(path) for path in evidence.get("screenshots", ()))
 
 
 def screenshot_path_for(bundle_dir: Path | None, evidence: dict[str, Any]) -> str:
@@ -175,7 +201,7 @@ class AuditCase:
         self.bundle_dir = bundle_dir
 
 
-def collect_cases(skills: list[str]) -> list[AuditCase]:
+def collect_cases(skills: list[str], bundle_root: Path | None = None) -> list[AuditCase]:
     collected: list[AuditCase] = []
     for skill in skills:
         for evidence_path in select_baseline_fixtures(FIXTURES_ROOT, skill):
@@ -196,7 +222,7 @@ def collect_cases(skills: list[str]) -> list[AuditCase]:
                     case=case,
                     evidence_path=evidence_path,
                     evidence=evidence,
-                    bundle_dir=bundle_dir_for(evidence),
+                    bundle_dir=bundle_dir_for(evidence, bundle_root),
                 )
             )
     if not collected:
@@ -209,6 +235,7 @@ def collect_cases(skills: list[str]) -> list[AuditCase]:
 
 def case_meta_for(audit_case: AuditCase) -> dict[str, Any]:
     case = audit_case.case
+    preflight = case.get("preflight") or {}
     return {
         "skill": audit_case.skill,
         "id": case.get("id", audit_case.case_id),
@@ -216,8 +243,9 @@ def case_meta_for(audit_case: AuditCase) -> dict[str, Any]:
         "name": case.get("name", ""),
         "description": case.get("description", ""),
         "prompt": case.get("prompt", ""),
-        "expected_behaviors": case.get("expected_behaviors"),
-        "visual_expectations": case.get("visual_expectations"),
+        "expected_behaviors": preflight.get("expected_behaviors") or case.get("expected_behaviors"),
+        "visual_expectations": preflight.get("visual_expectations") or case.get("visual_expectations"),
+        "screenshot_mode": preflight.get("screenshot_mode"),
     }
 
 
@@ -270,7 +298,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default="all",
         help="'all' (default) or a comma-separated list of skill ids to audit.",
     )
-    parser.add_argument("--judge-model", default="sonnet", help="Judge model id/alias (default: sonnet).")
+    parser.add_argument(
+        "--judge-model",
+        default="auto",
+        help="Judge model id/alias (default: OpenCode GPT-5.5 or Codex CLI default when adapter=codex).",
+    )
     parser.add_argument("--n-judges", type=int, default=3, help="Number of panel judges (default: 3).")
     parser.add_argument("--no-judge", action="store_true", help="Skip the qualitative lane entirely.")
     parser.add_argument(
@@ -287,9 +319,25 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--adapter",
-        default="claude",
-        choices=["claude", "fake"],
-        help="Judge adapter (default: claude; 'fake' for tests).",
+        default=default_judge_harness(),
+        choices=["opencode", "codex", "fake"],
+        help="Judge adapter (default: env or opencode; 'fake' for tests).",
+    )
+    parser.add_argument(
+        "--harness",
+        default=default_agent_harness("eval"),
+        help=(
+            "Codegen harness that produced the evaluated CesiumJS code (the 'tested with' "
+            "id stamped into the scorecard). Default: env or the pipeline eval harness."
+        ),
+    )
+    parser.add_argument(
+        "--bundle-root",
+        default=None,
+        help=(
+            "Optional root containing recaptured rendered bundles as "
+            "<skill>/baseline/<case-dir>. Defaults to fixture run_artifact_path values."
+        ),
     )
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     parser.add_argument("--output-dir", default=None)
@@ -316,7 +364,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
 
     skills = resolve_skills(args.skills)
-    audit_cases = collect_cases(skills)
+    bundle_root = Path(args.bundle_root) if args.bundle_root else None
+    if bundle_root is not None and not bundle_root.is_absolute():
+        bundle_root = REPO_ROOT / bundle_root
+    audit_cases = collect_cases(skills, bundle_root=bundle_root)
     case_keys = {(c.skill, c.case_id) for c in audit_cases}
 
     # --emit-cases: write the work list for the parallel Score/Judge phases.
@@ -328,6 +379,7 @@ def main(argv: list[str] | None = None) -> int:
                 "prompt": str(c.case.get("prompt", "")),
                 "bundle_dir": relative_path(c.bundle_dir) if c.bundle_dir else "",
                 "screenshot_path": screenshot_path_for(c.bundle_dir, c.evidence),
+                "screenshots": list(screenshot_paths_for(c.bundle_dir, c.evidence)),
                 "case_path": relative_path(c.case_path),
             }
             for c in audit_cases
@@ -354,7 +406,7 @@ def main(argv: list[str] | None = None) -> int:
         # Injected pre-judged items (local fan-out path); do not run the panel.
         visual_review = load_json(Path(args.visual_review))
         visual_review.setdefault("schema_version", "1.0")
-        visual_review.setdefault("reviewer", "static-visual-judge")
+        visual_review.setdefault("reviewer", "screenshot-visual-judge")
         visual_review.setdefault("run_id", run_id)
         judged_baseline_count = sum(
             1
@@ -364,8 +416,10 @@ def main(argv: list[str] | None = None) -> int:
     elif not args.no_judge:
         if args.adapter == "fake":
             adapter = _build_adapter("fake")
+        elif args.adapter == "codex":
+            adapter = CodexCliAdapter()
         else:
-            adapter = ClaudeCliAdapter()
+            adapter = OpenCodeCliAdapter()
         items: list[dict[str, Any]] = []
         for c in audit_cases:
             config = JudgeConfig(
@@ -380,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
                 judged_baseline_count += 1
         visual_review = {
             "schema_version": "1.0",
-            "reviewer": "static-visual-judge",
+            "reviewer": "screenshot-visual-judge",
             "run_id": run_id,
             "reviewed_at": timestamp_utc,
             "items": items,
@@ -412,8 +466,8 @@ def main(argv: list[str] | None = None) -> int:
                 case=c.case,
                 result=result,
                 evidence_path=relative_path(c.evidence_path),
-                screenshots=tuple(c.evidence.get("screenshots", ())),
-                evidence_summary=evidence_summary(c.evidence, c.evidence_path),
+                screenshots=screenshot_paths_for(c.bundle_dir, c.evidence),
+                evidence_summary=evidence_summary(c.evidence, c.evidence_path, c.bundle_dir),
             )
         )
 
@@ -426,6 +480,8 @@ def main(argv: list[str] | None = None) -> int:
         commit=commit,
         visual_review=visual_review,
         require_visual_review=require_visual_review,
+        harness=args.harness,
+        harness_judge=args.adapter,
     )
 
     output_dir = Path(args.output_dir) if args.output_dir else DEFAULT_OUTPUT_ROOT / scorecard["run_id"]

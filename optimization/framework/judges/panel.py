@@ -26,7 +26,9 @@ def judge_panel(
         baseline_bundle: Dict with keys: 'path' (str, bundle directory path)
         candidate_bundle: Dict with keys: 'path' (str, bundle directory path)
         judge_config: Dict with keys:
+            - harnesses: Optional List[str] with 3 harnesses
             - model_ids: List[str] with 3 model IDs (or single ID repeated 3 times)
+            - model_variants: Optional list of 3 model variants
             - protocol_version: str (e.g., 'pairwise-v1')
             - seeds: List[int] with 3 different seeds
 
@@ -43,13 +45,25 @@ def judge_panel(
         ValueError: If judge_config is invalid (wrong number of models/seeds)
     """
     # Validate configuration
+    harnesses = judge_config.get('harnesses') or [None] * 3
     model_ids = judge_config.get('model_ids', [])
+    model_variants = judge_config.get('model_variants') or [None] * 3
     seeds = judge_config.get('seeds', [])
     protocol_version = judge_config.get('protocol_version', 'pairwise-v1')
+
+    if len(harnesses) != 3:
+        raise ValueError(
+            f"judge_config harnesses must have exactly 3 items, got {len(harnesses)}"
+        )
 
     if len(model_ids) != 3:
         raise ValueError(
             f"judge_config must specify exactly 3 model_ids, got {len(model_ids)}"
+        )
+
+    if len(model_variants) != 3:
+        raise ValueError(
+            f"judge_config model_variants must have exactly 3 items, got {len(model_variants)}"
         )
 
     if len(seeds) != 3:
@@ -72,6 +86,8 @@ def judge_panel(
                 baseline_bundle=baseline_bundle,
                 candidate_bundle=candidate_bundle,
                 judge_model_id=model_ids[i],
+                judge_harness=harnesses[i],
+                judge_model_variant=model_variants[i],
                 judge_protocol_version=protocol_version,
                 seed=seeds[i]
             )
@@ -79,7 +95,9 @@ def judge_panel(
                 'judge_index': i,
                 'verdict': verdict['verdict'],
                 'rationale': verdict['rationale'],
+                'harness': verdict.get('harness'),
                 'model_id': verdict['model_id'],
+                'model_variant': verdict.get('model_variant'),
                 'protocol_version': verdict['protocol_version'],
                 'label_mapping': verdict['label_mapping'],
                 'seed': verdict['seed']
@@ -90,6 +108,7 @@ def judge_panel(
                 'judge_index': i,
                 'verdict': None,
                 'error': str(e),
+                'harness': harnesses[i],
                 'model_id': model_ids[i],
                 'seed': seeds[i]
             })

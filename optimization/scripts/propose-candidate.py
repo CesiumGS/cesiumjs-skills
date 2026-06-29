@@ -7,10 +7,10 @@ This script:
 2. Reads the last decision record
 3. Reads per-scenario verdicts and rationales for last N iterations
 4. Reads the coverage report
-5. Calls Claude API with a versioned prompt template
+5. Calls the selected agent CLI with a versioned prompt template
 6. Outputs candidate skill file, hypothesis, and metadata
 
-Requires the `claude` CLI on PATH (handles auth itself).
+Requires the selected agent CLI on PATH (handles auth itself).
 """
 
 from __future__ import annotations
@@ -26,14 +26,24 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-DEFAULT_MODEL_ID = "claude-opus-4-7"
-
-from optimization.framework.adapters.claude_cli import (  # noqa: E402
-    ClaudeCLIError,
-    ClaudeCLINotFoundError,
-    ensure_cli_available,
-    invoke_claude,
+from optimization.framework.adapters.agent_cli import (  # noqa: E402
+    AgentCLIError,
+    AgentCLINotFoundError,
+    default_agent_harness,
+    default_agent_model,
+    default_agent_variant,
+    ensure_agent_cli_available,
+    invoke_agent,
+    resolve_agent_harness,
+    resolve_agent_model,
+    resolve_agent_variant,
 )
+
+ensure_cli_available = ensure_agent_cli_available
+
+DEFAULT_HARNESS = default_agent_harness("proposer")
+DEFAULT_MODEL_ID = default_agent_model("proposer", DEFAULT_HARNESS)
+DEFAULT_MODEL_VARIANT = default_agent_variant("proposer", DEFAULT_HARNESS)
 
 
 def load_skill(skill_path: Path) -> str:
@@ -277,10 +287,12 @@ def _strip_preamble(text: str) -> str:
 
 def call_proposer(
     prompt: str,
-    model_id: str,
+    model_id: str | None,
+    model_variant: str | None,
     temperature: float,
+    harness: str | None = None,
 ) -> str:
-    """Invoke the local `claude` CLI with the proposer prompt.
+    """Invoke the configured agent harness with the proposer prompt.
 
     Grants read-only local research tools so the proposer can perform the
     research pass described in the prompt template — cross-checking related
@@ -294,14 +306,19 @@ def call_proposer(
             for path in ["skills", "optimization", "wiki"]
             if Path(path).exists()
         ]
-        raw = invoke_claude(
+        resolved_harness = resolve_agent_harness(harness, "proposer")
+        raw = invoke_agent(
             prompt=prompt,
+            harness=resolved_harness,
+            role="proposer",
             model=model_id,
+            variant=model_variant,
             allowed_tools=["Read", "Grep", "Glob"],
             add_dirs=research_dirs,
+            title="skill optimization proposer",
         )
         return _strip_preamble(raw)
-    except (ClaudeCLIError, ClaudeCLINotFoundError) as e:
+    except AgentCLIError as e:
         raise RuntimeError(f"Proposer CLI call failed: {e}") from e
 
 
@@ -450,9 +467,20 @@ def main() -> int:
         help="Maximum number of iterations to include in history (default: 3)",
     )
     parser.add_argument(
+        "--harness",
+        default=DEFAULT_HARNESS,
+        choices=["opencode", "codex"],
+        help="Agent CLI harness for proposer (default: env or opencode)",
+    )
+    parser.add_argument(
         "--model-id",
         default=DEFAULT_MODEL_ID,
-        help=f"Claude model ID to use (default: {DEFAULT_MODEL_ID})",
+        help="Model ID for proposer (default: OpenCode GPT-5.5, or Codex CLI default when harness=codex)",
+    )
+    parser.add_argument(
+        "--model-variant",
+        default=DEFAULT_MODEL_VARIANT,
+        help="Model variant/reasoning effort (used by OpenCode; ignored by Codex unless configured externally)",
     )
     parser.add_argument(
         "--temperature",
@@ -467,11 +495,14 @@ def main() -> int:
     )
 
     args = parser.parse_args()
+    args.harness = resolve_agent_harness(args.harness, "proposer")
+    args.model_id = resolve_agent_model(args.model_id, "proposer", args.harness)
+    args.model_variant = resolve_agent_variant(args.model_variant, "proposer", args.harness)
 
-    # Ensure the claude CLI is available — proposer calls it directly.
+    # Ensure the selected CLI is available — proposer calls it directly.
     try:
-        ensure_cli_available()
-    except ClaudeCLINotFoundError as e:
+        ensure_cli_available(args.harness, "proposer")
+    except AgentCLINotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
@@ -522,9 +553,19 @@ def main() -> int:
     print(f"Building prompt from template: {template_path}")
     prompt = build_prompt(template_path, current_skill, decision, history, coverage)
 
-    # Call proposer (via the local claude CLI)
-    print(f"Calling proposer (model={args.model_id}, temperature={args.temperature})...")
-    candidate_skill = call_proposer(prompt, args.model_id, args.temperature)
+    # Call proposer through the selected agent harness.
+    display_model = args.model_id or f"{args.harness}-default"
+    print(
+        f"Calling proposer (harness={args.harness}, model={display_model}, "
+        f"variant={args.model_variant}, temperature={args.temperature})..."
+    )
+    candidate_skill = call_proposer(
+        prompt,
+        args.model_id,
+        args.model_variant,
+        args.temperature,
+        harness=args.harness,
+    )
 
     # Generate hypothesis
     hypothesis = generate_hypothesis(decision, history, coverage)
@@ -533,7 +574,9 @@ def main() -> int:
     metadata = {
         "skill": args.skill,
         "iteration": iteration,
-        "model_id": args.model_id,
+        "harness": args.harness,
+        "model_id": display_model,
+        "model_variant": args.model_variant,
         "temperature": args.temperature,
         "prompt_version": args.prompt_version,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),

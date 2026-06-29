@@ -195,7 +195,7 @@ class TestJudgePanel(unittest.TestCase):
         self.candidate_bundle = {'path': '/path/to/candidate'}
 
         self.judge_config = {
-            'model_ids': ['claude-3-5-sonnet-20241022'] * 3,
+            'model_ids': ['openai/gpt-5.5'] * 3,
             'protocol_version': 'pairwise-v1',
             'seeds': [100, 200, 300]
         }
@@ -207,7 +207,7 @@ class TestJudgePanel(unittest.TestCase):
         mock_single_judge.return_value = {
             'verdict': 'BASELINE',
             'rationale': 'Test rationale',
-            'model_id': 'claude-3-5-sonnet-20241022',
+            'model_id': 'openai/gpt-5.5',
             'protocol_version': 'pairwise-v1',
             'label_mapping': {'A': 'BASELINE', 'B': 'CANDIDATE'},
             'seed': 100
@@ -240,7 +240,7 @@ class TestJudgePanel(unittest.TestCase):
                 return {
                     'verdict': 'CANDIDATE',
                     'rationale': 'Test rationale',
-                    'model_id': 'claude-3-5-sonnet-20241022',
+                    'model_id': 'openai/gpt-5.5',
                     'protocol_version': 'pairwise-v1',
                     'label_mapping': {'A': 'CANDIDATE', 'B': 'BASELINE'},
                     'seed': seed
@@ -249,7 +249,7 @@ class TestJudgePanel(unittest.TestCase):
                 return {
                     'verdict': 'BASELINE',
                     'rationale': 'Test rationale',
-                    'model_id': 'claude-3-5-sonnet-20241022',
+                    'model_id': 'openai/gpt-5.5',
                     'protocol_version': 'pairwise-v1',
                     'label_mapping': {'A': 'BASELINE', 'B': 'CANDIDATE'},
                     'seed': seed
@@ -279,7 +279,7 @@ class TestJudgePanel(unittest.TestCase):
             return {
                 'verdict': verdicts[seed],
                 'rationale': 'Test rationale',
-                'model_id': 'claude-3-5-sonnet-20241022',
+                'model_id': 'openai/gpt-5.5',
                 'protocol_version': 'pairwise-v1',
                 'label_mapping': {'A': 'BASELINE', 'B': 'CANDIDATE'},
                 'seed': seed
@@ -310,7 +310,7 @@ class TestJudgePanel(unittest.TestCase):
             return {
                 'verdict': 'BASELINE',
                 'rationale': 'Test rationale',
-                'model_id': 'claude-3-5-sonnet-20241022',
+                'model_id': 'openai/gpt-5.5',
                 'protocol_version': 'pairwise-v1',
                 'label_mapping': {'A': 'BASELINE', 'B': 'CANDIDATE'},
                 'seed': seed

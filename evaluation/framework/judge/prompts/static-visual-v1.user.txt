@@ -1,4 +1,4 @@
-You are scoring ONE CesiumJS render against the scenario below. The screenshot(s) are attached as images (read them from the granted directory); examine them first and base your scores on what is actually visible.
+You are scoring ONE CesiumJS render against the scenario below. Screenshot PNG file(s) are attached to this prompt, and their artifact path(s) are listed for traceability. Base the qualitative scores primarily on direct inspection of the attached screenshot image(s), using the text evidence below to corroborate loading state, scene state, console errors, and programmatic checks.
 
 # Scenario
 **ID**: {scenario_id}
@@ -14,18 +14,24 @@ You are scoring ONE CesiumJS render against the scenario below. The screenshot(s
 {visual_expectations}
 
 # Candidate Render
-**Screenshot(s)** — use the Read tool to open EACH of these image file paths and look at the rendered frame before scoring:
+**Screenshot Artifact Path(s)**:
 {screenshots}
 
-**Console Output** (corroborating only — does NOT override the image):
+**Screenshot Quality Evidence**:
+{screenshot_quality}
+
+**Programmatic Check Results**:
+{checks}
+
+**Console Output**:
 {console}
 
-**Scene State** (camera position, entity/primitive counts, imagery layers — corroborating only):
+**Scene State**:
 {scene_state}
 
 # Instructions
-1. First, write what you literally SEE in the screenshot(s).
-2. Check for every CesiumJS failure mode (black/starfield/gray-unloaded/error frame, wrong/absent subject, tiny speck, off-frame, camera-inside-geometry, nadir-flattened, flat-basemap-no-relief, cluttered labels, render artifacts, wrong viewing geometry). Trust the image over the console/checks if they disagree.
-3. Score each of the six dimensions 0-10 with a specific visible justification, using the calibration anchors.
+1. First, summarize what is directly visible in every attached screenshot image, including the subject, camera framing, visible artifacts, labels, and any obvious loading failures. If there are multiple screenshots, mention whether the render remains coherent across the set.
+2. Check for every CesiumJS failure mode that is supported by any screenshot or corroborating text evidence (black/starfield/gray-unloaded/error frame, wrong/absent subject, tiny speck, off-frame, camera-inside-geometry, nadir-flattened, flat-basemap-no-relief, cluttered labels, render artifacts, wrong viewing geometry). Do not invent visual details that are not present in the screenshot(s) or evidence.
+3. Score each of the six dimensions 0-10 with a specific screenshot-based justification where visually assessable. For multi-screenshot or cardinal-panorama cases, base the dimension score on the whole set, not only the best frame.
 4. Apply the liveness gate (render_liveness<=2 caps overall at 2.0) and subject gate (subject<=2 caps at 3.5), compute the weighted sum and gated overall, assign the band, and set your confidence.
 5. Respond with ONLY the JSON object specified in your instructions.

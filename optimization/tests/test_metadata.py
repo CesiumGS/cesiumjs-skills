@@ -33,7 +33,7 @@ def test_valid_metadata_passes(metadata_schema):
         "scenario_version_hash": "a" * 64,
         "candidate_skill_hash": "b" * 64,
         "runner_git_commit": "abc123def456",
-        "model_id": "claude-3-5-sonnet-20241022",
+        "model_id": "openai/gpt-5.5",
         "temperature": 0.7,
         "judge_protocol_version": "pairwise-v1",
         "browser_viewport": {"width": 1280, "height": 720},
@@ -55,7 +55,7 @@ def test_metadata_with_optional_fields(metadata_schema):
         "scenario_version_hash": "a" * 64,
         "candidate_skill_hash": "b" * 64,
         "runner_git_commit": "abc123def456",
-        "model_id": "claude-3-5-sonnet-20241022",
+        "model_id": "openai/gpt-5.5",
         "temperature": 0.7,
         "seed": 42,  # Optional field
         "judge_protocol_version": "pairwise-v1",
@@ -94,7 +94,7 @@ def test_invalid_hash_format_fails(metadata_schema):
         "scenario_version_hash": "not-a-valid-hash",  # Invalid format
         "candidate_skill_hash": "b" * 64,
         "runner_git_commit": "abc123def456",
-        "model_id": "claude-3-5-sonnet-20241022",
+        "model_id": "openai/gpt-5.5",
         "temperature": 0.7,
         "judge_protocol_version": "pairwise-v1",
         "browser_viewport": {"width": 1280, "height": 720},
@@ -116,7 +116,7 @@ def test_invalid_temperature_fails(metadata_schema):
         "scenario_version_hash": "a" * 64,
         "candidate_skill_hash": "b" * 64,
         "runner_git_commit": "abc123def456",
-        "model_id": "claude-3-5-sonnet-20241022",
+        "model_id": "openai/gpt-5.5",
         "temperature": 1.5,  # Invalid: > 1.0
         "judge_protocol_version": "pairwise-v1",
         "browser_viewport": {"width": 1280, "height": 720},
@@ -138,7 +138,7 @@ def test_invalid_viewport_fails(metadata_schema):
         "scenario_version_hash": "a" * 64,
         "candidate_skill_hash": "b" * 64,
         "runner_git_commit": "abc123def456",
-        "model_id": "claude-3-5-sonnet-20241022",
+        "model_id": "openai/gpt-5.5",
         "temperature": 0.7,
         "judge_protocol_version": "pairwise-v1",
         "browser_viewport": {"width": 1280},  # Missing height
@@ -182,7 +182,7 @@ def test_artifact_hashes_structure(metadata_schema):
         "scenario_version_hash": "a" * 64,
         "candidate_skill_hash": "b" * 64,
         "runner_git_commit": "abc123def456",
-        "model_id": "claude-3-5-sonnet-20241022",
+        "model_id": "openai/gpt-5.5",
         "temperature": 0.7,
         "judge_protocol_version": "pairwise-v1",
         "browser_viewport": {"width": 1280, "height": 720},
@@ -213,7 +213,7 @@ def test_git_commit_hash_formats(metadata_schema):
         "scenario_version_hash": "a" * 64,
         "candidate_skill_hash": "b" * 64,
         "runner_git_commit": "abc123d",  # Short hash (7 chars)
-        "model_id": "claude-3-5-sonnet-20241022",
+        "model_id": "openai/gpt-5.5",
         "temperature": 0.7,
         "judge_protocol_version": "pairwise-v1",
         "browser_viewport": {"width": 1280, "height": 720},

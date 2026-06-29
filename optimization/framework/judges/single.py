@@ -1,14 +1,12 @@
-"""
-Single pairwise judge for CesiumJS skills evaluation (claude CLI-backed).
+"""Single pairwise judge for CesiumJS skills evaluation.
 
 This module implements a single judge that compares baseline and candidate
 evidence pairwise and returns a structured verdict. The judge runs through
-the local `claude` CLI rather than the Anthropic SDK so evaluations do not
-depend on a personal API key — the CLI handles authentication itself.
+the selected local agent CLI, which handles provider authentication itself.
 
-The CLI is granted Read access to the bundle directories and instructed to
-read the screenshots itself, so verdicts are grounded in the actual rendered
-scenes (not just file paths or console output).
+    The judge attaches browser screenshot PNGs to the agent CLI and uses direct
+    visual inspection as the primary qualitative comparison signal, with
+    deterministic checks, console output, and scene state as corroboration.
 """
 
 import json
@@ -16,21 +14,34 @@ import random
 from pathlib import Path
 from typing import Any, Dict, List
 
-from optimization.framework.adapters.claude_cli import (
-    ClaudeCLIError,
-    ClaudeCLINotFoundError,
-    ensure_cli_available,
-    invoke_claude,
+from optimization.framework.adapters.agent_cli import (
+    AgentCLIError,
+    AgentCLINotFoundError,
+    ensure_agent_cli_available,
+    invoke_agent,
+    resolve_agent_harness,
+    resolve_agent_model,
+    resolve_agent_variant,
 )
+from optimization.framework.adapters.opencode_cli import (  # compatibility for older callers/tests
+    OpenCodeCLIError,
+    OpenCodeCLINotFoundError,
+)
+
+ensure_cli_available = ensure_agent_cli_available
+invoke_opencode = invoke_agent
 
 
 def judge(
     scenario: Dict[str, Any],
     baseline_bundle: Dict[str, Any],
     candidate_bundle: Dict[str, Any],
-    judge_model_id: str,
-    judge_protocol_version: str,
-    seed: int
+    judge_model_id: str | None,
+    judge_protocol_version: str = 'pairwise-v1',
+    seed: int = 42,
+    *,
+    judge_harness: str | None = None,
+    judge_model_variant: str | None = None,
 ) -> Dict[str, Any]:
     """
     Compare baseline and candidate evidence pairwise and return a structured verdict.
@@ -39,8 +50,9 @@ def judge(
         scenario: The scenario manifest dict
         baseline_bundle: Dict with keys: 'path' (str, bundle directory path)
         candidate_bundle: Dict with keys: 'path' (str, bundle directory path)
-        judge_model_id: Model alias/ID passed to `claude --model`
-            (e.g. 'sonnet', 'opus', 'claude-sonnet-4-6')
+        judge_model_id: Optional model ID.
+        judge_harness: Optional agent CLI harness, ``opencode`` or ``codex``.
+        judge_model_variant: Optional model variant/reasoning effort.
         judge_protocol_version: Protocol version (e.g., 'pairwise-v1')
         seed: Random seed for label randomization
 
@@ -54,11 +66,14 @@ def judge(
             - seed: int
 
     Raises:
-        ClaudeCLINotFoundError: If `claude` is not on PATH.
+        AgentCLINotFoundError: If the selected CLI is not on PATH.
         ValueError: If required files are missing or invalid.
         RuntimeError: If the CLI call fails.
     """
-    ensure_cli_available()
+    resolved_harness = resolve_agent_harness(judge_harness, "judge")
+    ensure_cli_available(resolved_harness, "judge")
+    resolved_model_id = resolve_agent_model(judge_model_id, "judge", resolved_harness)
+    resolved_model_variant = resolve_agent_variant(judge_model_variant, "judge", resolved_harness)
 
     # Validate protocol version
     if judge_protocol_version != 'pairwise-v1':
@@ -89,6 +104,7 @@ def judge(
     # Load evidence from bundles (this validates that bundles exist and have screenshots)
     evidence_a = _load_evidence(bundle_a['path'])
     evidence_b = _load_evidence(bundle_b['path'])
+    screenshot_files = evidence_a['screenshots'] + evidence_b['screenshots']
 
     # Format prompt
     prompt = _format_prompt(
@@ -98,21 +114,18 @@ def judge(
         evidence_b,
     )
 
-    # Grant the CLI read access to both bundle directories so it can Read the
-    # screenshot PNGs and verify scene content directly.
-    add_dirs = sorted({
-        str(Path(bundle_a['path']).resolve()),
-        str(Path(bundle_b['path']).resolve()),
-    })
-
     try:
-        response_text = invoke_claude(
+        response_text = invoke_opencode(
             prompt=prompt,
-            model=judge_model_id,
-            add_dirs=add_dirs,
-            allowed_tools=["Read"],  # Vision: agent reads the PNGs itself.
+            harness=resolved_harness,
+            role="judge",
+            model=resolved_model_id,
+            variant=resolved_model_variant,
+            files=screenshot_files,
+            disable_tools=True,
+            title=f"{scenario['id']} pairwise judge",
         )
-    except (ClaudeCLIError, ClaudeCLINotFoundError) as e:
+    except AgentCLIError as e:
         raise RuntimeError(f"Judge CLI call failed: {e}") from e
 
     verdict_json = _parse_verdict(response_text)
@@ -128,7 +141,11 @@ def judge(
     return {
         'verdict': final_verdict,
         'rationale': verdict_json['rationale'],
-        'model_id': judge_model_id,
+        'harness': resolved_harness,
+        'model_id': resolved_model_id or f"{resolved_harness}-default",
+        'model_variant': resolved_model_variant,
+        'screenshot_input_mode': 'attached_image_files',
+        'screenshots_attached': len(screenshot_files),
         'protocol_version': judge_protocol_version,
         'label_mapping': label_mapping,
         'seed': seed
@@ -227,7 +244,7 @@ def _format_prompt(
 
 
 def _describe_screenshots(paths: List[str], side: str) -> str:
-    """Render the screenshot paths so the agent knows what to Read."""
+    """Render screenshot artifact paths for traceability."""
     if not paths:
         return f"(no screenshots captured for Candidate {side})"
     lines = []

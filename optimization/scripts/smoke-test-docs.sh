@@ -154,9 +154,9 @@ echo "=== Section: Full Autonomous Loop ==="
 run_test "Plan all-skill loop commands" \
     python3 optimization/scripts/run-all-evals.py --dry-run --max-iterations 1
 
-if [ -z "${CESIUM_ION_TOKEN:-}" ] || ! command -v claude > /dev/null 2>&1; then
-    echo ">>> Skipping full loop test (requires CESIUM_ION_TOKEN and claude CLI)"
-    echo "    Note: Set CESIUM_ION_TOKEN and install/authenticate the claude CLI to test full loop commands"
+if [ -z "${CESIUM_ION_TOKEN:-}" ] || { ! command -v opencode > /dev/null 2>&1 && ! command -v codex > /dev/null 2>&1; }; then
+    echo ">>> Skipping full loop test (requires CESIUM_ION_TOKEN and an agent CLI harness)"
+    echo "    Note: Set CESIUM_ION_TOKEN and install/authenticate opencode or codex to test full loop commands"
     echo ""
 else
     # For smoke test, we'll verify the script at least accepts the arguments
