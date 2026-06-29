@@ -176,10 +176,15 @@ evaluation/fixtures/
 ## Two-Lane Baseline Audit (deterministic + qualitative)
 
 **Invariant: every eval has two lanes.** A *deterministic* programmatic lane (the
-binding gate) **and** a *qualitative* static visual-judge lane (advisory). The
-qualitative lane is a single-render, non-pairwise judge that scores each baseline
-**0–10** against a fixed 6-dimension rubric with hard liveness/subject gates and
-named CesiumJS failure modes (see [docs/qualitative-audit-design.md](docs/qualitative-audit-design.md)).
+binding gate) **and** a *qualitative* static rendered-evidence lane (advisory).
+The qualitative lane is a single-render, non-pairwise judge that scores each
+baseline **0-10** against a fixed 6-dimension rubric with hard liveness/subject
+gates and named CesiumJS failure modes (see [docs/qualitative-audit-design.md](docs/qualitative-audit-design.md)).
+With OpenCode or Codex CLI, the qualitative judge attaches the screenshot PNG
+files to each judge call and scores from direct image inspection.
+Screenshot-quality checks, programmatic checks, console output, scene state,
+and scenario requirements remain supporting evidence for auditability and
+failure diagnosis.
 The qualitative score can only *downgrade* a deterministically-passing baseline
 (a blocking failure flag → fail/needs_review); it can never upgrade a deterministic
 failure. The deterministic lane stays Python-owned and binding.
@@ -192,8 +197,11 @@ fan-out both call the same module via one runner:
 # Deterministic lane only (fast, no LLM) — the CI PR gate:
 python3 evaluation/scripts/run-baseline-audit.py --skills all --no-judge
 
-# Both lanes (qualitative judge over rendered baselines, 3-judge median panel):
-python3 evaluation/scripts/run-baseline-audit.py --skills all --judge-model sonnet --n-judges 3
+# Both lanes (qualitative screenshot judge, 3-judge median panel):
+python3 evaluation/scripts/run-baseline-audit.py --skills all --adapter opencode --judge-model auto --n-judges 3
+
+# Same qualitative lane through Codex CLI:
+python3 evaluation/scripts/run-baseline-audit.py --skills all --adapter codex --judge-model auto --n-judges 3
 
 # Build the audit dashboard from a combined scorecard, then serve from repo root:
 python3 evaluation/scripts/build-audit-ui.py evaluation/artifacts/audits/<run_id>/scorecard.json \
@@ -201,8 +209,8 @@ python3 evaluation/scripts/build-audit-ui.py evaluation/artifacts/audits/<run_id
 ```
 
 The qualitative lane needs rendered baselines under `optimization/runs/<skill>/baseline`
-(gitignored). Locally, the watchable parallel fan-out `.claude/workflows/audit-baselines.js`
-runs the same judge module across all baselines concurrently; CI
+(gitignored). Local fan-out helpers can run the same judge module across all
+baselines concurrently; CI
 (`.github/workflows/baseline-audit.yml`) runs the deterministic lane as a blocking
 PR gate and the qualitative lane nightly (rendering baselines first).
 

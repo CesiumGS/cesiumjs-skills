@@ -1,16 +1,21 @@
 # Qualitative Baseline-Audit Design
 
 Goal: every eval has **two lanes** — deterministic programmatic checks (the gate) **and** a
-static, criteria-based qualitative judge (0–10, advisory). Run both over all 14 skills' rendered
+static, criteria-based qualitative judge (0-10, advisory). Run both over all 14 skills' rendered
 baselines to **audit** whether each baseline is still acceptable, browsable in an industry-grade UI.
+Under the OpenCode/OpenAI or Codex CLI runtime this judge attaches screenshot
+PNG files to each judge call. The model scores from direct screenshot
+inspection first, then uses screenshot-quality checks, programmatic checks,
+console output, scene state, and scenario requirements as supporting evidence.
 
 ## 1. Static qualitative judge (single-render, NOT pairwise)
 
-Six weighted dimensions, each scored 0–10 by the judge from the screenshot:
+Six weighted dimensions, each scored 0-10 by the judge from attached screenshot
+images plus rendered-bundle supporting evidence:
 
 | dimension | weight | gist |
 |---|---|---|
-| `render_liveness` | 0.20 | real loaded scene, not black/starfield/gray-unloaded/error (HARD GATE) |
+| `render_liveness` | 0.20 | evidence shows a real loaded scene, not black/starfield/gray-unloaded/error (HARD GATE) |
 | `subject_presence_and_recognizability` | 0.22 | intended subject clearly present & identifiable (GATE) |
 | `framing_and_composition` | 0.18 | subject centered, well-sized (~15–70% frame), not a speck / off-frame |
 | `prompt_and_behavior_fidelity` | 0.22 | viewing geometry & content match the prompt/expected behaviors |
@@ -29,7 +34,7 @@ wrong_viewing_geometry`.
 **Reliability:** N=3 judges, distinct seeds [42,123,789] + varied lenses (failure-auditor / fidelity /
 holistic); aggregate per-dimension by **median**, then gate+weight once; a gate also fires if ≥2/3 judges
 flag it. Confidence high/medium/low from band agreement + spread; BORDERLINE or low → human review.
-Calibration anchors embedded in the prompt (0–2 dead/wrong · 3–4 major · 5–6 borderline · 7–8 clearly-good · 9–10 exemplary).
+Calibration anchors embedded in the prompt (0-2 dead/wrong · 3-4 major · 5-6 borderline · 7-8 clearly-good · 9-10 exemplary).
 
 ## 2. Item contract (what the judge emits per case)
 
@@ -47,8 +52,8 @@ Extends the existing `visual-review.schema.json` v1.0 **additively** (so `scorec
   "observations": ["…"], "risks": ["…"],
   "screenshots": ["optimization/runs/<skill>/baseline/<dir>/screenshot.png"],
   "required": true, "blocking": true,
-  "reviewer": "static-visual-judge", "reviewed_at": "…",
-  "judge": { "model": "...", "n_judges": 3, "seeds": [42,123,789], "aggregation": "median", "protocol_version": "static-visual-v1" } // NEW
+  "reviewer": "screenshot-visual-judge", "reviewed_at": "…",
+  "judge": { "model": "...", "n_judges": 3, "seeds": [42,123,789], "aggregation": "median", "protocol_version": "static-visual-v1", "screenshot_input_mode": "attached_image_files" } // NEW
 }
 ```
 
@@ -65,7 +70,7 @@ deterministic failure. Deterministic lane stays Python-owned and binding.
 ## 4. Single source of truth + pipeline
 
 - `evaluation/framework/judge/` — `static_judge.py` (`judge_render`, panel, scoring/gating, `__main__`),
-  `cli_adapter.py` (self-contained claude-CLI adapter; must NOT import `optimization/`),
+  `cli_adapter.py` (self-contained OpenCode/Codex CLI adapters; must NOT import `optimization/`),
   `prompts/static-visual-v1.txt`.
 - `evaluation/scripts/run-baseline-audit.py` — runs BOTH lanes over all 14 baselines
   (`optimization/runs/<skill>/baseline`, bridged via the tracked `*-baseline-observed.evidence.json`
@@ -73,9 +78,9 @@ deterministic failure. Deterministic lane stays Python-owned and binding.
   `--visual-review <json>` (inject pre-judged items), `--emit-cases`, `--judge-model`, `--n-judges`,
   `--output-dir`. Exit = combined gate.
 - **CI/CD** (`.github/workflows/baseline-audit.yml`): job 1 deterministic (`--no-judge`, blocking, no secrets);
-  job 2 qualitative (claude CLI, advisory on PR / blocking nightly).
-- **Local fan-out** (`.claude/workflows/evaluate-skills.js`): Score (`--no-judge --emit-cases`) →
+  job 2 qualitative (agent CLI harness, advisory on PR / blocking nightly).
+- **Local fan-out**: Score (`--no-judge --emit-cases`) →
   parallel Judge (each shells the SAME `static_judge` module) → Assemble (`--visual-review` re-score) → UI.
 - **UI** (`build-audit-ui.py`): Lighthouse-style gauges, Datadog KPI strip, coverage-style skill×category
-  matrix, test-report drill-down (full check table + 0–10 criteria breakdown + baseline screenshot),
+  matrix, test-report drill-down (full check table + 0-10 criteria breakdown + baseline screenshot),
   worst-first **Audit Board** with Accept / Flag-rebaseline / Needs-review toggles (localStorage, exportable).

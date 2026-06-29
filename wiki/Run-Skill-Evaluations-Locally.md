@@ -25,11 +25,17 @@ playwright install-deps chromium
 Export required tokens for full pipeline execution:
 
 ```bash
+opencode auth login --provider openai
+codex login
 export CESIUM_ION_TOKEN="<your-cesium-ion-token>"
-export ANTHROPIC_API_KEY="<your-anthropic-api-key>"
+export AGENT_HARNESS="opencode"  # or "codex"
+export OPENCODE_MODEL="openai/gpt-5.5"
+export OPENCODE_PROPOSER_VARIANT="high"
+export OPENCODE_EVAL_VARIANT="medium"
+export OPENCODE_JUDGE_VARIANT="medium"
 ```
 
-**Note:** The Anthropic API key is only required for LLM-powered components (proposer, skills adapter, judges). Deterministic checks and browser runner work without it.
+**Note:** OpenCode and Codex CLI each handle authentication through their local login state. Deterministic checks and the browser runner work without model access.
 
 ## Validate Public Artifacts
 
@@ -129,13 +135,29 @@ python3 optimization/scripts/run-loop.py cesiumjs-camera --max-iterations 10 --s
 # Stop immediately on first regression (REJECT)
 python3 optimization/scripts/run-loop.py cesiumjs-camera --max-iterations 10 --stop-on regression
 
-# Configure models and temperature
+# Configure harnesses, model, reasoning variants, and temperature.
 python3 optimization/scripts/run-loop.py cesiumjs-camera \
-  --proposer-model claude-sonnet-4-5-20250929 \
-  --proposer-temp 1.0 \
-  --eval-model claude-sonnet-4-5-20250929 \
-  --eval-temp 0.0 \
-  --judge-models claude-sonnet-4-5-20250929 claude-sonnet-4-5-20250929 claude-sonnet-4-5-20250929
+  --proposer-harness opencode \
+  --proposer-model auto \
+  --proposer-variant high \
+  --proposer-temperature 1.0 \
+  --eval-harness opencode \
+  --eval-model auto \
+  --eval-variant medium \
+  --eval-temperature 1.0 \
+  --judge-harness opencode \
+  --judge-model auto \
+  --judge-variant medium
+
+# Run the same proposal, codegen, and judge phases through Codex CLI agents.
+python3 optimization/scripts/run-loop.py cesiumjs-camera \
+  --max-iterations 1 \
+  --proposer-harness codex \
+  --eval-harness codex \
+  --judge-harness codex \
+  --proposer-model auto \
+  --eval-model auto \
+  --judge-model auto
 ```
 
 ### Loop Stopping Conditions

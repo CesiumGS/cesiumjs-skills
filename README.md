@@ -4,24 +4,16 @@ Curated agent skills for CesiumJS development — 14 domain skills covering ~550
 
 ## Quick Start
 
-### Claude Code
+### OpenCode
 
-**One-Liner from the terminal (recommended):**
+Install OpenCode and run it from a checkout of this repository:
 
 ```bash
-claude plugin marketplace add CesiumGS/cesiumjs-skills
+npm i -g opencode-ai@latest
+opencode
 ```
 
-**From inside Claude Code:**
-
-1. Type `/plugin` and press Enter
-2. Select **Add Marketplace**
-3. Enter `CesiumGS/cesiumjs-skills`
-4. Once the marketplace is added, type `/plugin` again
-5. Select **Install Plugin**
-6. Choose **cesiumjs-skills** from the list
-
-After installing, run `/reload-plugins` to activate the skills in your current session.
+OpenCode discovers Agent Skills from `skills/<name>/SKILL.md` in the project.
 
 ### Any Agent Skills-Compatible Tool
 
@@ -97,7 +89,7 @@ For local browser-backed optimization scenario reproduction, place generated Jav
 python3 optimization/scripts/run-public-eval.py cesiumjs-camera --iteration candidate --only eval-001
 ```
 
-For the full autonomous optimization loop across every skill scenario group, use `python3 optimization/scripts/run-all-evals.py --skills all --max-iterations 1` after configuring the Claude CLI and `CESIUM_ION_TOKEN`.
+For the full autonomous optimization loop across every skill scenario group, use `python3 optimization/scripts/run-all-evals.py --skills all --max-iterations 1` after configuring an agent CLI harness and setting `CESIUM_ION_TOKEN`. The default harness is OpenCode with `openai/gpt-5.5`, using `--variant high` for proposal and `--variant medium` for code generation and judging. To test the same phases through Codex CLI agents, pass `--proposer-harness codex --eval-harness codex --judge-harness codex`; `--model auto` lets Codex use its authenticated default model.
 Raw generated code, HTML, screenshots, and run traces under `optimization/generated/` and `optimization/runs/` are local-only and gitignored by default.
 Optimization-specific tests live under `optimization/tests/`; pure evaluation tests live under `evaluation/tests/`.
 Scenario validation is read-only; update changed scenario hashes explicitly with `python3 optimization/scripts/rebaseline-scenario.py <skill> <eval-id>`.
@@ -107,9 +99,7 @@ The previous local tuning harness has been removed from the active repo surface.
 
 ## Compatibility
 
-The [Agent Skills](https://agentskills.io/) format is an open standard originally developed by Anthropic and adopted by leading AI development tools including Claude Code, GitHub Copilot, and many others.
-
-By popular demand, this repository also ships as a **Claude Code plugin** with Chrome DevTools MCP integration for browser-based verification.
+The [Agent Skills](https://agentskills.io/) format is an open standard adopted by multiple AI development tools. These skills are plain Markdown files under `skills/`, so compatible tools can load them without provider-specific Python SDKs.
 
 ## Repository Layout
 
@@ -122,9 +112,6 @@ cesiumjs-skills/
 ├── optimization/                    # Self-optimization loop, scripts, candidates, decisions, and results
 ├── wiki/                            # Source-controlled GitHub Wiki pages and reference docs
 ├── .github/workflows/wiki-sync.yml  # Publishes wiki/ to the GitHub Wiki from main
-├── .claude-plugin/
-│   ├── plugin.json                  # Claude Code plugin manifest
-│   └── marketplace.json             # Plugin marketplace catalog
 ├── .mcp.json                        # Chrome DevTools MCP server
 └── LICENSE
 ```

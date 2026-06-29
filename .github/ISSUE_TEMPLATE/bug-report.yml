@@ -91,7 +91,7 @@ body:
       description: Step-by-step instructions to trigger the bug. Include CesiumJS version if relevant.
       placeholder: |
         1. Load skill cesiumjs-camera
-        2. Run prompt above against Claude Sonnet 4.6
+        2. Run prompt above with your OpenCode model
         3. Execute generated code in browser at localhost:3000
         4. Observe horizon flips after 2 seconds
     validations:
@@ -110,7 +110,7 @@ body:
     attributes:
       label: Model used
       description: Which model generated the output, if applicable.
-      placeholder: e.g. "claude-sonnet-4-6"
+      placeholder: e.g. "auto" or "github-copilot/claude-sonnet-4.6"
     validations:
       required: false
 

@@ -67,11 +67,11 @@
     },
     {
       "id": "US-005",
-      "title": "Implement skills adapter that calls Claude API and writes generated JS",
+      "title": "Implement skills adapter that calls OpenCode CLI and writes generated JS",
       "description": "As the runner, I need a skills adapter that invokes an agent with a candidate skill and writes the generated JavaScript output.",
       "acceptanceCriteria": [
         "Create optimization/framework/adapters/skills_adapter.py implementing the Adapter interface from US-004",
-        "Reads ANTHROPIC_API_KEY from env; refuses to write any file if the key is missing",
+        "Uses OpenCode CLI authentication; non-interactive runs use OpenCode OpenAI OAuth",
         "Takes inputs: scenario id, candidate skill file path, model id, temperature",
         "Writes generated JS body to optimization/generated/<skill>/<iteration>/<eval-id>.js",
         "Writes metadata sidecar optimization/generated/<skill>/<iteration>/<eval-id>.meta.json with model id, temperature, skill content hash, timestamp UTC",
@@ -140,7 +140,7 @@
         "Create optimization/framework/judges/single.py with a function judge(scenario, baseline_bundle, candidate_bundle, judge_model_id, judge_protocol_version, seed) returning { verdict: 'BASELINE' | 'CANDIDATE' | 'TIE', rationale: str, model_id, protocol_version }",
         "Prompt template lives in optimization/framework/judges/prompts/pairwise-v1.txt and is referenced by version",
         "Randomizes which side is presented as 'A' vs 'B' using the provided seed; records the mapping in the returned record",
-        "Refuses to run if ANTHROPIC_API_KEY (or configured judge key) is missing",
+        "Refuses to run if OpenCode CLI auth is unavailable for the configured judge model",
         "Tests pass for verdict parsing and label randomization given a mocked model response",
         "Typecheck passes"
       ],
@@ -219,10 +219,10 @@
       "description": "As the framework, I need an agent that reads history and proposes a revised skill so the loop improves itself autonomously.",
       "acceptanceCriteria": [
         "Create optimization/scripts/propose-candidate.py that receives <skill> and reads: current best skill content, last decision record, per-scenario verdicts + rationales for last N iterations (configurable), coverage report",
-        "Calls Claude API with a versioned prompt template at optimization/framework/proposer/prompts/propose-v1.txt",
+        "Calls OpenCode CLI with a versioned prompt template at optimization/framework/proposer/prompts/propose-v1.txt",
         "Outputs a candidate skill file at optimization/candidates/<skill>/<iteration>/SKILL.md and hypothesis.md describing the change and the scenario evidence it addresses",
         "Records proposer model id, prompt version, temperature, seed in optimization/candidates/<skill>/<iteration>/proposer-metadata.json",
-        "Refuses to run if ANTHROPIC_API_KEY is missing",
+        "Refuses to run if OpenCode CLI auth is unavailable for the configured proposer model",
         "Tests pass for input assembly and output paths using a mocked model",
         "Typecheck passes"
       ],
@@ -270,7 +270,7 @@
       "acceptanceCriteria": [
         "Create .github/workflows/evals-visual.yml triggered on workflow_dispatch, on cron schedule (nightly), and on release tags",
         "Runs the full pipeline: adapter -> runner -> checks -> three-judge panel -> decision -> report",
-        "Reads CESIUM_ION_TOKEN, ANTHROPIC_API_KEY, and any judge model keys from CI secrets; never echoes them",
+        "Reads CESIUM_ION_TOKEN plus OpenCode OpenAI OAuth from CI secrets; never echoes them",
         "Uploads full sanitized reports as workflow artifacts and commits only compact aggregate result files under optimization/results/*.json via PR or push branch (configurable)",
         "Typecheck passes"
       ],
@@ -283,7 +283,7 @@
       "title": "Update local reproduction wiki page with full loop instructions",
       "description": "As a contributor, I want documented commands to reproduce any public decision locally.",
       "acceptanceCriteria": [
-        "Update wiki/Run-Skill-Evaluations-Locally.md to cover: install (Playwright + Python deps), token setup (CESIUM_ION_TOKEN, ANTHROPIC_API_KEY), single-scenario run via run-public-eval.py, full skill loop via run-loop.py",
+        "Update wiki/Run-Skill-Evaluations-Locally.md to cover: install (Playwright + Python deps), token setup (CESIUM_ION_TOKEN and OpenCode OpenAI OAuth), single-scenario run via run-public-eval.py, full skill loop via run-loop.py",
         "All commands are copy-paste runnable from a clean checkout",
         "Create optimization/scripts/smoke-test-docs.sh that executes each documented command (using a tiny scenario set) and exits non-zero on any failure",
         "Local runner respects check-public-artifacts.py before any aggregate result file is staged for publication",

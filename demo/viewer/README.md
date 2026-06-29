@@ -1,6 +1,6 @@
 # `demo/viewer/` — Local CesiumJS viewer for browser-driven iteration
 
-A minimal, single-page CesiumJS viewer designed to be driven by browser automation (Chrome DevTools MCP, already wired into this plugin's `.mcp.json`, or Playwright MCP) from a Claude Code session.
+A minimal, single-page CesiumJS viewer designed to be driven by browser automation (Chrome DevTools MCP, already wired into this repo's `.mcp.json`, or Playwright MCP) from an agent session.
 
 The page loads once. After that, drivers inject code, take screenshots, and read state without reloading. This is intentionally separate from `demo/index.html`, which is the interactive showcase: the showcase is meant for humans to click around in, this page is meant for agents to drive.
 
@@ -18,7 +18,7 @@ Or any other static HTTP server. The page must be served over HTTP, not opened a
 
 ### 2. Navigate to it (with your Ion token)
 
-In your Claude Code session, with `chrome-devtools` MCP available:
+In an agent session with `chrome-devtools` MCP available:
 
 ```
 mcp__chrome-devtools__navigate url="http://localhost:3000/demo/viewer/?ionToken=YOUR_TOKEN"
