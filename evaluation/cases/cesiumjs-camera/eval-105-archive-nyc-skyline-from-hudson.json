@@ -52,14 +52,16 @@
       "Heading ~90 degrees (facing east toward Manhattan)",
       "Low-medium altitude (300-800m) for skyline perspective",
       "Pitch near horizontal or slightly down (-5 to -15 degrees)",
-      "Uses flyTo or setView (not lookAt \u2014 this is a positioned view, not an orbital lock)"
+      "Uses flyTo or setView (not lookAt \u2014 this is a positioned view, not an orbital lock)",
+      "Adds a visible Manhattan skyline proxy made from vertical geometry"
     ],
     "landmark": "NYC Skyline",
     "perspective": "panoramic from across Hudson River",
     "source": "optimization/scenarios",
     "source_name": "nyc-skyline-from-hudson",
     "source_scenario_id": "eval-005",
-    "visual_expectations": "The Manhattan skyline viewed from the west across the Hudson River. The waterfront, piers, and city buildings should be visible. This is the classic NYC postcard view from New Jersey side."
+    "visual_expectations": "The Manhattan skyline viewed from the west across the Hudson River. The waterfront and piers should be visible, with a row of vertical skyline proxy bars over Manhattan so the visual subject reads as a recognizable skyline rather than a flat basemap. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
@@ -72,7 +74,7 @@
     ],
     "snapshot_before_and_after": false
   },
-  "prompt": "Position the camera in the air over the Hudson River, west of Manhattan, looking east toward the NYC skyline. I want to see the full Manhattan skyline as if photographing it from across the river at about 500 meters altitude. Camera should be roughly at coordinates 40.7484 N, 74.02 W (over the Hudson), looking east.",
+  "prompt": "Position the camera in the air over the Hudson River, west of Manhattan, looking east toward the NYC skyline. I want to see the full Manhattan skyline as if photographing it from across the river at about 500 meters altitude. Camera should be roughly at coordinates 40.7484 N, 74.02 W (over the Hudson), looking east. Because public OSM imagery can render this as a flat map with no skyline, add a simplified skyline proxy along Manhattan: multiple vertical colored boxes or cylinders of different heights at recognizable Midtown/Downtown waterfront positions, including a taller Empire State Building marker. The skyline bars should be visible across the river and should read as a city skyline, not as tiny points.",
   "schema_version": 1,
   "skill": "cesiumjs-camera",
   "timeout_ms": 5000

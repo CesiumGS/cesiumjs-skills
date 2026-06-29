@@ -18,18 +18,49 @@
     "Removes one overlay so only the grid remains visible",
     "Centers camera on London"
   ],
-  "visual_expectations": "A recognizable London map with an obvious debug grid overlay on top. The tile coordinate labels should not remain visible in the final scene.",
+  "visual_expectations": "A recognizable London map with an obvious debug grid overlay on top. The tile coordinate labels should not remain visible in the final scene. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "viewer\\.imageryLayers|imageryLayers", "description": "Uses layer collection API" },
-    { "type": "pattern_present", "pattern": "GridImageryProvider", "description": "Uses grid provider" },
-    { "type": "pattern_present", "pattern": "TileCoordinatesImageryProvider", "description": "Uses tile coordinates provider" },
-    { "type": "pattern_present", "pattern": "(?:imageryLayers|layers)\\.remove", "description": "Removes a layer" },
-    { "type": "pattern_present", "pattern": "-0\\.12|51\\.50", "description": "Targets London coordinates" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "viewer\\.imageryLayers|imageryLayers",
+      "description": "Uses layer collection API"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "GridImageryProvider",
+      "description": "Uses grid provider"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TileCoordinatesImageryProvider",
+      "description": "Uses tile coordinates provider"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:imageryLayers|layers)\\.remove",
+      "description": "Removes a layer"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-0\\.12|51\\.50",
+      "description": "Targets London coordinates"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 5000, "description": "Grid overlay visible over London" }
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Grid overlay visible over London"
+    }
   ],
-  "regression_critical": true
+  "regression_critical": true,
+  "screenshot_mode": "cardinal_panorama"
 }

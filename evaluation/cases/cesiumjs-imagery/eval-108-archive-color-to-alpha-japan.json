@@ -74,7 +74,8 @@
     "source": "optimization/scenarios",
     "source_name": "color-to-alpha-japan",
     "source_scenario_id": "eval-008",
-    "visual_expectations": "Japan should remain visible with city lights emphasized, while the dark opaque background of the overlay should be largely removed so the base imagery still shows through."
+    "visual_expectations": "Japan should remain visible with city lights emphasized, while the dark opaque background of the overlay should be largely removed so the base imagery still shows through. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

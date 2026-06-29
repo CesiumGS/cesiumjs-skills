@@ -100,7 +100,8 @@
     "source": "optimization/scenarios",
     "source_name": "public-tileset-height-style",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "The public 3D Tiles sample should render clearly with a visible declarative style applied, at minimum the green catch-all colour if the sample lacks height metadata."
+    "visual_expectations": "The public 3D Tiles sample should render clearly with a visible declarative style applied, at minimum the green catch-all colour if the sample lacks height metadata. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

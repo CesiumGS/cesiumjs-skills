@@ -101,7 +101,8 @@
     "source": "optimization/scenarios",
     "source_name": "fromdegrees-capitals-grid",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "A global Earth view with 6 distinct large lime-green points (with black outlines) visible at the listed capitals, roughly forming a band across the Northern Hemisphere from North America (Washington DC) eastward through Europe (London, Paris, Moscow) to East Asia (Beijing, Tokyo)."
+    "visual_expectations": "A global Earth view with 6 distinct large lime-green points (with black outlines) visible at the listed capitals, roughly forming a band across the Northern Hemisphere from North America (Washington DC) eastward through Europe (London, Paris, Moscow) to East Asia (Beijing, Tokyo). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

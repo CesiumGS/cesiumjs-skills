@@ -15,18 +15,49 @@
     "Adds the provider to the viewer imagery layers",
     "Frames the Grand Canyon"
   ],
-  "visual_expectations": "A shaded-relief style map over the Grand Canyon region with clear terrain texture and canyon form visible from above.",
+  "visual_expectations": "A shaded-relief style map over the Grand Canyon region with clear terrain texture and canyon form visible from above. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "WebMapTileServiceImageryProvider", "description": "Uses WMTS provider" },
-    { "type": "pattern_present", "pattern": "tileMatrixSetID", "description": "Sets tileMatrixSetID" },
-    { "type": "pattern_present", "pattern": "GoogleMapsCompatible", "description": "Uses the working USGS WMTS tile matrix set" },
-    { "type": "pattern_present", "pattern": "USGSShadedReliefOnly|WMTS", "description": "Targets USGS WMTS service" },
-    { "type": "pattern_present", "pattern": "-112|36\\.", "description": "Targets Grand Canyon region" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "WebMapTileServiceImageryProvider",
+      "description": "Uses WMTS provider"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "tileMatrixSetID",
+      "description": "Sets tileMatrixSetID"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "GoogleMapsCompatible",
+      "description": "Uses the working USGS WMTS tile matrix set"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "USGSShadedReliefOnly|WMTS",
+      "description": "Targets USGS WMTS service"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-112|36\\.",
+      "description": "Targets Grand Canyon region"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 7000, "description": "WMTS shaded relief over Grand Canyon" }
+    {
+      "timing": "after_load",
+      "delay_ms": 7000,
+      "description": "WMTS shaded relief over Grand Canyon"
+    }
   ],
-  "regression_critical": false
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
 }

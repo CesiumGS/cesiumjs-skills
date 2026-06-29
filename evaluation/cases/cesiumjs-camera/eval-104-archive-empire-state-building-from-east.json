@@ -60,14 +60,16 @@
       "Heading ~270 degrees (facing west = camera east of target)",
       "Pitch ~-25 degrees",
       "Range ~800m",
-      "Longitude must be negative (-73.9857)"
+      "Longitude must be negative (-73.9857)",
+      "Adds a visible public-eval Empire State Building tower surrogate"
     ],
     "landmark": "Empire State Building, NYC",
     "perspective": "orbital view from east",
     "source": "optimization/scenarios",
     "source_name": "empire-state-building-from-east",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "The Empire State Building area viewed from the east, looking westward across Midtown Manhattan. The urban grid of NYC should be visible with the building location centered."
+    "visual_expectations": "The Empire State Building area viewed from the east, looking westward across Midtown Manhattan. The urban grid of NYC should be visible with a centered, inspectable tower surrogate marking the Empire State Building location. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
@@ -80,7 +82,7 @@
     ],
     "snapshot_before_and_after": false
   },
-  "prompt": "Lock the camera onto the Empire State Building (40.7484 N, 73.9857 W) using lookAt. Position the camera to the east of the building, looking west toward it, at about 800 meters distance and a slight downward angle of 25 degrees. The Empire State Building should be centered in the view.",
+  "prompt": "Lock the camera onto the Empire State Building (40.7484 N, 73.9857 W) using lookAt. Position the camera to the east of the building, looking west toward it, at about 800 meters distance and a slight downward angle of 25 degrees. The Empire State Building should be centered in the view. Because public OSM tiles do not provide inspectable skyscraper geometry, add a visible Empire State Building surrogate at the coordinates, such as a 380 m gold or white tower/box/cylinder with a clear label. Frame the surrogate as the visual subject, not just the Midtown map label.",
   "schema_version": 1,
   "skill": "cesiumjs-camera",
   "timeout_ms": 5000

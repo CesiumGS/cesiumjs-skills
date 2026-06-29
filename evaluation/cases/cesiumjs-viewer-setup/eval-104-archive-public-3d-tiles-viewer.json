@@ -67,7 +67,8 @@
     "source": "optimization/scenarios",
     "source_name": "public-3d-tiles-viewer",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A visible public 3D Tiles sample inside a correctly initialized viewer. The screenshot should show the whole dragon or most of it with surrounding map context, proving URL-backed 3D Tiles can load and be framed without Google/Ion entitlements."
+    "visual_expectations": "A visible public 3D Tiles sample inside a correctly initialized viewer. The screenshot should show the whole dragon or most of it with surrounding map context, proving URL-backed 3D Tiles can load and be framed without Google/Ion entitlements. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

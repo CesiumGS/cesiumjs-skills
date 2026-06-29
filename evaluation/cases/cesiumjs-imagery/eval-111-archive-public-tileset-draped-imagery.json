@@ -67,7 +67,8 @@
     "source": "optimization/scenarios",
     "source_name": "public-tileset-draped-imagery",
     "source_scenario_id": "eval-011",
-    "visual_expectations": "The public sample 3D Tiles geometry should be visible with imagery draped onto the tileset rather than only on the globe."
+    "visual_expectations": "The public sample 3D Tiles geometry should be visible with imagery draped onto the tileset rather than only on the globe. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

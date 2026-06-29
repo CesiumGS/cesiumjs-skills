@@ -59,7 +59,8 @@
     "source": "optimization/scenarios",
     "source_name": "layer-error-events-london",
     "source_scenario_id": "eval-014",
-    "visual_expectations": "A normal visible map over London. The event listeners are not directly visible, so the visual test mainly confirms the scene still renders correctly."
+    "visual_expectations": "A normal visible map over London. The event listeners are not directly visible, so the visual test mainly confirms the scene still renders correctly. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

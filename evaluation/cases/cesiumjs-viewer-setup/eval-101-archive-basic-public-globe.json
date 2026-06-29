@@ -67,7 +67,8 @@
     "source": "optimization/scenarios",
     "source_name": "basic-public-globe",
     "source_scenario_id": "eval-001",
-    "visual_expectations": "A full-window 3D globe should be visible with public OpenStreetMap imagery. Standard Cesium widgets may be visible around the edges of the viewer."
+    "visual_expectations": "A full-window 3D globe should be visible with public OpenStreetMap imagery. Standard Cesium widgets may be visible around the edges of the viewer. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

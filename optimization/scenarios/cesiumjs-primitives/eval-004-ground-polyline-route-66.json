@@ -16,20 +16,57 @@
     "Adds to viewer.scene.primitives",
     "Frames the continental US (around -100 W, 37 N) at 4-7 million m altitude"
   ],
-  "visual_expectations": "A continental-US camera view with a clearly visible thick red polyline winding from the Chicago area (top right) through the central plains southwest to Los Angeles (bottom left), tracing Route 66.",
+  "visual_expectations": "A continental-US camera view with a clearly visible thick red polyline winding from the Chicago area (top right) through the central plains southwest to Los Angeles (bottom left), tracing Route 66. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "GroundPolylineGeometry", "description": "Uses GroundPolylineGeometry" },
-    { "type": "pattern_present", "pattern": "new (?:Cesium\\.)?GroundPolylinePrimitive", "description": "Uses GroundPolylinePrimitive" },
-    { "type": "pattern_present", "pattern": "PolylineColorAppearance", "description": "Uses PolylineColorAppearance" },
-    { "type": "pattern_present", "pattern": "ColorGeometryInstanceAttribute", "description": "Uses per-instance color" },
-    { "type": "pattern_present", "pattern": "Color\\.RED", "description": "Uses RED" },
-    { "type": "pattern_present", "pattern": "fromDegreesArray", "description": "Uses fromDegreesArray for waypoints" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "GroundPolylineGeometry",
+      "description": "Uses GroundPolylineGeometry"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?GroundPolylinePrimitive",
+      "description": "Uses GroundPolylinePrimitive"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "PolylineColorAppearance",
+      "description": "Uses PolylineColorAppearance"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ColorGeometryInstanceAttribute",
+      "description": "Uses per-instance color"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.RED",
+      "description": "Uses RED"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "fromDegreesArray",
+      "description": "Uses fromDegreesArray for waypoints"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 7000, "description": "Continental US with Route 66 polyline" }
+    {
+      "timing": "after_load",
+      "delay_ms": 7000,
+      "description": "Continental US with Route 66 polyline"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["GroundPolylinePrimitive"]
+  "target_skill_sections": [
+    "GroundPolylinePrimitive"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

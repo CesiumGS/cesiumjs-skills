@@ -11,18 +11,49 @@
     "Uses Color.BLUE.withAlpha() for semi-transparency",
     "Longitudes are negative (western hemisphere)"
   ],
-  "visual_expectations": "A tall, semi-transparent blue 3D column over the rectangular shape of Colorado, rising from the terrain. The terrain and globe should be visible through the translucent faces.",
+  "visual_expectations": "A tall, semi-transparent blue 3D column over the rectangular shape of Colorado, rising from the terrain. The terrain and globe should be visible through the translucent faces. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    {"type": "no_console_errors", "description": "No JS errors"},
-    {"type": "code_runs", "description": "No runtime exceptions"},
-    {"type": "pattern_present", "pattern": "polygon:", "description": "Polygon graphics defined"},
-    {"type": "pattern_present", "pattern": "extrudedHeight", "description": "Polygon is extruded"},
-    {"type": "pattern_present", "pattern": "withAlpha", "description": "Semi-transparency applied"},
-    {"type": "pattern_present", "pattern": "-102|-109", "description": "Colorado longitudes are negative"},
-    {"type": "pattern_present", "pattern": "fromDegreesArray", "description": "Uses fromDegreesArray for coordinates"}
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "polygon:",
+      "description": "Polygon graphics defined"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "extrudedHeight",
+      "description": "Polygon is extruded"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "withAlpha",
+      "description": "Semi-transparency applied"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-102|-109",
+      "description": "Colorado longitudes are negative"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "fromDegreesArray",
+      "description": "Uses fromDegreesArray for coordinates"
+    }
   ],
   "screenshots": [
-    {"timing": "after_load", "delay_ms": 5000, "description": "Semi-transparent blue 3D column over Colorado"}
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Semi-transparent blue 3D column over Colorado"
+    }
   ],
-  "regression_critical": true
+  "regression_critical": true,
+  "screenshot_mode": "cardinal_panorama"
 }

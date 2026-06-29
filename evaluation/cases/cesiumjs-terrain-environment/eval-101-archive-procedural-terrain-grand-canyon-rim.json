@@ -91,7 +91,8 @@
     "source": "optimization/scenarios",
     "source_name": "procedural-terrain-grand-canyon-rim",
     "source_scenario_id": "eval-001",
-    "visual_expectations": "A dramatic public no-token terrain view near the Grand Canyon from the South Rim looking north. The OSM map should be visibly warped over exaggerated procedural ridges/trenches so the screenshot does not read as a flat basemap."
+    "visual_expectations": "A dramatic public no-token terrain view near the Grand Canyon from the South Rim looking north. The OSM map should be visibly warped over exaggerated procedural ridges/trenches so the screenshot does not read as a flat basemap. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

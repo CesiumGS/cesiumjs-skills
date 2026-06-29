@@ -1,7 +1,7 @@
 {
   "id": "eval-002",
   "name": "resource-fetch-geojson-airports",
-  "landmark": "United States — major airports",
+  "landmark": "United States \u2014 major airports",
   "perspective": "country-wide overview with markers loaded from JSON",
   "difficulty": "medium",
   "description": "Use Resource.fetchJson to load a small GeoJSON FeatureCollection of US airport locations from a public Sandcastle data URL or an inline data: URI, then render each Feature as a point entity. Verifies the unified Resource.fetchJson static method and demonstrates network-driven entity creation.",
@@ -15,19 +15,53 @@
     "Each point's pixelSize is >= 12",
     "Frames camera over the continental US (around -100 W, 39 N, 5-7 million m altitude)"
   ],
-  "visual_expectations": "A continental-US camera view with three distinctly visible orange points: one in the northeast (JFK), one on the southwest coast (LAX), and one north of LAX on the California coast (SFO). The three points should clearly form a triangle across the country.",
+  "visual_expectations": "A continental-US camera view with three distinctly visible orange points: one in the northeast (JFK), one on the southwest coast (LAX), and one north of LAX on the California coast (SFO). The three points should clearly form a triangle across the country. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Resource\\.fetchJson", "description": "Uses Resource.fetchJson static method" },
-    { "type": "pattern_present", "pattern": "FeatureCollection", "description": "Inline GeoJSON has FeatureCollection type" },
-    { "type": "pattern_present", "pattern": "Color\\.ORANGE", "description": "Uses Color.ORANGE for markers" },
-    { "type": "pattern_present", "pattern": "viewer\\.entities\\.add", "description": "Adds entities" },
-    { "type": "pattern_present", "pattern": "(?:33\\.94|34\\.0|JFK|LAX|SFO|40\\.64|37\\.62)", "description": "References at least one of the three airport coordinates or codes" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Resource\\.fetchJson",
+      "description": "Uses Resource.fetchJson static method"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "FeatureCollection",
+      "description": "Inline GeoJSON has FeatureCollection type"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.ORANGE",
+      "description": "Uses Color.ORANGE for markers"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "viewer\\.entities\\.add",
+      "description": "Adds entities"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:33\\.94|34\\.0|JFK|LAX|SFO|40\\.64|37\\.62)",
+      "description": "References at least one of the three airport coordinates or codes"
+    }
   ],
   "screenshots": [
-    { "timing": "after_fetch", "delay_ms": 5000, "description": "Continental US view with three orange airport markers" }
+    {
+      "timing": "after_fetch",
+      "delay_ms": 5000,
+      "description": "Continental US view with three orange airport markers"
+    }
   ],
   "regression_critical": true,
-  "target_skill_sections": ["Resource: HTTP Requests and Data Fetching", "Fetching Data"]
+  "target_skill_sections": [
+    "Resource: HTTP Requests and Data Fetching",
+    "Fetching Data"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

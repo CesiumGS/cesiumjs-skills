@@ -14,21 +14,62 @@
     "Assigns the shader via tileset.customShader = shader (NOT tileset.style)",
     "Frames the public sample tileset close enough to inspect the shader output"
   ],
-  "visual_expectations": "The public sample 3D Tiles geometry should render with a clear cyan custom-shader tint, centered and large enough to inspect.",
+  "visual_expectations": "The public sample 3D Tiles geometry should render with a clear cyan custom-shader tint, centered and large enough to inspect. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Cesium3DTileset\\.fromUrl", "description": "Uses URL-backed 3D Tiles factory" },
-    { "type": "pattern_present", "pattern": "TilesetWithDiscreteLOD", "description": "Uses public CesiumGS sample tileset" },
-    { "type": "pattern_present", "pattern": "new (?:Cesium\\.)?CustomShader", "description": "Constructs CustomShader" },
-    { "type": "pattern_present", "pattern": "fragmentMain", "description": "Defines fragmentMain" },
-    { "type": "pattern_present", "pattern": "material\\.diffuse", "description": "Writes material.diffuse" },
-    { "type": "pattern_present", "pattern": "\\.customShader\\s*=", "description": "Assigns customShader on the tileset" },
-    { "type": "pattern_absent", "pattern": "Cesium3DTileStyle|createOsmBuildingsAsync|fromIonAssetId", "description": "Does NOT combine with style or entitlement-backed OSM Buildings" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Uses URL-backed 3D Tiles factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public CesiumGS sample tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?CustomShader",
+      "description": "Constructs CustomShader"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "fragmentMain",
+      "description": "Defines fragmentMain"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "material\\.diffuse",
+      "description": "Writes material.diffuse"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "\\.customShader\\s*=",
+      "description": "Assigns customShader on the tileset"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "Cesium3DTileStyle|createOsmBuildingsAsync|fromIonAssetId",
+      "description": "Does NOT combine with style or entitlement-backed OSM Buildings"
+    }
   ],
   "screenshots": [
-    { "timing": "after_tiles_load", "delay_ms": 10000, "description": "Public 3D Tiles sample with cyan CustomShader tint" }
+    {
+      "timing": "after_tiles_load",
+      "delay_ms": 10000,
+      "description": "Public 3D Tiles sample with cyan CustomShader tint"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Applying a CustomShader"]
+  "target_skill_sections": [
+    "Applying a CustomShader"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

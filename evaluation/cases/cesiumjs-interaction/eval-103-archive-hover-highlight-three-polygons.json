@@ -102,7 +102,8 @@
     "source": "optimization/scenarios",
     "source_name": "hover-highlight-three-polygons",
     "source_scenario_id": "eval-003",
-    "visual_expectations": "A state-level Florida view with three distinct semi-transparent coloured polygons visible: blue in the panhandle (north), green in central Florida, red over the Keys (south). The polygons should be rectangular and clearly distinguishable."
+    "visual_expectations": "A state-level Florida view with three distinct semi-transparent coloured polygons visible: blue in the panhandle (north), green in central Florida, red over the Keys (south). The polygons should be rectangular and clearly distinguishable. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

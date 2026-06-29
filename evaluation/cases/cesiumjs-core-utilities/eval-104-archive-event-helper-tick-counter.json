@@ -77,7 +77,8 @@
     "source": "optimization/scenarios",
     "source_name": "event-helper-tick-counter",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A global Atlantic-centered view of Earth with a prominent text label visible mid-screen reading 'Ticks: N' (where N is a positive non-zero integer, since the screenshot is taken after the clock has ticked)."
+    "visual_expectations": "A global Atlantic-centered view of Earth with a prominent text label visible mid-screen reading 'Ticks: N' (where N is a positive non-zero integer, since the screenshot is taken after the clock has ticked). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

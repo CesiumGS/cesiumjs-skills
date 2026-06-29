@@ -86,7 +86,8 @@
     "source": "optimization/scenarios",
     "source_name": "ground-polyline-route-66",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A continental-US camera view with a clearly visible thick red polyline winding from the Chicago area (top right) through the central plains southwest to Los Angeles (bottom left), tracing Route 66."
+    "visual_expectations": "A continental-US camera view with a clearly visible thick red polyline winding from the Chicago area (top right) through the central plains southwest to Los Angeles (bottom left), tracing Route 66. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

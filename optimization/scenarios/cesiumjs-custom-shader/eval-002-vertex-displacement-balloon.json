@@ -5,7 +5,7 @@
   "perspective": "framed inflated model",
   "difficulty": "hard",
   "description": "Load the public Cesium Balloon sample model and apply a CustomShader vertexShaderText that displaces vsOutput.positionMC outward along vsInput.attributes.normalMC by 0.4 model-space units. The balloon should appear visibly inflated relative to its default geometry. Tests vertex shader authoring, attribute coordinate-space contract, and vsOutput.positionMC mutation.",
-  "prompt": "Load the public Cesium Balloon sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumBalloon/CesiumBalloon.glb using Model.fromGltfAsync with scale 1.0 and minimumPixelSize 400 (large minimum pixel size so the balloon stays visible at distance). Apply a CustomShader with vertexShaderText: `void vertexMain(VertexInput vsInput, inout czm_modelVertexOutput vsOutput) { vsOutput.positionMC = vsInput.attributes.positionMC + vsInput.attributes.normalMC * 0.6; }` — 0.6 is enough to be visually obvious without inflating the balloon outside the frame. Position the model at (-75.0, 40.0, 200) via Transforms.eastNorthUpToFixedFrame. Add to viewer.scene.primitives. Frame from far enough back that the whole balloon fits, with the camera LOOKING TOWARD the model: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-74.998, 39.998, 300), orientation: { heading: Cesium.Math.toRadians(315), pitch: Cesium.Math.toRadians(-10), roll: 0 } }) — camera ~200 m SE of and 100 m above the balloon, heading 315° (NW) toward the balloon, pitch -10° slightly downward.",
+  "prompt": "Load the public Cesium Balloon sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumBalloon/CesiumBalloon.glb using Model.fromGltfAsync with scale 1.0 and minimumPixelSize 400 (large minimum pixel size so the balloon stays visible at distance). Apply a CustomShader with vertexShaderText: `void vertexMain(VertexInput vsInput, inout czm_modelVertexOutput vsOutput) { vsOutput.positionMC = vsInput.attributes.positionMC + vsInput.attributes.normalMC * 0.6; }` \u2014 0.6 is enough to be visually obvious without inflating the balloon outside the frame. Position the model at (-75.0, 40.0, 200) via Transforms.eastNorthUpToFixedFrame. Add to viewer.scene.primitives. Frame from far enough back that the whole balloon fits, with the camera LOOKING TOWARD the model: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-74.998, 39.998, 300), orientation: { heading: Cesium.Math.toRadians(315), pitch: Cesium.Math.toRadians(-10), roll: 0 } }) \u2014 camera ~200 m SE of and 100 m above the balloon, heading 315\u00b0 (NW) toward the balloon, pitch -10\u00b0 slightly downward.",
   "expected_behaviors": [
     "Calls Model.fromGltfAsync with the public CesiumBalloon glb URL",
     "Constructs a CustomShader with vertexShaderText only (no fragmentShaderText required)",
@@ -15,21 +15,64 @@
     "Frames the camera so the inflated balloon dominates the view",
     "Uses positionMC (NOT positionEC) in vertex shader"
   ],
-  "visual_expectations": "The Cesium Balloon model visible against sky/ocean, appearing rounder and noticeably enlarged vs its default geometry. The balloon's basket and tether may also be displaced but the rounded upper envelope should be clearly inflated.",
+  "visual_expectations": "The Cesium Balloon model visible against sky/ocean, appearing rounder and noticeably enlarged vs its default geometry. The balloon's basket and tether may also be displaced but the rounded upper envelope should be clearly inflated. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Model\\.fromGltfAsync", "description": "Uses Model.fromGltfAsync" },
-    { "type": "pattern_present", "pattern": "CesiumBalloon", "description": "Targets the CesiumBalloon sample model" },
-    { "type": "pattern_present", "pattern": "vertexShaderText", "description": "Defines vertexShaderText" },
-    { "type": "pattern_present", "pattern": "vertexMain", "description": "Defines vertexMain function" },
-    { "type": "pattern_present", "pattern": "vsOutput\\.positionMC", "description": "Writes to vsOutput.positionMC" },
-    { "type": "pattern_present", "pattern": "normalMC", "description": "Reads normalMC vertex attribute" },
-    { "type": "pattern_absent", "pattern": "vsInput\\.attributes\\.positionEC", "description": "Does NOT misuse positionEC in vertex shader" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Model\\.fromGltfAsync",
+      "description": "Uses Model.fromGltfAsync"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "CesiumBalloon",
+      "description": "Targets the CesiumBalloon sample model"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "vertexShaderText",
+      "description": "Defines vertexShaderText"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "vertexMain",
+      "description": "Defines vertexMain function"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "vsOutput\\.positionMC",
+      "description": "Writes to vsOutput.positionMC"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "normalMC",
+      "description": "Reads normalMC vertex attribute"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "vsInput\\.attributes\\.positionEC",
+      "description": "Does NOT misuse positionEC in vertex shader"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 6000, "description": "Inflated CesiumBalloon model framed in view" }
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Inflated CesiumBalloon model framed in view"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Shader function signatures", "Attributes", "czm_modelVertexOutput & czm_modelMaterial"]
+  "target_skill_sections": [
+    "Shader function signatures",
+    "Attributes",
+    "czm_modelVertexOutput & czm_modelMaterial"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

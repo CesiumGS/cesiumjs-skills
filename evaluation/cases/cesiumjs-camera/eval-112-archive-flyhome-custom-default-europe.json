@@ -58,7 +58,8 @@
     "source": "optimization/scenarios",
     "source_name": "flyhome-custom-default-europe",
     "source_scenario_id": "eval-012",
-    "visual_expectations": "After the flyHome animation, the view should show Europe \u2014 the Mediterranean, UK, Scandinavia, and Eastern Europe should be visible in a roughly rectangular framing."
+    "visual_expectations": "After the flyHome animation, the view should show Europe \u2014 the Mediterranean, UK, Scandinavia, and Eastern Europe should be visible in a roughly rectangular framing. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

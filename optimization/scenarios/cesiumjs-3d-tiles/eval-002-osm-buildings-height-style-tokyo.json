@@ -14,22 +14,68 @@
     "Style does NOT call defined() (the DSL does not support it)",
     "Frames the public sample tileset so the style is visible"
   ],
-  "visual_expectations": "The public 3D Tiles sample should render clearly with a visible declarative style applied, at minimum the green catch-all colour if the sample lacks height metadata.",
+  "visual_expectations": "The public 3D Tiles sample should render clearly with a visible declarative style applied, at minimum the green catch-all colour if the sample lacks height metadata. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Cesium3DTileset\\.fromUrl", "description": "Uses URL-backed 3D Tiles factory" },
-    { "type": "pattern_present", "pattern": "TilesetWithDiscreteLOD", "description": "Uses public CesiumGS sample tileset" },
-    { "type": "pattern_present", "pattern": "Cesium3DTileStyle", "description": "Uses Cesium3DTileStyle" },
-    { "type": "pattern_present", "pattern": "conditions", "description": "Style uses conditions array" },
-    { "type": "pattern_present", "pattern": "true", "description": "Style has a safe true catch-all" },
-    { "type": "pattern_absent", "pattern": "\\bdefined\\(", "description": "Does NOT use defined() (unsupported in tileset style DSL)" },
-    { "type": "pattern_present", "pattern": "(?:red|yellow|green|#[fF]{2}0|color\\(\")", "description": "Style assigns named colors" },
-    { "type": "pattern_absent", "pattern": "createOsmBuildingsAsync|fromIonAssetId", "description": "Avoids entitlement-backed OSM Buildings" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Uses URL-backed 3D Tiles factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public CesiumGS sample tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileStyle",
+      "description": "Uses Cesium3DTileStyle"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "conditions",
+      "description": "Style uses conditions array"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "true",
+      "description": "Style has a safe true catch-all"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "\\bdefined\\(",
+      "description": "Does NOT use defined() (unsupported in tileset style DSL)"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:red|yellow|green|#[fF]{2}0|color\\(\")",
+      "description": "Style assigns named colors"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createOsmBuildingsAsync|fromIonAssetId",
+      "description": "Avoids entitlement-backed OSM Buildings"
+    }
   ],
   "screenshots": [
-    { "timing": "after_tiles_load", "delay_ms": 9000, "description": "Public sample tileset with declarative colour style" }
+    {
+      "timing": "after_tiles_load",
+      "delay_ms": 9000,
+      "description": "Public sample tileset with declarative colour style"
+    }
   ],
   "regression_critical": true,
-  "target_skill_sections": ["OSM Buildings", "Declarative Styling"]
+  "target_skill_sections": [
+    "OSM Buildings",
+    "Declarative Styling"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

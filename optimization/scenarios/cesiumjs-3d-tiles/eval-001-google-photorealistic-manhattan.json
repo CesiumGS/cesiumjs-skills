@@ -13,19 +13,52 @@
     "Frames the dragon tileset close enough that it fills a meaningful part of the screenshot",
     "Does not load private ion terrain, OSM Buildings, or Google Photorealistic 3D Tiles"
   ],
-  "visual_expectations": "A close, nonblank 3D Tiles render of the sample dragon on the globe. The dragon or its tiled geometry should be centered and large enough to inspect, not a tiny speck or a black failed-load frame.",
+  "visual_expectations": "A close, nonblank 3D Tiles render of the sample dragon on the globe. The dragon or its tiled geometry should be centered and large enough to inspect, not a tiny speck or a black failed-load frame. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Cesium3DTileset\\.fromUrl", "description": "Uses URL-backed 3D Tiles factory" },
-    { "type": "pattern_present", "pattern": "TilesetWithDiscreteLOD", "description": "Uses public CesiumGS sample tileset" },
-    { "type": "pattern_present", "pattern": "scene\\.primitives\\.add", "description": "Adds tileset to scene primitives" },
-    { "type": "pattern_present", "pattern": "zoomTo|flyTo|HeadingPitchRange|setView", "description": "Frames the tileset" },
-    { "type": "pattern_absent", "pattern": "createGooglePhotorealistic3DTileset|createOsmBuildingsAsync|fromIonAssetId", "description": "Avoids private entitlement-backed assets" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Uses URL-backed 3D Tiles factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public CesiumGS sample tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "scene\\.primitives\\.add",
+      "description": "Adds tileset to scene primitives"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "zoomTo|flyTo|HeadingPitchRange|setView",
+      "description": "Frames the tileset"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createGooglePhotorealistic3DTileset|createOsmBuildingsAsync|fromIonAssetId",
+      "description": "Avoids private entitlement-backed assets"
+    }
   ],
   "screenshots": [
-    { "timing": "after_tiles_load", "delay_ms": 10000, "description": "Public 3D Tiles sample dragon framed clearly" }
+    {
+      "timing": "after_tiles_load",
+      "delay_ms": 10000,
+      "description": "Public 3D Tiles sample dragon framed clearly"
+    }
   ],
   "regression_critical": true,
-  "target_skill_sections": ["Loading a Tileset"]
+  "target_skill_sections": [
+    "Loading a Tileset"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

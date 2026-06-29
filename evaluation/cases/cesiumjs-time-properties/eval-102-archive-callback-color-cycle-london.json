@@ -93,7 +93,8 @@
     "source": "optimization/scenarios",
     "source_name": "callback-color-cycle-london",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "A top-down view of central London with a large rectangular polygon overlay coloured with a vivid saturated colour (orange, yellow, green, blue, purple, or pink \u2014 any one of the HSL ramp), partially transparent. The Thames should be visible underneath."
+    "visual_expectations": "A top-down view of central London with a large rectangular polygon overlay coloured with a vivid saturated colour (orange, yellow, green, blue, purple, or pink \u2014 any one of the HSL ramp), partially transparent. The Thames should be visible underneath. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

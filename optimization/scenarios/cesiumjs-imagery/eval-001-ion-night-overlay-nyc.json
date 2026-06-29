@@ -17,19 +17,54 @@
     "Sets brightness above 1.0 on the overlay layer",
     "Positions the camera over the northeastern United States"
   ],
-  "visual_expectations": "A globe view of the northeastern United States with visible night lights over the New York City region and nearby urban corridor. The overlay should not completely hide the underlying imagery.",
+  "visual_expectations": "A globe view of the northeastern United States with visible night lights over the New York City region and nearby urban corridor. The overlay should not completely hide the underlying imagery. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "VIIRS_CityLights_2012|gibs\\.earthdata", "description": "Uses public NASA GIBS city-lights imagery" },
-    { "type": "pattern_present", "pattern": "WebMapTileServiceImageryProvider|UrlTemplateImageryProvider", "description": "Uses a public URL-backed imagery provider" },
-    { "type": "pattern_present", "pattern": "alpha\\s*=\\s*0\\.", "description": "Sets overlay alpha below 1" },
-    { "type": "pattern_present", "pattern": "brightness\\s*=\\s*1\\.", "description": "Adjusts brightness" },
-    { "type": "pattern_present", "pattern": "-7[234]\\.|4[01]\\.", "description": "Targets NYC / Northeast corridor coordinates" },
-    { "type": "pattern_absent", "pattern": "IonImageryProvider|fromWorldImagery", "description": "Avoids ion imagery helpers" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "VIIRS_CityLights_2012|gibs\\.earthdata",
+      "description": "Uses public NASA GIBS city-lights imagery"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "WebMapTileServiceImageryProvider|UrlTemplateImageryProvider",
+      "description": "Uses a public URL-backed imagery provider"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "alpha\\s*=\\s*0\\.",
+      "description": "Sets overlay alpha below 1"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "brightness\\s*=\\s*1\\.",
+      "description": "Adjusts brightness"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-7[234]\\.|4[01]\\.",
+      "description": "Targets NYC / Northeast corridor coordinates"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "IonImageryProvider|fromWorldImagery",
+      "description": "Avoids ion imagery helpers"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 7000, "description": "Night overlay visible over NYC corridor" }
+    {
+      "timing": "after_load",
+      "delay_ms": 7000,
+      "description": "Night overlay visible over NYC corridor"
+    }
   ],
-  "regression_critical": true
+  "regression_critical": true,
+  "screenshot_mode": "cardinal_panorama"
 }

@@ -16,7 +16,7 @@
     "Callback updates label.text to a formatted Lon/Lat string",
     "Frames camera over the eastern Mediterranean at ~37 N, 25 E"
   ],
-  "visual_expectations": "An eastern-Mediterranean camera view (Greece, Turkey coast, Aegean islands clearly visible) with a labelled text box on the screen showing 'Lon:' and 'Lat:' values, anchored over the Aegean Sea.",
+  "visual_expectations": "An eastern-Mediterranean camera view (Greece, Turkey coast, Aegean islands clearly visible) with a labelled text box on the screen showing 'Lon:' and 'Lat:' values, anchored over the Aegean Sea. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -73,5 +73,6 @@
   "target_skill_sections": [
     "Recipes \u2014 Coordinate Readout on Mouse Move",
     "Scene Picking Methods"
-  ]
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

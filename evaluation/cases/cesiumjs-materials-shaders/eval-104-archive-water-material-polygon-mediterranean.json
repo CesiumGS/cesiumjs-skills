@@ -76,7 +76,8 @@
     "source": "optimization/scenarios",
     "source_name": "water-material-polygon-mediterranean",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A top-down camera view of Italy and the western Mediterranean with the sea region rendered as visibly textured blue water \u2014 wave normals and varying color across the surface should be apparent vs a flat blue colour."
+    "visual_expectations": "A top-down camera view of Italy and the western Mediterranean with the sea region rendered as visibly textured blue water \u2014 wave normals and varying color across the surface should be apparent vs a flat blue colour. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

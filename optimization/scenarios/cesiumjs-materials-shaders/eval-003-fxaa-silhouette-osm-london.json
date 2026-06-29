@@ -16,22 +16,67 @@
     "Adds the silhouette composite to viewer.scene.postProcessStages",
     "Frames the public sample tileset close enough to inspect the silhouette"
   ],
-  "visual_expectations": "The public 3D Tiles sample should be visible with yellow silhouette/edge outlining from the post-process stage.",
+  "visual_expectations": "The public 3D Tiles sample should be visible with yellow silhouette/edge outlining from the post-process stage. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Cesium3DTileset\\.fromUrl", "description": "Uses URL-backed 3D Tiles factory" },
-    { "type": "pattern_present", "pattern": "TilesetWithDiscreteLOD", "description": "Uses public CesiumGS sample tileset" },
-    { "type": "pattern_present", "pattern": "createEdgeDetectionStage", "description": "Uses edge-detection stage factory" },
-    { "type": "pattern_present", "pattern": "createSilhouetteStage", "description": "Uses silhouette composite factory" },
-    { "type": "pattern_present", "pattern": "uniforms\\.color", "description": "Sets edge uniform color" },
-    { "type": "pattern_present", "pattern": "Color\\.YELLOW", "description": "Uses YELLOW for silhouette" },
-    { "type": "pattern_present", "pattern": "postProcessStages\\.add", "description": "Adds composite to postProcessStages" },
-    { "type": "pattern_absent", "pattern": "createOsmBuildingsAsync|fromIonAssetId", "description": "Avoids entitlement-backed OSM Buildings" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Uses URL-backed 3D Tiles factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public CesiumGS sample tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "createEdgeDetectionStage",
+      "description": "Uses edge-detection stage factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "createSilhouetteStage",
+      "description": "Uses silhouette composite factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "uniforms\\.color",
+      "description": "Sets edge uniform color"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.YELLOW",
+      "description": "Uses YELLOW for silhouette"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "postProcessStages\\.add",
+      "description": "Adds composite to postProcessStages"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createOsmBuildingsAsync|fromIonAssetId",
+      "description": "Avoids entitlement-backed OSM Buildings"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 9000, "description": "Public tileset with yellow silhouette outlines" }
+    {
+      "timing": "after_load",
+      "delay_ms": 9000,
+      "description": "Public tileset with yellow silhouette outlines"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Post-Processing"]
+  "target_skill_sections": [
+    "Post-Processing"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

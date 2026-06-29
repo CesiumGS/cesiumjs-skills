@@ -94,7 +94,8 @@
     "source": "optimization/scenarios",
     "source_name": "drillpick-stacked-polygons",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A regional view of Lake Michigan with three semi-transparent overlapping rectangles visible \u2014 red, blue, and green \u2014 with their overlap zones showing colour mixing (purple where red+blue overlap, yellow where green+red, cyan where green+blue, brownish where all three overlap)."
+    "visual_expectations": "A regional view of Lake Michigan with three semi-transparent overlapping rectangles visible \u2014 red, blue, and green \u2014 with their overlap zones showing colour mixing (purple where red+blue overlap, yellow where green+red, cyan where green+blue, brownish where all three overlap). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

@@ -76,7 +76,8 @@
     "source": "optimization/scenarios",
     "source_name": "entity-collection-query-and-modify",
     "source_scenario_id": "eval-005",
-    "visual_expectations": "Three visible airport markers: JFK (magenta, eastern US), LAX (western US), and ORD (central US). LHR and NRT should NOT be visible."
+    "visual_expectations": "Three visible airport markers: JFK (magenta, eastern US), LAX (western US), and ORD (central US). LHR and NRT should NOT be visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

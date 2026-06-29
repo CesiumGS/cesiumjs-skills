@@ -12,19 +12,50 @@
     "Removes NRT entity via viewer.entities.removeById or .remove()",
     "Only 3 entities should be visible at the end (JFK magenta, LAX, ORD)"
   ],
-  "visual_expectations": "Three visible airport markers: JFK (magenta, eastern US), LAX (western US), and ORD (central US). LHR and NRT should NOT be visible.",
+  "visual_expectations": "Three visible airport markers: JFK (magenta, eastern US), LAX (western US), and ORD (central US). LHR and NRT should NOT be visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    {"type": "no_console_errors", "description": "No JS errors"},
-    {"type": "code_runs", "description": "No runtime exceptions"},
-    {"type": "pattern_present", "pattern": "getById|entities\\.getById", "description": "Queries entities by ID"},
-    {"type": "pattern_present", "pattern": "show.*false|\\.show\\s*=\\s*false", "description": "Hides an entity"},
-    {"type": "pattern_present", "pattern": "removeById|remove\\(", "description": "Removes an entity"},
-    {"type": "pattern_present", "pattern": "MAGENTA|magenta|Color\\.MAGENTA", "description": "JFK color changed to magenta"},
-    {"type": "pattern_present", "pattern": "\"JFK\"|'JFK'", "description": "JFK ID used"}
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "getById|entities\\.getById",
+      "description": "Queries entities by ID"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "show.*false|\\.show\\s*=\\s*false",
+      "description": "Hides an entity"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "removeById|remove\\(",
+      "description": "Removes an entity"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "MAGENTA|magenta|Color\\.MAGENTA",
+      "description": "JFK color changed to magenta"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "\"JFK\"|'JFK'",
+      "description": "JFK ID used"
+    }
   ],
   "screenshots": [
-    {"timing": "after_load", "delay_ms": 5000, "description": "Three airport markers visible (JFK magenta, LAX, ORD). LHR and NRT not visible."}
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Three airport markers visible (JFK magenta, LAX, ORD). LHR and NRT not visible."
+    }
   ],
   "regression_critical": false,
-  "notes": "Tests Entity API CRUD operations — add, query, modify, hide, remove. The skill needs to clearly document getById, show property, and remove/removeById patterns."
+  "notes": "Tests Entity API CRUD operations \u2014 add, query, modify, hide, remove. The skill needs to clearly document getById, show property, and remove/removeById patterns.",
+  "screenshot_mode": "cardinal_panorama"
 }

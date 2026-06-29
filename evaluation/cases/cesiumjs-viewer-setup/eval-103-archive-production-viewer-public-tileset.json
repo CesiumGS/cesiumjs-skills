@@ -101,7 +101,8 @@
     "source": "optimization/scenarios",
     "source_name": "production-viewer-public-tileset",
     "source_scenario_id": "eval-003",
-    "visual_expectations": "A production-style viewer with no animation/timeline widgets and a clearly visible public 3D Tiles sample. The screenshot should prove the viewer, async tileset load, and camera framing all work without ion-backed assets."
+    "visual_expectations": "A production-style viewer with no animation/timeline widgets and a clearly visible public 3D Tiles sample. The screenshot should prove the viewer, async tileset load, and camera framing all work without ion-backed assets. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

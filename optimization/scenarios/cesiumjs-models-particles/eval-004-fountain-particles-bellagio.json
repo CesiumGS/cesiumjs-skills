@@ -16,20 +16,57 @@
     "Adds the particle system to viewer.scene.primitives",
     "Frames the camera close to the fountain with the vertical jet visible against the map"
   ],
-  "visual_expectations": "A close oblique view at the Bellagio fountains with a clearly visible upward-rising column of cyan/white water particles and a small base marker showing the particle source.",
+  "visual_expectations": "A close oblique view at the Bellagio fountains with a clearly visible upward-rising column of cyan/white water particles and a small base marker showing the particle source. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "new (?:Cesium\\.)?ParticleSystem", "description": "Constructs ParticleSystem" },
-    { "type": "pattern_present", "pattern": "ConeEmitter", "description": "Uses ConeEmitter" },
-    { "type": "pattern_present", "pattern": "startColor", "description": "Sets startColor" },
-    { "type": "pattern_present", "pattern": "endColor", "description": "Sets endColor" },
-    { "type": "pattern_present", "pattern": "emissionRate", "description": "Sets emissionRate" },
-    { "type": "pattern_present", "pattern": "-115\\.1", "description": "Targets Bellagio longitude" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?ParticleSystem",
+      "description": "Constructs ParticleSystem"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ConeEmitter",
+      "description": "Uses ConeEmitter"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "startColor",
+      "description": "Sets startColor"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "endColor",
+      "description": "Sets endColor"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "emissionRate",
+      "description": "Sets emissionRate"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-115\\.1",
+      "description": "Targets Bellagio longitude"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 6000, "description": "Bellagio with rising fountain water column" }
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Bellagio with rising fountain water column"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Particle Systems"]
+  "target_skill_sections": [
+    "Particle Systems"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

@@ -58,7 +58,8 @@
     "source": "optimization/scenarios",
     "source_name": "grand-canyon-aerial-overview",
     "source_scenario_id": "eval-007",
-    "visual_expectations": "A top-down aerial view showing the Grand Canyon's distinctive sinuous shape carved by the Colorado River. The layered rock formations and canyon width should be visible from this altitude."
+    "visual_expectations": "A top-down aerial view showing the Grand Canyon's distinctive sinuous shape carved by the Colorado River. The layered rock formations and canyon width should be visible from this altitude. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

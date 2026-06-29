@@ -74,7 +74,8 @@
     "source": "optimization/scenarios",
     "source_name": "public-tileset-oblique-closeup",
     "source_scenario_id": "eval-005",
-    "visual_expectations": "A visible public 3D Tiles dragon sample, centered and large enough to inspect. The screenshot should prove that URL-backed 3D Tiles content loaded successfully."
+    "visual_expectations": "A visible public 3D Tiles dragon sample, centered and large enough to inspect. The screenshot should prove that URL-backed 3D Tiles content loaded successfully. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

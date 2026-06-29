@@ -11,7 +11,7 @@
     "Adds the tileset to scene.primitives",
     "Frames the public 3D Tiles sample clearly without cropping it into an extreme close-up"
   ],
-  "visual_expectations": "A visible public 3D Tiles sample inside a correctly initialized viewer. The screenshot should show the whole dragon or most of it with surrounding map context, proving URL-backed 3D Tiles can load and be framed without Google/Ion entitlements.",
+  "visual_expectations": "A visible public 3D Tiles sample inside a correctly initialized viewer. The screenshot should show the whole dragon or most of it with surrounding map context, proving URL-backed 3D Tiles can load and be framed without Google/Ion entitlements. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -56,5 +56,6 @@
   ],
   "regression_critical": false,
   "notes": "This keeps the viewer setup coverage focused on a runnable public 3D Tiles scene. Google Photorealistic 3D Tiles remain documented in the skill, but they are not part of the public baseline eval because they require external entitlement.",
-  "runner_mode": "global-js"
+  "runner_mode": "global-js",
+  "screenshot_mode": "cardinal_panorama"
 }

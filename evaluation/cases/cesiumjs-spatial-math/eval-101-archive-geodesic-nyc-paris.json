@@ -102,7 +102,8 @@
     "source": "optimization/scenarios",
     "source_name": "geodesic-nyc-paris",
     "source_scenario_id": "eval-001",
-    "visual_expectations": "A globe view showing a clear yellow great-circle polyline arcing from New York City to Paris, with a distance label visible near the midpoint reading approximately 'Distance: 5837 km'. The polyline should curve northward over the Atlantic (great-circle path), not run flat east-west."
+    "visual_expectations": "A globe view showing a clear yellow great-circle polyline arcing from New York City to Paris, with a distance label visible near the midpoint reading approximately 'Distance: 5837 km'. The polyline should curve northward over the Atlantic (great-circle path), not run flat east-west. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

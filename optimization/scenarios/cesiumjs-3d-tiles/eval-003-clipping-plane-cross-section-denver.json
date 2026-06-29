@@ -13,20 +13,57 @@
     "Assigns clippingPlanes to the tileset (constructor option or tileset.clippingPlanes =)",
     "Frames the public sample tileset close enough to inspect the clipped geometry"
   ],
-  "visual_expectations": "The public sample 3D Tiles geometry should render with an obvious clipping plane and a yellow edge. The screenshot should not be blank or dominated by failed terrain/ion loading.",
+  "visual_expectations": "The public sample 3D Tiles geometry should render with an obvious clipping plane and a yellow edge. The screenshot should not be blank or dominated by failed terrain/ion loading. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Cesium3DTileset\\.fromUrl", "description": "Uses URL-backed 3D Tiles factory" },
-    { "type": "pattern_present", "pattern": "TilesetWithDiscreteLOD", "description": "Uses public CesiumGS sample tileset" },
-    { "type": "pattern_present", "pattern": "ClippingPlane(?:Collection)?", "description": "Uses ClippingPlane API" },
-    { "type": "pattern_present", "pattern": "edgeWidth", "description": "Sets edgeWidth on clipping" },
-    { "type": "pattern_present", "pattern": "edgeColor", "description": "Sets edgeColor on clipping" },
-    { "type": "pattern_absent", "pattern": "createOsmBuildingsAsync|fromIonAssetId", "description": "Avoids entitlement-backed OSM Buildings" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Uses URL-backed 3D Tiles factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public CesiumGS sample tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ClippingPlane(?:Collection)?",
+      "description": "Uses ClippingPlane API"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "edgeWidth",
+      "description": "Sets edgeWidth on clipping"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "edgeColor",
+      "description": "Sets edgeColor on clipping"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createOsmBuildingsAsync|fromIonAssetId",
+      "description": "Avoids entitlement-backed OSM Buildings"
+    }
   ],
   "screenshots": [
-    { "timing": "after_tiles_load", "delay_ms": 9000, "description": "Public sample tileset clipped by a yellow-edged plane" }
+    {
+      "timing": "after_tiles_load",
+      "delay_ms": 9000,
+      "description": "Public sample tileset clipped by a yellow-edged plane"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Clipping Planes"]
+  "target_skill_sections": [
+    "Clipping Planes"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

@@ -60,7 +60,8 @@
     "source": "optimization/scenarios",
     "source_name": "grand-canyon-south-rim",
     "source_scenario_id": "eval-006",
-    "visual_expectations": "A dramatic public no-token view from the south rim looking north across the Grand Canyon. The screenshot should have visible canyon relief cues such as rim walls, a river line, or procedural terrain displacement rather than a flat pale basemap."
+    "visual_expectations": "A dramatic public no-token view from the south rim looking north across the Grand Canyon. The screenshot should have visible canyon relief cues such as rim walls, a river line, or procedural terrain displacement rather than a flat pale basemap. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

@@ -85,7 +85,8 @@
     "source": "optimization/scenarios",
     "source_name": "boundingsphere-viz",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A regional view of the southwestern US with a large semi-transparent yellow sphere visualization (with outlined edge) centered roughly over Arizona/New Mexico, enclosing 5 small cyan dots at the listed cities. The sphere should be clearly visible against the terrain."
+    "visual_expectations": "A regional view of the southwestern US with a large semi-transparent yellow sphere visualization (with outlined edge) centered roughly over Arizona/New Mexico, enclosing 5 small cyan dots at the listed cities. The sphere should be clearly visible against the terrain. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

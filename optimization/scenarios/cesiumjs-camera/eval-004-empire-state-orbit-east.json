@@ -5,25 +5,58 @@
   "perspective": "orbital view from east",
   "difficulty": "medium",
   "description": "Lock camera onto the Empire State Building and view from the east. Tests lookAt with heading=270 (facing west = camera is east of target).",
-  "prompt": "Lock the camera onto the Empire State Building (40.7484 N, 73.9857 W) using lookAt. Position the camera to the east of the building, looking west toward it, at about 800 meters distance and a slight downward angle of 25 degrees. The Empire State Building should be centered in the view.",
+  "prompt": "Lock the camera onto the Empire State Building (40.7484 N, 73.9857 W) using lookAt. Position the camera to the east of the building, looking west toward it, at about 800 meters distance and a slight downward angle of 25 degrees. The Empire State Building should be centered in the view. Because public OSM tiles do not provide inspectable skyscraper geometry, add a visible Empire State Building surrogate at the coordinates, such as a 380 m gold or white tower/box/cylinder with a clear label. Frame the surrogate as the visual subject, not just the Midtown map label.",
   "expected_behaviors": [
     "Uses lookAt with the building's coordinates",
     "Heading ~270 degrees (facing west = camera east of target)",
     "Pitch ~-25 degrees",
     "Range ~800m",
-    "Longitude must be negative (-73.9857)"
+    "Longitude must be negative (-73.9857)",
+    "Adds a visible public-eval Empire State Building tower surrogate"
   ],
-  "visual_expectations": "The Empire State Building area viewed from the east, looking westward across Midtown Manhattan. The urban grid of NYC should be visible with the building location centered.",
+  "visual_expectations": "The Empire State Building area viewed from the east, looking westward across Midtown Manhattan. The urban grid of NYC should be visible with a centered, inspectable tower surrogate marking the Empire State Building location. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    {"type": "no_console_errors", "description": "No JS errors"},
-    {"type": "code_runs", "description": "No runtime exceptions"},
-    {"type": "pattern_present", "pattern": "lookAt", "description": "Uses lookAt"},
-    {"type": "pattern_present", "pattern": "HeadingPitchRange", "description": "Uses HeadingPitchRange"},
-    {"type": "pattern_present", "pattern": "-73\\.98", "description": "NYC longitude negative"},
-    {"type": "pattern_present", "pattern": "270|3\\*Math\\.PI/2|4\\.71", "description": "Heading ~270 degrees (east perspective)"}
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "lookAt",
+      "description": "Uses lookAt"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "HeadingPitchRange",
+      "description": "Uses HeadingPitchRange"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-73\\.98",
+      "description": "NYC longitude negative"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "270|3\\*Math\\.PI/2|4\\.71",
+      "description": "Heading ~270 degrees (east perspective)"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "entities\\.add|box|cylinder|polyline",
+      "description": "Adds a visible public-eval Empire State Building surrogate"
+    }
   ],
   "screenshots": [
-    {"timing": "after_load", "delay_ms": 5000, "description": "Empire State Building from east, looking west"}
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Empire State Building from east, looking west"
+    }
   ],
-  "regression_critical": false
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
 }

@@ -78,14 +78,15 @@
       "Calls handler.setInputAction with a callback and ScreenSpaceEventType.LEFT_CLICK",
       "Callback invokes viewer.scene.pick(event.position)",
       "Callback console.logs the picked entity's id.name when a hit occurs",
-      "Frames the camera over the US west coast (around 38 N, -122 W) at ~1-3 million m altitude"
+      "Frames the camera over the US west coast (around 40-41 N, -121 W) at ~3-4 million m altitude or with a fitted rectangle"
     ],
     "landmark": "Three colored pins over US west coast",
     "perspective": "regional overview with three interactive pins",
     "source": "optimization/scenarios",
     "source_name": "click-logger-three-pins",
     "source_scenario_id": "eval-001",
-    "visual_expectations": "A west-coast camera view of the US with three distinct large coloured points clearly visible: cyan in the Pacific Northwest, magenta in central California, lime green in southern California. The points should form a roughly vertical line down the coast."
+    "visual_expectations": "A west-coast camera view of the US with three distinct large coloured points clearly visible: cyan in the Pacific Northwest, magenta in central California, lime green in southern California. The points should form a roughly vertical line down the coast. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
@@ -98,7 +99,7 @@
     ],
     "snapshot_before_and_after": false
   },
-  "prompt": "Place three large point entities at Seattle (47.6062, -122.3321), San Francisco (37.7749, -122.4194), and Los Angeles (34.0522, -118.2437). Give them names 'Seattle', 'San Francisco', and 'Los Angeles' and distinct colours (CYAN, MAGENTA, LIME) with pixelSize 25. Then construct a new ScreenSpaceEventHandler on viewer.scene.canvas and register a LEFT_CLICK input action that picks the scene at event.position and console.logs the picked entity's id.name when one was hit. Frame the camera over the US west coast (around 40 N, -122 W, 2,500,000 m altitude).",
+  "prompt": "Place three large point entities at Seattle (47.6062, -122.3321), San Francisco (37.7749, -122.4194), and Los Angeles (34.0522, -118.2437). Give them names 'Seattle', 'San Francisco', and 'Los Angeles' and distinct colours (CYAN, MAGENTA, LIME) with pixelSize 28 and a contrasting outline. Then construct a new ScreenSpaceEventHandler on viewer.scene.canvas and register a LEFT_CLICK input action that picks the scene at event.position and console.logs the picked entity's id.name when one was hit. Frame the camera over the US west coast with enough margin to include Seattle through Los Angeles, for example around 40.8 N, -121 W, 3,600,000 m altitude, or use a fitted rectangle.",
   "schema_version": 1,
   "skill": "cesiumjs-interaction",
   "timeout_ms": 5000

@@ -12,7 +12,7 @@
     "Does NOT try to add terrain (no globe means no terrain)",
     "Does NOT disable the skyBox unless asked (stars in space are expected)"
   ],
-  "visual_expectations": "A dark space scene with a star field visible. No Earth surface, no blue atmospheric glow around the limb. The view should be pure space \u2014 the camera can look in any direction and see stars. The Cesium default star skybox should be visible.",
+  "visual_expectations": "A dark space scene with a star field visible. No Earth surface, no blue atmospheric glow around the limb. The view should be pure space \u2014 the camera can look in any direction and see stars. The Cesium default star skybox should be visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -47,5 +47,6 @@
   ],
   "regression_critical": false,
   "notes": "Common failure: setting globe:false but forgetting skyAtmosphere:false (leaves a floating blue ring). Also: trying to add terrain when there's no globe, which silently fails or errors.",
-  "runner_mode": "global-js"
+  "runner_mode": "global-js",
+  "screenshot_mode": "cardinal_panorama"
 }

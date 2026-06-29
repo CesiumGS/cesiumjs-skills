@@ -77,7 +77,8 @@
     "source": "optimization/scenarios",
     "source_name": "resource-fetch-geojson-airports",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "A continental-US camera view with three distinctly visible orange points: one in the northeast (JFK), one on the southwest coast (LAX), and one north of LAX on the California coast (SFO). The three points should clearly form a triangle across the country."
+    "visual_expectations": "A continental-US camera view with three distinctly visible orange points: one in the northeast (JFK), one on the southwest coast (LAX), and one north of LAX on the California coast (SFO). The three points should clearly form a triangle across the country. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

@@ -10,7 +10,7 @@
     "Does not hardcode or reset the Ion token",
     "Configures a public base layer and assigns the viewer to window.viewer"
   ],
-  "visual_expectations": "A full-window 3D globe with NO UI chrome whatsoever. No timeline bar at bottom, no animation controls at bottom-left, no buttons in top-right corner, no search bar. Just the globe with terrain and imagery.",
+  "visual_expectations": "A full-window 3D globe with NO UI chrome whatsoever. No timeline bar at bottom, no animation controls at bottom-left, no buttons in top-right corner, no search bar. Just the globe with terrain and imagery. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -75,5 +75,6 @@
   ],
   "regression_critical": true,
   "notes": "Common failure: forgetting one or two widget options (selectionIndicator, navigationHelpButton are often missed). Also tests whether the LLM understands that baseLayerPicker must be false if using a custom baseLayer.",
-  "runner_mode": "global-js"
+  "runner_mode": "global-js",
+  "screenshot_mode": "cardinal_panorama"
 }

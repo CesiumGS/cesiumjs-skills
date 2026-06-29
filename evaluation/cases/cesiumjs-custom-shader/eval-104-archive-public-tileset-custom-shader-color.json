@@ -92,7 +92,8 @@
     "source": "optimization/scenarios",
     "source_name": "public-tileset-custom-shader-color",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "The public sample 3D Tiles geometry should render with a clear cyan custom-shader tint, centered and large enough to inspect."
+    "visual_expectations": "The public sample 3D Tiles geometry should render with a clear cyan custom-shader tint, centered and large enough to inspect. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

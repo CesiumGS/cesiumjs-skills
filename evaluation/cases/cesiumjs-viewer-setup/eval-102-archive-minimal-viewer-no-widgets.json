@@ -106,7 +106,8 @@
     "source": "optimization/scenarios",
     "source_name": "minimal-viewer-no-widgets",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "A full-window 3D globe with NO UI chrome whatsoever. No timeline bar at bottom, no animation controls at bottom-left, no buttons in top-right corner, no search bar. Just the globe with terrain and imagery."
+    "visual_expectations": "A full-window 3D globe with NO UI chrome whatsoever. No timeline bar at bottom, no animation controls at bottom-left, no buttons in top-right corner, no search bar. Just the globe with terrain and imagery. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

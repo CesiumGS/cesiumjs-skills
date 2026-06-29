@@ -5,7 +5,7 @@
   "perspective": "downtown overview with batched cylinder column field",
   "difficulty": "hard",
   "description": "Batch 100 cylinder GeometryInstances into a single Primitive over a 10x10 grid centred on Times Square. Each cylinder is 200 m tall with varying colours assigned via per-instance ColorGeometryInstanceAttribute. Tests Primitive + GeometryInstance batching, per-instance attributes, and PerInstanceColorAppearance.",
-  "prompt": "Create a 10x10 grid of CylinderGeometry instances (100 total) centred on Times Square (-73.9857 longitude, 40.7580 latitude). Each cylinder should be length 200 m, topRadius 8, bottomRadius 8, with positions in a 50 m grid spacing. Each instance must have a per-instance Color attribute via ColorGeometryInstanceAttribute.fromColor(Color.fromRandom({alpha: 1.0})) so the field is rainbow-coloured. Wrap them into a single new Primitive with appearance: new PerInstanceColorAppearance({ flat: true }) and add it to viewer.scene.primitives. For each grid cell, build the modelMatrix via Matrix4.multiply(Transforms.eastNorthUpToFixedFrame(centerCart, undefined, new Matrix4()), Matrix4.fromTranslation(new Cartesian3(xOffset, yOffset, 100), new Matrix4()), new Matrix4()). Frame the camera oblique looking down at the grid from -73.985, 40.756, 800 m altitude.",
+  "prompt": "Create a 10x10 grid of CylinderGeometry instances (100 total) centred on Times Square (-73.9857 longitude, 40.7580 latitude). Each cylinder should be length 200 m, topRadius 8, bottomRadius 8, with positions in a 50 m grid spacing. Each instance must have a per-instance Color attribute via ColorGeometryInstanceAttribute.fromColor(Color.fromRandom({alpha: 1.0})) so the field is rainbow-coloured. Wrap them into a single new Primitive with appearance: new PerInstanceColorAppearance({ flat: true }) and add it to viewer.scene.primitives. For each grid cell, build the modelMatrix via Matrix4.multiply(Transforms.eastNorthUpToFixedFrame(centerCart, undefined, new Matrix4()), Matrix4.fromTranslation(new Cartesian3(xOffset, yOffset, 100), new Matrix4()), new Matrix4()). Frame the camera oblique looking down at the grid, but keep the full 10x10 field centered and comfortably inside the frame. A camera around -73.985, 40.756, 1000-1400 m altitude or a camera.lookAt of the grid center with range about 1100-1400 m is preferable to a tight frame that clips the bottom rows.",
   "expected_behaviors": [
     "Builds 100 GeometryInstance objects with CylinderGeometry",
     "Each instance has ColorGeometryInstanceAttribute.fromColor as a per-instance attribute",
@@ -14,9 +14,9 @@
     "Uses Transforms.eastNorthUpToFixedFrame for the grid anchor",
     "Adds the Primitive to viewer.scene.primitives",
     "Grid is centred at Times Square (around -73.986, 40.758)",
-    "Frames the camera oblique with the grid clearly visible"
+    "Frames the camera oblique with the full grid clearly visible and not clipped"
   ],
-  "visual_expectations": "An oblique camera view over Times Square showing a dense grid of ~100 short, colourful vertical cylinders arranged in a square pattern. The cylinders should be clearly distinct, with varied colours (rainbow), each rising vertically.",
+  "visual_expectations": "An oblique camera view over Times Square showing the full dense grid of ~100 short, colourful vertical cylinders arranged in a square pattern. The cylinders should be clearly distinct, with varied colours (rainbow), each rising vertically, and the grid should not be clipped at the bottom of the screenshot. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -79,5 +79,6 @@
     "Primitive",
     "Batching Multiple Instances",
     "Appearances (7 Types)"
-  ]
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

@@ -102,7 +102,8 @@
     "source": "optimization/scenarios",
     "source_name": "clock-flythrough-sydney",
     "source_scenario_id": "eval-003",
-    "visual_expectations": "A mid-altitude view of Sydney Harbour with the Opera House's distinctive sail-shaped roofs visible, the Sydney Harbour Bridge, or both. The camera should be at an oblique angle (pitched downward) showing the harbour clearly framed."
+    "visual_expectations": "A mid-altitude view of Sydney Harbour with the Opera House's distinctive sail-shaped roofs visible, the Sydney Harbour Bridge, or both. The camera should be at an oblique angle (pitched downward) showing the harbour clearly framed. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

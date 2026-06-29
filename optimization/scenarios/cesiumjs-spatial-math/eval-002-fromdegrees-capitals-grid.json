@@ -15,7 +15,7 @@
     "Uses pixelSize >= 20 and a distinctive colour (LIME) with an outline",
     "Frames the camera for a global view that includes Washington through Tokyo"
   ],
-  "visual_expectations": "A global Earth view with 6 distinct large lime-green points (with black outlines) visible at the listed capitals, roughly forming a band across the Northern Hemisphere from North America (Washington DC) eastward through Europe (London, Paris, Moscow) to East Asia (Beijing, Tokyo).",
+  "visual_expectations": "A global Earth view with 6 distinct large lime-green points (with black outlines) visible at the listed capitals, roughly forming a band across the Northern Hemisphere from North America (Washington DC) eastward through Europe (London, Paris, Moscow) to East Asia (Beijing, Tokyo). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -77,5 +77,6 @@
   "target_skill_sections": [
     "Cartesian3 -- Positions and Vectors",
     "Common Patterns"
-  ]
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

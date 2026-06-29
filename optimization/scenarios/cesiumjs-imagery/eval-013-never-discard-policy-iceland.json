@@ -15,16 +15,39 @@
     "Uses NeverTileDiscardPolicy",
     "Frames Iceland"
   ],
-  "visual_expectations": "A visible map of Iceland. The discard policy is not directly visible, but the imagery should render successfully.",
+  "visual_expectations": "A visible map of Iceland. The discard policy is not directly visible, but the imagery should render successfully. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "NeverTileDiscardPolicy", "description": "Uses explicit tile discard policy" },
-    { "type": "pattern_present", "pattern": "UrlTemplateImageryProvider", "description": "Uses URL template provider" },
-    { "type": "pattern_present", "pattern": "-19|64\\.", "description": "Targets Iceland" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "NeverTileDiscardPolicy",
+      "description": "Uses explicit tile discard policy"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "UrlTemplateImageryProvider",
+      "description": "Uses URL template provider"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-19|64\\.",
+      "description": "Targets Iceland"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 6000, "description": "Iceland imagery with explicit discard policy configuration" }
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Iceland imagery with explicit discard policy configuration"
+    }
   ],
-  "regression_critical": false
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
 }

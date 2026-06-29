@@ -102,7 +102,8 @@
     "source": "optimization/scenarios",
     "source_name": "fog-denali-ridge",
     "source_scenario_id": "eval-003",
-    "visual_expectations": "A near-mountain view in Alaska with snow-covered ridgelines clearly visible in the foreground (likely Denali's silhouette) and distant terrain fading smoothly into atmospheric fog. The fog should be perceptible as a gradient \u2014 distant peaks softer and washed-out compared to the sharply lit foreground."
+    "visual_expectations": "A near-mountain view in Alaska with snow-covered ridgelines clearly visible in the foreground (likely Denali's silhouette) and distant terrain fading smoothly into atmospheric fog. The fog should be perceptible as a gradient \u2014 distant peaks softer and washed-out compared to the sharply lit foreground. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

@@ -15,7 +15,7 @@
     "Calls viewer.scene.requestRender() after adding the entity OR uses the entity API which auto-triggers renders",
     "May reduce msaaSamples for additional power savings"
   ],
-  "visual_expectations": "A 3D globe with a visible point/marker entity near San Francisco (37.77N, 122.42W). Minimal UI chrome. The scene should be static (not continuously animating).",
+  "visual_expectations": "A 3D globe with a visible point/marker entity near San Francisco (37.77N, 122.42W). Minimal UI chrome. The scene should be static (not continuously animating). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -70,5 +70,6 @@
   ],
   "regression_critical": false,
   "notes": "This eval tests the intersection of the viewer-setup skill with the entity skill. The viewer-setup skill should provide enough context for the LLM to correctly set up requestRenderMode, but entity creation technically belongs to cesiumjs-entities. A good viewer-setup skill helps the LLM get the rendering mode right even when combining domains. Common failure: enabling requestRenderMode but not understanding that entities auto-trigger renders (so requestRender() is optional with the Entity API).",
-  "runner_mode": "global-js"
+  "runner_mode": "global-js",
+  "screenshot_mode": "cardinal_panorama"
 }

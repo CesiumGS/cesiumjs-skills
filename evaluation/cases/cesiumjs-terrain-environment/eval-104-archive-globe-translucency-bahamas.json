@@ -66,15 +66,17 @@
     "expected_behaviors": [
       "Sets viewer.scene.globe.translucency.enabled = true",
       "Configures frontFaceAlphaByDistance (or front face alpha) with NearFarScalar or numeric",
-      "Frames over the Bahamas (around 24.5 N, -77.5 W) at 1-3 million m altitude",
-      "Camera pitch is moderately downward (between -30 and -70 degrees)"
+      "Uses public satellite imagery with visible Bahamas shallow-bank contrast, not only OSM labels",
+      "Frames over the Bahamas (around 24.4 N, -77.8 W) close enough for turquoise banks and dark channels to fill the screenshot",
+      "Camera is close and steeply downward enough that the Bahamas banks, not the globe back face, fill the screenshot"
     ],
     "landmark": "Translucent globe revealing seafloor over the Bahamas",
     "perspective": "ocean translucency demonstration over coral reefs",
     "source": "optimization/scenarios",
     "source_name": "globe-translucency-bahamas",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A regional view of the Bahamas with the ocean visibly translucent \u2014 the iconic bright turquoise shallows of the Great Bahama Bank should be clearly visible AND lighter than the surrounding deep-water dark zones, demonstrating that the surface is semi-transparent."
+    "visual_expectations": "A regional satellite view of the Bahamas with the iconic bright turquoise shallows of the Great Bahama Bank clearly visible and lighter than the surrounding deep-water dark zones. The screenshot should read as an ocean/seafloor translucency demo, not as a far-away labeled map of North America. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
@@ -87,7 +89,7 @@
     ],
     "snapshot_before_and_after": false
   },
-  "prompt": "Configure globe translucency: `viewer.scene.globe.translucency.enabled = true; viewer.scene.globe.translucency.frontFaceAlphaByDistance = new Cesium.NearFarScalar(400000, 0.5, 4000000, 1.0); viewer.scene.globe.translucency.backFaceAlphaByDistance = new Cesium.NearFarScalar(400000, 0.5, 4000000, 1.0);`. Set `viewer.scene.globe.undergroundColor = Cesium.Color.BLACK.withAlpha(0.0)` to clear underground colour, and `viewer.scene.skyAtmosphere.show = true`. Frame the Bahamas: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-77.5, 24.5, 1500000), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-50), roll: 0 } }) \u2014 at 1.5M m altitude looking down with moderate pitch.",
+  "prompt": "Use a public satellite imagery base layer that shows Bahamas reef and shallow-bank color contrast, such as ArcGIS World Imagery via ArcGisMapServerImageryProvider, rather than OpenStreetMap labels. Configure globe translucency without showing the opposite side of Earth through the globe: `viewer.scene.globe.translucency.enabled = true; viewer.scene.globe.translucency.frontFaceAlphaByDistance = new Cesium.NearFarScalar(400000, 0.85, 4000000, 1.0); viewer.scene.globe.translucency.backFaceAlphaByDistance = new Cesium.NearFarScalar(400000, 0.0, 4000000, 0.0);`. Set `viewer.scene.globe.undergroundColor = Cesium.Color.BLACK.withAlpha(0.0)` to clear underground colour, and `viewer.scene.skyAtmosphere.show = true`. Frame closer over the Bahamas banks: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-77.8, 24.4, 300000), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-85), roll: 0 } }) or an equivalent view where turquoise banks and dark channels fill the frame.",
   "schema_version": 1,
   "skill": "cesiumjs-terrain-environment",
   "timeout_ms": 5000

@@ -85,14 +85,16 @@
       "fragmentShaderText defines fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) and multiplies material.diffuse by u_tint",
       "Positions the model via modelMatrix from Transforms.eastNorthUpToFixedFrame at roughly -120 long, 35 lat, 30000 m altitude",
       "Frames the camera so the aircraft is clearly the dominant visible element",
-      "Adds the model to viewer.scene.primitives"
+      "Adds the model to viewer.scene.primitives",
+      "Uses minimumPixelSize and explicit camera framing so the aircraft is visible in the screenshot"
     ],
     "landmark": "CesiumAir sample model over the Pacific",
     "perspective": "framed model with shader-tinted body",
     "source": "optimization/scenarios",
     "source_name": "tint-uniform-aircraft",
     "source_scenario_id": "eval-001",
-    "visual_expectations": "The Cesium Air aircraft visible against ocean or sky, with its fuselage and wings visibly tinted toward magenta/pink rather than the default white/blue. The aircraft silhouette should be recognizable."
+    "visual_expectations": "The Cesium Air aircraft centered and large against ocean or sky, with its fuselage and wings visibly tinted toward magenta/pink rather than the default white/blue. The aircraft silhouette should be recognizable and not clipped or off-screen. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
@@ -105,7 +107,7 @@
     ],
     "snapshot_before_and_after": false
   },
-  "prompt": "Load the public Cesium Air sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb using Model.fromGltfAsync. Apply a CustomShader with a VEC3 uniform u_tint set to (1.0, 0.2, 0.9) (magenta) and fragmentShaderText that multiplies material.diffuse by u_tint. Position the model at -120.0 longitude, 35.0 latitude, 30000 m altitude with a Transforms.eastNorthUpToFixedFrame model matrix. Frame the camera so the aircraft fills most of the screen against the ocean.",
+  "prompt": "Load the public Cesium Air sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb using Model.fromGltfAsync. Apply a CustomShader with a VEC3 uniform u_tint set to (1.0, 0.2, 0.9) (magenta) and fragmentShaderText that multiplies material.diffuse by u_tint. Position the model at -120.0 longitude, 35.0 latitude, 30000 m altitude with a Transforms.eastNorthUpToFixedFrame model matrix. Set a robust visual scale such as scale 30, minimumPixelSize 350, maximumScale 30000, and a subtle white silhouette so the aircraft is visible after load. Frame a known target point explicitly, waiting for the model to be renderable if needed, so the aircraft fills most of the screen against the ocean instead of rendering as an empty ocean/sky frame.",
   "schema_version": 1,
   "skill": "cesiumjs-custom-shader",
   "timeout_ms": 5000

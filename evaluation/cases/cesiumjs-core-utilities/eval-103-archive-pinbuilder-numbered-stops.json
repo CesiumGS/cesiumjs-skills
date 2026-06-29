@@ -73,7 +73,7 @@
     }
   ],
   "critical": true,
-  "description": "Use PinBuilder to create three numbered pins (1, 2, 3) coloured ROYALBLUE, FORESTGREEN, and CRIMSON at three Paris landmarks: Eiffel Tower (2.2945, 48.8584), Louvre (2.3376, 48.8606), Notre-Dame (2.3499, 48.8530). Each pin should be a billboard entity anchored at its position with VerticalOrigin.BOTTOM. Frame Paris from about 5000 m altitude.",
+  "description": "Use PinBuilder to create three numbered pins (1, 2, 3) coloured ROYALBLUE, FORESTGREEN, and CRIMSON at three Paris landmarks: Eiffel Tower (2.2945, 48.8584), Louvre (2.3376, 48.8606), Notre-Dame (2.3499, 48.8530). Each pin should be a billboard entity anchored at its position with VerticalOrigin.BOTTOM. Frame Paris so all three pins are comfortably visible.",
   "id": "eval-103",
   "name": "archive-pinbuilder-numbered-stops",
   "notes": "Imported from optimization/scenarios/cesiumjs-core-utilities/eval-003. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
@@ -81,18 +81,19 @@
     "difficulty": "easy",
     "expected_behaviors": [
       "Constructs a new PinBuilder()",
-      "Calls pinBuilder.fromText('1', Color.ROYALBLUE, 48) and similar for '2' and '3'",
+      "Calls pinBuilder.fromText('1', Color.ROYALBLUE, size) and similar for '2' and '3' with size >= 56",
       "Uses VerticalOrigin.BOTTOM for billboard anchoring",
       "Adds three viewer.entities with billboard graphics, one per pin",
       "Coordinates match the three landmarks (approximately)",
-      "Frames the camera over central Paris (around 48.85 N, 2.34 E) at 3000-8000 m altitude"
+      "Frames the camera over central Paris with all three pins comfortably visible"
     ],
     "landmark": "Paris \u2014 three iconic landmarks",
     "perspective": "city-scale overview with numbered pins",
     "source": "optimization/scenarios",
     "source_name": "pinbuilder-numbered-stops",
     "source_scenario_id": "eval-003",
-    "visual_expectations": "A top-down or oblique view of central Paris with three numbered pins visible: '1' in royal blue at the Eiffel Tower (lower-left), '2' in forest green at the Louvre (center), '3' in crimson at Notre-Dame (slightly east). The pins should be visually distinct and the numbers legible."
+    "visual_expectations": "A top-down or oblique view of central Paris with all three numbered pins visible and not clipped: '1' in royal blue at the Eiffel Tower (west/southwest), '2' in forest green at the Louvre, '3' in crimson at Notre-Dame (east). The pins should be visually distinct and the numbers legible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
@@ -105,7 +106,7 @@
     ],
     "snapshot_before_and_after": false
   },
-  "prompt": "Create three numbered PinBuilder pins (text '1', '2', '3') for Paris landmarks. Pin 1 at the Eiffel Tower (2.2945, 48.8584) in royal blue, pin 2 at the Louvre (2.3376, 48.8606) in forest green, pin 3 at Notre-Dame de Paris (2.3499, 48.8530) in crimson. All pins should be 48 pixels tall, anchored as billboards with VerticalOrigin.BOTTOM. Frame the camera over central Paris at about 48.857 N, 2.343 E from 5000 m altitude looking straight down.",
+  "prompt": "Create three numbered PinBuilder pins (text '1', '2', '3') for Paris landmarks. Pin 1 at the Eiffel Tower (2.2945, 48.8584) in royal blue, pin 2 at the Louvre (2.3376, 48.8606) in forest green, pin 3 at Notre-Dame de Paris (2.3499, 48.8530) in crimson. All pins should be at least 56 pixels tall, ideally 64 pixels, anchored as billboards with VerticalOrigin.BOTTOM. Frame the camera over central Paris so all three pins are comfortably inside the viewport; use a fitted Rectangle.fromDegrees(...) or a top-down camera around 48.857 N, 2.325 E from roughly 8000-10000 m altitude.",
   "schema_version": 1,
   "skill": "cesiumjs-core-utilities",
   "timeout_ms": 5000

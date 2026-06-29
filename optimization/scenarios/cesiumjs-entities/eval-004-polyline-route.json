@@ -12,18 +12,49 @@
     "Adds point + label entities at each city",
     "All longitudes are negative (US cities)"
   ],
-  "visual_expectations": "A bright red line connecting LA to Denver to Chicago to NYC across the US, following terrain. Four large labeled city markers should be visible at each endpoint.",
+  "visual_expectations": "A bright red line connecting LA to Denver to Chicago to NYC across the US, following terrain. Four large labeled city markers should be visible at each endpoint. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    {"type": "no_console_errors", "description": "No JS errors"},
-    {"type": "code_runs", "description": "No runtime exceptions"},
-    {"type": "pattern_present", "pattern": "polyline:", "description": "Polyline graphics defined"},
-    {"type": "pattern_present", "pattern": "clampToGround.*true|clampToGround:\\s*true", "description": "Clamped to ground"},
-    {"type": "pattern_present", "pattern": "-118", "description": "LA longitude"},
-    {"type": "pattern_present", "pattern": "-74", "description": "NYC longitude"},
-    {"type": "pattern_present", "pattern": "label:", "description": "City labels present"}
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "polyline:",
+      "description": "Polyline graphics defined"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "clampToGround.*true|clampToGround:\\s*true",
+      "description": "Clamped to ground"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-118",
+      "description": "LA longitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-74",
+      "description": "NYC longitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "label:",
+      "description": "City labels present"
+    }
   ],
   "screenshots": [
-    {"timing": "after_load", "delay_ms": 6000, "description": "Red line across US with city labels"}
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Red line across US with city labels"
+    }
   ],
-  "regression_critical": false
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
 }

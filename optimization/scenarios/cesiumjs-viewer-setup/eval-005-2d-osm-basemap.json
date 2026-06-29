@@ -11,7 +11,7 @@
     "Uses the correct OSM tile URL",
     "Uses the global Cesium namespace rather than ES module imports"
   ],
-  "visual_expectations": "A flat, top-down 2D map showing OpenStreetMap tiles \u2014 the characteristic OSM cartographic style with road labels, building outlines, and pastel colors. No 3D globe curvature. The view should be zoomable and pannable as a flat map.",
+  "visual_expectations": "A flat, top-down 2D map showing OpenStreetMap tiles \u2014 the characteristic OSM cartographic style with road labels, building outlines, and pastel colors. No 3D globe curvature. The view should be zoomable and pannable as a flat map. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -51,5 +51,6 @@
   ],
   "regression_critical": false,
   "notes": "The baseLayerPicker/baseLayer dependency is a common source of runtime errors. If baseLayerPicker is true (default) and a custom baseLayer is provided, CesiumJS throws. The skill must make this dependency clear.",
-  "runner_mode": "global-js"
+  "runner_mode": "global-js",
+  "screenshot_mode": "cardinal_panorama"
 }

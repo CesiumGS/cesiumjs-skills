@@ -16,22 +16,69 @@
     "Adds a label entity at or near the midpoint showing the distance in kilometres",
     "Frames the camera over the North Atlantic so both endpoints and the polyline are visible"
   ],
-  "visual_expectations": "A globe view showing a clear yellow great-circle polyline arcing from New York City to Paris, with a distance label visible near the midpoint reading approximately 'Distance: 5837 km'. The polyline should curve northward over the Atlantic (great-circle path), not run flat east-west.",
+  "visual_expectations": "A globe view showing a clear yellow great-circle polyline arcing from New York City to Paris, with a distance label visible near the midpoint reading approximately 'Distance: 5837 km'. The polyline should curve northward over the Atlantic (great-circle path), not run flat east-west. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "EllipsoidGeodesic", "description": "Uses EllipsoidGeodesic" },
-    { "type": "pattern_present", "pattern": "surfaceDistance", "description": "Reads surfaceDistance" },
-    { "type": "pattern_present", "pattern": "interpolateUsingFraction", "description": "Samples intermediate points" },
-    { "type": "pattern_present", "pattern": "Cartographic", "description": "Uses Cartographic" },
-    { "type": "pattern_present", "pattern": "polyline", "description": "Adds a polyline entity" },
-    { "type": "pattern_present", "pattern": "label", "description": "Adds a label entity" },
-    { "type": "pattern_present", "pattern": "(?:-74\\.00|40\\.71)", "description": "References NYC coordinates" },
-    { "type": "pattern_present", "pattern": "(?:2\\.35|48\\.85)", "description": "References Paris coordinates" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "EllipsoidGeodesic",
+      "description": "Uses EllipsoidGeodesic"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "surfaceDistance",
+      "description": "Reads surfaceDistance"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "interpolateUsingFraction",
+      "description": "Samples intermediate points"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cartographic",
+      "description": "Uses Cartographic"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "polyline",
+      "description": "Adds a polyline entity"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "label",
+      "description": "Adds a label entity"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:-74\\.00|40\\.71)",
+      "description": "References NYC coordinates"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:2\\.35|48\\.85)",
+      "description": "References Paris coordinates"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 5500, "description": "Great-circle arc between NYC and Paris with distance label" }
+    {
+      "timing": "after_load",
+      "delay_ms": 5500,
+      "description": "Great-circle arc between NYC and Paris with distance label"
+    }
   ],
   "regression_critical": true,
-  "target_skill_sections": ["Geodesic Distance", "Cartesian3 -- Positions and Vectors", "Cartographic -- Geographic Coordinates"]
+  "target_skill_sections": [
+    "Geodesic Distance",
+    "Cartesian3 -- Positions and Vectors",
+    "Cartographic -- Geographic Coordinates"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

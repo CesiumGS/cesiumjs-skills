@@ -60,7 +60,8 @@
     "source": "optimization/scenarios",
     "source_name": "space-scene-no-globe",
     "source_scenario_id": "eval-006",
-    "visual_expectations": "A dark space scene with a star field visible. No Earth surface, no blue atmospheric glow around the limb. The view should be pure space \u2014 the camera can look in any direction and see stars. The Cesium default star skybox should be visible."
+    "visual_expectations": "A dark space scene with a star field visible. No Earth surface, no blue atmospheric glow around the limb. The view should be pure space \u2014 the camera can look in any direction and see stars. The Cesium default star skybox should be visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

@@ -58,7 +58,8 @@
     "source": "optimization/scenarios",
     "source_name": "single-tile-alert-florida",
     "source_scenario_id": "eval-010",
-    "visual_expectations": "Florida should show a visible tinted overlay region stretched across the peninsula, making the single-tile overlay obvious against the normal base imagery."
+    "visual_expectations": "Florida should show a visible tinted overlay region stretched across the peninsula, making the single-tile overlay obvious against the normal base imagery. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

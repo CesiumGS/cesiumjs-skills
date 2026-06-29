@@ -87,7 +87,8 @@
     "source": "optimization/scenarios",
     "source_name": "czml-satellite-orbit",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A global view of Earth with a visible coloured orbital path arc curving around the planet, with a satellite billboard somewhere along the arc indicating its current position."
+    "visual_expectations": "A global view of Earth with a visible coloured orbital path arc curving around the planet, with a satellite billboard somewhere along the arc indicating its current position. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

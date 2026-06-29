@@ -102,7 +102,8 @@
     "source": "optimization/scenarios",
     "source_name": "sampled-flight-jfk-lax",
     "source_scenario_id": "eval-001",
-    "visual_expectations": "A continental US camera view with an animated entity (billboard) positioned roughly over the central US (Colorado/Kansas), connected to a visible yellow flight path arc spanning from the east coast (JFK) to the southwest coast (LAX). The path should be a visible polyline indicating an arc from northeast to southwest."
+    "visual_expectations": "A continental US camera view with an animated entity (billboard) positioned roughly over the central US (Colorado/Kansas), connected to a visible yellow flight path arc spanning from the east coast (JFK) to the southwest coast (LAX). The path should be a visible polyline indicating an arc from northeast to southwest. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

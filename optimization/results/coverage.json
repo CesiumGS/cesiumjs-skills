@@ -19,6 +19,16 @@
           ]
         },
         {
+          "heading": "Mapbox Vector Tiles as Runtime 3D Tiles (Experimental, 1.142+)",
+          "scenarios": [
+            "cesiumjs-3d-tiles/eval-001",
+            "cesiumjs-3d-tiles/eval-002",
+            "cesiumjs-3d-tiles/eval-003",
+            "cesiumjs-3d-tiles/eval-004",
+            "cesiumjs-3d-tiles/eval-005"
+          ]
+        },
+        {
           "heading": "Tileset Events",
           "scenarios": [
             "cesiumjs-3d-tiles/eval-001",
@@ -48,6 +58,12 @@
             "cesiumjs-3d-tiles/eval-002",
             "cesiumjs-3d-tiles/eval-003",
             "cesiumjs-3d-tiles/eval-004"
+          ]
+        },
+        {
+          "heading": "Edge Display Mode (Experimental, 1.142+)",
+          "scenarios": [
+            "cesiumjs-3d-tiles/eval-003"
           ]
         },
         {
@@ -223,11 +239,27 @@
           "scenarios": []
         },
         {
+          "api": "EdgeDisplayMode.EDGES_ONLY",
+          "scenarios": []
+        },
+        {
+          "api": "EdgeDisplayMode.SURFACES_AND_EDGES",
+          "scenarios": []
+        },
+        {
+          "api": "EdgeDisplayMode.SURFACES_ONLY",
+          "scenarios": []
+        },
+        {
           "api": "Ellipsoid.WGS84.cartographicToCartesian",
           "scenarios": []
         },
         {
           "api": "I3SDataProvider.fromUrl",
+          "scenarios": []
+        },
+        {
+          "api": "MVTDataProvider.fromUrl",
           "scenarios": []
         },
         {
@@ -237,6 +269,14 @@
         {
           "api": "Rectangle.center",
           "scenarios": []
+        },
+        {
+          "api": "Rectangle.fromDegrees",
+          "scenarios": [
+            "cesiumjs-camera/eval-012",
+            "cesiumjs-imagery/eval-007",
+            "cesiumjs-imagery/eval-010"
+          ]
         },
         {
           "api": "ScreenSpaceEventType.LEFT_CLICK",
@@ -334,8 +374,12 @@
         "Cesium3DTileset.fromIonAssetId",
         "ClassificationType.BOTH",
         "Color.fromRandom",
+        "EdgeDisplayMode.EDGES_ONLY",
+        "EdgeDisplayMode.SURFACES_AND_EDGES",
+        "EdgeDisplayMode.SURFACES_ONLY",
         "Ellipsoid.WGS84.cartographicToCartesian",
         "I3SDataProvider.fromUrl",
+        "MVTDataProvider.fromUrl",
         "Matrix4.fromTranslation",
         "Rectangle.center",
         "viewer.extend",
@@ -1355,7 +1399,7 @@
           "scenarios": []
         },
         {
-          "heading": "CesiumJS 1.139 version notes",
+          "heading": "CesiumJS 1.139-1.142 version notes",
           "scenarios": []
         },
         {
@@ -1439,7 +1483,7 @@
         "FeatureIds",
         "Metadata",
         "Common patterns",
-        "CesiumJS 1.139 version notes",
+        "CesiumJS 1.139-1.142 version notes",
         "Gotchas & pitfalls",
         "Performance tips",
         "See also"
@@ -1454,6 +1498,13 @@
         {
           "heading": "Architecture",
           "scenarios": []
+        },
+        {
+          "heading": "Coordinate & Framing Rules (Read First)",
+          "scenarios": [
+            "cesiumjs-entities/eval-001",
+            "cesiumjs-entities/eval-002"
+          ]
         },
         {
           "heading": "Entity Basics",
@@ -2029,6 +2080,10 @@
           ]
         },
         {
+          "heading": "Framing Reference for Named Places",
+          "scenarios": []
+        },
+        {
           "heading": "ImageryLayerCollection API",
           "scenarios": []
         },
@@ -2061,6 +2116,22 @@
             "cesiumjs-imagery/eval-010",
             "cesiumjs-imagery/eval-011",
             "cesiumjs-imagery/eval-012",
+            "cesiumjs-imagery/eval-014",
+            "cesiumjs-imagery/eval-015"
+          ]
+        },
+        {
+          "heading": "Choosing a Visible Light Basemap",
+          "scenarios": [
+            "cesiumjs-imagery/eval-001",
+            "cesiumjs-imagery/eval-003",
+            "cesiumjs-imagery/eval-005",
+            "cesiumjs-imagery/eval-006",
+            "cesiumjs-imagery/eval-007",
+            "cesiumjs-imagery/eval-008",
+            "cesiumjs-imagery/eval-011",
+            "cesiumjs-imagery/eval-012",
+            "cesiumjs-imagery/eval-013",
             "cesiumjs-imagery/eval-014",
             "cesiumjs-imagery/eval-015"
           ]
@@ -2237,6 +2308,10 @@
           "scenarios": [
             "cesiumjs-imagery/eval-015"
           ]
+        },
+        {
+          "heading": "Common Framing Pitfalls",
+          "scenarios": []
         },
         {
           "heading": "See Also",
@@ -2447,10 +2522,12 @@
         }
       ],
       "uncovered_sections": [
+        "Framing Reference for Named Places",
         "ImageryLayerCollection API",
         "BingMapsImageryProvider",
         "MapboxStyleImageryProvider",
         "Debugging Providers",
+        "Common Framing Pitfalls",
         "See Also"
       ],
       "uncovered_apis": [
@@ -2509,6 +2586,16 @@
         {
           "heading": "Picking Return Values",
           "scenarios": [
+            "cesiumjs-interaction/eval-005"
+          ]
+        },
+        {
+          "heading": "Camera Framing for Interaction Demos",
+          "scenarios": [
+            "cesiumjs-interaction/eval-001",
+            "cesiumjs-interaction/eval-002",
+            "cesiumjs-interaction/eval-003",
+            "cesiumjs-interaction/eval-004",
             "cesiumjs-interaction/eval-005"
           ]
         },
@@ -2655,6 +2742,17 @@
           ]
         },
         {
+          "api": "Cartesian3.fromDegreesArray",
+          "scenarios": [
+            "cesiumjs-entities/eval-002",
+            "cesiumjs-primitives/eval-002",
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-spatial-math/eval-002",
+            "cesiumjs-spatial-math/eval-004",
+            "cesiumjs-time-properties/eval-001"
+          ]
+        },
+        {
           "api": "Cartographic.fromCartesian",
           "scenarios": [
             "cesiumjs-interaction/eval-002"
@@ -2668,17 +2766,25 @@
           ]
         },
         {
-          "api": "Color.BLUE",
+          "api": "CesiumMath.toRadians",
           "scenarios": [
-            "cesiumjs-entities/eval-002"
+            "cesiumjs-interaction/eval-002",
+            "cesiumjs-spatial-math/eval-003",
+            "cesiumjs-time-properties/eval-003"
           ]
         },
         {
-          "api": "Color.LIME",
+          "api": "Color.CRIMSON.withAlpha",
           "scenarios": [
+            "cesiumjs-core-utilities/eval-003",
             "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-spatial-math/eval-002"
+            "cesiumjs-interaction/eval-004"
+          ]
+        },
+        {
+          "api": "Color.ORANGE",
+          "scenarios": [
+            "cesiumjs-core-utilities/eval-002"
           ]
         },
         {
@@ -2721,6 +2827,12 @@
         {
           "api": "HorizontalOrigin.LEFT",
           "scenarios": []
+        },
+        {
+          "api": "KeyboardEventModifier.CTRL",
+          "scenarios": [
+            "cesiumjs-camera/eval-010"
+          ]
         },
         {
           "api": "KeyboardEventModifier.SHIFT",
@@ -2782,6 +2894,13 @@
         {
           "api": "viewer.camera.positionCartographic.height",
           "scenarios": []
+        },
+        {
+          "api": "viewer.camera.setView",
+          "scenarios": [
+            "cesiumjs-terrain-environment/eval-001",
+            "cesiumjs-time-properties/eval-003"
+          ]
         },
         {
           "api": "viewer.camera.zoomIn",
@@ -3306,6 +3425,15 @@
           ]
         },
         {
+          "heading": "Avoiding Distorted Model Appearance",
+          "scenarios": [
+            "cesiumjs-models-particles/eval-001",
+            "cesiumjs-models-particles/eval-002",
+            "cesiumjs-models-particles/eval-003",
+            "cesiumjs-models-particles/eval-004"
+          ]
+        },
+        {
           "heading": "Key Model.fromGltfAsync Options",
           "scenarios": [
             "cesiumjs-models-particles/eval-001",
@@ -3356,11 +3484,27 @@
           ]
         },
         {
+          "heading": "Edge Display Mode (Experimental, 1.142+)",
+          "scenarios": [
+            "cesiumjs-models-particles/eval-001",
+            "cesiumjs-models-particles/eval-002",
+            "cesiumjs-models-particles/eval-003",
+            "cesiumjs-models-particles/eval-004"
+          ]
+        },
+        {
           "heading": "Height Reference",
           "scenarios": []
         },
         {
           "heading": "Particle Systems",
+          "scenarios": [
+            "cesiumjs-models-particles/eval-002",
+            "cesiumjs-models-particles/eval-004"
+          ]
+        },
+        {
+          "heading": "Producing a Legible Vertical Plume",
           "scenarios": [
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-004"
@@ -3393,9 +3537,11 @@
           ]
         },
         {
-          "heading": "Framing Particle Effects",
+          "heading": "Framing Particle Effects So the Map Is Visible",
           "scenarios": [
+            "cesiumjs-models-particles/eval-001",
             "cesiumjs-models-particles/eval-002",
+            "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004"
           ]
         },
@@ -3632,6 +3778,18 @@
           ]
         },
         {
+          "api": "EdgeDisplayMode.EDGES_ONLY",
+          "scenarios": []
+        },
+        {
+          "api": "EdgeDisplayMode.SURFACES_AND_EDGES",
+          "scenarios": []
+        },
+        {
+          "api": "EdgeDisplayMode.SURFACES_ONLY",
+          "scenarios": []
+        },
+        {
           "api": "Math.PI",
           "scenarios": [
             "cesiumjs-camera/eval-002",
@@ -3822,6 +3980,9 @@
         "Color.GRAY.withAlpha",
         "Color.LIGHTGRAY.withAlpha",
         "Color.TRANSPARENT",
+        "EdgeDisplayMode.EDGES_ONLY",
+        "EdgeDisplayMode.SURFACES_AND_EDGES",
+        "EdgeDisplayMode.SURFACES_ONLY",
         "viewer.camera.lookAt",
         "viewer.scene.preUpdate.addEventListener",
         "viewer.trackedEntity"
@@ -3872,6 +4033,27 @@
         },
         {
           "heading": "PrimitiveCollection",
+          "scenarios": [
+            "cesiumjs-primitives/eval-001"
+          ]
+        },
+        {
+          "heading": "Choosing a Vector Data Path",
+          "scenarios": [
+            "cesiumjs-primitives/eval-004"
+          ]
+        },
+        {
+          "heading": "Buffer Primitive Collections (Experimental, 1.140+)",
+          "scenarios": [
+            "cesiumjs-primitives/eval-001",
+            "cesiumjs-primitives/eval-002",
+            "cesiumjs-primitives/eval-003",
+            "cesiumjs-primitives/eval-004"
+          ]
+        },
+        {
+          "heading": "GeoJsonPrimitive (Experimental, 1.142+)",
           "scenarios": [
             "cesiumjs-primitives/eval-001"
           ]
@@ -3982,6 +4164,15 @@
           "scenarios": []
         },
         {
+          "heading": "Camera Framing for Primitive Scenes",
+          "scenarios": [
+            "cesiumjs-primitives/eval-001",
+            "cesiumjs-primitives/eval-002",
+            "cesiumjs-primitives/eval-003",
+            "cesiumjs-primitives/eval-004"
+          ]
+        },
+        {
           "heading": "Performance Tips",
           "scenarios": []
         },
@@ -3994,6 +4185,16 @@
         {
           "api": "ArcType.GEODESIC",
           "scenarios": []
+        },
+        {
+          "api": "BlendOption.TRANSLUCENT",
+          "scenarios": []
+        },
+        {
+          "api": "BoundingSphere.fromPoints",
+          "scenarios": [
+            "cesiumjs-spatial-math/eval-004"
+          ]
         },
         {
           "api": "BoxGeometry.fromDimensions",
@@ -4102,6 +4303,12 @@
           ]
         },
         {
+          "api": "Color.WHITE.withAlpha",
+          "scenarios": [
+            "cesiumjs-materials-shaders/eval-002"
+          ]
+        },
+        {
           "api": "Color.YELLOW",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
@@ -4146,6 +4353,10 @@
         },
         {
           "api": "EllipsoidSurfaceAppearance.VERTEX_FORMAT",
+          "scenarios": []
+        },
+        {
+          "api": "GeoJsonPrimitive.fromUrl",
           "scenarios": []
         },
         {
@@ -4234,6 +4445,10 @@
           ]
         },
         {
+          "api": "viewer.camera.lookAt",
+          "scenarios": []
+        },
+        {
           "api": "viewer.scene",
           "scenarios": [
             "cesiumjs-3d-tiles/eval-001",
@@ -4285,6 +4500,7 @@
       ],
       "uncovered_apis": [
         "ArcType.GEODESIC",
+        "BlendOption.TRANSLUCENT",
         "BoxGeometry.fromDimensions",
         "ClassificationType.BOTH",
         "ClassificationType.TERRAIN",
@@ -4294,6 +4510,7 @@
         "Color.fromRandom",
         "ColorGeometryInstanceAttribute.toValue",
         "EllipsoidSurfaceAppearance.VERTEX_FORMAT",
+        "GeoJsonPrimitive.fromUrl",
         "HeightReference.CLAMP_TO_GROUND",
         "HorizontalOrigin.CENTER",
         "LabelStyle.FILL_AND_OUTLINE",
@@ -4301,7 +4518,8 @@
         "Matrix4.fromTranslation",
         "PerInstanceColorAppearance.VERTEX_FORMAT",
         "PolylineColorAppearance.VERTEX_FORMAT",
-        "ShowGeometryInstanceAttribute.toValue"
+        "ShowGeometryInstanceAttribute.toValue",
+        "viewer.camera.lookAt"
       ]
     },
     "cesiumjs-spatial-math": {
@@ -5119,6 +5337,12 @@
           ]
         },
         {
+          "heading": "Making Translucency Visually Readable",
+          "scenarios": [
+            "cesiumjs-terrain-environment/eval-004"
+          ]
+        },
+        {
           "heading": "Elevation Band Material",
           "scenarios": []
         },
@@ -5182,6 +5406,14 @@
         {
           "heading": "Performance Tips",
           "scenarios": []
+        },
+        {
+          "heading": "Visual-Quality Checklist for Terrain Scenarios",
+          "scenarios": [
+            "cesiumjs-terrain-environment/eval-001",
+            "cesiumjs-terrain-environment/eval-002",
+            "cesiumjs-terrain-environment/eval-003"
+          ]
         },
         {
           "heading": "Quick Reference",
@@ -5289,6 +5521,20 @@
           ]
         },
         {
+          "api": "Math.exp",
+          "scenarios": [
+            "cesiumjs-interaction/eval-002",
+            "cesiumjs-spatial-math/eval-003"
+          ]
+        },
+        {
+          "api": "Math.pow",
+          "scenarios": [
+            "cesiumjs-interaction/eval-002",
+            "cesiumjs-spatial-math/eval-003"
+          ]
+        },
+        {
           "api": "Math.sin",
           "scenarios": [
             "cesiumjs-interaction/eval-002",
@@ -5362,12 +5608,6 @@
             "cesiumjs-viewer-setup/eval-004",
             "cesiumjs-viewer-setup/eval-005",
             "cesiumjs-viewer-setup/eval-007"
-          ]
-        },
-        {
-          "api": "viewer.scene.fog",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-003"
           ]
         },
         {
@@ -5647,6 +5887,15 @@
           ]
         },
         {
+          "heading": "Framing Time-Dynamic Entities",
+          "scenarios": [
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-002",
+            "cesiumjs-time-properties/eval-003",
+            "cesiumjs-time-properties/eval-004"
+          ]
+        },
+        {
           "heading": "Putting It Together: Animated Flight",
           "scenarios": [
             "cesiumjs-time-properties/eval-001"
@@ -5655,6 +5904,15 @@
         {
           "heading": "Performance Tips",
           "scenarios": []
+        },
+        {
+          "heading": "Screenshot Checklist for Time-Dynamic Scenes",
+          "scenarios": [
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-002",
+            "cesiumjs-time-properties/eval-003",
+            "cesiumjs-time-properties/eval-004"
+          ]
         },
         {
           "heading": "Key Enums",
@@ -5857,6 +6115,14 @@
           ]
         },
         {
+          "api": "Rectangle.fromDegrees",
+          "scenarios": [
+            "cesiumjs-camera/eval-012",
+            "cesiumjs-imagery/eval-007",
+            "cesiumjs-imagery/eval-010"
+          ]
+        },
+        {
           "api": "ReferenceProperty.fromString",
           "scenarios": []
         },
@@ -5983,10 +6249,6 @@
           "scenarios": []
         },
         {
-          "api": "viewer.trackedEntity",
-          "scenarios": []
-        },
-        {
           "api": "viewer.zoomTo",
           "scenarios": []
         }
@@ -6014,7 +6276,6 @@
         "TimeInterval.contains",
         "TimeInterval.fromIso8601",
         "viewer.timeline.zoomTo",
-        "viewer.trackedEntity",
         "viewer.zoomTo"
       ]
     },
@@ -6023,6 +6284,14 @@
         {
           "heading": "Quick Start",
           "scenarios": []
+        },
+        {
+          "heading": "Framing Loaded Content (Critical)",
+          "scenarios": [
+            "cesiumjs-viewer-setup/eval-003",
+            "cesiumjs-viewer-setup/eval-004",
+            "cesiumjs-viewer-setup/eval-007"
+          ]
         },
         {
           "heading": "Ion & Platform Configuration",
@@ -6236,6 +6505,14 @@
           ]
         },
         {
+          "heading": "Loading and Framing a Sample 3D Tileset",
+          "scenarios": [
+            "cesiumjs-viewer-setup/eval-003",
+            "cesiumjs-viewer-setup/eval-004",
+            "cesiumjs-viewer-setup/eval-007"
+          ]
+        },
+        {
           "heading": "Space Scene (No Globe)",
           "scenarios": [
             "cesiumjs-viewer-setup/eval-001",
@@ -6248,7 +6525,7 @@
           ]
         },
         {
-          "heading": "Explicit Render Mode (Low Power)",
+          "heading": "Explicit Render Mode (Low Power Dashboard)",
           "scenarios": [
             "cesiumjs-viewer-setup/eval-001",
             "cesiumjs-viewer-setup/eval-002",
@@ -6285,6 +6562,15 @@
         {
           "heading": "Performance Tips",
           "scenarios": [
+            "cesiumjs-viewer-setup/eval-007"
+          ]
+        },
+        {
+          "heading": "Framing Checklist (Avoid Blank / Off-Frame Renders)",
+          "scenarios": [
+            "cesiumjs-viewer-setup/eval-001",
+            "cesiumjs-viewer-setup/eval-003",
+            "cesiumjs-viewer-setup/eval-004",
             "cesiumjs-viewer-setup/eval-007"
           ]
         },
@@ -6355,6 +6641,14 @@
         },
         {
           "api": "ITwinData.createTilesetForIModel",
+          "scenarios": []
+        },
+        {
+          "api": "ITwinData.createTilesetForRealityDataId",
+          "scenarios": []
+        },
+        {
+          "api": "ITwinPlatform.RealityDataType.GaussianSplat3DTiles",
           "scenarios": []
         },
         {
@@ -6479,11 +6773,24 @@
           ]
         },
         {
+          "api": "viewer.scene.globe",
+          "scenarios": [
+            "cesiumjs-terrain-environment/eval-001",
+            "cesiumjs-terrain-environment/eval-002",
+            "cesiumjs-terrain-environment/eval-003",
+            "cesiumjs-terrain-environment/eval-004"
+          ]
+        },
+        {
           "api": "viewer.scene.globe.enableLighting",
           "scenarios": [
             "cesiumjs-terrain-environment/eval-002",
             "cesiumjs-terrain-environment/eval-003"
           ]
+        },
+        {
+          "api": "viewer.scene.moon.show",
+          "scenarios": []
         },
         {
           "api": "viewer.scene.morphTo3D",
@@ -6529,6 +6836,26 @@
           "scenarios": []
         },
         {
+          "api": "viewer.scene.skyAtmosphere",
+          "scenarios": [
+            "cesiumjs-terrain-environment/eval-002"
+          ]
+        },
+        {
+          "api": "viewer.scene.skyAtmosphere.show",
+          "scenarios": [
+            "cesiumjs-terrain-environment/eval-002"
+          ]
+        },
+        {
+          "api": "viewer.scene.skyBox.show",
+          "scenarios": []
+        },
+        {
+          "api": "viewer.scene.sun.show",
+          "scenarios": []
+        },
+        {
           "api": "viewer.terrainProvider",
           "scenarios": [
             "cesiumjs-primitives/eval-003",
@@ -6557,6 +6884,8 @@
         "GeocodeType.SEARCH",
         "GoogleMaps.defaultApiKey",
         "ITwinData.createTilesetForIModel",
+        "ITwinData.createTilesetForRealityDataId",
+        "ITwinPlatform.RealityDataType.GaussianSplat3DTiles",
         "ITwinPlatform.defaultAccessToken",
         "Ion.defaultServer",
         "IonResource.fromAssetId",
@@ -6567,9 +6896,12 @@
         "viewer.destroy",
         "viewer.dropError.addEventListener",
         "viewer.extend",
+        "viewer.scene.moon.show",
         "viewer.scene.morphTo3D",
         "viewer.scene.morphToColumbusView",
         "viewer.scene.setTerrain",
+        "viewer.scene.skyBox.show",
+        "viewer.scene.sun.show",
         "viewer.zoomTo"
       ]
     },

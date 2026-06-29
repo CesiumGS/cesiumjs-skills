@@ -14,16 +14,39 @@
     "Heading ~0 (facing north, across the canyon)",
     "Should convey the depth and scale of the canyon"
   ],
-  "visual_expectations": "A dramatic public no-token view from the south rim looking north across the Grand Canyon. The screenshot should have visible canyon relief cues such as rim walls, a river line, or procedural terrain displacement rather than a flat pale basemap.",
+  "visual_expectations": "A dramatic public no-token view from the south rim looking north across the Grand Canyon. The screenshot should have visible canyon relief cues such as rim walls, a river line, or procedural terrain displacement rather than a flat pale basemap. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    {"type": "no_console_errors", "description": "No JS errors"},
-    {"type": "code_runs", "description": "No runtime exceptions"},
-    {"type": "pattern_present", "pattern": "36\\.0", "description": "Grand Canyon latitude"},
-    {"type": "pattern_present", "pattern": "-112", "description": "Grand Canyon longitude negative"},
-    {"type": "pattern_present", "pattern": "flyTo|setView|lookAt", "description": "Uses a camera method"}
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "36\\.0",
+      "description": "Grand Canyon latitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-112",
+      "description": "Grand Canyon longitude negative"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "flyTo|setView|lookAt",
+      "description": "Uses a camera method"
+    }
   ],
   "screenshots": [
-    {"timing": "after_load", "delay_ms": 6000, "description": "Grand Canyon from south rim looking north"}
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Grand Canyon from south rim looking north"
+    }
   ],
-  "regression_critical": false
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
 }

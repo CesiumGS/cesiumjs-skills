@@ -1,7 +1,7 @@
 {
   "id": "eval-002",
   "name": "checkerboard-material-polygon-utah",
-  "landmark": "Utah — large rectangular polygon",
+  "landmark": "Utah \u2014 large rectangular polygon",
   "perspective": "state-level overview with checkerboard-textured polygon",
   "difficulty": "easy",
   "description": "Add a large rectangular polygon over Utah and apply a CheckerboardMaterialProperty (or Fabric JSON Checkerboard type) so the polygon is rendered with a clear checkerboard pattern of two contrasting colours. Tests Fabric material assignment via the Entity API.",
@@ -14,20 +14,57 @@
     "Frames the camera over Utah (around 39.5 N, -111.5 W) at ~1-2 million m altitude",
     "Camera pitch is straight down or close to it"
   ],
-  "visual_expectations": "A top-down camera view of Utah showing a large rectangular polygon with a clear repeating checkerboard pattern of navy-blue and white squares, covering the state. The pattern should have multiple cells visible.",
+  "visual_expectations": "A top-down camera view of Utah showing a large rectangular polygon with a clear repeating checkerboard pattern of navy-blue and white squares, covering the state. The pattern should have multiple cells visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Checkerboard", "description": "Uses Checkerboard material/property" },
-    { "type": "pattern_present", "pattern": "(?:evenColor|oddColor)", "description": "Sets even/odd colors" },
-    { "type": "pattern_present", "pattern": "Color\\.NAVY", "description": "Uses NAVY for one color" },
-    { "type": "pattern_present", "pattern": "Color\\.WHITE", "description": "Uses WHITE for other color" },
-    { "type": "pattern_present", "pattern": "(?:polygon|rectangle)", "description": "Uses polygon graphics" },
-    { "type": "pattern_present", "pattern": "repeat", "description": "Sets repeat for cell count" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Checkerboard",
+      "description": "Uses Checkerboard material/property"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:evenColor|oddColor)",
+      "description": "Sets even/odd colors"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.NAVY",
+      "description": "Uses NAVY for one color"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.WHITE",
+      "description": "Uses WHITE for other color"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:polygon|rectangle)",
+      "description": "Uses polygon graphics"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "repeat",
+      "description": "Sets repeat for cell count"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 4500, "description": "Utah covered by a checkerboard polygon" }
+    {
+      "timing": "after_load",
+      "delay_ms": 4500,
+      "description": "Utah covered by a checkerboard polygon"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Material System (Fabric JSON)"]
+  "target_skill_sections": [
+    "Material System (Fabric JSON)"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

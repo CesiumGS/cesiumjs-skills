@@ -93,7 +93,8 @@
     "source": "optimization/scenarios",
     "source_name": "billboard-collection-east-coast-cities",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "A regional camera view of the US east coast with 8 distinct coloured pin billboards visible at major cities. The pins should form a roughly vertical chain down the east coast, each with a different color."
+    "visual_expectations": "A regional camera view of the US east coast with 8 distinct coloured pin billboards visible at major cities. The pins should form a roughly vertical chain down the east coast, each with a different color. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

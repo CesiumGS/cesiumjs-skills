@@ -94,7 +94,8 @@
     "source": "optimization/scenarios",
     "source_name": "mouse-coord-readout-label",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "An eastern-Mediterranean camera view (Greece, Turkey coast, Aegean islands clearly visible) with a labelled text box on the screen showing 'Lon:' and 'Lat:' values, anchored over the Aegean Sea."
+    "visual_expectations": "An eastern-Mediterranean camera view (Greece, Turkey coast, Aegean islands clearly visible) with a labelled text box on the screen showing 'Lon:' and 'Lat:' values, anchored over the Aegean Sea. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

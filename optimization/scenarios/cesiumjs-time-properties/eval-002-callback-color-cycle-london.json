@@ -15,7 +15,7 @@
     "Sets viewer.clock.startTime and currentTime to specific JulianDate values",
     "Frames the camera over central London (around 51.51 N, -0.13 W) at 15,000-50,000 m altitude"
   ],
-  "visual_expectations": "A top-down view of central London with a large rectangular polygon overlay coloured with a vivid saturated colour (orange, yellow, green, blue, purple, or pink \u2014 any one of the HSL ramp), partially transparent. The Thames should be visible underneath.",
+  "visual_expectations": "A top-down view of central London with a large rectangular polygon overlay coloured with a vivid saturated colour (orange, yellow, green, blue, purple, or pink \u2014 any one of the HSL ramp), partially transparent. The Thames should be visible underneath. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -72,5 +72,6 @@
   "target_skill_sections": [
     "Property System -- Time-Varying Values",
     "Material Properties"
-  ]
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

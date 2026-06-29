@@ -86,7 +86,8 @@
     "source": "optimization/scenarios",
     "source_name": "fountain-particles-bellagio",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A close oblique view at the Bellagio fountains with a clearly visible upward-rising column of cyan/white water particles and a small base marker showing the particle source."
+    "visual_expectations": "A close oblique view at the Bellagio fountains with a clearly visible upward-rising column of cyan/white water particles and a small base marker showing the particle source. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

@@ -16,22 +16,69 @@
     "Camera heading is northwest (around 300-340 degrees)",
     "Camera pitch is slight downward (between 0 and -15 degrees)"
   ],
-  "visual_expectations": "A near-mountain view in Alaska with snow-covered ridgelines clearly visible in the foreground (likely Denali's silhouette) and distant terrain fading smoothly into atmospheric fog. The fog should be perceptible as a gradient — distant peaks softer and washed-out compared to the sharply lit foreground.",
+  "visual_expectations": "A near-mountain view in Alaska with snow-covered ridgelines clearly visible in the foreground (likely Denali's silhouette) and distant terrain fading smoothly into atmospheric fog. The fog should be perceptible as a gradient \u2014 distant peaks softer and washed-out compared to the sharply lit foreground. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "CustomHeightmapTerrainProvider", "description": "Uses no-token procedural terrain provider" },
-    { "type": "pattern_present", "pattern": "scene\\.fog\\.enabled", "description": "Enables fog" },
-    { "type": "pattern_present", "pattern": "fog\\.density", "description": "Sets fog density" },
-    { "type": "pattern_present", "pattern": "enableLighting", "description": "Enables lighting" },
-    { "type": "pattern_present", "pattern": "depthTestAgainstTerrain", "description": "Enables depth test against terrain" },
-    { "type": "pattern_present", "pattern": "-150\\.9", "description": "Targets Denali longitude" },
-    { "type": "pattern_present", "pattern": "63\\.0", "description": "Targets Denali latitude" },
-    { "type": "pattern_absent", "pattern": "fromIonAssetId|fromWorldTerrain", "description": "Avoids ion terrain helpers" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "CustomHeightmapTerrainProvider",
+      "description": "Uses no-token procedural terrain provider"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "scene\\.fog\\.enabled",
+      "description": "Enables fog"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "fog\\.density",
+      "description": "Sets fog density"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "enableLighting",
+      "description": "Enables lighting"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "depthTestAgainstTerrain",
+      "description": "Enables depth test against terrain"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-150\\.9",
+      "description": "Targets Denali longitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "63\\.0",
+      "description": "Targets Denali latitude"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "fromIonAssetId|fromWorldTerrain",
+      "description": "Avoids ion terrain helpers"
+    }
   ],
   "screenshots": [
-    { "timing": "after_terrain_load", "delay_ms": 8000, "description": "Denali ridgeline with atmospheric fog falloff" }
+    {
+      "timing": "after_terrain_load",
+      "delay_ms": 8000,
+      "description": "Denali ridgeline with atmospheric fog falloff"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Fog", "Terrain Providers", "Lighting"]
+  "target_skill_sections": [
+    "Fog",
+    "Terrain Providers",
+    "Lighting"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

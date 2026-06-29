@@ -43,14 +43,16 @@
       "Uses lookAt with HeadingPitchRange",
       "Heading ~0 degrees (facing north = camera is south of target)",
       "Pitch around -20 to -35 degrees (looking down at moderate angle)",
-      "Range 1000-3000m"
+      "Range 1000-3000m",
+      "Adds a visible tall Eiffel Tower surrogate because public basemap labels alone are not enough"
     ],
     "landmark": "Eiffel Tower, Paris",
     "perspective": "mid-altitude from south",
     "source": "optimization/scenarios",
     "source_name": "eiffel-tower-from-south",
     "source_scenario_id": "eval-003",
-    "visual_expectations": "The Eiffel Tower area viewed from the south. The Seine River and Trocad\u00e9ro plaza should be behind/beyond the tower location. The camera is at medium altitude with an angled view, not straight down."
+    "visual_expectations": "The Eiffel Tower area viewed from the south. A tall gold tower surrogate should be centered and fully visible, with the Seine River and Trocad\u00e9ro plaza behind/beyond the tower location. The camera is at medium altitude with an angled view, not straight down. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
@@ -63,7 +65,7 @@
     ],
     "snapshot_before_and_after": false
   },
-  "prompt": "Position the camera to view the Eiffel Tower from the south side, at about 1000 meters altitude, looking north toward the tower. I want to see the tower with the Trocad\u00e9ro and Seine behind it. Use lookAt to lock onto the tower. Eiffel Tower: 48.8584 N, 2.2945 E.",
+  "prompt": "Position the camera to view the Eiffel Tower from the south side, at about 1000 meters altitude, looking north toward the tower. I want to see the tower with the Trocad\u00e9ro and Seine behind it. Use lookAt to lock onto the tower. Eiffel Tower: 48.8584 N, 2.2945 E. Because public OSM tiles do not contain inspectable 3D tower geometry, add a tall gold Eiffel Tower surrogate at the coordinates (for example a 300 m cylinder/polyline mast with a label) and frame that surrogate as the visual subject, not just a map label.",
   "schema_version": 1,
   "skill": "cesiumjs-camera",
   "timeout_ms": 5000

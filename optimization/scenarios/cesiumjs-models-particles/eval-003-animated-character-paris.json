@@ -15,21 +15,63 @@
     "Calls model.activeAnimations.addAll with ModelAnimationLoop.REPEAT",
     "Frames the camera close enough that the figure is recognizable"
   ],
-  "visual_expectations": "The Cesium Man character figure clearly visible near the Eiffel Tower location on the Paris OSM map. The figure should be upright, recognizable, and silhouette-highlighted; a single still frame is acceptable as long as the model is visible.",
+  "visual_expectations": "The Cesium Man character figure clearly visible near the Eiffel Tower location on the Paris OSM map. The figure should be upright, recognizable, and silhouette-highlighted; a single still frame is acceptable as long as the model is visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "Model\\.fromGltfAsync", "description": "Uses Model.fromGltfAsync" },
-    { "type": "pattern_present", "pattern": "Cesium_Man", "description": "Targets the CesiumMan sample model" },
-    { "type": "pattern_present", "pattern": "activeAnimations\\.addAll", "description": "Activates all animations" },
-    { "type": "pattern_present", "pattern": "ModelAnimationLoop", "description": "Uses ModelAnimationLoop enum" },
-    { "type": "pattern_present", "pattern": "Transforms\\.eastNorthUpToFixedFrame", "description": "Uses ENU frame" },
-    { "type": "pattern_present", "pattern": "48\\.85", "description": "Targets Paris latitude" },
-    { "type": "pattern_present", "pattern": "(?:readyEvent|readyPromise|addEventListener)", "description": "Waits for model readiness before animating" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Model\\.fromGltfAsync",
+      "description": "Uses Model.fromGltfAsync"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium_Man",
+      "description": "Targets the CesiumMan sample model"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "activeAnimations\\.addAll",
+      "description": "Activates all animations"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ModelAnimationLoop",
+      "description": "Uses ModelAnimationLoop enum"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Transforms\\.eastNorthUpToFixedFrame",
+      "description": "Uses ENU frame"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "48\\.85",
+      "description": "Targets Paris latitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:readyEvent|readyPromise|addEventListener)",
+      "description": "Waits for model readiness before animating"
+    }
   ],
   "screenshots": [
-    { "timing": "after_animation_start", "delay_ms": 9000, "description": "Cesium Man character animated near the Eiffel Tower" }
+    {
+      "timing": "after_animation_start",
+      "delay_ms": 9000,
+      "description": "Cesium Man character animated near the Eiffel Tower"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Animations", "Readiness and Lifecycle"]
+  "target_skill_sections": [
+    "Animations",
+    "Readiness and Lifecycle"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

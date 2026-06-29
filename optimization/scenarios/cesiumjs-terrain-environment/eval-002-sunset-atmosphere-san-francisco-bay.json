@@ -15,22 +15,68 @@
     "Positions camera over San Francisco Bay (around 37.77 N, -122.42 W) at 15-60 km altitude",
     "Camera heading is around 270 (west) and pitch is moderately downward (-15 to -30)"
   ],
-  "visual_expectations": "A regional San Francisco Bay view with the horizon visible and the sky showing warm sunset colours (orange/red near the horizon, blue above). Terrain lighting should reflect the low sun angle with long shadows. The bay's distinctive coastline (Golden Gate, peninsula) should be visible.",
+  "visual_expectations": "A regional San Francisco Bay view with the horizon visible and the sky showing warm sunset colours (orange/red near the horizon, blue above). Terrain lighting should reflect the low sun angle with long shadows. The bay's distinctive coastline (Golden Gate, peninsula) should be visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "enableLighting", "description": "Enables globe lighting" },
-    { "type": "pattern_present", "pattern": "JulianDate\\.fromIso8601", "description": "Sets a specific clock time" },
-    { "type": "pattern_present", "pattern": "skyAtmosphere", "description": "Configures skyAtmosphere" },
-    { "type": "pattern_present", "pattern": "showGroundAtmosphere", "description": "Enables ground atmosphere" },
-    { "type": "pattern_present", "pattern": "shouldAnimate\\s*=\\s*false", "description": "Freezes the clock" },
-    { "type": "pattern_present", "pattern": "37\\.7", "description": "Targets SF latitude" },
-    { "type": "pattern_present", "pattern": "-122\\.4", "description": "Targets SF longitude" },
-    { "type": "pattern_absent", "pattern": "fromIonAssetId|fromWorldTerrain", "description": "Avoids ion terrain helpers" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "enableLighting",
+      "description": "Enables globe lighting"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "JulianDate\\.fromIso8601",
+      "description": "Sets a specific clock time"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "skyAtmosphere",
+      "description": "Configures skyAtmosphere"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "showGroundAtmosphere",
+      "description": "Enables ground atmosphere"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "shouldAnimate\\s*=\\s*false",
+      "description": "Freezes the clock"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "37\\.7",
+      "description": "Targets SF latitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-122\\.4",
+      "description": "Targets SF longitude"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "fromIonAssetId|fromWorldTerrain",
+      "description": "Avoids ion terrain helpers"
+    }
   ],
   "screenshots": [
-    { "timing": "after_lighting", "delay_ms": 6000, "description": "San Francisco Bay at sunset with warm atmosphere" }
+    {
+      "timing": "after_lighting",
+      "delay_ms": 6000,
+      "description": "San Francisco Bay at sunset with warm atmosphere"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Lighting", "SkyAtmosphere"]
+  "target_skill_sections": [
+    "Lighting",
+    "SkyAtmosphere"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

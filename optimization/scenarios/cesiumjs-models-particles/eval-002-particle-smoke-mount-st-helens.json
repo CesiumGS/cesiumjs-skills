@@ -16,7 +16,7 @@
     "Adds the particle system to viewer.scene.primitives",
     "Frames the camera so the crater marker and rising plume are visible"
   ],
-  "visual_expectations": "An oblique public no-terrain view centered on Mount St. Helens with a dark crater marker and a clearly visible upward-rising column of translucent grey particles emerging from the marker.",
+  "visual_expectations": "An oblique public no-terrain view centered on Mount St. Helens with a dark crater marker and a clearly visible upward-rising column of translucent grey particles emerging from the marker. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -68,5 +68,6 @@
   "target_skill_sections": [
     "Particle Systems",
     "Attaching Particles to a Moving Model"
-  ]
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

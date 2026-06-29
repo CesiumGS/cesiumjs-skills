@@ -85,7 +85,8 @@
     "source": "optimization/scenarios",
     "source_name": "constrain-zoom-tilt-london",
     "source_scenario_id": "eval-009",
-    "visual_expectations": "An overhead or angled view of London at 5000m altitude showing the Thames, urban grid, and parks. Navigation constraints are not visible in screenshots but the camera position should be correct."
+    "visual_expectations": "An overhead or angled view of London at 5000m altitude showing the Thames, urban grid, and parks. Navigation constraints are not visible in screenshots but the camera position should be correct. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

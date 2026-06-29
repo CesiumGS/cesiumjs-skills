@@ -15,7 +15,7 @@
     "Uses VerticalOrigin.BOTTOM",
     "Frames the camera over the US east coast (around 35 N, -78 W) at 2-4 million m altitude"
   ],
-  "visual_expectations": "A regional camera view of the US east coast with 8 distinct coloured pin billboards visible at major cities. The pins should form a roughly vertical chain down the east coast, each with a different color.",
+  "visual_expectations": "A regional camera view of the US east coast with 8 distinct coloured pin billboards visible at major cities. The pins should form a roughly vertical chain down the east coast, each with a different color. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
     {
       "type": "no_console_errors",
@@ -71,5 +71,6 @@
   "regression_critical": true,
   "target_skill_sections": [
     "BillboardCollection"
-  ]
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

@@ -66,7 +66,8 @@
     "source": "optimization/scenarios",
     "source_name": "regional-provider-performance-hawaii",
     "source_scenario_id": "eval-015",
-    "visual_expectations": "A visible regional view of the Hawaiian island chain on a light map. The screenshot should not be mostly black; it should visibly focus on Hawaii rather than a global map, and the code should clearly demonstrate bounded regional-provider configuration."
+    "visual_expectations": "A visible regional view of the Hawaiian island chain on a light map. The screenshot should not be mostly black; it should visibly focus on Hawaii rather than a global map, and the code should clearly demonstrate bounded regional-provider configuration. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

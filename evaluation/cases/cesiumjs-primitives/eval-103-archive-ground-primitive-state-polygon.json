@@ -94,7 +94,8 @@
     "source": "optimization/scenarios",
     "source_name": "ground-primitive-state-polygon",
     "source_scenario_id": "eval-003",
-    "visual_expectations": "A regional view of Colorado with a large semi-transparent royal-blue rectangular polygon clearly draped over the globe, with the OSM basemap visible underneath the blue overlay."
+    "visual_expectations": "A regional view of Colorado with a large semi-transparent royal-blue rectangular polygon clearly draped over the globe, with the OSM basemap visible underneath the blue overlay. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

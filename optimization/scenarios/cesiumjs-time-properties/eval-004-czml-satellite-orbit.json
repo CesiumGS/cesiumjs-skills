@@ -17,20 +17,58 @@
     "Sets viewer.clock.shouldAnimate = true",
     "Frames globally (10M+ m altitude)"
   ],
-  "visual_expectations": "A global view of Earth with a visible coloured orbital path arc curving around the planet, with a satellite billboard somewhere along the arc indicating its current position.",
+  "visual_expectations": "A global view of Earth with a visible coloured orbital path arc curving around the planet, with a satellite billboard somewhere along the arc indicating its current position. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "CzmlDataSource", "description": "Uses CzmlDataSource" },
-    { "type": "pattern_present", "pattern": "cartographicDegrees", "description": "Uses cartographicDegrees position samples" },
-    { "type": "pattern_present", "pattern": "(?:clock|interval)", "description": "CZML defines clock or interval" },
-    { "type": "pattern_present", "pattern": "(?:leadTime|trailTime)", "description": "Path has leadTime/trailTime" },
-    { "type": "pattern_present", "pattern": "viewer\\.dataSources", "description": "Adds to dataSources" },
-    { "type": "pattern_present", "pattern": "shouldAnimate", "description": "Animates the clock" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "CzmlDataSource",
+      "description": "Uses CzmlDataSource"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "cartographicDegrees",
+      "description": "Uses cartographicDegrees position samples"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:clock|interval)",
+      "description": "CZML defines clock or interval"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:leadTime|trailTime)",
+      "description": "Path has leadTime/trailTime"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "viewer\\.dataSources",
+      "description": "Adds to dataSources"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "shouldAnimate",
+      "description": "Animates the clock"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 6000, "description": "Global view with orbital arc and satellite billboard" }
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Global view with orbital arc and satellite billboard"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["CZML Temporal Data", "Property System -- Time-Varying Values"]
+  "target_skill_sections": [
+    "CZML Temporal Data",
+    "Property System -- Time-Varying Values"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

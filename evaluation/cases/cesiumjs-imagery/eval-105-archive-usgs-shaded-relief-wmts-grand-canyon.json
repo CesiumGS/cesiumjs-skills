@@ -74,7 +74,8 @@
     "source": "optimization/scenarios",
     "source_name": "usgs-shaded-relief-wmts-grand-canyon",
     "source_scenario_id": "eval-005",
-    "visual_expectations": "A shaded-relief style map over the Grand Canyon region with clear terrain texture and canyon form visible from above."
+    "visual_expectations": "A shaded-relief style map over the Grand Canyon region with clear terrain texture and canyon form visible from above. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

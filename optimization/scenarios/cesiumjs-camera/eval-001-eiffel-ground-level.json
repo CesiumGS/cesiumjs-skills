@@ -12,18 +12,49 @@
     "Range/distance from target should be 200-800m for ground-level feel",
     "Adds a visible marker/surrogate at the Eiffel Tower location so the public eval has an inspectable subject"
   ],
-  "visual_expectations": "A close, low-angle view of the Eiffel Tower area. The camera should be near ground level, with city map context below and a visible tall marker/surrogate at the Eiffel Tower location rising into the sky. The whole surrogate should fit inside the frame rather than being clipped by an extreme close-up.",
+  "visual_expectations": "A close, low-angle view of the Eiffel Tower area. The camera should be near ground level, with city map context below and a visible tall marker/surrogate at the Eiffel Tower location rising into the sky. The whole surrogate should fit inside the frame rather than being clipped by an extreme close-up. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    {"type": "no_console_errors", "description": "No JS errors"},
-    {"type": "code_runs", "description": "No runtime exceptions"},
-    {"type": "pattern_present", "pattern": "lookAt|setView|flyTo", "description": "Uses a camera positioning method"},
-    {"type": "pattern_present", "pattern": "48\\.8", "description": "Paris latitude"},
-    {"type": "pattern_present", "pattern": "2\\.29", "description": "Paris longitude"},
-    {"type": "pattern_present", "pattern": "entities\\.add|Polyline|CylinderGraphics|BoxGraphics|polyline|cylinder|box", "description": "Adds a visible public-eval subject marker"},
-    {"type": "pattern_absent", "pattern": "createOsmBuildingsAsync|createGooglePhotorealistic3DTileset|fromIonAssetId|fromWorldTerrain", "description": "Avoids entitlement-backed 3D assets"}
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "lookAt|setView|flyTo",
+      "description": "Uses a camera positioning method"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "48\\.8",
+      "description": "Paris latitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "2\\.29",
+      "description": "Paris longitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "entities\\.add|Polyline|CylinderGraphics|BoxGraphics|polyline|cylinder|box",
+      "description": "Adds a visible public-eval subject marker"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createOsmBuildingsAsync|createGooglePhotorealistic3DTileset|fromIonAssetId|fromWorldTerrain",
+      "description": "Avoids entitlement-backed 3D assets"
+    }
   ],
   "screenshots": [
-    {"timing": "after_load", "delay_ms": 6000, "description": "Ground-level view of Eiffel Tower area"}
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Ground-level view of Eiffel Tower area"
+    }
   ],
-  "regression_critical": true
+  "regression_critical": true,
+  "screenshot_mode": "cardinal_panorama"
 }

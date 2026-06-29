@@ -95,7 +95,8 @@
     "source": "optimization/scenarios",
     "source_name": "low-power-dashboard-render-mode",
     "source_scenario_id": "eval-007",
-    "visual_expectations": "A 3D globe with a visible point/marker entity near San Francisco (37.77N, 122.42W). Minimal UI chrome. The scene should be static (not continuously animating)."
+    "visual_expectations": "A 3D globe with a visible point/marker entity near San Francisco (37.77N, 122.42W). Minimal UI chrome. The scene should be static (not continuously animating). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

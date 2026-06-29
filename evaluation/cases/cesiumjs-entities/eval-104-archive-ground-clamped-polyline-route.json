@@ -76,7 +76,8 @@
     "source": "optimization/scenarios",
     "source_name": "ground-clamped-polyline-route",
     "source_scenario_id": "eval-004",
-    "visual_expectations": "A bright red line connecting LA to Denver to Chicago to NYC across the US, following terrain. Four large labeled city markers should be visible at each endpoint."
+    "visual_expectations": "A bright red line connecting LA to Denver to Chicago to NYC across the US, following terrain. Four large labeled city markers should be visible at each endpoint. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

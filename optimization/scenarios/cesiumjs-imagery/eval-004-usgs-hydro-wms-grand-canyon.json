@@ -15,17 +15,44 @@
     "Wraps the provider in an ImageryLayer or equivalent add pattern",
     "Frames the Grand Canyon region"
   ],
-  "visual_expectations": "A map-like hydrographic rendering over northern Arizona, with the Colorado River corridor and surrounding region visible.",
+  "visual_expectations": "A map-like hydrographic rendering over northern Arizona, with the Colorado River corridor and surrounding region visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "WebMapServiceImageryProvider", "description": "Uses WMS provider" },
-    { "type": "pattern_present", "pattern": "WMSServer|MapServer", "description": "Uses public WMS endpoint" },
-    { "type": "pattern_present", "pattern": "layers", "description": "Sets WMS layer id" },
-    { "type": "pattern_present", "pattern": "-112|36\\.", "description": "Targets Grand Canyon region" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "WebMapServiceImageryProvider",
+      "description": "Uses WMS provider"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "WMSServer|MapServer",
+      "description": "Uses public WMS endpoint"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "layers",
+      "description": "Sets WMS layer id"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-112|36\\.",
+      "description": "Targets Grand Canyon region"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 7000, "description": "USGS WMS imagery over Grand Canyon region" }
+    {
+      "timing": "after_load",
+      "delay_ms": 7000,
+      "description": "USGS WMS imagery over Grand Canyon region"
+    }
   ],
-  "regression_critical": false
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
 }

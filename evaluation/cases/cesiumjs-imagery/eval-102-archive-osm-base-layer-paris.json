@@ -66,7 +66,8 @@
     "source": "optimization/scenarios",
     "source_name": "osm-base-layer-paris",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "A top-down cartographic map of Paris with recognizable OpenStreetMap styling, road labels, and the Seine river visible."
+    "visual_expectations": "A top-down cartographic map of Paris with recognizable OpenStreetMap styling, road labels, and the Seine river visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

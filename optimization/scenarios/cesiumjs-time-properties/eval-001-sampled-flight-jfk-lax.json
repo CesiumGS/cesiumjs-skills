@@ -16,22 +16,69 @@
     "Sets shouldAnimate = true OR forces the path to be visible at a non-start time",
     "Path graphic has a coloured material (e.g., Color.YELLOW or ORANGE)"
   ],
-  "visual_expectations": "A continental US camera view with an animated entity (billboard) positioned roughly over the central US (Colorado/Kansas), connected to a visible yellow flight path arc spanning from the east coast (JFK) to the southwest coast (LAX). The path should be a visible polyline indicating an arc from northeast to southwest.",
+  "visual_expectations": "A continental US camera view with an animated entity (billboard) positioned roughly over the central US (Colorado/Kansas), connected to a visible yellow flight path arc spanning from the east coast (JFK) to the southwest coast (LAX). The path should be a visible polyline indicating an arc from northeast to southwest. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "SampledPositionProperty", "description": "Uses SampledPositionProperty" },
-    { "type": "pattern_present", "pattern": "addSample", "description": "Adds samples to the property" },
-    { "type": "pattern_present", "pattern": "JulianDate\\.fromIso8601", "description": "Uses ISO time" },
-    { "type": "pattern_present", "pattern": "JulianDate\\.addSeconds", "description": "Advances JulianDate" },
-    { "type": "pattern_present", "pattern": "viewer\\.clock", "description": "Configures viewer clock" },
-    { "type": "pattern_present", "pattern": "path", "description": "Entity has path graphic" },
-    { "type": "pattern_present", "pattern": "(?:leadTime|trailTime)", "description": "Path has leadTime or trailTime" },
-    { "type": "pattern_present", "pattern": "-118\\.4|33\\.9", "description": "References LAX coordinates" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "SampledPositionProperty",
+      "description": "Uses SampledPositionProperty"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "addSample",
+      "description": "Adds samples to the property"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "JulianDate\\.fromIso8601",
+      "description": "Uses ISO time"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "JulianDate\\.addSeconds",
+      "description": "Advances JulianDate"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "viewer\\.clock",
+      "description": "Configures viewer clock"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "path",
+      "description": "Entity has path graphic"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:leadTime|trailTime)",
+      "description": "Path has leadTime or trailTime"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-118\\.4|33\\.9",
+      "description": "References LAX coordinates"
+    }
   ],
   "screenshots": [
-    { "timing": "after_midflight", "delay_ms": 6000, "description": "Animated flight at mid-route over central US" }
+    {
+      "timing": "after_midflight",
+      "delay_ms": 6000,
+      "description": "Animated flight at mid-route over central US"
+    }
   ],
   "regression_critical": true,
-  "target_skill_sections": ["Property System -- Time-Varying Values", "Clock -- Simulation Time Controller", "JulianDate -- The Time Primitive"]
+  "target_skill_sections": [
+    "Property System -- Time-Varying Values",
+    "Clock -- Simulation Time Controller",
+    "JulianDate -- The Time Primitive"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

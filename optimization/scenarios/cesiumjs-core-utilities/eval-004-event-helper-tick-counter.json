@@ -15,19 +15,53 @@
     "Sets viewer.clock.shouldAnimate = true",
     "Frames the camera for a global view (10-25 million m altitude)"
   ],
-  "visual_expectations": "A global Atlantic-centered view of Earth with a prominent text label visible mid-screen reading 'Ticks: N' (where N is a positive non-zero integer, since the screenshot is taken after the clock has ticked).",
+  "visual_expectations": "A global Atlantic-centered view of Earth with a prominent text label visible mid-screen reading 'Ticks: N' (where N is a positive non-zero integer, since the screenshot is taken after the clock has ticked). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "new (?:Cesium\\.)?EventHelper", "description": "Uses EventHelper" },
-    { "type": "pattern_present", "pattern": "helper\\.add", "description": "Uses helper.add to subscribe" },
-    { "type": "pattern_present", "pattern": "clock\\.onTick", "description": "Subscribes to clock.onTick" },
-    { "type": "pattern_present", "pattern": "shouldAnimate", "description": "Enables clock animation" },
-    { "type": "pattern_present", "pattern": "label", "description": "Uses label graphics" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?EventHelper",
+      "description": "Uses EventHelper"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "helper\\.add",
+      "description": "Uses helper.add to subscribe"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "clock\\.onTick",
+      "description": "Subscribes to clock.onTick"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "shouldAnimate",
+      "description": "Enables clock animation"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "label",
+      "description": "Uses label graphics"
+    }
   ],
   "screenshots": [
-    { "timing": "after_ticks", "delay_ms": 5000, "description": "Global Atlantic view with tick-counter label" }
+    {
+      "timing": "after_ticks",
+      "delay_ms": 5000,
+      "description": "Global Atlantic view with tick-counter label"
+    }
   ],
   "regression_critical": false,
-  "target_skill_sections": ["Event System", "EventHelper for Batch Cleanup"]
+  "target_skill_sections": [
+    "Event System",
+    "EventHelper for Batch Cleanup"
+  ],
+  "screenshot_mode": "cardinal_panorama"
 }

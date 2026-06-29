@@ -84,7 +84,8 @@
     "source": "optimization/scenarios",
     "source_name": "remap-input-right-drag-rotate",
     "source_scenario_id": "eval-010",
-    "visual_expectations": "An overhead view of Rome at 8000m showing the Tiber River, Colosseum area, and Vatican. The input remapping is not visible in screenshots but the camera position should be correct."
+    "visual_expectations": "An overhead view of Rome at 8000m showing the Tiber River, Colosseum area, and Vatican. The input remapping is not visible in screenshots but the camera position should be correct. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

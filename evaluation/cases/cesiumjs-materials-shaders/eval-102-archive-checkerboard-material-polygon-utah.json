@@ -84,7 +84,8 @@
     "source": "optimization/scenarios",
     "source_name": "checkerboard-material-polygon-utah",
     "source_scenario_id": "eval-002",
-    "visual_expectations": "A top-down camera view of Utah showing a large rectangular polygon with a clear repeating checkerboard pattern of navy-blue and white squares, covering the state. The pattern should have multiple cells visible."
+    "visual_expectations": "A top-down camera view of Utah showing a large rectangular polygon with a clear repeating checkerboard pattern of navy-blue and white squares, covering the state. The pattern should have multiple cells visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",

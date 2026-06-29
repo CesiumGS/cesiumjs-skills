@@ -17,17 +17,44 @@
     "Sets minimumTerrainLevel or maximumTerrainLevel",
     "Frames Hawaii closely"
   ],
-  "visual_expectations": "A visible regional view of the Hawaiian island chain on a light map. The screenshot should not be mostly black; it should visibly focus on Hawaii rather than a global map, and the code should clearly demonstrate bounded regional-provider configuration.",
+  "visual_expectations": "A visible regional view of the Hawaiian island chain on a light map. The screenshot should not be mostly black; it should visibly focus on Hawaii rather than a global map, and the code should clearly demonstrate bounded regional-provider configuration. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
   "programmatic_checks": [
-    { "type": "no_console_errors", "description": "No JS errors" },
-    { "type": "code_runs", "description": "No runtime exceptions" },
-    { "type": "pattern_present", "pattern": "UrlTemplateImageryProvider", "description": "Uses URL template imagery provider" },
-    { "type": "pattern_present", "pattern": "rectangle", "description": "Sets tight rectangle bounds" },
-    { "type": "pattern_present", "pattern": "minimumTerrainLevel|maximumTerrainLevel", "description": "Uses imagery performance level limits" },
-    { "type": "pattern_present", "pattern": "-160|-155|19\\.|22\\.", "description": "Targets Hawaii region" }
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "UrlTemplateImageryProvider",
+      "description": "Uses URL template imagery provider"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "rectangle",
+      "description": "Sets tight rectangle bounds"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "minimumTerrainLevel|maximumTerrainLevel",
+      "description": "Uses imagery performance level limits"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-160|-155|19\\.|22\\.",
+      "description": "Targets Hawaii region"
+    }
   ],
   "screenshots": [
-    { "timing": "after_load", "delay_ms": 6000, "description": "Regional imagery provider focused on Hawaii" }
+    {
+      "timing": "after_load",
+      "delay_ms": 6000,
+      "description": "Regional imagery provider focused on Hawaii"
+    }
   ],
-  "regression_critical": false
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
 }

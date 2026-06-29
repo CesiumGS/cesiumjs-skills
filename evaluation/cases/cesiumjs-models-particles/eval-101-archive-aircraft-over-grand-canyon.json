@@ -78,14 +78,15 @@
       "Sets heading toward east-northeast (around 60 degrees, in radians)",
       "Adds the model to viewer.scene.primitives",
       "Positions the model over the Grand Canyon South Rim (around -112.1 W, 36.05 N) at 2000-5000 m altitude",
-      "Frames the camera so the aircraft is recognizable in the scene"
+      "Frames the camera so the aircraft is recognizable in the scene and fully inside the screenshot"
     ],
     "landmark": "Grand Canyon, Arizona",
     "perspective": "framed aircraft model over the canyon",
     "source": "optimization/scenarios",
     "source_name": "aircraft-over-grand-canyon",
     "source_scenario_id": "eval-001",
-    "visual_expectations": "The Cesium Air aircraft model clearly visible in the sky over the Grand Canyon map context. The model should be recognizable (wings, fuselage) and pointed roughly east-northeast."
+    "visual_expectations": "The full Cesium Air aircraft model clearly visible and centered in the sky over the Grand Canyon map context. The model should be recognizable (wings, fuselage), not clipped by the frame, and pointed roughly east-northeast. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
@@ -98,7 +99,7 @@
     ],
     "snapshot_before_and_after": false
   },
-  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer (`maximumLevel: 18`) and no ion terrain/defaults. Load the public Cesium Air glb model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb using Model.fromGltfAsync with scale 30, minimumPixelSize 300, maximumScale 30000. Position the model 800 m above the South Rim at -112.1130 longitude, 36.0544 latitude, 2900 m altitude using Transforms.headingPitchRollToFixedFrame with heading Cesium.Math.toRadians(75) (east-northeast), pitch 0, roll 0. Add to scene.primitives. Frame the aircraft with explicit camera coords (NOT viewer.flyTo of the model): viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-112.115, 36.045, 3500), orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-15), roll: 0 } }) \u2014 places the camera 1 km south of the aircraft at 3500 m, looking north and slightly down so the aircraft appears over the Grand Canyon map context. Do not use CesiumTerrainProvider.fromIonAssetId or Terrain.fromWorldTerrain.",
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer (`maximumLevel: 18`) and no ion terrain/defaults. Load the public Cesium Air glb model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb using Model.fromGltfAsync with scale 30, minimumPixelSize 350, maximumScale 30000, plus a subtle cyan or white silhouette so the aircraft remains visible. Position the model 800 m above the South Rim at -112.1130 longitude, 36.0544 latitude, 2900 m altitude using Transforms.headingPitchRollToFixedFrame with heading Cesium.Math.toRadians(75) (east-northeast), pitch 0, roll 0. Add to scene.primitives. Frame the aircraft with explicit camera coords (NOT viewer.flyTo of the model) and aim at the known model position so the full aircraft stays centered in the screenshot, not clipped by the bottom edge; for example use camera.lookAt or setView from just south/southwest of the model with a moderate downward pitch and 900-1400 m range, then release the transform if needed. Do not use CesiumTerrainProvider.fromIonAssetId or Terrain.fromWorldTerrain.",
   "schema_version": 1,
   "skill": "cesiumjs-models-particles",
   "timeout_ms": 5000

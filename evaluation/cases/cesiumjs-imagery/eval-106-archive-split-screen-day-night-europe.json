@@ -82,7 +82,8 @@
     "source": "optimization/scenarios",
     "source_name": "split-screen-day-night-europe",
     "source_scenario_id": "eval-006",
-    "visual_expectations": "The viewer should show a clear vertical split, with Southern Europe visible on both sides. One half should show normal globe imagery and the other half should show the night-lights treatment."
+    "visual_expectations": "The viewer should show a clear vertical split, with Southern Europe visible on both sides. One half should show normal globe imagery and the other half should show the night-lights treatment. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
   },
   "probe": {
     "actual_source": "observed baseline run artifacts",
