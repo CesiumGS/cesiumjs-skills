@@ -1,0 +1,39 @@
+{
+  "id": "eval-006",
+  "name": "czml-segmented-path",
+  "landmark": "CZML multi-phase route over Lake Michigan",
+  "perspective": "regional overhead view showing two CZML material phases",
+  "difficulty": "hard",
+  "description": "Verify that the CesiumJS 1.143 CZML materialMode surface is a time-varying PathMode property by loading one sampled route that switches from PORTIONS to WHOLE while using interval-tagged solid-color materials.",
+  "prompt": "Create a public no-token Viewer with an explicit OpenStreetMap base layer and EllipsoidTerrainProvider. Define an inline CZML array with a document packet and one route packet. Give the document a clock interval from 2026-07-15T12:00:00Z through 12:04:00Z and currentTime 12:01:00Z. Give the route an epoch-based cartographicDegrees position with five 60-second samples from approximately (-88.0, 41.7, 12000) to (-87.0, 42.0, 12000). Its path must use materialMode as an array of exactly two interval packets: pathMode 'PORTIONS' before 12:02 and pathMode 'WHOLE' from 12:02 onward. Also use resolution: 30, leadTime: 120, trailTime: 120, width: 8, and material as an array of exactly two interval-tagged solidColor packets: cyan before 12:02 and orange from 12:02 onward. Load with await Cesium.CzmlDataSource.load(czml), add the result to viewer.dataSources, set viewer.clock.currentTime to 12:01:00Z with shouldAnimate false, tick once, and frame the full route with Rectangle.fromDegrees(-88.15, 41.55, -86.85, 42.15). Do not reconstruct the route as multiple entities or manual polylines.",
+  "expected_behaviors": [
+    "Defines an inline CZML document and one sampled route packet",
+    "Uses epoch-based cartographicDegrees samples over a non-zero interval",
+    "Defines CZML path.materialMode as two interval packets that switch from PORTIONS to WHOLE",
+    "Defines exactly two interval-tagged solidColor material packets with cyan and orange values",
+    "Uses a practical positive resolution and bounded leadTime and trailTime",
+    "Loads through CzmlDataSource.load and adds the data source to the Viewer",
+    "Positions the clock inside the PORTIONS interval and frames the complete route",
+    "Uses one CZML path instead of emulating segmentation with multiple entities"
+  ],
+  "visual_expectations": "One continuous route rendered as two plainly distinct CZML-driven portions, cyan and orange, with the entire regional path visible.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS or CZML processing errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "CzmlDataSource\\.load", "description": "Uses the public CZML loader" },
+    { "type": "pattern_present", "pattern": "materialMode\\s*:\\s*\\[", "description": "Uses a time-varying CZML PathMode property" },
+    { "type": "pattern_present", "pattern": "pathMode\\s*:\\s*['\"]PORTIONS['\"]", "description": "Enables segmented rendering in the first interval" },
+    { "type": "pattern_present", "pattern": "pathMode\\s*:\\s*['\"]WHOLE['\"]", "description": "Switches to whole-path rendering in the second interval" },
+    { "type": "pattern_present", "pattern": "solidColor", "description": "Uses CZML solid-color materials" },
+    { "type": "pattern_present", "pattern": "material\\s*:\\s*\\[", "description": "Uses interval-tagged material packets" },
+    { "type": "pattern_present", "pattern": "cartographicDegrees", "description": "Uses sampled cartographic positions" },
+    { "type": "pattern_present", "pattern": "viewer\\.dataSources", "description": "Adds the CZML data source" },
+    { "type": "pattern_absent", "pattern": "Terrain\\.fromWorldTerrain|CesiumTerrainProvider\\.fromIonAssetId", "description": "Avoids ion terrain dependencies" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 8000, "description": "CZML path with cyan and orange temporal portions after imagery settles" }
+  ],
+  "regression_critical": true,
+  "runner_mode": "global-js",
+  "target_skill_sections": ["CZML", "All 17 Graphics Types"]
+}

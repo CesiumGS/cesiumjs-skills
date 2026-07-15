@@ -4,7 +4,7 @@ description: "CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLa
 ---
 # CesiumJS Imagery Layers
 
-> CesiumJS v1.142 -- Imagery providers supply raster tile data rendered on the Globe
+> CesiumJS v1.143 -- Imagery providers supply raster tile data rendered on the Globe
 > or draped over a Cesium3DTileset. The three core abstractions are **ImageryProvider**
 > (fetches tiles), **ImageryLayer** (display settings), and
 > **ImageryLayerCollection** (ordered stack on the globe).

@@ -1,0 +1,38 @@
+{
+  "id": "eval-005",
+  "name": "khr-meshopt-conformance",
+  "landmark": "Official Cesium KHR_meshopt_compression conformance grid",
+  "perspective": "near-front view of the complete labeled cube grid",
+  "difficulty": "hard",
+  "description": "Verify CesiumJS 1.143's automatic KHR_meshopt_compression decoding with the official tagged conformance asset, including the v1 attribute codec and COLOR filter cases, without application-side decoder wiring.",
+  "prompt": "Create a no-token Viewer with baseLayer: false, globe: false, skyBox: false, skyAtmosphere: false, navigationHelpButton: false, and a dark background. Load https://raw.githubusercontent.com/CesiumGS/cesium/1.143/Specs/Data/Models/glTF-2.0/MeshoptCubeTest/glTF-Meshopt/MeshoptCubeTest.gltf directly with await Cesium.Model.fromGltfAsync. Do not import, configure, or call a meshopt decoder or private loader helper. Anchor the model at Cartesian3.fromDegrees(-75.0, 40.0, 1000) with Transforms.eastNorthUpToFixedFrame and set scale: 100. Add it to viewer.scene.primitives, then wait for model.readyEvent if model.ready is still false before reading model.boundingSphere. Because the grid is an offset vertical board, frame the complete asset with viewer.camera.viewBoundingSphere using a HeadingPitchRange of about -90 degrees heading, -10 degrees pitch, and range 0 so Cesium computes a viewport-safe near-front view; do not target the raw anchor. The official asset and its relative binary resources must remain on the immutable 1.143 tag URL.",
+  "expected_behaviors": [
+    "Creates a Viewer that does not require ion imagery or terrain",
+    "Calls Model.fromGltfAsync with the official Cesium 1.143 MeshoptCubeTest glTF URL",
+    "Relies on CesiumJS automatic KHR_meshopt_compression decoding",
+    "Does not import or wire a meshopt decoder or private loader helper",
+    "Anchors the model with Transforms.eastNorthUpToFixedFrame and adds it to scene.primitives",
+    "Waits for model.readyEvent before reading the bounding sphere when necessary",
+    "Uses the model bounding sphere and a near-front camera angle that keeps the entire labeled grid visible",
+    "Loads all conformance rows, including attribute codec and COLOR filter cases, without runtime errors"
+  ],
+  "visual_expectations": "A dark-background near-front view of the complete labeled conformance grid: five columns by five rows of decoded cubes plus readable row and column labels, with no missing or corrupted geometry.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS or model loader errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "Model\\.fromGltfAsync", "description": "Uses the public async Model loader" },
+    { "type": "pattern_present", "pattern": "cesium/1\\.143/.+MeshoptCubeTest", "description": "Uses the immutable official 1.143 conformance asset" },
+    { "type": "pattern_present", "pattern": "Transforms\\.eastNorthUpToFixedFrame", "description": "Anchors the local glTF frame" },
+    { "type": "pattern_present", "pattern": "primitives\\.add", "description": "Adds the model to the scene" },
+    { "type": "pattern_present", "pattern": "(?:readyEvent|\\.ready)", "description": "Waits for render readiness before reading model bounds" },
+    { "type": "pattern_present", "pattern": "(?:viewBoundingSphere|flyToBoundingSphere)", "description": "Frames the model's computed bounds rather than its offset origin" },
+    { "type": "pattern_absent", "pattern": "MeshoptDecoder|findMeshoptExtension|meshopt_decoder", "description": "Avoids private or application-side decoder wiring" },
+    { "type": "pattern_absent", "pattern": "Terrain\\.fromWorldTerrain|CesiumTerrainProvider\\.fromIonAssetId", "description": "Avoids ion terrain dependencies" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 7000, "description": "Complete decoded KHR meshopt conformance grid" }
+  ],
+  "regression_critical": true,
+  "runner_mode": "global-js",
+  "target_skill_sections": ["Loading a glTF/GLB Model", "Readiness and Lifecycle"]
+}

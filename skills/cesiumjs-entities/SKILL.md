@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-entities
-description: "CesiumJS entities and data sources - Entity, EntityCollection, DataSource, GeoJsonDataSource, KmlDataSource, CzmlDataSource, Graphics types, Visualizers. Use when adding points, labels, models, polygons, or polylines to the map, loading GeoJSON/KML/CZML/GPX data, or working with the high-level Entity API."
+description: "CesiumJS entities and data sources - Entity, EntityCollection, DataSource, GeoJsonDataSource, KmlDataSource, CzmlDataSource, Graphics types, PathGraphics, PathMode, Visualizers. Use when adding points, labels, models, polygons, polylines, or time-segmented paths, loading GeoJSON/KML/CZML/GPX data, or working with the high-level Entity API."
 ---
 # CesiumJS Entities & DataSources
 
-> **Version baseline:** CesiumJS 1.142 -- ES module imports: `import { ... } from "cesium";`
+> **Version baseline:** CesiumJS 1.143 -- ES module imports: `import { ... } from "cesium";`
 > **Ownership rule:** `*Graphics` classes belong here; `*Geometry` classes belong in cesiumjs-primitives. Properties (SampledProperty, CallbackProperty, MaterialProperty subtypes) belong in cesiumjs-time-properties.
 
 ## Architecture
@@ -310,6 +310,31 @@ viewer.dataSources.add(ds);
 await ds.process("/data/vehicle-update.czml");  // append without clearing
 ```
 
+In 1.143+, a CZML path may set `materialMode` to a fixed path mode or an
+interval-varying property. `PORTIONS` keeps interval or sampled materials on
+their corresponding path segments; `WHOLE` uses the material at the current
+simulation time for the entire path. See `cesiumjs-time-properties` for the
+optimized direct-API patterns.
+
+```javascript
+const routePacket = {
+  id: "route",
+  path: {
+    materialMode: [
+      { interval: "2026-07-15T12:00:00Z/2026-07-15T12:02:00Z", pathMode: "PORTIONS" },
+      { interval: "2026-07-15T12:02:00Z/2026-07-15T12:04:00Z", pathMode: "WHOLE" },
+    ],
+    resolution: 30,
+    material: [
+      { interval: "2026-07-15T12:00:00Z/2026-07-15T12:02:00Z",
+        solidColor: { color: { rgba: [0, 255, 255, 255] } } },
+      { interval: "2026-07-15T12:02:00Z/2026-07-15T12:04:00Z",
+        solidColor: { color: { rgba: [255, 165, 0, 255] } } },
+    ],
+  },
+};
+```
+
 ### GPX
 
 ```javascript
@@ -410,7 +435,7 @@ const url = URL.createObjectURL(result.kmz);
 | `WallGraphics` | positions, minimumHeights, maximumHeights |
 | `PolylineVolumeGraphics` | positions, shape (Cartesian2[]) |
 | `PlaneGraphics` | plane (Plane), dimensions (Cartesian2) |
-| `PathGraphics` | resolution, leadTime, trailTime, width, `relativeTo` (experimental, 1.140+) |
+| `PathGraphics` | resolution, leadTime, trailTime, width, material, `materialMode` (1.143+), `relativeTo` (experimental) |
 | `Cesium3DTilesetGraphics` | uri |
 
 > **`PathGraphics.relativeTo` (experimental, 1.140+, #13223):** display a path in a
@@ -418,6 +443,14 @@ const url = URL.createObjectURL(result.kmz);
 > than the entity's `position` `ReferenceFrame` -- e.g. draw a drone's track
 > relative to a moving vehicle rather than ECEF. Marked experimental; the signature
 > may change.
+
+> **`PathGraphics.materialMode` (1.143+):** use `PathMode.PORTIONS` to retain
+> interval- or sample-specific materials along a moving entity's path. The
+> default `PathMode.WHOLE` colors the entire path with the material at the
+> current time. The value is itself a `Property`, so it may also vary by time.
+> Set it through the path options object for clean TypeScript 1.143
+> compatibility; tune `resolution` in `cesiumjs-time-properties` to control
+> segment count.
 
 ## Key Enums
 
@@ -428,6 +461,7 @@ const url = URL.createObjectURL(result.kmz);
 | `VerticalOrigin` | TOP, CENTER, BOTTOM, BASELINE |
 | `LabelStyle` | FILL, OUTLINE, FILL_AND_OUTLINE |
 | `ColorBlendMode` | HIGHLIGHT, REPLACE, MIX |
+| `PathMode` | WHOLE, PORTIONS |
 | `ShadowMode` | DISABLED, ENABLED, CAST_ONLY, RECEIVE_ONLY |
 | `ArcType` | NONE, GEODESIC, RHUMB |
 | `CornerType` | ROUNDED, MITERED, BEVELED |

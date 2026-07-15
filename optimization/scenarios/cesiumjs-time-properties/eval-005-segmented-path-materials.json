@@ -1,0 +1,42 @@
+{
+  "id": "eval-005",
+  "name": "segmented-path-materials",
+  "landmark": "Multi-phase flight path over Lake Michigan",
+  "perspective": "regional overhead view showing a sampled color transition",
+  "difficulty": "hard",
+  "description": "Exercise CesiumJS 1.143 PathGraphics.materialMode with the sampled-material branch by rendering one time-dynamic route whose color transitions from cyan through lime to orange. The scene must use PathMode.PORTIONS, a SampledProperty of Color values, bounded lead/trail times, and a practical positive resolution.",
+  "prompt": "Create a public no-token Viewer with an explicit OpenStreetMap base layer and EllipsoidTerrainProvider. Build a SampledPositionProperty for a four-minute flight over Lake Michigan from 2026-07-15T12:00:00Z through 12:04:00Z, with samples every 60 seconds from approximately (-88.0, 41.7, 12000) to (-87.0, 42.0, 12000). Build a SampledProperty(Cesium.Color) with exactly three samples: Cesium.Color.CYAN at start, Cesium.Color.LIME at 12:02, and Cesium.Color.ORANGE at stop, then wrap it in a ColorMaterialProperty. Add one entity whose path uses that sampled material, materialMode: Cesium.PathMode.PORTIONS, resolution: 30, leadTime: 120, trailTime: 120, and width: 8. Set the Viewer clock start/stop/current times, place currentTime at 12:02:00Z, use ClockRange.CLAMPED, keep shouldAnimate false, and tick once. Frame the complete route with Rectangle.fromDegrees(-88.15, 41.55, -86.85, 42.15) so the sampled color transition is plainly visible. Do not emulate segmentation with multiple entities or polylines.",
+  "expected_behaviors": [
+    "Constructs a SampledPositionProperty spanning a non-zero four-minute interval",
+    "Constructs a SampledProperty of Color values with three samples over the route interval",
+    "Wraps the sampled cyan, lime, and orange values in one ColorMaterialProperty",
+    "Sets path.materialMode to PathMode.PORTIONS",
+    "Uses a positive path resolution of roughly 30 seconds with bounded leadTime and trailTime",
+    "Uses one entity/path rather than manually splitting the route into multiple entities",
+    "Sets the clock currentTime at the middle color sample and ticks once",
+    "Frames the entire Lake Michigan route so the sampled material transition is visible"
+  ],
+  "visual_expectations": "A regional overhead view with one continuous flight path visibly transitioning from cyan through lime to orange, with the complete sampled-material route in frame.",
+  "programmatic_checks": [
+    { "type": "no_console_errors", "description": "No JS errors" },
+    { "type": "code_runs", "description": "No runtime exceptions" },
+    { "type": "pattern_present", "pattern": "SampledPositionProperty", "description": "Uses a sampled route" },
+    { "type": "pattern_present", "pattern": "SampledProperty\\s*\\(\\s*Cesium\\.Color", "description": "Uses a sampled Color property" },
+    { "type": "pattern_present", "pattern": "addSample", "description": "Adds time-tagged color samples" },
+    { "type": "pattern_present", "pattern": "ColorMaterialProperty", "description": "Wraps sampled colors as one material" },
+    { "type": "pattern_present", "pattern": "Color\\.CYAN", "description": "Uses cyan at the route start" },
+    { "type": "pattern_present", "pattern": "Color\\.LIME", "description": "Uses lime at the midpoint" },
+    { "type": "pattern_present", "pattern": "Color\\.ORANGE", "description": "Uses orange at the route stop" },
+    { "type": "pattern_present", "pattern": "PathMode\\.PORTIONS", "description": "Enables 1.143 segmented path rendering" },
+    { "type": "pattern_present", "pattern": "materialMode", "description": "Sets PathGraphics.materialMode" },
+    { "type": "pattern_present", "pattern": "resolution\\s*:\\s*(?:[1-9]|[1-9][0-9])", "description": "Uses a positive bounded segmentation resolution" },
+    { "type": "pattern_present", "pattern": "(?:leadTime|trailTime)", "description": "Bounds the visible path window" },
+    { "type": "pattern_absent", "pattern": "Terrain\\.fromWorldTerrain|CesiumTerrainProvider\\.fromIonAssetId", "description": "Avoids ion terrain dependencies" }
+  ],
+  "screenshots": [
+    { "timing": "after_load", "delay_ms": 5000, "description": "One route with a cyan-to-lime-to-orange sampled transition" }
+  ],
+  "regression_critical": true,
+  "runner_mode": "global-js",
+  "target_skill_sections": ["Segmented Path Materials (1.143+)", "SampledProperty -- Interpolated Time Series", "Material Properties"]
+}

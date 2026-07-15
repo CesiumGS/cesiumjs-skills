@@ -222,6 +222,42 @@ class TestHeadingMatchesScenario(unittest.TestCase):
         self.assertTrue(analyze_coverage.heading_matches_scenario("Camera Fundamentals", scenario))
         self.assertTrue(analyze_coverage.heading_matches_scenario("flyTo animation", scenario))
 
+    def test_target_skill_sections_prevent_keyword_fallthrough(self):
+        """Declared targets must not cover unrelated keyword matches."""
+        scenario = {
+            "target_skill_sections": [
+                "Loading a glTF/GLB Model",
+                "Readiness and Lifecycle",
+            ],
+            "name": "khr-meshopt-conformance",
+            "description": "Load a model while keeping every labeled grid visible",
+            "expected_behaviors": [
+                "The particle-like test grid remains visible without runtime errors",
+                "The camera framing keeps the complete model in view",
+            ],
+        }
+
+        self.assertTrue(
+            analyze_coverage.heading_matches_scenario(
+                "Loading a glTF/GLB Model", scenario
+            )
+        )
+        self.assertTrue(
+            analyze_coverage.heading_matches_scenario(
+                "Readiness and Lifecycle", scenario
+            )
+        )
+        self.assertFalse(
+            analyze_coverage.heading_matches_scenario(
+                "Producing a Legible Vertical Plume", scenario
+            )
+        )
+        self.assertFalse(
+            analyze_coverage.heading_matches_scenario(
+                "Framing Particle Effects So the Map Is Visible", scenario
+            )
+        )
+
     def test_expected_behaviors_keyword_match(self):
         """Test matching via keywords in expected_behaviors."""
         scenario = {
@@ -291,6 +327,21 @@ class TestAnalyzeCoverage(unittest.TestCase):
                 self.assertIn("api", api)
                 self.assertIn("scenarios", api)
                 self.assertIsInstance(api["scenarios"], list)
+
+    def test_meshopt_scenario_covers_only_declared_sections(self):
+        """The meshopt scenario must not leak into particle/plume sections."""
+        report = analyze_coverage.analyze_coverage()
+        scenario_ref = "cesiumjs-models-particles/eval-005"
+        covered_headings = {
+            section["heading"]
+            for section in report["skills"]["cesiumjs-models-particles"]["sections"]
+            if scenario_ref in section["scenarios"]
+        }
+
+        self.assertEqual(
+            covered_headings,
+            {"Loading a glTF/GLB Model", "Readiness and Lifecycle"},
+        )
 
     def test_analyze_coverage_no_absolute_paths(self):
         """Test that coverage report contains no absolute paths."""

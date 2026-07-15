@@ -4,7 +4,7 @@ description: "CesiumJS interaction and picking - ScreenSpaceEventHandler, multi-
 ---
 # CesiumJS Interaction & Picking
 
-Version baseline: CesiumJS v1.142 (ES module imports, Ion token required).
+Version baseline: CesiumJS v1.143 (ES module imports, Ion token required).
 
 ## ScreenSpaceEventHandler
 

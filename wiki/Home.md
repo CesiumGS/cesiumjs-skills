@@ -10,7 +10,7 @@ The framework starts with `CesiumGS/cesiumjs-skills`, where skill documents guid
 
 ## Start Here
 
-1. [Domain Mapping](Domain-Mapping) - Every CesiumJS v1.142 public symbol assigned to exactly one skill domain (~550 symbols across 14 skills).
+1. [Domain Mapping](Domain-Mapping) - Every CesiumJS v1.143 public symbol assigned to exactly one skill domain (~551 symbols across 14 skills).
 2. [Architecture Concept Document](Architecture-Concept-Document) - Goals, constraints, building blocks, runtime views, decisions, risks, and glossary.
 3. [Run Skill Evaluations Locally](Run-Skill-Evaluations-Locally) - How to validate manifests and reproduce selected browser scenarios.
 4. [Add an Evaluation Scenario](Add-Evaluation-Scenario) - How to add public-safe scenario manifests.

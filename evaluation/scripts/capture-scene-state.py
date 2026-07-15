@@ -30,7 +30,7 @@ except ImportError:  # pragma: no cover - optional local dependency
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACTS_ROOT = REPO_ROOT / "evaluation" / "artifacts"
-CESIUM_VERSION = "1.142"
+CESIUM_VERSION = "1.143"
 
 sys.path.insert(0, str(REPO_ROOT))
 from evaluation.runner import run_case  # noqa: E402

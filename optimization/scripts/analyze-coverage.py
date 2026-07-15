@@ -207,16 +207,26 @@ def heading_matches_scenario(heading: str, scenario: Dict) -> bool:
     Check if a heading is relevant to a scenario based on expected_behaviors
     and scenario attributes.
 
-    Uses keyword matching and semantic relevance.
+    A non-empty target_skill_sections list is authoritative. Keyword matching
+    is only used as a compatibility fallback for scenarios that do not declare
+    explicit targets.
     """
     # Normalize heading for comparison
     heading_lower = heading.lower()
 
-    # Check target_skill_sections if present
-    target_sections = scenario.get('target_skill_sections', [])
-    for section in target_sections:
-        if section.lower() in heading_lower or heading_lower in section.lower():
-            return True
+    # Treat declared targets as an allowlist. Falling through to broad keyword
+    # matching would make an explicit scenario target cover unrelated sections
+    # merely because its prose happens to mention a shared term.
+    target_sections = [
+        section.strip().lower()
+        for section in scenario.get('target_skill_sections', [])
+        if isinstance(section, str) and section.strip()
+    ]
+    if target_sections:
+        return any(
+            section in heading_lower or heading_lower in section
+            for section in target_sections
+        )
 
     # Check expected_behaviors for keywords
     behaviors_text = ' '.join(scenario.get('expected_behaviors', [])).lower()

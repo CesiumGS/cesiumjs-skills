@@ -29,7 +29,7 @@ Based on the evidence above, propose a revised version of the skill that:
 
 Before editing, perform a private research pass:
 
-- Trace every proposed change back to a concrete signal in recent losses, failed checks, uncovered critical APIs, or CesiumJS v1.142 behavior already present in the provided context.
+- Trace every proposed change back to a concrete signal in recent losses, failed checks, uncovered critical APIs, or CesiumJS v1.143 behavior already present in the provided context.
 - When the orchestration environment provides research/sub-agent tooling, delegate narrow checks before changing broad guidance: one pass for Cesium API correctness, one pass for visual/framing failure patterns, and one pass for regression risk against winning examples. Fold in only verified findings.
 - If a fact cannot be verified from the available evidence, do not invent new API behavior. Prefer a smaller, evidence-backed change.
 
@@ -62,7 +62,7 @@ Before editing, perform a private research pass:
 - Maintain the existing structure and section organization unless reorganization is clearly needed
 - Use the same tone, style, and formatting conventions as the current skill
 - All code examples must be syntactically correct CesiumJS code
-- Keep guidance grounded in actual CesiumJS v1.142 API documentation
+- Keep guidance grounded in actual CesiumJS v1.143 API documentation
 
 ## Output Format
 

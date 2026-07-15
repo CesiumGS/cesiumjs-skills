@@ -6,44 +6,25 @@
           "heading": "Loading a Tileset",
           "scenarios": [
             "cesiumjs-3d-tiles/eval-001",
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-003",
             "cesiumjs-3d-tiles/eval-004",
             "cesiumjs-3d-tiles/eval-005"
           ]
         },
         {
           "heading": "Key Constructor Options",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Mapbox Vector Tiles as Runtime 3D Tiles (Experimental, 1.142+)",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-001",
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-003",
-            "cesiumjs-3d-tiles/eval-004",
-            "cesiumjs-3d-tiles/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Tileset Events",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-001",
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-003",
-            "cesiumjs-3d-tiles/eval-004",
-            "cesiumjs-3d-tiles/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Runtime Properties",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Declarative Styling",
@@ -54,34 +35,19 @@
         },
         {
           "heading": "Color Blend Modes",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-003",
-            "cesiumjs-3d-tiles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Edge Display Mode (Experimental, 1.142+)",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Feature Picking and Properties",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Inherited Metadata (3D Tiles 1.1 / EXT_structural_metadata)",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-001",
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-003",
-            "cesiumjs-3d-tiles/eval-004",
-            "cesiumjs-3d-tiles/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Clipping Planes",
@@ -91,9 +57,7 @@
         },
         {
           "heading": "Clipping Polygons",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Point Cloud Shading",
@@ -101,20 +65,11 @@
         },
         {
           "heading": "Voxel Primitives",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-001",
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-003",
-            "cesiumjs-3d-tiles/eval-004",
-            "cesiumjs-3d-tiles/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "I3S Data Provider",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Gaussian Splats",
@@ -126,13 +81,7 @@
         },
         {
           "heading": "Adjusting Tileset Height",
-          "scenarios": [
-            "cesiumjs-3d-tiles/eval-001",
-            "cesiumjs-3d-tiles/eval-002",
-            "cesiumjs-3d-tiles/eval-003",
-            "cesiumjs-3d-tiles/eval-004",
-            "cesiumjs-3d-tiles/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Performance Tips",
@@ -180,7 +129,9 @@
         },
         {
           "api": "Cesium3DTileColorBlendMode.REPLACE",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Cesium3DTilesVoxelProvider.fromUrl",
@@ -220,7 +171,8 @@
         {
           "api": "Color.WHITE",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -231,12 +183,15 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromRandom",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "EdgeDisplayMode.EDGES_ONLY",
@@ -341,6 +296,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -361,19 +317,29 @@
         }
       ],
       "uncovered_sections": [
+        "Key Constructor Options",
+        "Mapbox Vector Tiles as Runtime 3D Tiles (Experimental, 1.142+)",
+        "Tileset Events",
+        "Runtime Properties",
+        "Color Blend Modes",
+        "Edge Display Mode (Experimental, 1.142+)",
+        "Feature Picking and Properties",
+        "Inherited Metadata (3D Tiles 1.1 / EXT_structural_metadata)",
+        "Clipping Polygons",
         "Point Cloud Shading",
+        "Voxel Primitives",
+        "I3S Data Provider",
         "Gaussian Splats",
         "Classification",
+        "Adjusting Tileset Height",
         "Performance Tips",
         "See Also"
       ],
       "uncovered_apis": [
         "Cartesian3.subtract",
-        "Cesium3DTileColorBlendMode.REPLACE",
         "Cesium3DTilesVoxelProvider.fromUrl",
         "Cesium3DTileset.fromIonAssetId",
         "ClassificationType.BOTH",
-        "Color.fromRandom",
         "EdgeDisplayMode.EDGES_ONLY",
         "EdgeDisplayMode.SURFACES_AND_EDGES",
         "EdgeDisplayMode.SURFACES_ONLY",
@@ -541,7 +507,8 @@
           "scenarios": [
             "cesiumjs-camera/eval-001",
             "cesiumjs-camera/eval-009",
-            "cesiumjs-camera/eval-010"
+            "cesiumjs-camera/eval-010",
+            "cesiumjs-camera/eval-011"
           ]
         },
         {
@@ -708,6 +675,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-spatial-math/eval-003"
           ]
@@ -896,11 +864,12 @@
         {
           "heading": "Color",
           "scenarios": [
-            "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-core-utilities/eval-002",
-            "cesiumjs-core-utilities/eval-003",
-            "cesiumjs-core-utilities/eval-004"
+            "cesiumjs-core-utilities/eval-001"
           ]
+        },
+        {
+          "heading": "Visual Eval Framing for Pins",
+          "scenarios": []
         },
         {
           "heading": "Creating Colors",
@@ -938,9 +907,7 @@
         },
         {
           "heading": "Helper Functions",
-          "scenarios": [
-            "cesiumjs-core-utilities/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "defined, clone, combine",
@@ -974,9 +941,7 @@
         },
         {
           "heading": "Feature Detection and Fullscreen",
-          "scenarios": [
-            "cesiumjs-core-utilities/eval-002"
-          ]
+          "scenarios": []
         },
         {
           "heading": "TaskProcessor",
@@ -1028,12 +993,15 @@
         },
         {
           "api": "Color.BLACK.withAlpha",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.BLUE",
           "scenarios": [
-            "cesiumjs-entities/eval-002"
+            "cesiumjs-entities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -1041,50 +1009,59 @@
           "scenarios": [
             "cesiumjs-core-utilities/eval-003",
             "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004"
+            "cesiumjs-interaction/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.FORESTGREEN",
           "scenarios": [
-            "cesiumjs-core-utilities/eval-003"
+            "cesiumjs-core-utilities/eval-003",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.GREEN",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.ORANGE",
           "scenarios": [
-            "cesiumjs-core-utilities/eval-002"
+            "cesiumjs-core-utilities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.RED",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.RED.equals",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.ROYALBLUE",
           "scenarios": [
             "cesiumjs-core-utilities/eval-003",
-            "cesiumjs-primitives/eval-003"
+            "cesiumjs-primitives/eval-003",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.WHITE",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -1095,31 +1072,37 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromBytes",
           "scenarios": [
-            "cesiumjs-core-utilities/eval-001"
+            "cesiumjs-core-utilities/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromCssColorString",
           "scenarios": [
-            "cesiumjs-core-utilities/eval-001"
+            "cesiumjs-core-utilities/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromHsl",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-time-properties/eval-002"
+            "cesiumjs-time-properties/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromRandom",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "FeatureDetection.supportsTypedArrays",
@@ -1214,6 +1197,14 @@
           "api": "viewer.entities.add",
           "scenarios": [
             "cesiumjs-camera/eval-001",
+            "cesiumjs-camera/eval-002",
+            "cesiumjs-camera/eval-003",
+            "cesiumjs-camera/eval-004",
+            "cesiumjs-camera/eval-005",
+            "cesiumjs-camera/eval-008",
+            "cesiumjs-camera/eval-011",
+            "cesiumjs-camera/eval-013",
+            "cesiumjs-camera/eval-014",
             "cesiumjs-core-utilities/eval-001",
             "cesiumjs-core-utilities/eval-002",
             "cesiumjs-core-utilities/eval-003",
@@ -1244,6 +1235,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -1264,16 +1256,19 @@
         "Derived Resources and Template Values",
         "Retry and Proxy",
         "POST and PUT",
+        "Visual Eval Framing for Pins",
         "Manipulation and Conversion",
         "Basic Usage",
         "RequestScheduler Configuration",
         "Error Handling",
+        "Helper Functions",
         "defined, clone, combine",
         "createGuid, buildModuleUrl",
         "URL Utilities",
         "destroyObject",
         "AssociativeArray",
         "DistanceDisplayCondition",
+        "Feature Detection and Fullscreen",
         "TaskProcessor",
         "TrustedServers",
         "Performance Tips",
@@ -1281,9 +1276,6 @@
       ],
       "uncovered_apis": [
         "Cesium.ScreenSpaceEventHandler",
-        "Color.BLACK.withAlpha",
-        "Color.GREEN",
-        "Color.fromRandom",
         "FeatureDetection.supportsTypedArrays",
         "FeatureDetection.supportsWebAssembly",
         "Frozen.EMPTY_OBJECT",
@@ -1316,9 +1308,6 @@
         {
           "heading": "Applying a CustomShader",
           "scenarios": [
-            "cesiumjs-custom-shader/eval-001",
-            "cesiumjs-custom-shader/eval-002",
-            "cesiumjs-custom-shader/eval-003",
             "cesiumjs-custom-shader/eval-004"
           ]
         },
@@ -1329,10 +1318,7 @@
         {
           "heading": "Shader function signatures",
           "scenarios": [
-            "cesiumjs-custom-shader/eval-001",
-            "cesiumjs-custom-shader/eval-002",
-            "cesiumjs-custom-shader/eval-003",
-            "cesiumjs-custom-shader/eval-004"
+            "cesiumjs-custom-shader/eval-002"
           ]
         },
         {
@@ -1387,12 +1373,7 @@
         },
         {
           "heading": "VoxelPrimitive shader subset",
-          "scenarios": [
-            "cesiumjs-custom-shader/eval-001",
-            "cesiumjs-custom-shader/eval-002",
-            "cesiumjs-custom-shader/eval-003",
-            "cesiumjs-custom-shader/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Common patterns",
@@ -1443,6 +1424,7 @@
             "cesiumjs-custom-shader/eval-003",
             "cesiumjs-models-particles/eval-001",
             "cesiumjs-models-particles/eval-003",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-spatial-math/eval-003"
           ]
         },
@@ -1465,6 +1447,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -1482,6 +1465,7 @@
         "Translucency",
         "FeatureIds",
         "Metadata",
+        "VoxelPrimitive shader subset",
         "Common patterns",
         "CesiumJS 1.139-1.142 version notes",
         "Gotchas & pitfalls",
@@ -1582,7 +1566,9 @@
         },
         {
           "heading": "CZML",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-entities/eval-006"
+          ]
         },
         {
           "heading": "GPX",
@@ -1625,7 +1611,8 @@
         {
           "heading": "All 17 Graphics Types",
           "scenarios": [
-            "cesiumjs-entities/eval-001"
+            "cesiumjs-entities/eval-001",
+            "cesiumjs-entities/eval-006"
           ]
         },
         {
@@ -1689,84 +1676,105 @@
         },
         {
           "api": "Color.BLACK",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.BLUE",
           "scenarios": [
-            "cesiumjs-entities/eval-002"
+            "cesiumjs-entities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.BLUE.withAlpha",
           "scenarios": [
-            "cesiumjs-entities/eval-002"
+            "cesiumjs-entities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.CYAN",
           "scenarios": [
-            "cesiumjs-interaction/eval-005"
+            "cesiumjs-interaction/eval-005",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.CYAN.withAlpha",
           "scenarios": [
-            "cesiumjs-interaction/eval-005"
+            "cesiumjs-interaction/eval-005",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.GREEN.withAlpha",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.HOTPINK",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.LIME",
           "scenarios": [
             "cesiumjs-interaction/eval-003",
             "cesiumjs-interaction/eval-004",
-            "cesiumjs-spatial-math/eval-002"
+            "cesiumjs-spatial-math/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.ORANGE.withAlpha",
           "scenarios": [
-            "cesiumjs-core-utilities/eval-002"
+            "cesiumjs-core-utilities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.PINK.withAlpha",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.PURPLE.withAlpha",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.RED",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.RED.withAlpha",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.VIOLET",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.WHITE",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -1777,12 +1785,15 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromRandom",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "CornerType.ROUNDED",
@@ -1791,6 +1802,7 @@
         {
           "api": "CzmlDataSource.load",
           "scenarios": [
+            "cesiumjs-entities/eval-006",
             "cesiumjs-time-properties/eval-004"
           ]
         },
@@ -1843,6 +1855,7 @@
           "api": "viewer.dataSources.add",
           "scenarios": [
             "cesiumjs-entities/eval-003",
+            "cesiumjs-entities/eval-006",
             "cesiumjs-time-properties/eval-004"
           ]
         },
@@ -1850,6 +1863,14 @@
           "api": "viewer.entities",
           "scenarios": [
             "cesiumjs-camera/eval-001",
+            "cesiumjs-camera/eval-002",
+            "cesiumjs-camera/eval-003",
+            "cesiumjs-camera/eval-004",
+            "cesiumjs-camera/eval-005",
+            "cesiumjs-camera/eval-008",
+            "cesiumjs-camera/eval-011",
+            "cesiumjs-camera/eval-013",
+            "cesiumjs-camera/eval-014",
             "cesiumjs-core-utilities/eval-001",
             "cesiumjs-core-utilities/eval-002",
             "cesiumjs-core-utilities/eval-003",
@@ -1866,6 +1887,14 @@
           "api": "viewer.entities.add",
           "scenarios": [
             "cesiumjs-camera/eval-001",
+            "cesiumjs-camera/eval-002",
+            "cesiumjs-camera/eval-003",
+            "cesiumjs-camera/eval-004",
+            "cesiumjs-camera/eval-005",
+            "cesiumjs-camera/eval-008",
+            "cesiumjs-camera/eval-011",
+            "cesiumjs-camera/eval-013",
+            "cesiumjs-camera/eval-014",
             "cesiumjs-core-utilities/eval-001",
             "cesiumjs-core-utilities/eval-002",
             "cesiumjs-core-utilities/eval-003",
@@ -2014,7 +2043,6 @@
         "3D Model",
         "Box, Cylinder, Ellipsoid, Ellipse",
         "KML / KMZ",
-        "CZML",
         "GPX",
         "CustomDataSource",
         "Export to KML",
@@ -2024,13 +2052,6 @@
       ],
       "uncovered_apis": [
         "ArcType.GEODESIC",
-        "Color.BLACK",
-        "Color.GREEN.withAlpha",
-        "Color.HOTPINK",
-        "Color.PINK.withAlpha",
-        "Color.PURPLE.withAlpha",
-        "Color.VIOLET",
-        "Color.fromRandom",
         "CornerType.ROUNDED",
         "GpxDataSource.load",
         "HeightReference.CLAMP_TO_GROUND",
@@ -2387,7 +2408,8 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -2504,6 +2526,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -2546,38 +2569,26 @@
         {
           "heading": "ScreenSpaceEventHandler",
           "scenarios": [
-            "cesiumjs-interaction/eval-001",
+            "cesiumjs-interaction/eval-001"
+          ]
+        },
+        {
+          "heading": "ScreenSpaceEventType Reference",
+          "scenarios": [
+            "cesiumjs-interaction/eval-001"
+          ]
+        },
+        {
+          "heading": "Scene Picking Methods",
+          "scenarios": [
             "cesiumjs-interaction/eval-002",
             "cesiumjs-interaction/eval-003",
             "cesiumjs-interaction/eval-004"
           ]
         },
         {
-          "heading": "ScreenSpaceEventType Reference",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002"
-          ]
-        },
-        {
-          "heading": "Scene Picking Methods",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
-        },
-        {
           "heading": "pick / pickAsync / drillPick / pickPosition",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "pickVoxel (experimental)",
@@ -2585,25 +2596,15 @@
         },
         {
           "heading": "Picking Return Values",
-          "scenarios": [
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Camera Framing for Interaction Demos",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Coordinate Conversion (Required for Readouts)",
-          "scenarios": [
-            "cesiumjs-interaction/eval-002"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Recipes",
@@ -2617,53 +2618,27 @@
         },
         {
           "heading": "Polygon Setup For Picking Examples",
-          "scenarios": [
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "1. Entity Selection with Click",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "2. 3D Tiles Feature Picking and Property Inspection",
-          "scenarios": [
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "3. Terrain Position Picking (Lon/Lat from Click)",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "4. Multi-Pick with drillPick",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "5. Hover Highlighting with MOUSE_MOVE",
-          "scenarios": [
-            "cesiumjs-interaction/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "6. Drag-Based Drawing and Measurement",
@@ -2671,32 +2646,19 @@
         },
         {
           "heading": "7. Coordinate Readout on Mouse Move",
-          "scenarios": [
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "8. Conditional Behavior Based on Picked Object Type",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "9. pickAsync for Non-Blocking Hover (v1.136+)",
-          "scenarios": [
-            "cesiumjs-interaction/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "10. Hover + Selection with Silhouettes (Full Pattern)",
-          "scenarios": [
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "11. Wheel Zoom with Custom Logic",
@@ -2704,21 +2666,11 @@
         },
         {
           "heading": "12. Right-Click Context Menu",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "13. Drag Interaction (Move an Entity)",
-          "scenarios": [
-            "cesiumjs-interaction/eval-001",
-            "cesiumjs-interaction/eval-002",
-            "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004",
-            "cesiumjs-interaction/eval-005"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Performance Tips",
@@ -2778,20 +2730,23 @@
           "scenarios": [
             "cesiumjs-core-utilities/eval-003",
             "cesiumjs-interaction/eval-003",
-            "cesiumjs-interaction/eval-004"
+            "cesiumjs-interaction/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.ORANGE",
           "scenarios": [
-            "cesiumjs-core-utilities/eval-002"
+            "cesiumjs-core-utilities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.RED",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -2802,7 +2757,8 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -2813,12 +2769,15 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.clone",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Ellipsoid.WGS84",
@@ -2910,6 +2869,14 @@
           "api": "viewer.entities.add",
           "scenarios": [
             "cesiumjs-camera/eval-001",
+            "cesiumjs-camera/eval-002",
+            "cesiumjs-camera/eval-003",
+            "cesiumjs-camera/eval-004",
+            "cesiumjs-camera/eval-005",
+            "cesiumjs-camera/eval-008",
+            "cesiumjs-camera/eval-011",
+            "cesiumjs-camera/eval-013",
+            "cesiumjs-camera/eval-014",
             "cesiumjs-core-utilities/eval-001",
             "cesiumjs-core-utilities/eval-002",
             "cesiumjs-core-utilities/eval-003",
@@ -2943,6 +2910,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -3028,14 +2996,29 @@
         }
       ],
       "uncovered_sections": [
+        "pick / pickAsync / drillPick / pickPosition",
         "pickVoxel (experimental)",
+        "Picking Return Values",
+        "Camera Framing for Interaction Demos",
+        "Coordinate Conversion (Required for Readouts)",
+        "Polygon Setup For Picking Examples",
+        "1. Entity Selection with Click",
+        "2. 3D Tiles Feature Picking and Property Inspection",
+        "3. Terrain Position Picking (Lon/Lat from Click)",
+        "4. Multi-Pick with drillPick",
+        "5. Hover Highlighting with MOUSE_MOVE",
         "6. Drag-Based Drawing and Measurement",
+        "7. Coordinate Readout on Mouse Move",
+        "8. Conditional Behavior Based on Picked Object Type",
+        "9. pickAsync for Non-Blocking Hover (v1.136+)",
+        "10. Hover + Selection with Silhouettes (Full Pattern)",
         "11. Wheel Zoom with Custom Logic",
+        "12. Right-Click Context Menu",
+        "13. Drag Interaction (Move an Entity)",
         "Performance Tips",
         "See Also"
       ],
       "uncovered_apis": [
-        "Color.clone",
         "Ellipsoid.WGS84",
         "HorizontalOrigin.LEFT",
         "KeyboardEventModifier.SHIFT",
@@ -3056,17 +3039,12 @@
           "heading": "Material System (Fabric JSON)",
           "scenarios": [
             "cesiumjs-materials-shaders/eval-002",
-            "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-materials-shaders/eval-004"
           ]
         },
         {
           "heading": "Built-in Material Types",
-          "scenarios": [
-            "cesiumjs-materials-shaders/eval-001",
-            "cesiumjs-materials-shaders/eval-002",
-            "cesiumjs-materials-shaders/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Creating Materials",
@@ -3074,23 +3052,15 @@
         },
         {
           "heading": "Custom Fabric with GLSL Source",
-          "scenarios": [
-            "cesiumjs-materials-shaders/eval-002",
-            "cesiumjs-materials-shaders/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Applying Materials to Primitives",
-          "scenarios": [
-            "cesiumjs-materials-shaders/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Compositing Sub-Materials (Fabric materials + components)",
-          "scenarios": [
-            "cesiumjs-materials-shaders/eval-002",
-            "cesiumjs-materials-shaders/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "CustomShader",
@@ -3109,25 +3079,15 @@
         },
         {
           "heading": "Built-in Effects (PostProcessStageLibrary)",
-          "scenarios": [
-            "cesiumjs-materials-shaders/eval-001",
-            "cesiumjs-materials-shaders/eval-003",
-            "cesiumjs-materials-shaders/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Collection Stages (Bloom, AO, FXAA, Tonemapping)",
-          "scenarios": [
-            "cesiumjs-materials-shaders/eval-001",
-            "cesiumjs-materials-shaders/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Custom PostProcessStage",
-          "scenarios": [
-            "cesiumjs-materials-shaders/eval-001",
-            "cesiumjs-materials-shaders/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Selected Feature Highlighting",
@@ -3139,10 +3099,7 @@
         },
         {
           "heading": "Managing Stages",
-          "scenarios": [
-            "cesiumjs-materials-shaders/eval-001",
-            "cesiumjs-materials-shaders/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "BlendingState",
@@ -3164,35 +3121,43 @@
         },
         {
           "api": "Color.BLACK",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.BLUE",
           "scenarios": [
-            "cesiumjs-entities/eval-002"
+            "cesiumjs-entities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.CYAN",
           "scenarios": [
-            "cesiumjs-interaction/eval-005"
+            "cesiumjs-interaction/eval-005",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.GREEN",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.RED.withAlpha",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.WHITE",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -3203,7 +3168,8 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -3226,6 +3192,7 @@
             "cesiumjs-custom-shader/eval-003",
             "cesiumjs-models-particles/eval-001",
             "cesiumjs-models-particles/eval-003",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-spatial-math/eval-003"
           ]
         },
@@ -3361,6 +3328,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -3373,19 +3341,25 @@
         }
       ],
       "uncovered_sections": [
+        "Built-in Material Types",
         "Creating Materials",
+        "Custom Fabric with GLSL Source",
+        "Applying Materials to Primitives",
+        "Compositing Sub-Materials (Fabric materials + components)",
         "CustomShader",
         "ImageBasedLighting",
+        "Built-in Effects (PostProcessStageLibrary)",
+        "Collection Stages (Bloom, AO, FXAA, Tonemapping)",
+        "Custom PostProcessStage",
         "Selected Feature Highlighting",
         "PostProcessStageComposite",
+        "Managing Stages",
         "BlendingState",
         "Performance Tips",
         "See Also"
       ],
       "uncovered_apis": [
         "BlendingState.ALPHA_BLEND",
-        "Color.BLACK",
-        "Color.GREEN",
         "PostProcessStageLibrary.createBloomStage",
         "PostProcessStageLibrary.createBlurStage",
         "PostProcessStageLibrary.createDepthOfFieldStage",
@@ -3402,52 +3376,31 @@
           "heading": "Loading a glTF/GLB Model",
           "scenarios": [
             "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
+            "cesiumjs-models-particles/eval-005"
           ]
         },
         {
           "heading": "Public Sample Models",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Positioned Model with Heading",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Avoiding Distorted Model Appearance",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Key Model.fromGltfAsync Options",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Readiness and Lifecycle",
           "scenarios": [
             "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003"
+            "cesiumjs-models-particles/eval-003",
+            "cesiumjs-models-particles/eval-005"
           ]
         },
         {
@@ -3458,39 +3411,23 @@
         },
         {
           "heading": "Play by Name / Play All",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Animation Events",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Model Nodes",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Coloring, Silhouettes, and Feature Picking",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Edge Display Mode (Experimental, 1.142+)",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Height Reference",
@@ -3505,70 +3442,41 @@
         },
         {
           "heading": "Producing a Legible Vertical Plume",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Smoke Trail",
+          "scenarios": []
+        },
+        {
+          "heading": "Emitter Types",
+          "scenarios": []
+        },
+        {
+          "heading": "Particle Bursts",
+          "scenarios": []
+        },
+        {
+          "heading": "Update Callback (Gravity / Wind)",
+          "scenarios": []
+        },
+        {
+          "heading": "Framing Particle Effects So the Map Is Visible",
+          "scenarios": []
+        },
+        {
+          "heading": "Attaching Particles to a Moving Model",
           "scenarios": [
             "cesiumjs-models-particles/eval-002"
           ]
         },
         {
-          "heading": "Emitter Types",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-004"
-          ]
-        },
-        {
-          "heading": "Particle Bursts",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-004"
-          ]
-        },
-        {
-          "heading": "Update Callback (Gravity / Wind)",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-004"
-          ]
-        },
-        {
-          "heading": "Framing Particle Effects So the Map Is Visible",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
-          ]
-        },
-        {
-          "heading": "Attaching Particles to a Moving Model",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
-          ]
-        },
-        {
           "heading": "Canvas-Based Particle Images",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Entity API Model (ModelGraphics)",
-          "scenarios": [
-            "cesiumjs-models-particles/eval-001",
-            "cesiumjs-models-particles/eval-002",
-            "cesiumjs-models-particles/eval-003",
-            "cesiumjs-models-particles/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "GPM Extension (NGA_gpm_local)",
@@ -3625,13 +3533,15 @@
           "api": "Cesium.Color.RED.withAlpha",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Cesium.Color.WHITE.withAlpha",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -3642,18 +3552,22 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Cesium.Color.fromCssColorString",
           "scenarios": [
-            "cesiumjs-core-utilities/eval-001"
+            "cesiumjs-core-utilities/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Cesium.ColorBlendMode.MIX",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Cesium.HeadingPitchRange",
@@ -3747,34 +3661,43 @@
         },
         {
           "api": "Color.GRAY.withAlpha",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.LIGHTGRAY.withAlpha",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.RED",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.RED.withAlpha",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.TRANSPARENT",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.WHITE.withAlpha",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -3811,6 +3734,7 @@
             "cesiumjs-custom-shader/eval-003",
             "cesiumjs-models-particles/eval-001",
             "cesiumjs-models-particles/eval-003",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-spatial-math/eval-003"
           ]
         },
@@ -3823,6 +3747,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-spatial-math/eval-003"
           ]
@@ -3857,6 +3782,14 @@
           "api": "viewer.entities.add",
           "scenarios": [
             "cesiumjs-camera/eval-001",
+            "cesiumjs-camera/eval-002",
+            "cesiumjs-camera/eval-003",
+            "cesiumjs-camera/eval-004",
+            "cesiumjs-camera/eval-005",
+            "cesiumjs-camera/eval-008",
+            "cesiumjs-camera/eval-011",
+            "cesiumjs-camera/eval-013",
+            "cesiumjs-camera/eval-014",
             "cesiumjs-core-utilities/eval-001",
             "cesiumjs-core-utilities/eval-002",
             "cesiumjs-core-utilities/eval-003",
@@ -3890,6 +3823,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -3938,6 +3872,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -3955,7 +3890,24 @@
       ],
       "uncovered_sections": [
         "Quick Reference",
+        "Public Sample Models",
+        "Positioned Model with Heading",
+        "Avoiding Distorted Model Appearance",
+        "Key Model.fromGltfAsync Options",
+        "Play by Name / Play All",
+        "Animation Events",
+        "Model Nodes",
+        "Coloring, Silhouettes, and Feature Picking",
+        "Edge Display Mode (Experimental, 1.142+)",
         "Height Reference",
+        "Producing a Legible Vertical Plume",
+        "Smoke Trail",
+        "Emitter Types",
+        "Particle Bursts",
+        "Update Callback (Gravity / Wind)",
+        "Framing Particle Effects So the Map Is Visible",
+        "Canvas-Based Particle Images",
+        "Entity API Model (ModelGraphics)",
         "GPM Extension (NGA_gpm_local)",
         "Performance Tips",
         "See Also"
@@ -3964,7 +3916,6 @@
         "Cesium.Cartesian3.add",
         "Cesium.Cartesian3.multiplyByScalar",
         "Cesium.Cartesian3.normalize",
-        "Cesium.ColorBlendMode.MIX",
         "Cesium.HeadingPitchRange",
         "Cesium.HeightReference.CLAMP_TO_GROUND",
         "Cesium.Matrix4.fromScale",
@@ -3977,9 +3928,6 @@
         "Cesium.VelocityOrientationProperty",
         "CesiumAir.glb",
         "CesiumMilkTruck.glb",
-        "Color.GRAY.withAlpha",
-        "Color.LIGHTGRAY.withAlpha",
-        "Color.TRANSPARENT",
         "EdgeDisplayMode.EDGES_ONLY",
         "EdgeDisplayMode.SURFACES_AND_EDGES",
         "EdgeDisplayMode.SURFACES_ONLY",
@@ -3998,7 +3946,6 @@
           "heading": "Primitive",
           "scenarios": [
             "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
             "cesiumjs-primitives/eval-004"
           ]
@@ -4010,26 +3957,16 @@
         {
           "heading": "Batching Multiple Instances",
           "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-001"
           ]
         },
         {
           "heading": "Batching Volume Geometry (CylinderGeometry Grid)",
-          "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Updating Per-Instance Attributes",
-          "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "PrimitiveCollection",
@@ -4039,17 +3976,12 @@
         },
         {
           "heading": "Choosing a Vector Data Path",
-          "scenarios": [
-            "cesiumjs-primitives/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Buffer Primitive Collections (Experimental, 1.140+)",
           "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-002",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-001"
           ]
         },
         {
@@ -4061,32 +3993,20 @@
         {
           "heading": "Built-in Geometry Types (31)",
           "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
-          ]
-        },
-        {
-          "heading": "Filled + Outline Pattern",
-          "scenarios": [
             "cesiumjs-primitives/eval-003"
           ]
         },
         {
+          "heading": "Filled + Outline Pattern",
+          "scenarios": []
+        },
+        {
           "heading": "Geometry Catalog",
-          "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Positioning Off-Surface Geometry",
-          "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Appearances (7 Types)",
@@ -4102,15 +4022,13 @@
           "heading": "GroundPrimitive",
           "scenarios": [
             "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-003"
           ]
         },
         {
           "heading": "GroundPolylinePrimitive",
           "scenarios": [
             "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-003",
             "cesiumjs-primitives/eval-004"
           ]
         },
@@ -4132,9 +4050,7 @@
         },
         {
           "heading": "PinBuilder -- Procedural Pin Images",
-          "scenarios": [
-            "cesiumjs-primitives/eval-002"
-          ]
+          "scenarios": []
         },
         {
           "heading": "LabelCollection",
@@ -4153,10 +4069,7 @@
         {
           "heading": "Polyline via Primitive",
           "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-002",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-001"
           ]
         },
         {
@@ -4166,10 +4079,7 @@
         {
           "heading": "Camera Framing for Primitive Scenes",
           "scenarios": [
-            "cesiumjs-primitives/eval-001",
-            "cesiumjs-primitives/eval-002",
-            "cesiumjs-primitives/eval-003",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-001"
           ]
         },
         {
@@ -4254,58 +4164,71 @@
         },
         {
           "api": "Color.AQUA",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.BLACK",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.BLUE.withAlpha",
           "scenarios": [
-            "cesiumjs-entities/eval-002"
+            "cesiumjs-entities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.CORAL",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Color.CYAN.withAlpha",
           "scenarios": [
-            "cesiumjs-interaction/eval-005"
+            "cesiumjs-interaction/eval-005",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.LIME.withAlpha",
           "scenarios": [
-            "cesiumjs-spatial-math/eval-002"
+            "cesiumjs-spatial-math/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.RED.withAlpha",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.ROYALBLUE",
           "scenarios": [
             "cesiumjs-core-utilities/eval-003",
-            "cesiumjs-primitives/eval-003"
+            "cesiumjs-primitives/eval-003",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.WHITE",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.WHITE.withAlpha",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -4316,7 +4239,8 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -4327,29 +4251,36 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromHsl",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-time-properties/eval-002"
+            "cesiumjs-time-properties/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromRandom",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "ColorGeometryInstanceAttribute.fromColor",
           "scenarios": [
-            "cesiumjs-primitives/eval-001"
+            "cesiumjs-primitives/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "ColorGeometryInstanceAttribute.toValue",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "EllipsoidSurfaceAppearance.VERTEX_FORMAT",
@@ -4399,11 +4330,15 @@
         },
         {
           "api": "PerInstanceColorAppearance.VERTEX_FORMAT",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "PolylineColorAppearance.VERTEX_FORMAT",
-          "scenarios": []
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
         },
         {
           "api": "Rectangle.fromDegrees",
@@ -4433,6 +4368,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-spatial-math/eval-003"
           ]
@@ -4470,6 +4406,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -4490,8 +4427,15 @@
       "uncovered_sections": [
         "Architecture",
         "Key Options",
+        "Batching Volume Geometry (CylinderGeometry Grid)",
+        "Updating Per-Instance Attributes",
+        "Choosing a Vector Data Path",
+        "Filled + Outline Pattern",
+        "Geometry Catalog",
+        "Positioning Off-Surface Geometry",
         "MaterialAppearance Example",
         "Basic Usage",
+        "PinBuilder -- Procedural Pin Images",
         "LabelCollection",
         "CloudCollection and PolylineCollection",
         "Enums",
@@ -4504,11 +4448,6 @@
         "BoxGeometry.fromDimensions",
         "ClassificationType.BOTH",
         "ClassificationType.TERRAIN",
-        "Color.AQUA",
-        "Color.BLACK",
-        "Color.CORAL",
-        "Color.fromRandom",
-        "ColorGeometryInstanceAttribute.toValue",
         "EllipsoidSurfaceAppearance.VERTEX_FORMAT",
         "GeoJsonPrimitive.fromUrl",
         "HeightReference.CLAMP_TO_GROUND",
@@ -4516,8 +4455,6 @@
         "LabelStyle.FILL_AND_OUTLINE",
         "MaterialAppearance.MaterialSupport.TEXTURED.vertexFormat",
         "Matrix4.fromTranslation",
-        "PerInstanceColorAppearance.VERTEX_FORMAT",
-        "PolylineColorAppearance.VERTEX_FORMAT",
         "ShowGeometryInstanceAttribute.toValue",
         "viewer.camera.lookAt"
       ]
@@ -4532,58 +4469,40 @@
           "heading": "Cartesian3 -- Positions and Vectors",
           "scenarios": [
             "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-002",
-            "cesiumjs-spatial-math/eval-004"
+            "cesiumjs-spatial-math/eval-002"
           ]
         },
         {
           "heading": "Vector Operations",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Cartographic -- Geographic Coordinates",
           "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-003",
-            "cesiumjs-spatial-math/eval-004"
+            "cesiumjs-spatial-math/eval-001"
           ]
         },
         {
           "heading": "CesiumMath Utilities",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Ellipsoid",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Transforms -- Reference Frames",
           "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-002",
-            "cesiumjs-spatial-math/eval-003",
-            "cesiumjs-spatial-math/eval-004"
+            "cesiumjs-spatial-math/eval-003"
           ]
         },
         {
           "heading": "East-North-Up (ENU)",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Heading-Pitch-Roll Model Matrix",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "HeadingPitchRoll",
@@ -4591,12 +4510,7 @@
         },
         {
           "heading": "Other Local Frames",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-002",
-            "cesiumjs-spatial-math/eval-003",
-            "cesiumjs-spatial-math/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Matrix4 -- 4x4 Transforms",
@@ -4612,24 +4526,17 @@
         },
         {
           "heading": "Quaternion \u2192 Matrix3 \u2192 Matrix4 Composition Pattern",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Geodesic Distance",
           "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-003"
+            "cesiumjs-spatial-math/eval-001"
           ]
         },
         {
           "heading": "Sampling a Geodesic into Cartesian3 Positions",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-002",
-            "cesiumjs-spatial-math/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "BoundingSphere",
@@ -4639,19 +4546,11 @@
         },
         {
           "heading": "Ray and Intersection Tests",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-002",
-            "cesiumjs-spatial-math/eval-003",
-            "cesiumjs-spatial-math/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "SceneTransforms -- World to Screen",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-002",
-            "cesiumjs-spatial-math/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Geographic Projections",
@@ -4665,20 +4564,11 @@
         },
         {
           "heading": "Offset a Position in Local ENU",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-002",
-            "cesiumjs-spatial-math/eval-003",
-            "cesiumjs-spatial-math/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Compare Positions with Tolerance",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-001",
-            "cesiumjs-spatial-math/eval-002",
-            "cesiumjs-spatial-math/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Performance Tips",
@@ -4686,9 +4576,7 @@
         },
         {
           "heading": "See Also",
-          "scenarios": [
-            "cesiumjs-spatial-math/eval-004"
-          ]
+          "scenarios": []
         }
       ],
       "apis": [
@@ -4903,7 +4791,8 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -4914,7 +4803,8 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -5092,6 +4982,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-spatial-math/eval-003"
           ]
@@ -5126,6 +5017,14 @@
           "api": "viewer.entities.add",
           "scenarios": [
             "cesiumjs-camera/eval-001",
+            "cesiumjs-camera/eval-002",
+            "cesiumjs-camera/eval-003",
+            "cesiumjs-camera/eval-004",
+            "cesiumjs-camera/eval-005",
+            "cesiumjs-camera/eval-008",
+            "cesiumjs-camera/eval-011",
+            "cesiumjs-camera/eval-013",
+            "cesiumjs-camera/eval-014",
             "cesiumjs-core-utilities/eval-001",
             "cesiumjs-core-utilities/eval-002",
             "cesiumjs-core-utilities/eval-003",
@@ -5159,6 +5058,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -5178,9 +5078,22 @@
       ],
       "uncovered_sections": [
         "Core Concepts",
+        "Vector Operations",
+        "CesiumMath Utilities",
+        "Ellipsoid",
+        "East-North-Up (ENU)",
+        "Heading-Pitch-Roll Model Matrix",
         "HeadingPitchRoll",
+        "Other Local Frames",
+        "Quaternion \u2192 Matrix3 \u2192 Matrix4 Composition Pattern",
+        "Sampling a Geodesic into Cartesian3 Positions",
+        "Ray and Intersection Tests",
+        "SceneTransforms -- World to Screen",
         "Geographic Projections",
-        "Performance Tips"
+        "Offset a Position in Local ENU",
+        "Compare Positions with Tolerance",
+        "Performance Tips",
+        "See Also"
       ],
       "uncovered_apis": [
         "Cartesian3.UNIT_X",
@@ -5247,100 +5160,58 @@
           "heading": "Terrain Providers",
           "scenarios": [
             "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
             "cesiumjs-terrain-environment/eval-003"
           ]
         },
         {
           "heading": "Public / No-Token Terrain",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Cesium Ion World Terrain",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003",
-            "cesiumjs-terrain-environment/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "CesiumTerrainProvider from Ion Asset / URL",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003",
-            "cesiumjs-terrain-environment/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "EllipsoidTerrainProvider (Flat Globe)",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003",
-            "cesiumjs-terrain-environment/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "CustomHeightmapTerrainProvider (Procedural)",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Sampling Terrain Heights",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003"
-          ]
+          "scenarios": []
+        },
+        {
+          "heading": "Clamped-Height Callback Correctness (1.143+)",
+          "scenarios": []
         },
         {
           "heading": "Globe Configuration",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003",
-            "cesiumjs-terrain-environment/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Globe.pick and Globe.getHeight",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003",
-            "cesiumjs-terrain-environment/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Terrain Exaggeration",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Globe Translucency",
           "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003",
             "cesiumjs-terrain-environment/eval-004"
           ]
         },
         {
           "heading": "Making Translucency Visually Readable",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Elevation Band Material",
@@ -5349,8 +5220,7 @@
         {
           "heading": "SkyAtmosphere",
           "scenarios": [
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-004"
+            "cesiumjs-terrain-environment/eval-002"
           ]
         },
         {
@@ -5370,7 +5240,6 @@
         {
           "heading": "Lighting",
           "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
             "cesiumjs-terrain-environment/eval-002",
             "cesiumjs-terrain-environment/eval-003"
           ]
@@ -5397,11 +5266,7 @@
         },
         {
           "heading": "Terrain Provider Events",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Performance Tips",
@@ -5409,11 +5274,7 @@
         },
         {
           "heading": "Visual-Quality Checklist for Terrain Scenarios",
-          "scenarios": [
-            "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-002",
-            "cesiumjs-terrain-environment/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Quick Reference",
@@ -5461,7 +5322,8 @@
         {
           "api": "Cesium.Color.BLUE",
           "scenarios": [
-            "cesiumjs-entities/eval-002"
+            "cesiumjs-entities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -5495,9 +5357,12 @@
         {
           "api": "CesiumTerrainProvider.fromIonAssetId",
           "scenarios": [
+            "cesiumjs-entities/eval-006",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-003",
             "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-003"
+            "cesiumjs-terrain-environment/eval-003",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -5510,7 +5375,8 @@
         {
           "api": "Color.WHITE",
           "scenarios": [
-            "cesiumjs-materials-shaders/eval-002"
+            "cesiumjs-materials-shaders/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -5552,7 +5418,10 @@
         {
           "api": "Terrain.fromWorldTerrain",
           "scenarios": [
+            "cesiumjs-entities/eval-006",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-003",
+            "cesiumjs-time-properties/eval-005",
             "cesiumjs-viewer-setup/eval-001",
             "cesiumjs-viewer-setup/eval-002",
             "cesiumjs-viewer-setup/eval-007"
@@ -5594,6 +5463,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -5679,6 +5549,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -5726,13 +5597,27 @@
         {
           "api": "viewer.terrainProvider",
           "scenarios": [
+            "cesiumjs-entities/eval-006",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-003",
             "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-003"
+            "cesiumjs-terrain-environment/eval-003",
+            "cesiumjs-time-properties/eval-005"
           ]
         }
       ],
       "uncovered_sections": [
+        "Public / No-Token Terrain",
+        "Cesium Ion World Terrain",
+        "CesiumTerrainProvider from Ion Asset / URL",
+        "EllipsoidTerrainProvider (Flat Globe)",
+        "CustomHeightmapTerrainProvider (Procedural)",
+        "Sampling Terrain Heights",
+        "Clamped-Height Callback Correctness (1.143+)",
+        "Globe Configuration",
+        "Globe.pick and Globe.getHeight",
+        "Terrain Exaggeration",
+        "Making Translucency Visually Readable",
         "Elevation Band Material",
         "SkyBox",
         "Sun and Moon",
@@ -5741,7 +5626,9 @@
         "EquirectangularPanorama",
         "CubeMapPanorama",
         "GoogleStreetViewCubeMapPanoramaProvider",
+        "Terrain Provider Events",
         "Performance Tips",
+        "Visual-Quality Checklist for Terrain Scenarios",
         "Quick Reference",
         "See Also"
       ],
@@ -5776,18 +5663,14 @@
           "heading": "JulianDate -- The Time Primitive",
           "scenarios": [
             "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
+            "cesiumjs-time-properties/eval-003"
           ]
         },
         {
           "heading": "Clock -- Simulation Time Controller",
           "scenarios": [
             "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
+            "cesiumjs-time-properties/eval-003"
           ]
         },
         {
@@ -5799,7 +5682,6 @@
           "scenarios": [
             "cesiumjs-time-properties/eval-001",
             "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003",
             "cesiumjs-time-properties/eval-004"
           ]
         },
@@ -5810,96 +5692,63 @@
         {
           "heading": "SampledProperty -- Interpolated Time Series",
           "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "heading": "SampledPositionProperty -- Interpolated Positions",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "CallbackProperty -- Computed on Demand",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "CompositeProperty -- Stitching Properties Over Time",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "VelocityOrientationProperty -- Auto-Orient Along Path",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "ReferenceProperty -- Cross-Entity Binding",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-002"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Material Properties",
           "scenarios": [
-            "cesiumjs-time-properties/eval-001",
             "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-004"
+            "cesiumjs-time-properties/eval-005"
+          ]
+        },
+        {
+          "heading": "Segmented Path Materials (1.143+)",
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "heading": "Splines -- Parametric Curve Interpolation",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-003"
-          ]
+          "scenarios": []
         },
         {
           "heading": "CZML Temporal Data",
           "scenarios": [
-            "cesiumjs-time-properties/eval-001",
             "cesiumjs-time-properties/eval-004"
           ]
         },
         {
           "heading": "EasingFunction -- Camera Flight Curves",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Framing Time-Dynamic Entities",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Putting It Together: Animated Flight",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Performance Tips",
@@ -5907,12 +5756,7 @@
         },
         {
           "heading": "Screenshot Checklist for Time-Dynamic Scenes",
-          "scenarios": [
-            "cesiumjs-time-properties/eval-001",
-            "cesiumjs-time-properties/eval-002",
-            "cesiumjs-time-properties/eval-003",
-            "cesiumjs-time-properties/eval-004"
-          ]
+          "scenarios": []
         },
         {
           "heading": "Key Enums",
@@ -5958,21 +5802,40 @@
         {
           "api": "Color.BLUE",
           "scenarios": [
-            "cesiumjs-entities/eval-002"
+            "cesiumjs-entities/eval-002",
+            "cesiumjs-time-properties/eval-005"
+          ]
+        },
+        {
+          "api": "Color.LIME",
+          "scenarios": [
+            "cesiumjs-interaction/eval-003",
+            "cesiumjs-interaction/eval-004",
+            "cesiumjs-spatial-math/eval-002",
+            "cesiumjs-time-properties/eval-005"
+          ]
+        },
+        {
+          "api": "Color.ORANGE",
+          "scenarios": [
+            "cesiumjs-core-utilities/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.RED",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.RED.withAlpha",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-primitives/eval-004"
+            "cesiumjs-primitives/eval-004",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -5983,19 +5846,22 @@
             "cesiumjs-interaction/eval-005",
             "cesiumjs-materials-shaders/eval-003",
             "cesiumjs-spatial-math/eval-004",
-            "cesiumjs-time-properties/eval-001"
+            "cesiumjs-time-properties/eval-001",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "Color.fromHsl",
           "scenarios": [
             "cesiumjs-core-utilities/eval-001",
-            "cesiumjs-time-properties/eval-002"
+            "cesiumjs-time-properties/eval-002",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
           "api": "CzmlDataSource.load",
           "scenarios": [
+            "cesiumjs-entities/eval-006",
             "cesiumjs-time-properties/eval-004"
           ]
         },
@@ -6115,6 +5981,16 @@
           ]
         },
         {
+          "api": "PathMode.PORTIONS",
+          "scenarios": [
+            "cesiumjs-time-properties/eval-005"
+          ]
+        },
+        {
+          "api": "PathMode.WHOLE",
+          "scenarios": []
+        },
+        {
           "api": "Rectangle.fromDegrees",
           "scenarios": [
             "cesiumjs-camera/eval-012",
@@ -6210,6 +6086,7 @@
           "api": "viewer.dataSources.add",
           "scenarios": [
             "cesiumjs-entities/eval-003",
+            "cesiumjs-entities/eval-006",
             "cesiumjs-time-properties/eval-004"
           ]
         },
@@ -6217,6 +6094,14 @@
           "api": "viewer.entities",
           "scenarios": [
             "cesiumjs-camera/eval-001",
+            "cesiumjs-camera/eval-002",
+            "cesiumjs-camera/eval-003",
+            "cesiumjs-camera/eval-004",
+            "cesiumjs-camera/eval-005",
+            "cesiumjs-camera/eval-008",
+            "cesiumjs-camera/eval-011",
+            "cesiumjs-camera/eval-013",
+            "cesiumjs-camera/eval-014",
             "cesiumjs-core-utilities/eval-001",
             "cesiumjs-core-utilities/eval-002",
             "cesiumjs-core-utilities/eval-003",
@@ -6233,6 +6118,14 @@
           "api": "viewer.entities.add",
           "scenarios": [
             "cesiumjs-camera/eval-001",
+            "cesiumjs-camera/eval-002",
+            "cesiumjs-camera/eval-003",
+            "cesiumjs-camera/eval-004",
+            "cesiumjs-camera/eval-005",
+            "cesiumjs-camera/eval-008",
+            "cesiumjs-camera/eval-011",
+            "cesiumjs-camera/eval-013",
+            "cesiumjs-camera/eval-014",
             "cesiumjs-core-utilities/eval-001",
             "cesiumjs-core-utilities/eval-002",
             "cesiumjs-core-utilities/eval-003",
@@ -6256,7 +6149,17 @@
       "uncovered_sections": [
         "TimeInterval & TimeIntervalCollection",
         "ConstantProperty",
+        "SampledPositionProperty -- Interpolated Positions",
+        "CallbackProperty -- Computed on Demand",
+        "CompositeProperty -- Stitching Properties Over Time",
+        "VelocityOrientationProperty -- Auto-Orient Along Path",
+        "ReferenceProperty -- Cross-Entity Binding",
+        "Splines -- Parametric Curve Interpolation",
+        "EasingFunction -- Camera Flight Curves",
+        "Framing Time-Dynamic Entities",
+        "Putting It Together: Animated Flight",
         "Performance Tips",
+        "Screenshot Checklist for Time-Dynamic Scenes",
         "Key Enums",
         "See Also"
       ],
@@ -6272,6 +6175,7 @@
         "JulianDate.now",
         "JulianDate.toGregorianDate",
         "JulianDate.toIso8601",
+        "PathMode.WHOLE",
         "ReferenceProperty.fromString",
         "TimeInterval.contains",
         "TimeInterval.fromIso8601",
@@ -6700,7 +6604,10 @@
         {
           "api": "Terrain.fromWorldTerrain",
           "scenarios": [
+            "cesiumjs-entities/eval-006",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-003",
+            "cesiumjs-time-properties/eval-005",
             "cesiumjs-viewer-setup/eval-001",
             "cesiumjs-viewer-setup/eval-002",
             "cesiumjs-viewer-setup/eval-007"
@@ -6750,6 +6657,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -6815,6 +6723,7 @@
             "cesiumjs-models-particles/eval-002",
             "cesiumjs-models-particles/eval-003",
             "cesiumjs-models-particles/eval-004",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-001",
             "cesiumjs-primitives/eval-002",
             "cesiumjs-primitives/eval-003",
@@ -6858,9 +6767,12 @@
         {
           "api": "viewer.terrainProvider",
           "scenarios": [
+            "cesiumjs-entities/eval-006",
+            "cesiumjs-models-particles/eval-005",
             "cesiumjs-primitives/eval-003",
             "cesiumjs-terrain-environment/eval-001",
-            "cesiumjs-terrain-environment/eval-003"
+            "cesiumjs-terrain-environment/eval-003",
+            "cesiumjs-time-properties/eval-005"
           ]
         },
         {
@@ -6912,6 +6824,10 @@
           "scenarios": []
         },
         {
+          "heading": "Choose the Output Surface",
+          "scenarios": []
+        },
+        {
           "heading": "Cross-Domain Questions",
           "scenarios": []
         },
@@ -6923,6 +6839,7 @@
       "apis": [],
       "uncovered_sections": [
         "Available Skills",
+        "Choose the Output Surface",
         "Cross-Domain Questions",
         "Runtime Verification"
       ],

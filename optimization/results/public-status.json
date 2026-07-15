@@ -66,7 +66,7 @@
     },
     {
       "skill": "cesiumjs-entities",
-      "scenario_count": 5,
+      "scenario_count": 6,
       "current_best": {
         "iteration": "004",
         "wins": 3,
@@ -92,7 +92,7 @@
         "rationale_summary": "KEEP: Candidate won 3 scenarios vs 1 baseline wins"
       },
       "runner_mode_counts": {
-        "global-js": 5
+        "global-js": 6
       }
     },
     {
@@ -188,7 +188,7 @@
     },
     {
       "skill": "cesiumjs-time-properties",
-      "scenario_count": 4,
+      "scenario_count": 5,
       "current_best": {
         "iteration": "003",
         "wins": 2,
@@ -214,7 +214,7 @@
         "rationale_summary": "KEEP: Candidate won 2 scenarios vs 0 baseline wins"
       },
       "runner_mode_counts": {
-        "global-js": 4
+        "global-js": 5
       }
     },
     {
@@ -281,7 +281,7 @@
     },
     {
       "skill": "cesiumjs-models-particles",
-      "scenario_count": 4,
+      "scenario_count": 5,
       "current_best": {
         "iteration": "001",
         "wins": 2,
@@ -307,7 +307,7 @@
         "rationale_summary": "REJECT: Baseline won 1 scenarios vs 0 candidate wins"
       },
       "runner_mode_counts": {
-        "global-js": 4
+        "global-js": 5
       }
     },
     {

@@ -32,7 +32,7 @@ except ImportError:  # pragma: no cover - optional local dependency
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CESIUM_VERSION = "1.142"
+CESIUM_VERSION = "1.143"
 
 # Make sibling modules importable when run as a script.
 sys.path.insert(0, str(REPO_ROOT))
