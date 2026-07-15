@@ -1,8 +1,18 @@
 # CesiumJS Agent Skills
 
-Curated agent skills for CesiumJS development — 14 domain skills covering ~550 public symbols across the CesiumJS v1.142 API surface.
+Curated agent skills for CesiumJS development — 14 domain skills covering ~550 public symbols across the CesiumJS v1.142 API surface, with native plugin support for Codex and Claude Code.
 
 ## Quick Start
+
+### Codex
+
+**One-line install (recommended):**
+
+```bash
+codex plugin marketplace add CesiumGS/cesiumjs-skills && codex plugin add cesiumjs-skills@cesiumjs-skills
+```
+
+This registers the CesiumJS Skills marketplace and installs the plugin, including all 14 skills, the SessionStart hook, and the Chrome DevTools MCP server. Start a new Codex session after installation so the skills and tools are loaded.
 
 ### Claude Code
 
@@ -66,7 +76,7 @@ Every public class, function, and enum in CesiumJS is assigned to exactly one sk
 
 The [Agent Skills](https://agentskills.io/) format is an open standard originally developed by Anthropic and adopted by leading AI development tools including Claude Code, GitHub Copilot, and many others.
 
-By popular demand, this repository also ships as a **Claude Code plugin** with a SessionStart hook and Chrome DevTools MCP integration for browser-based verification.
+This repository ships as native plugins for both **Codex** and **Claude Code**, with a SessionStart hook and Chrome DevTools MCP integration for browser-based verification.
 
 ## Repository Layout
 
@@ -78,6 +88,8 @@ cesiumjs-skills/
 ├── docs/
 │   ├── DOMAINS.md                   # Symbol ownership map
 │   └── skills-catalog.md            # Skills catalog
+├── .agents/plugins/marketplace.json # Codex plugin marketplace catalog
+├── .codex-plugin/plugin.json        # Codex plugin manifest
 ├── .claude-plugin/
 │   ├── plugin.json                  # Claude Code plugin manifest
 │   └── marketplace.json             # Plugin marketplace catalog
