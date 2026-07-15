@@ -1,0 +1,207 @@
+/* ── Cesium globe palette ───────────────────────────────────────────────────
+   Atmosphere blue  : #2e86c1
+   Highlight / glow : #48c9f0
+   Deep ocean       : #1a5276
+   ──────────────────────────────────────────────────────────────────────── */
+
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color: #2e86c1;
+  --md-primary-fg-color--light: #48c9f0;
+  --md-primary-fg-color--dark: #1a5276;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
+}
+
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color: #48c9f0;
+  --md-accent-fg-color--transparent: rgba(72, 201, 240, 0.1);
+}
+
+/* ── Doc illustrations ───────────────────────────────────────────────────── */
+
+.doc-illustration {
+  width: 180px;
+  float: right;
+  margin: 0 0 1.5rem 2rem;
+  border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .doc-illustration {
+    float: none;
+    width: 100%;
+    margin: 0 0 1.5rem;
+  }
+}
+
+/* ── Mermaid diagrams ────────────────────────────────────────────────────── */
+.mermaid {
+  max-width: 100%;
+  width: 100%;
+}
+
+.mermaid svg {
+  width: 100%;
+  height: auto;
+  min-height: 200px;
+}
+
+/* ── Repository-specific presentation ───────────────────────────────────── */
+
+.skills-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 1.25rem 0 2rem;
+  padding: 2rem;
+  border: 1px solid rgba(72, 201, 240, 0.35);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(72, 201, 240, 0.24), transparent 28%),
+    linear-gradient(135deg, rgba(26, 82, 118, 0.98), rgba(46, 134, 193, 0.92));
+  box-shadow: 0 16px 42px rgba(26, 82, 118, 0.18);
+  color: #ffffff;
+}
+
+.skills-hero h2 {
+  margin: 0 0 0.55rem;
+  color: #ffffff;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+  line-height: 1.15;
+}
+
+.skills-hero p {
+  max-width: 40rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.92rem;
+}
+
+.hero-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+}
+
+.hero-metrics span {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 2rem;
+}
+
+.feature-card {
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 10px;
+  background: var(--md-default-bg-color);
+  box-shadow: 0 5px 18px rgba(26, 82, 118, 0.07);
+}
+
+.feature-card h3 {
+  margin: 0 0 0.35rem;
+  color: var(--md-primary-fg-color);
+  font-size: 0.9rem;
+}
+
+.feature-card p {
+  margin: 0;
+  font-size: 0.76rem;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  color: var(--md-primary-fg-color);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workflow-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 2rem;
+  counter-reset: workflow;
+}
+
+.workflow-step {
+  position: relative;
+  min-height: 6.2rem;
+  padding: 1rem;
+  border-top: 3px solid var(--md-primary-fg-color);
+  border-radius: 0 0 8px 8px;
+  background: var(--md-code-bg-color);
+  counter-increment: workflow;
+}
+
+.workflow-step::before {
+  content: "0" counter(workflow);
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--md-primary-fg-color);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.workflow-step strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.78rem;
+}
+
+.workflow-step span {
+  display: block;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.68rem;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 0.16rem 0.46rem;
+  border-radius: 999px;
+  background: rgba(72, 201, 240, 0.14);
+  color: var(--md-primary-fg-color--dark);
+  font-size: 0.63rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+[data-md-color-scheme="slate"] .feature-card {
+  border-color: rgba(72, 201, 240, 0.16);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.18);
+}
+
+[data-md-color-scheme="slate"] .status-pill {
+  color: #72d7f4;
+}
+
+@media (max-width: 760px) {
+  .feature-grid,
+  .workflow-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .skills-hero {
+    padding: 1.4rem;
+  }
+
+  .workflow-step {
+    min-height: auto;
+  }
+}
