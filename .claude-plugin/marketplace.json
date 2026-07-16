@@ -4,7 +4,7 @@
     "name": "CesiumGS"
   },
   "metadata": {
-    "description": "CesiumJS domain skills covering ~535 public symbols across the CesiumJS v1.139 API surface"
+    "description": "CesiumJS domain skills covering ~551 public symbols across the CesiumJS v1.143 API surface"
   },
   "plugins": [
     {

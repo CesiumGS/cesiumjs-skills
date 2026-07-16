@@ -1,6 +1,6 @@
 # CustomShader Reference
 
-Exhaustive struct/enum tables and built-in uniform catalog for the `cesiumjs-custom-shader` skill. Updated for the CesiumJS 1.142 public API.
+Exhaustive struct/enum tables and built-in uniform catalog for the `cesiumjs-custom-shader` skill. Updated for the CesiumJS 1.143 public API.
 
 ---
 
@@ -169,7 +169,7 @@ Auto-generated from the primitive's `featureIds` array. All values are GLSL `int
 
 ## Metadata struct
 
-Addressable via `vsInput.metadata.<prop>` and `fsInput.metadata.<prop>`. Sources supported in 1.142:
+Addressable via `vsInput.metadata.<prop>` and `fsInput.metadata.<prop>`. Sources supported in 1.143:
 
 1. **Property attributes** — per-vertex (vertex and fragment).
 2. **Property textures** — per-texel (**fragment only**).

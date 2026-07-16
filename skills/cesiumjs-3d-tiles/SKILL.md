@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-3d-tiles
-description: "CesiumJS 3D Tiles - Cesium3DTileset, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets or Mapbox Vector Tiles as runtime 3D Tiles, styling building/vector features, querying metadata properties, working with voxels or point clouds, or clipping spatial data."
+description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when loading 3D Tiles or Mapbox Vector Tiles, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
 ---
 # CesiumJS 3D Tiles
 
-Version baseline: CesiumJS v1.142 (ES module imports, async factory methods).
+Version baseline: CesiumJS v1.143 (ES module imports, async factory methods).
 
 ## Loading a Tileset
 
@@ -23,6 +23,10 @@ viewer.zoomTo(tileset, new HeadingPitchRange(
   0.0, CesiumMath.toRadians(-25.0), tileset.boundingSphere.radius * 2.0,
 ));
 ```
+
+CesiumJS 1.143 applies standalone model loading to glTF embedded in tilesets.
+Read the [glTF compatibility matrix](../cesiumjs-models-particles/REFERENCE.md)
+for automatic `KHR_meshopt_compression`, CAD extension behavior, and the unsupported planar-fill boundary.
 
 ```js
 // From Cesium ion
@@ -459,6 +463,7 @@ tileset.modelMatrix = Matrix4.fromTranslation(translation);
 
 ## See Also
 
+- **cesiumjs-models-particles** -- glTF compression and CAD-extension compatibility used by tile content
 - **cesiumjs-custom-shader** -- GLSL authoring for `Cesium3DTileset.customShader` and `VoxelPrimitive.customShader` (struct reference, feature IDs, metadata)
 - **cesiumjs-materials-shaders** -- ImageBasedLighting, post-processing stages for tilesets
 - **cesiumjs-interaction** -- Scene.pick, drillPick, ScreenSpaceEventHandler for feature selection

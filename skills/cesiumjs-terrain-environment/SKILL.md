@@ -4,7 +4,7 @@ description: "CesiumJS terrain, globe, and environment - TerrainProvider, Globe,
 ---
 # CesiumJS Terrain, Globe & Environment
 
-Version baseline: CesiumJS v1.142 | ES module imports (`import { ... } from "cesium";`)
+Version baseline: CesiumJS v1.143 | ES module imports (`import { ... } from "cesium";`)
 
 ## Terrain Providers
 
@@ -94,6 +94,15 @@ await sampleTerrainMostDetailed(viewer.scene.globe.terrainProvider, positions);
 // Pass true as 3rd arg to reject on tile failure instead of undefined heights
 await sampleTerrainMostDetailed(provider, positions, true);
 ```
+
+### Clamped-Height Callback Correctness (1.143+)
+
+CesiumJS 1.143 fixes the internal `Scene.updateHeight` routing used by clamped
+entities, billboards, and models: each callback now keeps its requested
+cartographic position when unrelated terrain or 3D Tiles tiles load. Prefer
+public `HeightReference` values and upgrade to 1.143+ rather than calling the
+private `Scene.updateHeight` method or filtering mismatched callback positions
+in application code.
 
 ## Globe Configuration
 
