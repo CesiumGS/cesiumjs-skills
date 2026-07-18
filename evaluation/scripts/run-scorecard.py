@@ -175,6 +175,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
             "stamped into the scorecard). Omit for synthetic fixtures (stays 'unknown')."
         ),
     )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Codegen model id that produced the scored evidence (stamped under artifacts.model).",
+    )
+    parser.add_argument(
+        "--model-variant",
+        default=None,
+        help="Codegen reasoning effort / variant (stamped under artifacts.model_variant).",
+    )
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     parser.add_argument("--output-dir", default=None)
     return parser.parse_args(argv)
@@ -206,6 +216,8 @@ def main(argv: list[str] | None = None) -> int:
         visual_review=visual_review,
         require_visual_review=args.require_visual_review,
         harness=args.harness,
+        model=args.model,
+        model_variant=args.model_variant,
     )
 
     output_dir = Path(args.output_dir) if args.output_dir else DEFAULT_OUTPUT_ROOT / scorecard["run_id"]

@@ -290,3 +290,37 @@ def test_run_scorecard_cli_accepts_visual_review(tmp_path: Path) -> None:
     scorecard = json.loads((tmp_path / "scorecard.json").read_text())
     assert scorecard["visual_summary"]["result"] == "pass"
     assert scorecard["visual_summary"]["required_count"] == 1
+
+
+def test_scorecard_stamps_model_provenance_under_artifacts() -> None:
+    case = _case()
+    result = run_case(case, _evidence(PASS_EVIDENCE_PATH))
+    inputs = [ScorecardInput(case=case, result=result, evidence_path=str(PASS_EVIDENCE_PATH))]
+
+    stamped = build_scorecard(
+        inputs,
+        threshold=0.95,
+        commit="abc123",
+        timestamp_utc="2026-05-27T00:00:00+00:00",
+        harness="codex",
+        harness_judge="codex",
+        model="gpt-5.6-sol",
+        model_variant="low",
+    )
+    _scorecard_validator().validate(stamped)
+    assert stamped["harness"] == "codex"
+    assert stamped["artifacts"]["harness_judge"] == "codex"
+    assert stamped["artifacts"]["model"] == "gpt-5.6-sol"
+    assert stamped["artifacts"]["model_variant"] == "low"
+
+    # Omitted stamps stay omitted — "not recorded" must remain distinguishable.
+    bare = build_scorecard(
+        inputs,
+        threshold=0.95,
+        commit="abc123",
+        timestamp_utc="2026-05-27T00:00:00+00:00",
+    )
+    _scorecard_validator().validate(bare)
+    assert "harness" not in bare
+    assert "model" not in bare["artifacts"]
+    assert "model_variant" not in bare["artifacts"]

@@ -334,6 +334,8 @@ def build_scorecard(
     require_visual_review: bool = False,
     harness: str | None = None,
     harness_judge: str | None = None,
+    model: str | None = None,
+    model_variant: str | None = None,
 ) -> dict[str, Any]:
     repo_root = repo_root or Path.cwd()
     timestamp_utc = timestamp_utc or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -398,6 +400,13 @@ def build_scorecard(
     artifacts_out = dict(artifacts or {})
     if harness_judge:
         artifacts_out.setdefault("harness_judge", harness_judge)
+    # Codegen model provenance rides beside the judge harness under `artifacts`:
+    # additive and optional, so historical scorecards stay schema-valid, and a
+    # missing stamp reads as "not recorded" rather than defaulting silently.
+    if model:
+        artifacts_out.setdefault("model", model)
+    if model_variant:
+        artifacts_out.setdefault("model_variant", model_variant)
 
     result = {
         "schema_version": SCORECARD_SCHEMA_VERSION,
