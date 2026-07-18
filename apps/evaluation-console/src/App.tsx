@@ -7,6 +7,7 @@ import { ReviewInspector, ReviewStage } from "./components/Review";
 import { OptimizeInspector, OptimizeStage } from "./components/Optimize";
 import { DecideInspector, DecideStage } from "./components/Decide";
 import { EvaluateOverview, PromotePanel } from "./components/Overview";
+import { CompareStation } from "./components/Compare";
 import { Overlays, Toasts } from "./components/Overlays";
 
 function Body() {
@@ -17,6 +18,14 @@ function Body() {
       <div className="body body--wide">
         <Rail />
         <EvaluateOverview />
+      </div>
+    );
+  }
+  if (station === "compare") {
+    return (
+      <div className="body body--wide">
+        <Rail />
+        <CompareStation />
       </div>
     );
   }

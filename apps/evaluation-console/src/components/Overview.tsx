@@ -1,6 +1,9 @@
+import { useMemo, useState } from "react";
+import { ArrowDownRight, ArrowUpRight, Copy } from "lucide-react";
 import { useStore } from "../store";
-import { LoopBadge, MetaTag, Pill } from "./primitives";
-import type { IterationSummary, SkillOverview } from "../types";
+import { modelShort, relativeTime } from "../lib/format";
+import { LoopBadge, MetaTag, Pill, UnknownChip } from "./primitives";
+import type { BaselineDiff, IterationSummary, SkillOverview } from "../types";
 
 /** ▣ / ◈ / ⚑ ink law (P3): steel for the machine, amber for the eye, magenta for the human flag. */
 
@@ -8,7 +11,7 @@ function shortSkill(skill: string): string {
   return skill.replace("cesiumjs-", "");
 }
 
-/** Per-iteration history tick class — keep / reject / baseline / failed. */
+/** Per-iteration history tick class: keep / reject / baseline / failed. */
 function histTickClass(h: IterationSummary): string {
   if (h.is_baseline) return "baseline";
   if (h.status === "failed") return "failed";
@@ -38,17 +41,17 @@ function SkillTile({ s, onClick }: { s: SkillOverview; onClick: () => void }) {
       </div>
       <div className="stage-sub" style={{ marginTop: "var(--sp-2)" }}>
         <span className="mono" style={{ color: "var(--keep)" }}>
-          {s.kept} kept
+          {s.kept} Kept
         </span>
         <span className="mono" style={{ color: "var(--reject)" }}>
-          · {s.rejected} rejected
+          · {s.rejected} Rejected
         </span>
-        <span>· {s.iteration_count} iter</span>
+        <span>· {s.iteration_count} Iterations</span>
       </div>
       <div className="st-hist">
         {ticks.length === 0 ? (
           <span className="mono" style={{ fontSize: "var(--fs-50)", color: "var(--text-3)" }}>
-            no iterations yet
+            No iterations yet
           </span>
         ) : (
           ticks.map((h) => (
@@ -64,8 +67,209 @@ function SkillTile({ s, onClick }: { s: SkillOverview; onClick: () => void }) {
   );
 }
 
+/** Score bar with a threshold notch: the pass/fail geometry made visible. */
+function ScoreVsThreshold({ score, threshold }: { score: number; threshold: number }) {
+  const pct = Math.round(score * 100);
+  const tPct = Math.round(threshold * 100);
+  const ok = score >= threshold;
+  return (
+    <div className="score-thresh" title={`Overall ${pct}% vs threshold ${tPct}%`}>
+      <div className="st-track">
+        <span className={`st-fill${ok ? "" : " under"}`} style={{ width: `${pct}%` }} />
+        <span className="st-notch" style={{ left: `${tPct}%` }} title={`Threshold ${tPct}%`} />
+      </div>
+      <span className="mono st-nums">
+        ▣ {pct}% <span className="st-vs">/ {tPct}%</span>
+      </span>
+    </div>
+  );
+}
+
+/** Signed score delta vs the comparison baseline: steel magnitude, diverging arrow. */
+function DeltaChip({ delta }: { delta: number | null }) {
+  if (delta === null) return <UnknownChip small text="No baseline score" />;
+  const pp = Math.round(delta * 100);
+  if (pp === 0) return <span className="delta-chip flat" title="Unchanged vs baseline">= 0pp</span>;
+  const up = pp > 0;
+  return (
+    <span className={`delta-chip ${up ? "up" : "down"}`} title="Overall score vs the comparison baseline">
+      {up ? <ArrowUpRight size={12} aria-hidden /> : <ArrowDownRight size={12} aria-hidden />}
+      {up ? "+" : "−"}
+      {Math.abs(pp)}pp
+    </span>
+  );
+}
+
+/** One "what changed" bucket card: count + drill into the exact cases. */
+function DiffCard({
+  label,
+  keys,
+  tone,
+  hint,
+  onDrill
+}: {
+  label: string;
+  keys: string[];
+  tone: "good" | "bad" | "warn" | "neutral";
+  hint: string;
+  onDrill: () => void;
+}) {
+  const empty = keys.length === 0;
+  return (
+    <button className={`diff-card ${tone}${empty ? " empty" : ""}`} onClick={onDrill} disabled={empty} title={hint}>
+      <span className="dc-count mono">{keys.length}</span>
+      <span className="dc-label">{label}</span>
+    </button>
+  );
+}
+
+function ChangedVsBaseline({ diff }: { diff: BaselineDiff | null }) {
+  const { baselineRun, baselineRunId, baselineLoading, runs, setBaselineRun, setCaseScope, setStation, scorecard, caseViews } =
+    useStore();
+
+  const incompleteKeys = useMemo(
+    () =>
+      caseViews
+        .filter((v) => v.visualStatus === "not_reviewed" || v.visualStatus === "needs_review")
+        .map((v) => v.key),
+    [caseViews]
+  );
+
+  const drill = (label: string, keys: string[]) => {
+    setCaseScope({ label, keys });
+    setStation("review");
+  };
+
+  const otherRuns = runs.filter((r) => r.run_id !== scorecard?.runId);
+
+  return (
+    <>
+      <div className="section-title">
+        Changed vs Baseline
+        <span className="section-sub">Deterministic result flips between the two runs. Click a card to open the exact cases.</span>
+        <span className="spacer" />
+        <label className="baseline-pick">
+          <span>Baseline</span>
+          <select
+            value={baselineRunId ?? ""}
+            onChange={(e) => setBaselineRun(e.target.value || null)}
+            title="The comparison run this run is diffed against"
+          >
+            <option value="">None</option>
+            {otherRuns.map((r) => (
+              <option key={r.run_id} value={r.run_id}>
+                {r.run_id.slice(0, 34)} · {(r.harness ?? "unknown")} · {r.timestamp_utc.slice(0, 16).replace("T", " ")}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {!baselineRunId ? (
+        <div className="empty-note">No comparison baseline selected. Pick an earlier run above to see what changed.</div>
+      ) : baselineLoading ? (
+        <div className="empty-note">Loading baseline cases…</div>
+      ) : !diff ? (
+        <div className="empty-note">Could not load the baseline run's cases.</div>
+      ) : (
+        <>
+          <div className="diff-cards">
+            <DiffCard label="Regressed" keys={diff.regressed} tone="bad" hint="Passed in the baseline, fails now. The first thing to look at." onDrill={() => drill(`Regressed vs ${diff.baselineRunId.slice(0, 24)}`, diff.regressed)} />
+            <DiffCard label="Fixed" keys={diff.fixed} tone="good" hint="Failed in the baseline, passes now." onDrill={() => drill(`Fixed vs ${diff.baselineRunId.slice(0, 24)}`, diff.fixed)} />
+            <DiffCard label="Still Failing" keys={diff.stillFailing} tone="warn" hint="Failed in both runs." onDrill={() => drill("Still failing", diff.stillFailing)} />
+            <DiffCard label="New Cases" keys={diff.added} tone="neutral" hint="Cases only the current run has." onDrill={() => drill("New cases", diff.added)} />
+            <DiffCard label="Removed" keys={diff.removed} tone="neutral" hint="Cases only the baseline had. Not drillable here, since they have no current evidence." onDrill={() => {}} />
+            <DiffCard label="Incomplete" keys={incompleteKeys} tone="warn" hint="Visual verdict still missing (not reviewed or needs review). Absence of evidence, not a failure." onDrill={() => drill("Incomplete visual review", incompleteKeys)} />
+          </div>
+          {baselineRun && (
+            <div className="baseline-meta stage-sub">
+              Baseline <span className="mono">{baselineRun.run_id}</span>
+              <MetaTag k="commit" v={baselineRun.git_commit.slice(0, 7) || "—"} />
+              <MetaTag k="harness" v={baselineRun.harness ?? "unknown"} />
+              {typeof baselineRun.overall_score === "number" && (
+                <MetaTag k="score" v={`${Math.round(baselineRun.overall_score * 100)}%`} />
+              )}
+              <span style={{ color: "var(--text-3)" }}>{relativeTime(baselineRun.timestamp_utc)}</span>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+/** Where this run came from and how to reproduce its configuration. */
+function ProvenanceCard() {
+  const { scorecard, config, pushToast } = useStore();
+  const [copied, setCopied] = useState(false);
+  if (!scorecard) return null;
+
+  const harness = scorecard.harness;
+  const model = scorecard.model;
+  const judge = scorecard.harnessJudge ?? (config?.harness_judge || null);
+
+  const lines = [
+    `git checkout ${scorecard.gitCommit || "<commit unrecorded>"}`,
+    harness && harness !== "unknown" ? `export AGENT_HARNESS=${harness}` : `# harness unrecorded by this run`,
+    model
+      ? `# codegen model: ${model}${scorecard.modelVariant ? ` @ ${scorecard.modelVariant}` : ""}`
+      : `# codegen model unrecorded by this run`,
+    `python3 evaluation/scripts/run-scorecard.py \\`,
+    `  ${harness && harness !== "unknown" ? `--harness ${harness} ` : ""}${model ? `--model ${model} ` : ""}${scorecard.modelVariant ? `--model-variant ${scorecard.modelVariant} ` : ""}--threshold ${scorecard.threshold}`
+  ];
+  const cmd = lines.join("\n");
+
+  const copy = () => {
+    navigator.clipboard
+      .writeText(cmd)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1600);
+      })
+      .catch(() => pushToast("Clipboard unavailable", "bad"));
+  };
+
+  const chip = (k: string, v: string | null, unrecorded = "Not recorded") =>
+    v ? <MetaTag k={k} v={v} /> : (
+      <span className="meta-tag unrecorded" title={`${k}: this run did not record it.`}>
+        <span className="meta-k">{k}</span>
+        <span className="meta-v">{unrecorded}</span>
+      </span>
+    );
+
+  return (
+    <>
+      <div className="section-title">
+        Provenance &amp; Reproduce
+        <span className="section-sub">What produced these numbers. Unrecorded values stay visibly unrecorded.</span>
+      </div>
+      <div className="prov-card">
+        <div className="prov-chips">
+          {chip("commit", scorecard.gitCommit ? scorecard.gitCommit.slice(0, 12) : null)}
+          {chip("when", scorecard.timestampUtc ? `${scorecard.timestampUtc.slice(0, 16).replace("T", " ")} (${relativeTime(scorecard.timestampUtc)})` : null)}
+          {chip("harness", harness !== "unknown" ? harness : null)}
+          {chip("model", model ? `${modelShort(model)}${scorecard.modelVariant ? ` @${scorecard.modelVariant}` : ""}` : null)}
+          {chip("judge", judge)}
+          {chip("mode", scorecard.visualReviewSupplied ? "A · det + visual" : "B · det-only")}
+          {chip("schema", scorecard.schemaVersion || null)}
+          {chip("threshold", `${Math.round(scorecard.threshold * 100)}%`)}
+        </div>
+        <div className="prov-repro">
+          <pre className="mono">{cmd}</pre>
+          <button className="pill" onClick={copy} title="Copy the reproduce sketch">
+            <Copy size={12} aria-hidden /> {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        <div className="prov-note">
+          Reproduce sketch, not a replay: evidence inputs (cases root, fixture set) live with the original
+          scorecard at <span className="mono">{config?.scorecard_path?.replace(config.repo_root + "/", "") ?? "—"}</span>.
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function EvaluateOverview() {
-  const { scorecard, counts, needsYouCount, confirmedFlagKeys, skills, setStation, selectSkill } =
+  const { scorecard, counts, needsYouCount, confirmedFlagKeys, skills, setStation, selectSkill, diff } =
     useStore();
 
   if (!scorecard) {
@@ -85,108 +289,141 @@ export function EvaluateOverview() {
 
   return (
     <div className="overview">
-      <div className="ov-hero">
+      <div className="dash-head">
+        <div>
+          <div className="dash-title">Evaluation Health</div>
+          <div className="dash-sub">
+            The loaded run at a glance: verdict, what changed vs the baseline, and where these numbers came from.
+          </div>
+        </div>
+      </div>
+
+      {/* HERO — the verdict with its gates named, beside the score geometry. */}
+      <div className="hero-card">
         <div>
           <div className="ov-big" style={{ color: pass ? "var(--pass)" : "var(--fail)" }}>
             {pass ? "PASS" : "FAIL"}
+            <DeltaChip delta={diff?.scoreDelta ?? null} />
           </div>
+          <div className="gate-chips" aria-label="Verdict composition">
+            <span className={`gate-chip ${scorecard.deterministicResult === "pass" ? "ok" : "bad"}`}>
+              ▣ Deterministic {scorecard.deterministicResult.toUpperCase()}
+            </span>
+            {scorecard.visualReviewSupplied ? (
+              <span
+                className={`gate-chip ${pass || scorecard.deterministicResult === "fail" ? (pass ? "ok" : "neutral") : "bad"}`}
+                title="The visual judge gate. Blocking failures fail the run even at a passing deterministic score."
+              >
+                ◈ Visual {pass ? "PASS" : scorecard.deterministicResult === "pass" ? "FAIL, the gate that failed" : "FAIL"}
+              </span>
+            ) : (
+              <span className="gate-chip neutral" title="Mode B: no visual review supplied">
+                ◈ Visual not reviewed
+              </span>
+            )}
+          </div>
+          <ScoreVsThreshold score={scorecard.overallScore} threshold={scorecard.threshold} />
           <div className="stage-sub" style={{ marginTop: "var(--sp-3)" }}>
             <span className="mono">{scorecard.runId}</span>
-            <MetaTag k="commit" v={scorecard.gitCommit.slice(0, 7) || "—"} />
-            <MetaTag k="score" v={`${Math.round(scorecard.overallScore * 100)}%`} />
-            <MetaTag k="threshold" v={`${Math.round(scorecard.threshold * 100)}%`} />
+            <MetaTag k="Commit" v={scorecard.gitCommit.slice(0, 7) || "—"} />
+            <span style={{ color: "var(--text-3)" }}>{relativeTime(scorecard.timestampUtc)}</span>
           </div>
         </div>
-        <button
-          onClick={() => setStation("review")}
-          style={{
-            marginLeft: "auto",
-            background: "none",
-            border: "1px solid var(--hairline-strong)",
-            borderRadius: "var(--r-2)",
-            color: needsYouCount > 0 ? "var(--ink-human)" : "var(--text-2)",
-            padding: "var(--sp-2) var(--sp-4)",
-            cursor: "pointer",
-            fontSize: "var(--fs-100)"
-          }}
-        >
-          {needsYouCount > 0 ? (
-            <>
-              <span aria-hidden>⚑ </span>
-              {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your eyes → press 2 for Review
-            </>
-          ) : (
-            <>Nothing needs your eyes → press 2 for Review</>
-          )}
-        </button>
+        <div className="hero-right">
+          <button className={`review-cta${needsYouCount > 0 ? " hot" : ""}`} onClick={() => setStation("review")}>
+            {needsYouCount > 0 ? (
+              <>
+                <span aria-hidden>⚑ </span>
+                {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your eyes → Review (2)
+              </>
+            ) : (
+              <>Nothing needs your eyes → Review (2)</>
+            )}
+          </button>
+          <div style={{ width: "100%" }}>
+            <div className="ov-distribution" aria-label="Decision distribution">
+              <span className="seg-accept" style={seg(counts.accept)} title={`Accept ${counts.accept}`} />
+              <span className="seg-flag" style={seg(counts.flag)} title={`Flag ${counts.flag}`} />
+              <span className="seg-defer" style={seg(counts.defer)} title={`Defer ${counts.defer}`} />
+            </div>
+            <div className="stage-sub" style={{ marginTop: "var(--sp-2)", justifyContent: "flex-end" }}>
+              <span style={{ color: "var(--pass)" }}>● Accept {counts.accept}</span>
+              <span style={{ color: "var(--fail)" }}>● Flag {counts.flag}</span>
+              <span style={{ color: "var(--defer)" }}>● Defer {counts.defer}</span>
+              <span style={{ color: "var(--text-3)" }}>· {Math.round((counts.accept / total) * 100)}% accepted</span>
+            </div>
+            {counts.neutral > 0 && (
+              <div className="stage-sub" style={{ justifyContent: "flex-end" }}>
+                <span style={{ color: "var(--unknown)" }}>{counts.neutral} not visually reviewed</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Decision distribution only — accept/flag/defer sum to total. "Not reviewed"
-          is a separate visual-status axis (it would double-count here), shown as a note. */}
-      <div className="ov-distribution" aria-label="decision distribution">
-        <span className="seg-accept" style={seg(counts.accept)} title={`accept ${counts.accept}`} />
-        <span className="seg-flag" style={seg(counts.flag)} title={`flag ${counts.flag}`} />
-        <span className="seg-defer" style={seg(counts.defer)} title={`defer ${counts.defer}`} />
+      <div className="kpi-row">
+        <div className="kpi">
+          <span className="kpi-label">Total Cases</span>
+          <span className="kpi-value">{counts.total}</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">Need You</span>
+          <span className="kpi-value" style={{ color: needsYouCount > 0 ? "var(--ink-human)" : undefined }}>
+            {needsYouCount}
+          </span>
+          <span className="kpi-sub">Failing or ambiguous</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">Focus Set</span>
+          <span className="kpi-value">{confirmedFlagKeys.length}</span>
+          <span className="kpi-sub">Flags for the optimizer</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">Skills</span>
+          <span className="kpi-value">{skills.length}</span>
+          <span className="kpi-sub">Under optimization</span>
+        </div>
+        <div className="kpi good">
+          <span className="kpi-label">Kept</span>
+          <span className="kpi-value">{kept}</span>
+          <span className="kpi-sub">Iterations promoted</span>
+        </div>
+        <div className="kpi bad">
+          <span className="kpi-label">Rejected</span>
+          <span className="kpi-value">{rejected}</span>
+          <span className="kpi-sub">Iterations discarded</span>
+        </div>
       </div>
-      <div className="stage-sub" style={{ marginBottom: "var(--sp-5)" }}>
-        <span style={{ color: "var(--pass)" }}>● accept {counts.accept}</span>
-        <span style={{ color: "var(--fail)" }}>● flag {counts.flag}</span>
-        <span style={{ color: "var(--defer)" }}>● defer {counts.defer}</span>
-        <span style={{ color: "var(--text-3)" }}>· {Math.round((counts.accept / total) * 100)}% accepted</span>
-        {counts.neutral > 0 && (
-          <span style={{ color: "var(--unknown)" }}>· {counts.neutral} not visually reviewed</span>
+
+      <div className="dash-card">
+        <ChangedVsBaseline diff={diff} />
+      </div>
+      <div className="dash-card">
+        <ProvenanceCard />
+      </div>
+
+      <div className="dash-card">
+        <div className="section-title">
+          Skill Health
+          <span className="section-sub">Click a skill to open it in Optimize.</span>
+        </div>
+        {skills.length === 0 ? (
+          <div className="empty-note">No optimization runs on disk yet.</div>
+        ) : (
+          <div className="skill-grid">
+            {skills.map((s) => (
+              <SkillTile
+                key={s.skill}
+                s={s}
+                onClick={() => {
+                  selectSkill(s.skill);
+                  setStation("optimize");
+                }}
+              />
+            ))}
+          </div>
         )}
       </div>
-
-      <div className="cards">
-        <div className="card">
-          <div className="card-k">total cases</div>
-          <div className="card-v mono">{counts.total}</div>
-        </div>
-        <div className="card">
-          <div className="card-k">need you</div>
-          <div className="card-v mono" style={{ color: needsYouCount > 0 ? "var(--ink-human)" : undefined }}>
-            {needsYouCount}
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-k">→ focus</div>
-          <div className="card-v mono">{confirmedFlagKeys.length}</div>
-        </div>
-        <div className="card">
-          <div className="card-k">skills</div>
-          <div className="card-v mono">{skills.length}</div>
-        </div>
-        <div className="card">
-          <div className="card-k">kept</div>
-          <div className="card-v mono" style={{ color: "var(--keep)" }}>{kept}</div>
-        </div>
-        <div className="card">
-          <div className="card-k">rejected</div>
-          <div className="card-v mono" style={{ color: "var(--reject)" }}>{rejected}</div>
-        </div>
-      </div>
-
-      <div className="section-title">
-        Skill health
-        <span className="section-sub">click a skill → Optimize</span>
-      </div>
-      {skills.length === 0 ? (
-        <div className="empty-note">No optimization runs on disk yet.</div>
-      ) : (
-        <div className="skill-grid">
-          {skills.map((s) => (
-            <SkillTile
-              key={s.skill}
-              s={s}
-              onClick={() => {
-                selectSkill(s.skill);
-                setStation("optimize");
-              }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -200,7 +437,7 @@ export function PromotePanel() {
     <div className="overview">
       <div className="section-title" style={{ marginTop: 0 }}>
         Promote
-        <span className="section-sub">guarded — promotion is a deliberate manual step</span>
+        <span className="section-sub">Guarded: promotion is a deliberate manual step.</span>
       </div>
 
       {promotable.length === 0 ? (

@@ -11,8 +11,11 @@ import {
 import {
   exportHandoff,
   loadConfig,
+  loadInsights,
   loadIteration,
+  loadRegistry,
   loadReviewDecisions,
+  loadRunCases,
   loadRuns,
   loadScorecard,
   loadSkills,
@@ -24,14 +27,19 @@ import { autoGrade, matchesFilter, worstFirstSort } from "./lib/grade";
 import type {
   AdaptedCase,
   AdaptedScorecard,
+  BaselineDiff,
+  CaseScope,
   CaseView,
   ConfigDTO,
   Decision,
   DecisionRecord,
   FilterKind,
   Harness,
+  InsightsDTO,
   IterationDetail,
   ConsoleOverlay,
+  RegistryDTO,
+  RunCaseLite,
   RunSummary,
   ReviewDecisionDoc,
   SkillOverview,
@@ -69,6 +77,19 @@ export interface Store {
   harnesses: Harness[];
   visibleRuns: RunSummary[];
   saveStatus: "idle" | "saving" | "saved" | "error";
+
+  // declared capability (registry) + observed model×harness performance (insights)
+  registry: RegistryDTO | null;
+  insights: InsightsDTO | null;
+
+  // comparison baseline: another run the loaded run is diffed against
+  baselineRunId: string | null;
+  baselineRun: RunSummary | null;
+  baselineLoading: boolean;
+  diff: BaselineDiff | null;
+
+  // drill-down scope: aggregate signal -> exact cases (chip shown in the stream)
+  caseScope: CaseScope | null;
 
   // review (derived)
   caseViews: CaseView[];
@@ -132,6 +153,8 @@ export interface Store {
   doExport: () => Promise<void>;
   switchRun: (runId: string) => Promise<void>;
   setActiveHarness: (h: Harness | null) => void;
+  setBaselineRun: (runId: string | null) => void;
+  setCaseScope: (scope: CaseScope | null) => void;
   reload: () => Promise<void>;
 }
 
@@ -170,6 +193,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [decisions, setDecisions] = useState<Record<string, DecisionRecord>>({});
   const [selectedKey, setSelectedKey] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<Store["saveStatus"]>("idle");
+  const [registry, setRegistry] = useState<RegistryDTO | null>(null);
+  const [insights, setInsights] = useState<InsightsDTO | null>(null);
+  const [baselineRunId, setBaselineRunId] = useState<string | null>(null);
+  const [baselineCases, setBaselineCases] = useState<RunCaseLite[] | null>(null);
+  const [baselineLoading, setBaselineLoading] = useState(false);
+  const [caseScope, setCaseScopeState] = useState<CaseScope | null>(null);
 
   const [skills, setSkills] = useState<SkillOverview[]>([]);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
@@ -204,6 +233,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
+  // ---------- comparison baseline ----------
+  const baselineReq = useRef(0);
+  const fetchBaseline = useCallback((runId: string) => {
+    const reqId = ++baselineReq.current;
+    setBaselineLoading(true);
+    loadRunCases(runId)
+      .then((dto) => {
+        if (baselineReq.current === reqId) setBaselineCases(dto.cases);
+      })
+      .catch(() => {
+        if (baselineReq.current === reqId) setBaselineCases(null);
+      })
+      .finally(() => {
+        if (baselineReq.current === reqId) setBaselineLoading(false);
+      });
+  }, []);
+
+  const setBaselineRun = useCallback(
+    (runId: string | null) => {
+      setBaselineRunId(runId);
+      setBaselineCases(null);
+      if (runId) fetchBaseline(runId);
+    },
+    [fetchBaseline]
+  );
+
   // ---------- load ----------
   const boot = useCallback(async () => {
     setLoading(true);
@@ -214,12 +269,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     undoStack.current = [];
     try {
-      const [cfg, raw, decDoc, runList, skillList] = await Promise.all([
+      const [cfg, raw, decDoc, runList, skillList, reg, ins] = await Promise.all([
         loadConfig(),
         loadScorecard(),
         loadReviewDecisions().catch(() => null),
         loadRuns().catch(() => [] as RunSummary[]),
-        loadSkills().catch(() => [] as SkillOverview[])
+        loadSkills().catch(() => [] as SkillOverview[]),
+        loadRegistry().catch(() => null),
+        loadInsights().catch(() => null)
       ]);
       const adapted = adaptScorecard(raw);
       // The scorecard carries no path, so a legacy fieldless run adapts to "unknown".
@@ -233,6 +290,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setActiveHarness(adapted.harness);
       setRuns(runList);
       setSkills(skillList);
+      setRegistry(reg);
+      setInsights(ins);
+      setCaseScopeState(null);
+      // Default comparison baseline: the most recent run strictly older than the
+      // loaded run — same harness when one exists, else any harness. The user can
+      // repoint it from the run list ("b"). No older run => honest "no baseline".
+      const loadedTs = adapted.timestampUtc;
+      const older = runList
+        .filter((r) => r.run_id !== adapted.runId && r.timestamp_utc && r.timestamp_utc < loadedTs)
+        .sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc));
+      const sameHarness = older.filter((r) => (r.harness ?? "unknown") === adapted.harness);
+      const defaultBaseline = (sameHarness[0] ?? older[0])?.run_id ?? null;
+      setBaselineRunId(defaultBaseline);
+      setBaselineCases(null);
+      if (defaultBaseline) fetchBaseline(defaultBaseline);
       const seeded = decDoc?.decisions ?? {};
       decisionsRef.current = seeded;
       setDecisions(seeded);
@@ -251,11 +323,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchBaseline]);
 
   useEffect(() => {
     void boot();
   }, [boot]);
+
+  // ---------- derived: baseline diff ----------
+  const baselineRun = useMemo(
+    () => runs.find((r) => r.run_id === baselineRunId) ?? null,
+    [runs, baselineRunId]
+  );
+
+  const diff = useMemo<BaselineDiff | null>(() => {
+    if (!scorecard || !baselineRunId || !baselineCases) return null;
+    const base = new Map(baselineCases.map((c) => [c.key, c]));
+    const fixed: string[] = [];
+    const regressed: string[] = [];
+    const stillFailing: string[] = [];
+    const added: string[] = [];
+    const seen = new Set<string>();
+    for (const c of scorecard.cases) {
+      const b = base.get(c.key);
+      if (!b) {
+        added.push(c.key);
+        continue;
+      }
+      seen.add(c.key);
+      const curFail = c.result === "fail";
+      const baseFail = b.result === "fail";
+      if (curFail && !baseFail) regressed.push(c.key);
+      else if (!curFail && baseFail) fixed.push(c.key);
+      else if (curFail && baseFail) stillFailing.push(c.key);
+    }
+    const removed = baselineCases.filter((c) => !seen.has(c.key)).map((c) => c.key);
+    const baseScore = baselineRun?.overall_score;
+    return {
+      baselineRunId,
+      fixed,
+      regressed,
+      stillFailing,
+      added,
+      removed,
+      scoreDelta: typeof baseScore === "number" ? scorecard.overallScore - baseScore : null
+    };
+  }, [scorecard, baselineRunId, baselineCases, baselineRun]);
+
+  const setCaseScope = useCallback((scope: CaseScope | null) => {
+    setCaseScopeState(scope && scope.keys.length === 0 ? null : scope);
+  }, []);
 
   // ---------- derived: harness lens ----------
   const harnesses = useMemo<Harness[]>(
@@ -280,11 +396,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [caseViews]);
 
   const orderedCases = useMemo(() => {
+    const scopeKeys = caseScope ? new Set(caseScope.keys) : null;
     const filtered = caseViews.filter(
-      (v) => matchesFilter(v, filter) && (!facetSkill || v.skill === facetSkill)
+      (v) =>
+        matchesFilter(v, filter) &&
+        (!facetSkill || v.skill === facetSkill) &&
+        (!scopeKeys || scopeKeys.has(v.key))
     );
     return worstFirstSort(filtered);
-  }, [caseViews, filter, facetSkill]);
+  }, [caseViews, filter, facetSkill, caseScope]);
 
   const counts = useMemo<Counts>(() => {
     const c: Counts = { accept: 0, flag: 0, defer: 0, neutral: 0, total: caseViews.length, overridden: 0 };
@@ -595,6 +715,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     harnesses,
     visibleRuns,
     saveStatus,
+    registry,
+    insights,
+    baselineRunId,
+    baselineRun,
+    baselineLoading,
+    diff,
+    caseScope,
     caseViews,
     orderedCases,
     selectedView,
@@ -647,6 +774,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     doExport,
     switchRun,
     setActiveHarness,
+    setBaselineRun,
+    setCaseScope,
     reload: boot
   };
 

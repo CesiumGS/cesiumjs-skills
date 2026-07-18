@@ -62,9 +62,9 @@ export function Pct({ value, label }: { value: number | null | undefined; label?
   );
 }
 
-export function UnknownChip({ small, text = "unknown" }: { small?: boolean; text?: string }) {
+export function UnknownChip({ small, text = "Unknown" }: { small?: boolean; text?: string }) {
   return (
-    <span className={`unknown-chip${small ? " sm" : ""}`} title="not reviewed — unknown, not a low score">
+    <span className={`unknown-chip${small ? " sm" : ""}`} title="Not reviewed: unknown, not a low score">
       <span className="unknown-ring" aria-hidden />
       {!small && text}
     </span>
@@ -119,7 +119,7 @@ export function ScenarioChip({ verdict, count }: { verdict: ScenarioVerdict; cou
     TIE: { label: "TIE", cls: "tie", mark: "=" }
   };
   const m = verdict ? map[verdict] : null;
-  if (!m) return <span className="scn-chip scn-na" title="judge unavailable">n/a</span>;
+  if (!m) return <span className="scn-chip scn-na" title="Judge unavailable">N/A</span>;
   return (
     <span className={`scn-chip scn-${m.cls}`} title={count != null ? `${m.label} (${count}/3 judges)` : m.label}>
       <span className="scn-mark" aria-hidden>

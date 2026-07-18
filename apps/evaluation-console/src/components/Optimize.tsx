@@ -1,6 +1,43 @@
 import { useStore } from "../store";
 import type { IterationSummary, JournalEvent, ScenarioDetail } from "../types";
+import { modelShort } from "../lib/format";
 import { LoopBadge, Pct, ProvGlyph, ScenarioChip } from "./primitives";
+
+/** The loaded iteration's recorded codegen provenance — or an honest "unrecorded". */
+function IterationProvenanceChips() {
+  const { iterationDetail } = useStore();
+  if (!iterationDetail) return null;
+  const p = iterationDetail.provenance;
+  if (!p || (!p.harness && !p.model_id)) {
+    return (
+      <span
+        className="prov-unrecorded"
+        title="This iteration's generated metas carry no harness or model stamp (they predate provenance stamping)."
+      >
+        Provenance unrecorded
+      </span>
+    );
+  }
+  return (
+    <span className="iter-prov" title="Recorded by the iteration's codegen metas">
+      {p.harness ? (
+        <span className="harness-pill" data-harness={p.harness}>
+          <span className="harness-dot" data-harness={p.harness} aria-hidden />
+          {p.harness}
+        </span>
+      ) : (
+        <span className="harness-pill unrecorded">Harness ?</span>
+      )}
+      <span className="mono">{modelShort(p.model_id)}</span>
+      {p.model_variant && <span className="effort-chip">@{p.model_variant}</span>}
+      {p.mixed && (
+        <span className="prov-mixed" title="Scenarios within this iteration disagree on provenance.">
+          Mixed!
+        </span>
+      )}
+    </span>
+  );
+}
 
 /* ============================================================================
    OPTIMIZE — live-loop monitor (DESIGN-SPEC §4c). Read-only over the real
@@ -63,7 +100,7 @@ function IterationLog() {
 
   return (
     <div className="panel">
-      <div className="panel-head">Iteration log</div>
+      <div className="panel-head">Iteration Log</div>
       <div className="panel-body">
         {nonBaseline.length === 0 && !baseline && (
           <div className="empty-note">No iterations recorded for this skill.</div>
@@ -120,10 +157,10 @@ function IterationLog() {
           );
         })}
         {baseline && (
-          <div className="commit" style={{ cursor: "default", opacity: 0.7 }} title="baseline (current best)">
+          <div className="commit" style={{ cursor: "default", opacity: 0.7 }} title="Baseline (current best)">
             <span className="c-iter">{baseline.iteration}</span>
             <span className="mono" style={{ fontSize: "var(--fs-50)", color: "var(--text-3)" }}>
-              baseline
+              Baseline
             </span>
             <span className="c-wlt">{wlt(baseline)}</span>
           </div>
@@ -139,7 +176,7 @@ function PipelineTrain() {
   if (iterationLoading) {
     return (
       <div className="panel">
-        <div className="panel-head">Pipeline train</div>
+        <div className="panel-head">Pipeline Train</div>
         <div className="panel-body">
           <div className="empty-note">Loading journal…</div>
         </div>
@@ -149,7 +186,7 @@ function PipelineTrain() {
   if (!iterationDetail) {
     return (
       <div className="panel">
-        <div className="panel-head">Pipeline train</div>
+        <div className="panel-head">Pipeline Train</div>
         <div className="panel-body">
           <div className="empty-note">No iteration selected.</div>
         </div>
@@ -159,7 +196,7 @@ function PipelineTrain() {
   const cars = carStatuses(iterationDetail.journal);
   return (
     <div className="panel">
-      <div className="panel-head">Pipeline train</div>
+      <div className="panel-head">Pipeline Train</div>
       <div className="panel-body">
         <div className="train">
           {TRAIN_STEPS.map((step) => {
@@ -187,7 +224,7 @@ function ScenarioBoard() {
   if (iterationLoading) {
     return (
       <div className="panel">
-        <div className="panel-head">Scenario board</div>
+        <div className="panel-head">Scenario Board</div>
         <div className="panel-body">
           <div className="empty-note">Loading scenarios…</div>
         </div>
@@ -197,7 +234,7 @@ function ScenarioBoard() {
   if (!iterationDetail) {
     return (
       <div className="panel">
-        <div className="panel-head">Scenario board</div>
+        <div className="panel-head">Scenario Board</div>
         <div className="panel-body">
           <div className="empty-note">No iteration selected.</div>
         </div>
@@ -302,12 +339,13 @@ export function OptimizeStage() {
         <div>
           <div className="stage-title">{selectedSkillData.skill.replace("cesiumjs-", "")}</div>
           <div className="stage-sub">
-            <span>{selectedSkillData.iteration_count} iterations</span>
-            <span>· {selectedSkillData.kept} kept</span>
-            <span>· {selectedSkillData.rejected} rejected</span>
+            <span>{selectedSkillData.iteration_count} Iterations</span>
+            <span>· {selectedSkillData.kept} Kept</span>
+            <span>· {selectedSkillData.rejected} Rejected</span>
+            <IterationProvenanceChips />
             {selectedSkillData.running && (
               <span style={{ color: "var(--live)", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <ProvGlyph kind="live" /> running
+                <ProvGlyph kind="live" /> Running
               </span>
             )}
           </div>
@@ -320,10 +358,10 @@ export function OptimizeStage() {
       <div className="chasing">
         <ProvGlyph kind="human" />
         {focus.length === 0 ? (
-          <span>no human focus yet — exploratory</span>
+          <span>No human focus yet, so the loop is exploratory</span>
         ) : (
           <>
-            <span style={{ marginRight: "var(--sp-1)" }}>chasing your flags:</span>
+            <span style={{ marginRight: "var(--sp-1)" }}>Chasing your flags:</span>
             {focus.map((k) => (
               <span key={k} className="mono" style={{ fontSize: "var(--fs-50)" }}>
                 {k.split("/").slice(1).join("/")}
@@ -396,10 +434,10 @@ export function OptimizeInspector() {
             }}
           >
             <span>
-              <span className="mono" style={{ color: "var(--keep)" }}>{selectedSkillData.kept}</span> kept
+              <span className="mono" style={{ color: "var(--keep)" }}>{selectedSkillData.kept}</span> Kept
             </span>
             <span>
-              <span className="mono" style={{ color: "var(--reject)" }}>{selectedSkillData.rejected}</span> rejected
+              <span className="mono" style={{ color: "var(--reject)" }}>{selectedSkillData.rejected}</span> Rejected
             </span>
           </div>
         </div>

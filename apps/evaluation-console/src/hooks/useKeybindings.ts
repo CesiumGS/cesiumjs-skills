@@ -7,7 +7,8 @@ const STATION_BY_DIGIT: Record<string, Station> = {
   "2": "review",
   "3": "optimize",
   "4": "decide",
-  "5": "promote"
+  "5": "promote",
+  "6": "compare"
 };
 
 function isTyping(el: EventTarget | null): boolean {

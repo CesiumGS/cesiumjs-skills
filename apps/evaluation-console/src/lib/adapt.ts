@@ -144,6 +144,11 @@ export function adaptCase(c: RawCase): AdaptedCase {
   };
 }
 
+function artifactString(raw: RawScorecard, key: string): string | null {
+  const v = (raw.artifacts ?? {})[key];
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
 export function adaptScorecard(raw: RawScorecard): AdaptedScorecard {
   const categoryScores: Record<string, number> = {};
   for (const [k, v] of Object.entries(raw.category_scores ?? {})) {
@@ -157,12 +162,18 @@ export function adaptScorecard(raw: RawScorecard): AdaptedScorecard {
     deterministicResult: raw.deterministic_result,
     overallScore: typeof raw.overall_score === "number" ? raw.overall_score : 0,
     threshold: typeof raw.threshold === "number" ? raw.threshold : 0.95,
+    schemaVersion: raw.schema_version ?? "",
     // Align with the server (defaults missing flag to false / Mode B).
     visualReviewSupplied: raw.visual_summary?.visual_review_supplied === true,
     // Harness comes from the in-band field only; the scorecard carries no path,
     // so legacy fieldless runs land on "unknown" here and the store backfills the
     // server-resolved value from ConfigDTO.harness. Never infer from run_id.
     harness: typeof raw.harness === "string" && raw.harness.trim() ? raw.harness.trim() : "unknown",
+    // Model provenance is additive (artifacts.model / .model_variant); null =
+    // the run did not record it, rendered as "unrecorded" — never guessed.
+    model: artifactString(raw, "model"),
+    modelVariant: artifactString(raw, "model_variant"),
+    harnessJudge: artifactString(raw, "harness_judge"),
     categoryScores,
     cases: (raw.cases ?? []).map(adaptCase)
   };

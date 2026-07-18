@@ -21,12 +21,23 @@ const FILTERS: Array<{ id: FilterKind; label: string }> = [
 ];
 
 function FacetBar() {
-  const { filter, setFilter, facetSkill, setFacetSkill, scorecard, caseViews } = useStore();
+  const { filter, setFilter, facetSkill, setFacetSkill, scorecard, caseViews, caseScope, setCaseScope } =
+    useStore();
   const skills = scorecard ? [...new Set(scorecard.cases.map((c) => c.skill))].sort() : [];
   const countFor = (f: FilterKind) =>
     f === "all" ? caseViews.length : caseViews.filter((v) => matches(v, f)).length;
   return (
     <div className="facetbar">
+      {caseScope && (
+        <button
+          className="facet scope-chip active"
+          onClick={() => setCaseScope(null)}
+          title="Drill-down scope from the overview. Click to clear."
+        >
+          ◎ {caseScope.label} <span className="count">{caseScope.keys.length}</span>
+          <span aria-hidden> ×</span>
+        </button>
+      )}
       {FILTERS.map((f) => (
         <button
           key={f.id}
@@ -43,7 +54,7 @@ function FacetBar() {
         onChange={(e) => setFacetSkill(e.target.value || null)}
         title="Filter by skill"
       >
-        <option value="">all skills</option>
+        <option value="">All skills</option>
         {skills.map((s) => (
           <option key={s} value={s}>
             {s.replace("cesiumjs-", "")}

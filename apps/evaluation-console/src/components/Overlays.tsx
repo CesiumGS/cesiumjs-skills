@@ -125,7 +125,7 @@ function Matrix() {
   }, [caseViews]);
 
   if (caseViews.length === 0) {
-    return <div className="empty-note">No scorecard loaded — nothing to map.</div>;
+    return <div className="empty-note">No scorecard loaded, so there is nothing to map.</div>;
   }
 
   const onCell = (skill: string) => {
@@ -137,10 +137,10 @@ function Matrix() {
   return (
     <>
       <div className="matrix-legend">
-        <span><span className="lg-swatch" /> steel = checks passed / total</span>
-        <span><span className="lg-swatch empty" /> no checks run</span>
-        <span style={{ color: "var(--crit)" }}>! critical failure</span>
-        <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>0–1 deterministic · click a row → Review</span>
+        <span><span className="lg-swatch" /> Steel = checks passed / total</span>
+        <span><span className="lg-swatch empty" /> No checks run</span>
+        <span style={{ color: "var(--crit)" }}>! Critical failure</span>
+        <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>Deterministic 0-1. Click a row to open Review.</span>
       </div>
       <table className="matrix">
         <caption className="sr-only">Skills by check category: deterministic checks passed over total.</caption>
@@ -196,7 +196,7 @@ function Matrix() {
 }
 
 /* ===========================================================================
-   (f) TRENDS — visual win-rate across iterations + decision history (P3/P4).
+   (f) TRENDS — visual win-rate across iterations + Decision history (P3/P4).
    =========================================================================== */
 function winRate(it: IterationSummary): number | null {
   const { wins, losses } = it.counts;
@@ -211,7 +211,7 @@ function Trends() {
     selectedSkillData ?? skills.find((s) => s.history.some((h) => !h.is_baseline)) ?? skills[0] ?? null;
 
   if (!skill) {
-    return <div className="empty-note">No optimized skill yet — run the loop to grow a trend.</div>;
+    return <div className="empty-note">No optimized skill yet. Run the loop to grow a trend.</div>;
   }
 
   const iters = skill.history.filter((h) => !h.is_baseline);
@@ -219,7 +219,7 @@ function Trends() {
     return <div className="empty-note">{skill.skill.replace("cesiumjs-", "")} has no completed iterations yet.</div>;
   }
 
-  // Geometry — a steel polyline over the win-rate %, gaps where judges didn't score.
+  // Geometry: a steel polyline over the win-rate %, with gaps where judges did not score.
   const W = 640;
   const H = 134;
   const padX = 28;
@@ -244,7 +244,7 @@ function Trends() {
   return (
     <>
       <div style={{ fontSize: "var(--fs-50)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-machine)", marginBottom: "var(--sp-2)" }}>
-        ▣ visual win-rate · steel % · W/(W+L) per iteration
+        ▣ Visual win rate · Steel % · W/(W+L) per iteration
       </div>
       <div className="trend-chart">
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="none" role="img" aria-label="win-rate trend">
@@ -282,7 +282,7 @@ function Trends() {
       </div>
 
       <div style={{ fontSize: "var(--fs-50)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-3)", margin: "var(--sp-4) 0 var(--sp-2)" }}>
-        decision history
+        Decision history
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-3)", alignItems: "center" }}>
         {iters.map((it) => (
@@ -320,8 +320,19 @@ interface HarnessAgg {
 }
 
 function HarnessOverlay() {
-  const { runs, harnesses, activeHarness, setActiveHarness, visibleRuns, switchRun, scorecard, config } =
-    useStore();
+  const {
+    runs,
+    harnesses,
+    activeHarness,
+    setActiveHarness,
+    visibleRuns,
+    switchRun,
+    scorecard,
+    config,
+    baselineRunId,
+    setBaselineRun,
+    pushToast
+  } = useStore();
   const [cur, setCur] = useState(0);
 
   const aggs = useMemo<HarnessAgg[]>(() => {
@@ -369,6 +380,17 @@ function HarnessOverlay() {
       e.preventDefault();
       const r = list[cur];
       if (r) void switchRun(r.run_id);
+    } else if (e.key === "b") {
+      e.preventDefault();
+      const r = list[cur];
+      if (!r) return;
+      if (r.run_id === scorecard?.runId) {
+        pushToast("A run cannot be its own baseline", "bad");
+        return;
+      }
+      const toggledOff = baselineRunId === r.run_id;
+      setBaselineRun(toggledOff ? null : r.run_id);
+      pushToast(toggledOff ? "Baseline cleared" : `Baseline → ${r.run_id.slice(0, 28)}`, "good");
     }
   };
 
@@ -389,35 +411,35 @@ function HarnessOverlay() {
             data-harness={h === "all" ? undefined : h}
             onClick={() => setActiveHarness(h === "all" ? null : h)}
           >
-            {h}
+            {h === "all" ? "All" : h}
             {h !== "all" && (
               <span className="hc-count">{aggs.find((a) => a.harness === h)?.runCount ?? 0}</span>
             )}
           </button>
         ))}
         {judge && (
-          <span className="harness-judge-note" title="qualitative judge harness (separate from the tested codegen harness)">
-            judge: <span className="mono">{judge}</span>
+          <span className="harness-judge-note" title="Qualitative judge harness (separate from the tested codegen harness)">
+            Judge: <span className="mono">{judge}</span>
           </span>
         )}
       </div>
 
       {/* COMPARE — run-level performance per harness (steel pass-rate + signed Δ). */}
       <div className="matrix-legend" style={{ marginTop: "var(--sp-3)" }}>
-        <span><span className="lg-swatch" /> steel = runs passed / runs</span>
-        <span>Δ = pass-rate vs <span className="mono">{baseHarness ?? "—"}</span></span>
-        <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>run-level · click a row → scope the list</span>
+        <span><span className="lg-swatch" /> Steel = runs passed / runs</span>
+        <span>Δ = pass rate vs <span className="mono">{baseHarness ?? "—"}</span></span>
+        <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>Run-level. Click a row to scope the list.</span>
       </div>
       <table className="matrix harness-compare">
         <caption className="sr-only">Per-harness run-level performance.</caption>
         <thead>
           <tr>
-            <th scope="col">harness</th>
-            <th scope="col">runs</th>
-            <th scope="col">pass-rate</th>
+            <th scope="col">Harness</th>
+            <th scope="col">Runs</th>
+            <th scope="col">Pass Rate</th>
             <th scope="col">Δ</th>
-            <th scope="col" title="visual pass / needs-review / fail across runs">vis P / ? / F</th>
-            <th scope="col">latest run</th>
+            <th scope="col" title="Visual pass / needs review / fail across runs">Visual P / ? / F</th>
+            <th scope="col">Latest Run</th>
           </tr>
         </thead>
         <tbody>
@@ -446,7 +468,7 @@ function HarnessOverlay() {
                 <td className="mono hc-num">{a.runCount}</td>
                 <td className="hc-rate">
                   {a.passRate === null ? (
-                    <span className="unknown-dash" title="no runs">◌</span>
+                    <span className="unknown-dash" title="No runs">◌</span>
                   ) : (
                     <>
                       <span className="hc-bar" style={{ width: `${Math.round(a.passRate * 100)}%`, opacity: 0.16 + a.passRate * a.passRate * 0.84 }} />
@@ -485,20 +507,21 @@ function HarnessOverlay() {
       </table>
       {aggs.length < 2 && (
         <div className="empty-note" style={{ marginTop: "var(--sp-2)" }}>
-          Only one harness discovered{activeHarness ? ` (${activeHarness})` : ""} — run another harness to compare.
+          Only one harness discovered{activeHarness ? ` (${activeHarness})` : ""}. Run another harness to compare.
         </div>
       )}
 
       {/* SWITCH target — the scoped run list; Enter (or click) loads a run. */}
       <div style={{ fontSize: "var(--fs-50)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-3)", margin: "var(--sp-4) 0 var(--sp-2)" }}>
-        runs{activeHarness ? ` · ${activeHarness}` : " · all harnesses"} <span className="kbd">↑</span><span className="kbd">↓</span> <span className="kbd">↵</span> load
+        Runs{activeHarness ? ` · ${activeHarness}` : " · All harnesses"} <span className="kbd">↑</span><span className="kbd">↓</span> <span className="kbd">↵</span> Load · <span className="kbd">b</span> Baseline
       </div>
       <div className="harness-runlist">
         {list.length === 0 ? (
-          <div className="empty-note">no runs for this harness</div>
+          <div className="empty-note">No runs for this harness.</div>
         ) : (
           list.map((r, i) => {
             const loaded = scorecard?.runId === r.run_id;
+            const isBaseline = baselineRunId === r.run_id;
             return (
               <div
                 key={r.run_id}
@@ -510,8 +533,24 @@ function HarnessOverlay() {
                 <span className="mono hr-id">{r.run_id.slice(0, 28)}</span>
                 <span className="mono" style={{ color: "var(--text-3)" }}>{r.git_commit.slice(0, 7)}</span>
                 <span className={`hr-result ${r.overall_result === "pass" ? "ok" : "bad"}`}>{r.overall_result || "—"}</span>
+                {typeof r.overall_score === "number" && (
+                  <span className="mono" style={{ color: "var(--ink-machine)" }}>{Math.round(r.overall_score * 100)}%</span>
+                )}
                 <span className="mono" style={{ color: "var(--text-3)", marginLeft: "auto" }}>{r.timestamp_utc.slice(0, 16).replace("T", " ")}</span>
-                {loaded && <span className="hr-loaded">loaded</span>}
+                {isBaseline && <span className="hr-baseline" title="The comparison baseline">Baseline</span>}
+                {loaded && <span className="hr-loaded">Loaded</span>}
+                {!loaded && (
+                  <button
+                    className="hr-set-baseline"
+                    title={isBaseline ? "Clear the baseline" : "Set as comparison baseline (b)"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBaselineRun(isBaseline ? null : r.run_id);
+                    }}
+                  >
+                    {isBaseline ? "Clear" : "Set baseline"}
+                  </button>
+                )}
               </div>
             );
           })
@@ -579,7 +618,7 @@ function Palette() {
     const stationItems: PaletteItem[] = STATIONS.map((st) => ({
       kind: "station",
       label: st.label,
-      hint: "station",
+      hint: "Station",
       run: () => setStation(st.id)
     }));
     return [...caseItems, ...skillItems, ...stationItems];
@@ -618,14 +657,14 @@ function Palette() {
         <input
           autoFocus
           value={q}
-          placeholder="jump to a case, skill, or station…"
+          placeholder="Jump to a case, skill, or station…"
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKey}
           aria-label="command palette filter"
         />
         <div style={{ borderTop: "1px solid var(--hairline)", paddingBottom: "var(--sp-2)" }}>
           {filtered.length === 0 ? (
-            <div className="empty-note">no matches</div>
+            <div className="empty-note">No matches.</div>
           ) : (
             filtered.map((it, i) => (
               <div
@@ -653,29 +692,31 @@ function Palette() {
    HELP — the keyboard grammar (DESIGN-SPEC §5).
    =========================================================================== */
 const HELP_ROWS: { keys: string[]; desc: string }[] = [
-  { keys: ["j", "k"], desc: "next / prev in stream (worst-first)" },
-  { keys: ["↓", "↑"], desc: "next / prev (same as j/k)" },
-  { keys: ["gg", "G"], desc: "jump to top (worst) / bottom" },
-  { keys: ["Enter"], desc: "commit cursor → stage / trust" },
-  { keys: ["Esc"], desc: "up one altitude / close overlay" },
-  { keys: ["1", "·", "5"], desc: "jump station: eval / review / opt / decide / promote" },
-  { keys: ["a"], desc: "accept (review)" },
-  { keys: ["f"], desc: "flag → focus.json (the only loop seed)" },
-  { keys: ["d"], desc: "defer (review)" },
-  { keys: ["e"], desc: "confirm decision → advance (review)" },
-  { keys: ["u"], desc: "undo last decision (toast)" },
-  { keys: ["n"], desc: "next flag / deferral below" },
-  { keys: ["space"], desc: "expand details (review)" },
-  { keys: ["z"], desc: "zoom render (lightbox); z again closes" },
-  { keys: ["x"], desc: "swipe-diff (decide)" },
-  { keys: ["X"], desc: "blink-compare (decide)" },
-  { keys: ["[", "]"], desc: "prev / next shot · scenario" },
-  { keys: ["m"], desc: "matrix overlay" },
-  { keys: ["t"], desc: "trends overlay" },
-  { keys: ["h"], desc: "harness label / switch / compare" },
-  { keys: ["?"], desc: "this help" },
-  { keys: ["⌘", "K"], desc: "command palette" },
-  { keys: ["T"], desc: "toggle theme" }
+  { keys: ["j", "k"], desc: "Next / previous in the stream (worst first)" },
+  { keys: ["↓", "↑"], desc: "Next / previous (same as j/k)" },
+  { keys: ["gg", "G"], desc: "Jump to top (worst) / bottom" },
+  { keys: ["Enter"], desc: "Commit the cursor to the stage" },
+  { keys: ["Esc"], desc: "Up one altitude / close the overlay" },
+  { keys: ["1", "·", "5"], desc: "Lifecycle stations: Evaluate, Review, Optimize, Decide, Promote" },
+  { keys: ["6"], desc: "Insights: Models & Harnesses" },
+  { keys: ["b"], desc: "Set the comparison baseline (in the Run Browser, h)" },
+  { keys: ["a"], desc: "Accept (Review)" },
+  { keys: ["f"], desc: "Flag into focus.json, the only loop seed (Review)" },
+  { keys: ["d"], desc: "Defer (Review)" },
+  { keys: ["e"], desc: "Confirm the decision and advance (Review)" },
+  { keys: ["u"], desc: "Undo the last decision" },
+  { keys: ["n"], desc: "Next flag or deferral below" },
+  { keys: ["space"], desc: "Expand details (Review)" },
+  { keys: ["z"], desc: "Zoom the render; z again closes" },
+  { keys: ["x"], desc: "Swipe diff (Decide)" },
+  { keys: ["X"], desc: "Blink compare (Decide)" },
+  { keys: ["[", "]"], desc: "Previous / next shot or scenario" },
+  { keys: ["m"], desc: "Skill × Category Matrix" },
+  { keys: ["t"], desc: "Trends overlay" },
+  { keys: ["h"], desc: "Run Browser: load runs, scope by harness, set the baseline" },
+  { keys: ["?"], desc: "This help" },
+  { keys: ["⌘", "K"], desc: "Command palette" },
+  { keys: ["T"], desc: "Toggle theme" }
 ];
 
 function Help() {
@@ -708,7 +749,7 @@ function Help() {
    =========================================================================== */
 function Journal() {
   const { iterationDetail, iterationLoading } = useStore();
-  if (iterationLoading) return <div className="empty-note">loading journal…</div>;
+  if (iterationLoading) return <div className="empty-note">Loading journal…</div>;
   if (!iterationDetail || iterationDetail.journal.length === 0) {
     return <div className="empty-note">No journal events for this iteration.</div>;
   }
@@ -773,7 +814,7 @@ export function Overlays() {
 
   if (overlay === "matrix") {
     return (
-      <OverlayShell title="Matrix" sub="skills × categories · deterministic 0-1 only" onClose={closeOverlay}>
+      <OverlayShell title="Skill × Category Matrix" sub="Deterministic 0-1 only" onClose={closeOverlay}>
         <Matrix />
       </OverlayShell>
     );
@@ -782,7 +823,7 @@ export function Overlays() {
     return (
       <OverlayShell
         title="Trends"
-        sub={selectedSkillData ? selectedSkillData.skill.replace("cesiumjs-", "") : "win-rate over iterations"}
+        sub={selectedSkillData ? selectedSkillData.skill.replace("cesiumjs-", "") : "Win rate over iterations"}
         onClose={closeOverlay}
       >
         <Trends />
@@ -791,21 +832,21 @@ export function Overlays() {
   }
   if (overlay === "journal") {
     return (
-      <OverlayShell title="Journal" sub="iteration events" onClose={closeOverlay}>
+      <OverlayShell title="Journal" sub="Iteration events" onClose={closeOverlay}>
         <Journal />
       </OverlayShell>
     );
   }
   if (overlay === "harness") {
     return (
-      <OverlayShell title="Harness" sub="label · switch · compare · the tested codegen harness" onClose={closeOverlay}>
+      <OverlayShell title="Run Browser" sub="Every scorecard run on disk: load one, scope by harness, set the comparison baseline" onClose={closeOverlay}>
         <HarnessOverlay />
       </OverlayShell>
     );
   }
   // help (and any future fallthrough)
   return (
-    <OverlayShell title="Keyboard" sub="one grammar, both lifecycles" onClose={closeOverlay}>
+    <OverlayShell title="Keyboard" sub="One grammar across every station" onClose={closeOverlay}>
       <Help />
     </OverlayShell>
   );

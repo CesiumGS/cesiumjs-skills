@@ -213,7 +213,7 @@ function Judges({ scn }: { scn: ScenarioDetail }) {
   if (scn.judge_unavailable || scn.individual_verdicts.length === 0) {
     return (
       <div className="empty-note" style={{ padding: "var(--sp-2)" }}>
-        Visual judges unavailable for this scenario — the programmatic ledger is the evidence.
+        Visual judges unavailable for this scenario, so the programmatic ledger is the evidence.
       </div>
     );
   }

@@ -50,7 +50,7 @@ function CheckLedgerHero({ v }: { v: CaseView }) {
         </div>
         {fails.length === 0 ? (
           <div className="checks-pass-row">
-            <StatusGlyph state="pass" /> all {v.checks.length} checks pass — nothing failing to inspect
+            <StatusGlyph state="pass" /> All {v.checks.length} checks pass; nothing failing to inspect
           </div>
         ) : (
           fails.map((c) => <CheckRow key={c.check_id} c={c} />)
@@ -163,7 +163,7 @@ function QualBand({ v }: { v: CaseView }) {
       <div className="band-body">
         {!reviewed && (
           <div className="empty-note" style={{ padding: "var(--sp-2)" }}>
-            Not visually reviewed — the deterministic ledger is the evidence.
+            Not visually reviewed; the deterministic ledger is the evidence.
           </div>
         )}
         {v.dimensions.map((d) => (
