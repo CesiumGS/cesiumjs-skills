@@ -15,14 +15,19 @@ from harness import (
     codex_fallback_model,
     invoke_codex,
     invoke_opencode,
-    latest_default_gpt55_model,
+    latest_default_frontier_model,
     model_supports_vision,
     vision_fallback_enabled,
 )
-from harness.models import DEFAULT_MODEL as DEFAULT_OPENCODE_JUDGE_MODEL
+from harness.models import (
+    DEFAULT_CODEX_MODEL,
+    DEFAULT_CODEX_REASONING_EFFORT,
+    DEFAULT_MODEL as DEFAULT_OPENCODE_JUDGE_MODEL,
+    LOW_VARIANT as _LOW_VARIANT,
+)
 from harness.selection import default_harness
 
-DEFAULT_OPENCODE_JUDGE_VARIANT = "medium"
+DEFAULT_OPENCODE_JUDGE_VARIANT = _LOW_VARIANT
 
 
 def default_judge_harness() -> str:
@@ -35,14 +40,14 @@ def default_judge_model() -> str:
             value = os.environ.get(name)
             if value:
                 return value
-        return "auto"
+        return DEFAULT_CODEX_MODEL
     for name in ("OPENCODE_JUDGE_MODEL", "OPENCODE_MODEL"):
         value = os.environ.get(name)
         if value:
             if value.strip().lower() == "auto":
                 break
             return value
-    return latest_default_gpt55_model() or DEFAULT_OPENCODE_JUDGE_MODEL
+    return latest_default_frontier_model() or DEFAULT_OPENCODE_JUDGE_MODEL
 
 
 def default_judge_variant() -> str:
@@ -81,6 +86,14 @@ def _split_opencode_model_variant(model: str | None, fallback_variant: str) -> t
 
 
 def _resolve_codex_judge_model(model: str | None) -> str | None:
+    """Resolve an explicit codex model override, or None to defer to the CLI.
+
+    ``model="auto"`` (or an ``auto``-valued env var) is a deliberate request to
+    use codex's own configured default rather than this pipeline's default --
+    distinct from "nothing configured," which ``default_judge_model()``
+    already resolves to :data:`DEFAULT_CODEX_MODEL` before this function ever
+    runs in the normal flow.
+    """
     if model and model.strip().lower() != "auto":
         return model
     for name in ("CODEX_JUDGE_MODEL", "CODEX_MODEL", "JUDGE_MODEL", "AGENT_MODEL"):
@@ -88,6 +101,14 @@ def _resolve_codex_judge_model(model: str | None) -> str | None:
         if value and value.strip().lower() != "auto":
             return value
     return None
+
+
+def _resolve_codex_judge_variant() -> str:
+    for name in ("CODEX_JUDGE_VARIANT", "CODEX_VARIANT"):
+        value = os.environ.get(name)
+        if value and value.strip().lower() != "auto":
+            return value
+    return DEFAULT_CODEX_REASONING_EFFORT
 
 
 @runtime_checkable
@@ -172,6 +193,7 @@ class CodexCliAdapter:
         return invoke_codex(
             prompt,
             model=_resolve_codex_judge_model(model),
+            reasoning_effort=_resolve_codex_judge_variant(),
             files=files,
             add_dirs=add_dirs,
             allowed_tools=allowed_tools,

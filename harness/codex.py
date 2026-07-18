@@ -63,6 +63,7 @@ def invoke_codex(
     *,
     system: str | None = None,
     model: str | None = None,
+    reasoning_effort: str | None = None,
     profile: str | None = None,
     files: Sequence[str | Path] | None = None,
     cwd: str | Path | None = None,
@@ -76,6 +77,9 @@ def invoke_codex(
     ``profile`` layers ``~/.codex/<profile>.config.toml`` over the base config.
     The ``copilot`` profile bills text work to the GitHub Copilot subscription;
     its bearer token is injected automatically from opencode's stored credential.
+    ``reasoning_effort`` (``none``/``low``/``medium``/``high``/``xhigh``/``max``)
+    overrides ``model_reasoning_effort`` via ``-c``, the same config key set in
+    ``~/.codex/config.toml``.
     """
 
     codex = _find_codex_executable()
@@ -99,6 +103,8 @@ def invoke_codex(
         cmd.extend(["-p", profile])
     if model:
         cmd.extend(["--model", model])
+    if reasoning_effort:
+        cmd.extend(["-c", f'model_reasoning_effort="{reasoning_effort}"'])
     for item in add_dirs or []:
         cmd.extend(["--add-dir", str(Path(item).resolve())])
     for file_path in files or []:

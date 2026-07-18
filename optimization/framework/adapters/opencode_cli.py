@@ -12,9 +12,8 @@ import os
 from harness.env import clean_subprocess_env as _clean_subprocess_env  # noqa: F401  (re-exported)
 from harness.models import (
     DEFAULT_MODEL as DEFAULT_OPENCODE_MODEL,
-    HIGH_VARIANT as DEFAULT_OPENCODE_HIGH_VARIANT,
-    MEDIUM_VARIANT as DEFAULT_OPENCODE_MEDIUM_VARIANT,
-    latest_default_gpt55_model as _latest_default_gpt55_model,
+    LOW_VARIANT as DEFAULT_OPENCODE_VARIANT,
+    latest_default_frontier_model as _latest_default_frontier_model,
 )
 from harness.opencode import (  # noqa: F401  (re-exported public surface)
     OpenCodeCLIError,
@@ -27,9 +26,11 @@ from harness.opencode import (  # noqa: F401  (re-exported public surface)
 def default_opencode_model(role: str = "default") -> str:
     """Return the configured OpenCode model for a pipeline role.
 
-    By default this discovers GPT-5.5 through the installed OpenCode CLI.
-    Role-specific env vars can override the defaults without changing code.
-    Setting any candidate env var to ``auto`` forces discovery for that role.
+    By default this discovers the flagship-tier GPT-5.6 model (``sol``) through
+    the installed OpenCode CLI, pinned to the ``low`` reasoning-effort variant
+    for cost/speed. Role-specific env vars can override the defaults without
+    changing code. Setting any candidate env var to ``auto`` forces discovery
+    for that role.
     """
 
     normalized = role.lower()
@@ -50,22 +51,20 @@ def default_opencode_model(role: str = "default") -> str:
                 break
             return value
 
-    return _latest_default_gpt55_model() or DEFAULT_OPENCODE_MODEL
+    return _latest_default_frontier_model() or DEFAULT_OPENCODE_MODEL
 
 
 def default_opencode_variant(role: str = "default") -> str:
     """Return the configured OpenCode model variant for a pipeline role."""
 
     normalized = role.lower()
+    fallback = DEFAULT_OPENCODE_VARIANT
     if normalized == "proposer":
         role_env = "OPENCODE_PROPOSER_VARIANT"
-        fallback = DEFAULT_OPENCODE_HIGH_VARIANT
     elif normalized in {"eval", "codegen"}:
         role_env = "OPENCODE_EVAL_VARIANT"
-        fallback = DEFAULT_OPENCODE_MEDIUM_VARIANT
     else:
         role_env = "OPENCODE_JUDGE_VARIANT" if normalized == "judge" else None
-        fallback = DEFAULT_OPENCODE_MEDIUM_VARIANT
 
     for name in (role_env, "OPENCODE_VARIANT"):
         if not name:

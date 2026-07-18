@@ -25,14 +25,14 @@ playwright install-deps chromium
 Export required tokens for full pipeline execution:
 
 ```bash
-opencode auth login --provider openai
+opencode auth login --provider github-copilot
 codex login
 export CESIUM_ION_TOKEN="<your-cesium-ion-token>"
 export AGENT_HARNESS="opencode"  # or "codex"
-export OPENCODE_MODEL="openai/gpt-5.5"
-export OPENCODE_PROPOSER_VARIANT="high"
-export OPENCODE_EVAL_VARIANT="medium"
-export OPENCODE_JUDGE_VARIANT="medium"
+# Defaults to github-copilot/gpt-5.6-sol (opencode) or gpt-5.6-sol (codex) at
+# "low" reasoning effort; override with OPENCODE_MODEL/OPENCODE_VARIANT or
+# CODEX_MODEL/CODEX_VARIANT (and role-specific variants, e.g.
+# OPENCODE_PROPOSER_VARIANT) if needed.
 ```
 
 **Note:** OpenCode and Codex CLI each handle authentication through their local login state. Deterministic checks and the browser runner work without model access.

@@ -1163,13 +1163,13 @@ def main():
     parser.add_argument(
         "--proposer-model",
         default="auto",
-        help="Model for proposer (default: OpenCode GPT-5.5, or Codex CLI default when harness=codex)"
+        help="Model for proposer (default: GPT-5.6 Sol at low effort, on either harness)"
     )
 
     parser.add_argument(
         "--proposer-variant",
         default="auto",
-        help="Model variant for proposer (OpenCode default: high; ignored by Codex)"
+        help="Model variant for proposer (default: low, on either harness)"
     )
 
     parser.add_argument(
@@ -1203,13 +1203,13 @@ def main():
     parser.add_argument(
         "--eval-model",
         default="auto",
-        help="Model for code generation (default: OpenCode GPT-5.5, or Codex CLI default when harness=codex)"
+        help="Model for code generation (default: GPT-5.6 Sol at low effort, on either harness)"
     )
 
     parser.add_argument(
         "--eval-variant",
         default="auto",
-        help="Model variant for code generation (OpenCode default: medium; ignored by Codex)"
+        help="Model variant for code generation (default: low, on either harness)"
     )
 
     parser.add_argument(
@@ -1230,13 +1230,13 @@ def main():
     parser.add_argument(
         "--judge-model",
         default="auto",
-        help="Model for judges (default: OpenCode GPT-5.5, or Codex CLI default when harness=codex)"
+        help="Model for judges (default: GPT-5.6 Sol at low effort, on either harness)"
     )
 
     parser.add_argument(
         "--judge-variant",
         default="auto",
-        help="Model variant for judges (OpenCode default: medium; ignored by Codex)"
+        help="Model variant for judges (default: low, on either harness)"
     )
 
     parser.add_argument(

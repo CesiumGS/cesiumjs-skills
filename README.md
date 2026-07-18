@@ -89,7 +89,7 @@ For local browser-backed optimization scenario reproduction, place generated Jav
 python3 optimization/scripts/run-public-eval.py cesiumjs-camera --iteration candidate --only eval-001
 ```
 
-For the full autonomous optimization loop across every skill scenario group, use `python3 optimization/scripts/run-all-evals.py --skills all --max-iterations 1` after configuring an agent CLI harness and setting `CESIUM_ION_TOKEN`. The default harness is OpenCode with `openai/gpt-5.5`, using `--variant high` for proposal and `--variant medium` for code generation and judging. To test the same phases through Codex CLI agents, pass `--proposer-harness codex --eval-harness codex --judge-harness codex`; `--model auto` lets Codex use its authenticated default model.
+For the full autonomous optimization loop across every skill scenario group, use `python3 optimization/scripts/run-all-evals.py --skills all --max-iterations 1` after configuring an agent CLI harness and setting `CESIUM_ION_TOKEN`. The default is GPT-5.6 Sol (`github-copilot/gpt-5.6-sol` on OpenCode, `gpt-5.6-sol` on Codex) pinned to `low` reasoning effort for proposal, code generation, and judging, to keep batch calls cheap and fast. To test the same phases through Codex CLI agents, pass `--proposer-harness codex --eval-harness codex --judge-harness codex`.
 Raw generated code, HTML, screenshots, and run traces under `optimization/generated/` and `optimization/runs/` are local-only and gitignored by default.
 Optimization-specific tests live under `optimization/tests/`; pure evaluation tests live under `evaluation/tests/`.
 Scenario validation is read-only; update changed scenario hashes explicitly with `python3 optimization/scripts/rebaseline-scenario.py <skill> <eval-id>`.

@@ -98,8 +98,9 @@ class SkillsAdapter(Adapter):
                 runner's expectations).
             model_id: Optional model identifier. For Codex, ``auto`` uses the
                 Codex CLI's configured default model.
-            model_variant: Optional model variant/reasoning effort. Currently
-                only forwarded by the OpenCode harness.
+            model_variant: Optional model variant/reasoning effort. Forwarded
+                to OpenCode via ``--variant`` and to Codex via
+                ``-c model_reasoning_effort=...``.
             harness: Agent CLI harness, ``opencode`` or ``codex``.
             temperature: Recorded in metadata for reproducibility. The CLI does
                 not expose a temperature flag; this is informational only.

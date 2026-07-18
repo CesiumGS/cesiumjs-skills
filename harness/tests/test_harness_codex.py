@@ -57,6 +57,41 @@ def test_invoke_codex_uses_exec_json_and_images(monkeypatch, tmp_path):
     assert captured["cmd"][-1] == "-"
 
 
+def test_invoke_codex_reasoning_effort_adds_config_override(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(codex.shutil, "which", lambda name: "/usr/local/bin/codex")
+    monkeypatch.setattr(codex.tempfile, "NamedTemporaryFile", _fake_tempfile_factory(tmp_path))
+    monkeypatch.setattr(codex.subprocess, "run", fake_run)
+
+    codex.invoke_codex("hello", model="gpt-5.6-sol", reasoning_effort="low", cwd=tmp_path)
+
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("--model") + 1] == "gpt-5.6-sol"
+    assert "-c" in cmd
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="low"'
+
+
+def test_invoke_codex_no_reasoning_effort_omits_config_flag(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(codex.shutil, "which", lambda name: "/usr/local/bin/codex")
+    monkeypatch.setattr(codex.tempfile, "NamedTemporaryFile", _fake_tempfile_factory(tmp_path))
+    monkeypatch.setattr(codex.subprocess, "run", fake_run)
+
+    codex.invoke_codex("hello", cwd=tmp_path)
+
+    assert "-c" not in captured["cmd"]
+
+
 def test_invoke_codex_copilot_profile_adds_flag_and_injects_token(monkeypatch, tmp_path):
     auth = tmp_path / "auth.json"
     auth.write_text('{"github-copilot": {"refresh": "gho_test_token"}}', encoding="utf-8")

@@ -864,7 +864,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument(
         "--model",
         default="auto",
-        help="Judge model id/alias (default: OpenCode GPT-5.5 or Codex CLI default when adapter=codex).",
+        help="Judge model id/alias (default: OpenCode discovers GPT-5.6 Sol; Codex defers to its own configured model unless overridden. Reasoning effort defaults to low on either adapter.)",
     )
     parser.add_argument("--n-judges", type=int, default=3, help="Number of panel judges (default: 3).")
     parser.add_argument(

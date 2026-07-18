@@ -28,12 +28,15 @@ from harness.copilot import (
 )
 from harness.env import DISALLOWED_ENV_VARS, clean_subprocess_env
 from harness.models import (
+    DEFAULT_CODEX_MODEL,
+    DEFAULT_CODEX_REASONING_EFFORT,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
     HIGH_VARIANT,
+    LOW_VARIANT,
     MEDIUM_VARIANT,
     codex_fallback_model,
-    latest_default_gpt55_model,
+    latest_default_frontier_model,
     model_supports_vision,
     vision_fallback_enabled,
 )
@@ -55,12 +58,15 @@ __all__ = [
     "read_copilot_gho_token",
     "DISALLOWED_ENV_VARS",
     "clean_subprocess_env",
+    "DEFAULT_CODEX_MODEL",
+    "DEFAULT_CODEX_REASONING_EFFORT",
     "DEFAULT_MODEL",
     "DEFAULT_PROVIDER",
     "HIGH_VARIANT",
+    "LOW_VARIANT",
     "MEDIUM_VARIANT",
     "codex_fallback_model",
-    "latest_default_gpt55_model",
+    "latest_default_frontier_model",
     "model_supports_vision",
     "vision_fallback_enabled",
     "OpenCodeCLIError",

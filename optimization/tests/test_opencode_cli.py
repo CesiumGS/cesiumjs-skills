@@ -12,14 +12,14 @@ def test_default_opencode_model_roles(monkeypatch):
     monkeypatch.delenv("OPENCODE_PROPOSER_MODEL", raising=False)
     monkeypatch.delenv("OPENCODE_EVAL_MODEL", raising=False)
     monkeypatch.delenv("OPENCODE_JUDGE_MODEL", raising=False)
-    monkeypatch.setattr(opencode_cli, "_latest_default_gpt55_model", lambda: "github-copilot/gpt-5.5")
+    monkeypatch.setattr(opencode_cli, "_latest_default_frontier_model", lambda: "github-copilot/gpt-5.6-sol")
 
-    assert opencode_cli.default_opencode_model("proposer") == "github-copilot/gpt-5.5"
-    assert opencode_cli.default_opencode_model("eval") == "github-copilot/gpt-5.5"
-    assert opencode_cli.default_opencode_model("judge") == "github-copilot/gpt-5.5"
-    assert opencode_cli.default_opencode_variant("proposer") == "high"
-    assert opencode_cli.default_opencode_variant("eval") == "medium"
-    assert opencode_cli.default_opencode_variant("judge") == "medium"
+    assert opencode_cli.default_opencode_model("proposer") == "github-copilot/gpt-5.6-sol"
+    assert opencode_cli.default_opencode_model("eval") == "github-copilot/gpt-5.6-sol"
+    assert opencode_cli.default_opencode_model("judge") == "github-copilot/gpt-5.6-sol"
+    assert opencode_cli.default_opencode_variant("proposer") == "low"
+    assert opencode_cli.default_opencode_variant("eval") == "low"
+    assert opencode_cli.default_opencode_variant("judge") == "low"
 
     monkeypatch.setenv("OPENCODE_PROPOSER_MODEL", "openai/custom-proposer")
     monkeypatch.setenv("OPENCODE_EVAL_MODEL", "openai/custom-eval")
@@ -35,9 +35,9 @@ def test_default_opencode_model_roles(monkeypatch):
 def test_auto_env_forces_discovery(monkeypatch):
     monkeypatch.setenv("OPENCODE_MODEL", "openai/custom-general")
     monkeypatch.setenv("OPENCODE_PROPOSER_MODEL", "auto")
-    monkeypatch.setattr(opencode_cli, "_latest_default_gpt55_model", lambda: "github-copilot/gpt-5.5")
+    monkeypatch.setattr(opencode_cli, "_latest_default_frontier_model", lambda: "github-copilot/gpt-5.6-sol")
 
-    assert opencode_cli.default_opencode_model("proposer") == "github-copilot/gpt-5.5"
+    assert opencode_cli.default_opencode_model("proposer") == "github-copilot/gpt-5.6-sol"
 
 
 def test_discovery_failure_uses_concrete_fallback(monkeypatch):
@@ -48,7 +48,7 @@ def test_discovery_failure_uses_concrete_fallback(monkeypatch):
         "OPENCODE_JUDGE_MODEL",
     ):
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.setattr(opencode_cli, "_latest_default_gpt55_model", lambda: None)
+    monkeypatch.setattr(opencode_cli, "_latest_default_frontier_model", lambda: None)
 
-    assert opencode_cli.default_opencode_model("proposer") == "github-copilot/gpt-5.5"
-    assert opencode_cli.default_opencode_model("eval") == "github-copilot/gpt-5.5"
+    assert opencode_cli.default_opencode_model("proposer") == "github-copilot/gpt-5.6-sol"
+    assert opencode_cli.default_opencode_model("eval") == "github-copilot/gpt-5.6-sol"

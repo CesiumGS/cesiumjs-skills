@@ -36,12 +36,12 @@ def main() -> int:
     parser.add_argument(
         "--model",
         default="auto",
-        help="Model id (default: OpenCode GPT-5.5 or Codex CLI default when harness=codex)",
+        help="Model id (default: GPT-5.6 Sol at low effort, on either harness)",
     )
     parser.add_argument(
         "--model-variant",
         default="auto",
-        help="Model variant/reasoning effort (OpenCode default: medium; ignored by Codex)",
+        help="Model variant/reasoning effort (default: low, on either harness)",
     )
     parser.add_argument("--force", action="store_true", help="Re-generate even if .js exists")
     parser.add_argument("--only", default="", help="Comma-separated scenario ids to generate")

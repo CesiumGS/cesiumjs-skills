@@ -475,12 +475,12 @@ def main() -> int:
     parser.add_argument(
         "--model-id",
         default=DEFAULT_MODEL_ID,
-        help="Model ID for proposer (default: OpenCode GPT-5.5, or Codex CLI default when harness=codex)",
+        help="Model ID for proposer (default: GPT-5.6 Sol at low effort, on either harness)",
     )
     parser.add_argument(
         "--model-variant",
         default=DEFAULT_MODEL_VARIANT,
-        help="Model variant/reasoning effort (used by OpenCode; ignored by Codex unless configured externally)",
+        help="Model variant/reasoning effort (default: low, on either harness)",
     )
     parser.add_argument(
         "--temperature",

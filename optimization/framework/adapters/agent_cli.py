@@ -24,6 +24,8 @@ from optimization.framework.adapters.opencode_cli import (
     resolve_opencode_variant,
 )
 from harness.models import (
+    DEFAULT_CODEX_MODEL as _DEFAULT_CODEX_MODEL,
+    DEFAULT_CODEX_REASONING_EFFORT as _DEFAULT_CODEX_REASONING_EFFORT,
     codex_fallback_model as _codex_fallback_model,
     model_supports_vision as _opencode_model_supports_vision,
     vision_fallback_enabled as _vision_fallback_enabled,
@@ -49,7 +51,7 @@ def default_agent_model(role: str = "default", harness: str | None = None) -> st
             value = os.environ.get(name)
             if value:
                 return value
-        return "auto"
+        return _DEFAULT_CODEX_MODEL
     return default_opencode_model(role)
 
 
@@ -83,7 +85,7 @@ def default_agent_variant(role: str = "default", harness: str | None = None) -> 
             value = os.environ.get(name)
             if value:
                 return value
-        return None
+        return _DEFAULT_CODEX_REASONING_EFFORT
     return default_opencode_variant(role)
 
 
@@ -155,11 +157,12 @@ def invoke_agent(
     resolved_variant = resolve_agent_variant(variant, role, resolved_harness)
 
     if resolved_harness == "codex":
-        _ = agent, title, resolved_variant
+        _ = agent, title
         return invoke_codex(
             prompt=prompt,
             system=system,
             model=resolved_model,
+            reasoning_effort=resolved_variant,
             profile=default_codex_profile(role),
             files=files,
             cwd=cwd,
@@ -187,6 +190,7 @@ def invoke_agent(
             prompt=prompt,
             system=system,
             model=fallback_model,
+            reasoning_effort=resolved_variant,
             # Images must stay on the ChatGPT subscription: never the Copilot
             # profile, whose endpoint has no vision.
             profile=None,

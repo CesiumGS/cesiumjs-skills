@@ -13,7 +13,7 @@ def test_clean_subprocess_env_drops_openai_key(monkeypatch):
     assert cleaned.get("KEEP_ME") == "yes"
 
 
-def test_latest_default_gpt55_model_prefers_base_model(monkeypatch):
+def test_latest_default_frontier_model_prefers_flagship_tier(monkeypatch):
     monkeypatch.setattr(models.shutil, "which", lambda name: "/usr/local/bin/opencode")
     monkeypatch.setattr(models, "_LATEST_MODEL_CACHE", {})
 
@@ -21,16 +21,22 @@ def test_latest_default_gpt55_model_prefers_base_model(monkeypatch):
         returncode=0,
         stdout="\n".join(
             [
-                "github-copilot/gpt-5.5-fast",
-                "github-copilot/gpt-5.5-pro",
-                "github-copilot/gpt-5.5",
+                "github-copilot/gpt-5.6-luna",
+                "github-copilot/gpt-5.6-terra",
+                "github-copilot/gpt-5.6-sol",
             ]
         ),
         stderr="",
     )
     monkeypatch.setattr(models.subprocess, "run", lambda *args, **kwargs: completed)
 
-    assert models.latest_default_gpt55_model() == "github-copilot/gpt-5.5"
+    assert models.latest_default_frontier_model() == "github-copilot/gpt-5.6-sol"
+
+
+def test_default_codex_constants_match_frontier_tier():
+    assert models.DEFAULT_CODEX_MODEL == "gpt-5.6-sol"
+    assert models.DEFAULT_CODEX_REASONING_EFFORT == "low"
+    assert models.DEFAULT_MODEL == "github-copilot/gpt-5.6-sol"
 
 
 def test_model_supports_vision():
