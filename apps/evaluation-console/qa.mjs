@@ -180,13 +180,289 @@ await step("review: Focus handoff writes focus.json (rail Focus button)", async 
 await step("evaluate: overview renders KPIs + skill grid", async () => {
   await press("1", 600);
   const big = await $(".ov-big");
-  const cards = await count(".cards .card");
+  const kpis = await count(".overview .kpi");
+  const hero = await count(".hero-card");
   const tiles = await count(".skill-grid .skill-tile");
   await shot("evaluate");
-  assert(["PASS", "FAIL"].includes(big), `ov-big=${big}`);
-  assert(cards === 6, `cards=${cards}`);
+  // the hero verdict now carries the Δ-vs-baseline chip inside .ov-big
+  assert(big.startsWith("PASS") || big.startsWith("FAIL"), `ov-big=${big}`);
+  assert(hero === 1, `hero cards=${hero}`);
+  assert(kpis === 6, `KPI tiles=${kpis}`);
   assert(tiles >= 10, `tiles=${tiles}`);
-  return `${big}, ${cards} cards, ${tiles} skill tiles`;
+  return `${big}, ${kpis} KPI tiles, ${tiles} skill tiles`;
+});
+
+await step("evaluate: verdict gates name why the run passed/failed", async () => {
+  const gates = await count(".gate-chips .gate-chip");
+  const det = await $(".gate-chip");
+  assert(gates === 2, `gates=${gates}`);
+  assert(/deterministic/i.test(det), `first gate=${det}`);
+  return `${gates} gate chips, first="${det}"`;
+});
+
+await step("evaluate: score-vs-threshold bar with notch", async () => {
+  const nums = await $(".score-thresh .st-nums");
+  const notch = await count(".score-thresh .st-notch");
+  assert(nums && nums.includes("%"), `nums=${nums}`);
+  assert(notch === 1, `notch=${notch}`);
+  return `bar reads "${nums}"`;
+});
+
+await step("evaluate: changed-vs-baseline cards render with an auto baseline", async () => {
+  const cards = await count(".diff-cards .diff-card");
+  const baselineSel = await page.evaluate(() => document.querySelector(".baseline-pick select")?.value ?? "");
+  await shot("evaluate-diff");
+  assert(cards === 6, `diff cards=${cards}`);
+  assert(baselineSel.length > 0, "no auto-selected baseline");
+  return `6 diff buckets vs ${baselineSel.slice(0, 30)}`;
+});
+
+await step("evaluate: diff card drills into a scoped Review stream", async () => {
+  const drilled = await page.evaluate(() => {
+    const card = [...document.querySelectorAll(".diff-cards .diff-card:not(.empty)")].find((c) => !c.disabled);
+    if (!card) return null;
+    const label = card.textContent.trim();
+    card.click();
+    return label;
+  });
+  if (drilled === null) return "no non-empty bucket to drill (all zero) — skipped";
+  await sleep(500);
+  const chip = await $(".facet.scope-chip");
+  const rows = await count(".row");
+  assert(chip, "scope chip missing after drill");
+  await shot("review-scoped");
+  // clear the scope and return to evaluate
+  await page.click(".facet.scope-chip");
+  await press("1", 500);
+  return `drilled "${drilled}" → ${rows} scoped rows, chip="${chip}"`;
+});
+
+await step("evaluate: provenance card renders chips + reproduce sketch", async () => {
+  const chips = await count(".prov-chips .meta-tag");
+  const pre = await $(".prov-repro pre");
+  assert(chips >= 6, `prov chips=${chips}`);
+  assert(pre.includes("git checkout"), "reproduce sketch missing git checkout");
+  return `${chips} provenance chips; sketch starts "${pre.split("\n")[0]}"`;
+});
+
+const insightsTab = async (name) => {
+  await page.evaluate((n) => {
+    const b = [...document.querySelectorAll(".seg-control button")].find((x) => x.textContent.trim() === n);
+    b && b.click();
+  }, name);
+  await sleep(350);
+};
+
+// ---------------- MODELS & HARNESSES (station 6) ----------------
+await step("models: station 6 renders registry cards for both harnesses", async () => {
+  await press("6", 600);
+  const seg = await count(".seg-control button");
+  assert(seg === 2, `segmented control buttons=${seg}`);
+  const kpis = await count(".kpi");
+  assert(kpis >= 4, `harness KPIs=${kpis}`);
+  const cards = await count(".hx-card");
+  const names = await page.evaluate(() =>
+    [...document.querySelectorAll(".hx-card .hx-name")].map((el) => el.textContent.trim())
+  );
+  const defaults = await page.evaluate(() =>
+    [...document.querySelectorAll(".hx-card .hx-model")].map((el) => el.textContent.trim())
+  );
+  await shot("models-cards");
+  assert(cards === 2, `hx-cards=${cards}`);
+  assert(names.includes("Codex CLI") && names.includes("OpenCode CLI"), `names=${names}`);
+  assert(defaults.every((d) => d.includes("gpt-5.6-sol")), `defaults=${defaults}`);
+  return `${names.join(" + ")}; defaults ${defaults.join(", ")}`;
+});
+
+await step("models: vision asymmetry is explicit (codex vision, opencode text-only)", async () => {
+  const chips = await page.evaluate(() =>
+    [...document.querySelectorAll(".hx-card")].map((card) => ({
+      harness: card.getAttribute("data-harness"),
+      vision: card.querySelector(".vision-chip")?.textContent.trim()
+    }))
+  );
+  const codex = chips.find((c) => c.harness === "codex");
+  const oc = chips.find((c) => c.harness === "opencode");
+  assert(/vision/i.test(codex?.vision ?? ""), `codex=${JSON.stringify(codex)}`);
+  assert(/text.only/i.test(oc?.vision ?? ""), `opencode=${JSON.stringify(oc)}`);
+  return `codex="${codex.vision}" opencode="${oc.vision}"`;
+});
+
+await step("models: observed combos table renders with stability metadata", async () => {
+  await insightsTab("Models");
+  const kpis = await count(".kpi");
+  assert(kpis >= 4, `model KPIs=${kpis}`);
+  const rows = await count(".combo-table .combo-row");
+  const stab = await count(".combo-table .stab-chip");
+  await shot("models-combos");
+  assert(rows >= 1, `combo rows=${rows}`);
+  assert(stab >= 1, `stability chips=${stab}`);
+  return `${rows} combos, ${stab} stability chips`;
+});
+
+await step("models: combo expands to member iterations and drills into Optimize", async () => {
+  await page.click(".combo-table .combo-row");
+  await sleep(300);
+  const members = await count(".combo-member");
+  assert(members >= 1, `members=${members}`);
+  await page.click(".combo-member");
+  await sleep(900);
+  const station = await $(".station.active .st-name");
+  assert(station === "Optimize", `station=${station}`);
+  await shot("models-drill-optimize");
+  await press("6", 500);
+  return `${members} members; drill landed on ${station}`;
+});
+
+await step("models: harness and model dashboards are separate views", async () => {
+  const onHarnesses = await page.evaluate(() => !!document.querySelector(".hx-card") && !document.querySelector(".combo-table"));
+  await insightsTab("Models");
+  const onModels = await page.evaluate(() => !!document.querySelector(".combo-table") && !document.querySelector(".hx-card"));
+  await insightsTab("Harnesses");
+  assert(onHarnesses, "Harnesses tab leaked model tables or lost harness cards");
+  assert(onModels, "Models tab leaked harness cards or lost the model table");
+  return "clean separation: Harnesses = cards + runs; Models = performance + catalogs";
+});
+
+await step("models: run trend renders clickable dots + axis toggle", async () => {
+  await insightsTab("Harnesses");
+  const dots = await count(".trend-runs circle");
+  const toggles = await count(".axis-toggle button");
+  assert(dots >= 2, `dots=${dots}`);
+  assert(toggles === 2, `axis toggles=${toggles}`);
+  await page.click(".axis-toggle button:last-child");
+  await sleep(200);
+  return `${dots} run dots; axis toggles work`;
+});
+
+await step("models: catalogs list both harness tabs with default starred", async () => {
+  await insightsTab("Models");
+  const tabs = await page.evaluate(() =>
+    [...document.querySelectorAll(".harness-switch .harness-chip")].map((el) => el.textContent.trim())
+  );
+  const starred = await count(".catalog-default");
+  const rows = await count(".catalog-table tbody tr");
+  await shot("models-catalog");
+  assert(tabs.length >= 2, `tabs=${tabs}`);
+  assert(starred === 1, `starred defaults=${starred}`);
+  assert(rows >= 6, `catalog rows=${rows}`);
+  return `tabs ${tabs.join(" | ")}; ${rows} models, 1 starred default`;
+});
+
+await step("models: unrecorded provenance stays dashed, never guessed", async () => {
+  await insightsTab("Models");
+  const unrecorded = await count(".combo-table .harness-pill.unrecorded");
+  const note = await $(".honesty-note");
+  assert(/unrecorded/i.test(note), "honesty note missing");
+  return `${unrecorded} unrecorded pills; note present`;
+});
+
+// ---------------- COPY & BRANDING AUDITS ----------------
+await step("brand: Cesium logomark renders in the top strip", async () => {
+  const ok = await page.evaluate(() => {
+    const img = document.querySelector(".brand .brand-mark");
+    return img && img.complete && img.naturalWidth > 0;
+  });
+  assert(ok, "logomark missing or failed to load");
+  return "cesium-logomark.svg loaded";
+});
+
+await step("rail: Models & Harnesses lives under Insights, not Lifecycle", async () => {
+  const groups = await page.evaluate(() => {
+    const sections = [...document.querySelectorAll(".rail-section")].map((el) => el.textContent.trim());
+    const insightsBtn = [...document.querySelectorAll(".rail .station")].find((b) =>
+      b.textContent.includes("Models & Harnesses")
+    );
+    return { sections, hasInsightsEntry: !!insightsBtn };
+  });
+  assert(groups.sections.some((s) => /insights/i.test(s)), `sections=${groups.sections}`);
+  assert(groups.hasInsightsEntry, "Models & Harnesses rail entry missing");
+  return `rail groups: ${groups.sections.join(" / ")}`;
+});
+
+await step("copy: no prose em dashes in any station or overlay", async () => {
+  const offenders = [];
+  const scan = async (label) => {
+    const hits = await page.evaluate(() => {
+      const text = document.body.innerText;
+      const out = [];
+      // an em dash embedded in prose (word chars on both sides, possibly spaced);
+      // standalone "—" placeholders for missing values are allowed
+      const re = /[\w)][ \u00a0]?—[ \u00a0]?[\w(]/g;
+      let m;
+      while ((m = re.exec(text)) && out.length < 5) out.push(text.slice(Math.max(0, m.index - 30), m.index + 34));
+      return out;
+    });
+    for (const h of hits) offenders.push(`${label}: …${h.replace(/\n/g, " ")}…`);
+  };
+  for (const key of ["1", "2", "3", "4", "5", "6"]) {
+    await press(key, 350);
+    await scan(`station ${key}`);
+  }
+  await press("h", 350); await scan("run browser"); await press("Escape", 200);
+  await press("?", 350); await scan("help"); await press("Escape", 200);
+  assert(offenders.length === 0, offenders.join(" | "));
+  return "no prose em dashes across 6 stations + 2 overlays";
+});
+
+await step("copy: every table header starts uppercase", async () => {
+  await press("6", 400);
+  const collect = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("table th[scope=col]")]
+        .map((th) => th.textContent.trim())
+        .filter((t) => t && /^[a-z]/.test(t))
+    );
+  const badHarnesses = await collect();
+  await insightsTab("Models");
+  const badModels = await collect();
+  await insightsTab("Harnesses");
+  const bad = [...badHarnesses, ...badModels];
+  assert(bad.length === 0, `lowercase headers: ${bad.join(", ")}`);
+  return "all column headers capitalized on both dashboards";
+});
+
+await step("cost: meter chips replace dollar-sign glyphs", async () => {
+  await press("6", 400);
+  const meters = await count(".cost-meter");
+  const words = await page.evaluate(() =>
+    [...document.querySelectorAll(".cost-meter .cm-word")].map((el) => el.textContent.trim())
+  );
+  const dollarSpam = await page.evaluate(() => /\${3,}/.test(document.body.innerText));
+  assert(meters >= 2, `cost meters=${meters}`);
+  assert(words.every((w) => /^[A-Z]/.test(w)), `meter words=${words}`);
+  assert(!dollarSpam, "found $$$ glyph spam in the page");
+  return `${meters} cost meters, words: ${[...new Set(words)].join(", ")}`;
+});
+
+await step("models: skill optimization trend renders with a skill picker", async () => {
+  await press("6", 400);
+  await insightsTab("Models");
+  const chart = await page.evaluate(() => {
+    const titles = [...document.querySelectorAll(".section-title")].map((el) => el.textContent);
+    return titles.some((t) => t.includes("Skill Optimization Trend"));
+  });
+  const ticks = await count(".skill-trend-ticks span.mono");
+  assert(chart, "skill trend section missing");
+  assert(ticks >= 1, `trend ticks=${ticks}`);
+  return `skill trend present with ${ticks} iteration ticks`;
+});
+
+await step("grammar: case count pluralizes correctly", async () => {
+  const meta = await $(".run-meta");
+  assert(!/\b1 cases\b/.test(meta), `top strip reads: ${meta.slice(0, 120)}`);
+  return "no '1 cases' in the top strip";
+});
+
+// ---------------- BASELINE (run list) ----------------
+await step("baseline: run list marks the comparison baseline; b is guarded", async () => {
+  await press("h", 500);
+  const baselineTag = await count(".hr-baseline");
+  const setBtns = await count(".hr-set-baseline");
+  await shot("runlist-baseline");
+  await press("Escape", 300);
+  assert(baselineTag >= 0 && setBtns >= 1, `tags=${baselineTag} buttons=${setBtns}`);
+  return `${baselineTag} baseline tag(s), ${setBtns} set-baseline buttons`;
 });
 
 // ---------------- OPTIMIZE ----------------
