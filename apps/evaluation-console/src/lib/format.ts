@@ -82,6 +82,47 @@ export function shortCommit(commit: string): string {
   return (commit || "").slice(0, 8) || "unknown";
 }
 
+/** "github-copilot/gpt-5.6-sol" -> "gpt-5.6-sol" (provider stays on the harness chip). */
+export function modelShort(modelId: string | null | undefined): string {
+  if (!modelId) return "—";
+  const idx = modelId.indexOf("/");
+  return idx >= 0 ? modelId.slice(idx + 1) : modelId;
+}
+
+/** Mean wall-clock seconds -> compact human duration. */
+export function fmtDuration(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return "—";
+  if (seconds < 90) return `${Math.round(seconds)}s`;
+  const mins = seconds / 60;
+  if (mins < 90) return `${mins.toFixed(mins < 10 ? 1 : 0)}m`;
+  return `${(mins / 60).toFixed(1)}h`;
+}
+
+export const PRICE_BAND_ORDER = ["very-low", "low", "medium", "high", "very-high"] as const;
+
+const PRICE_BAND_WORDS: Record<string, string> = {
+  "very-low": "Very low",
+  low: "Low",
+  medium: "Mid",
+  high: "High",
+  "very-high": "Premium"
+};
+
+export function priceBandLabel(band: string | null | undefined): string {
+  return PRICE_BAND_WORDS[band ?? ""] ?? "Unknown";
+}
+
+/** 0-based index into the 5-step cost meter, or null when the band is unknown. */
+export function priceBandIndex(band: string | null | undefined): number | null {
+  const idx = PRICE_BAND_ORDER.indexOf((band ?? "") as (typeof PRICE_BAND_ORDER)[number]);
+  return idx === -1 ? null : idx;
+}
+
+/** "3 cases" / "1 case". */
+export function pluralize(n: number, noun: string, plural?: string): string {
+  return `${n} ${n === 1 ? noun : (plural ?? `${noun}s`)}`;
+}
+
 export function basename(path: string): string {
   return path.split("/").filter(Boolean).pop() ?? path;
 }

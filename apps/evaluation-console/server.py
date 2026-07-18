@@ -35,6 +35,7 @@ DIST_ROOT = VIEWER_ROOT / "dist"
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(VIEWER_ROOT))
 from optimization.framework.scorecard_focus import build_focus  # noqa: E402
+import insights_data as insd  # noqa: E402
 import optimization_data as optd  # noqa: E402
 
 RUN_DIRS = [
@@ -329,6 +330,11 @@ def run_summary(path: Path) -> dict[str, Any] | None:
     if not isinstance(sc, dict) or not isinstance(sc.get("cases"), list):
         return None
     vs = sc.get("visual_summary") or {}
+    artifacts = sc.get("artifacts") if isinstance(sc.get("artifacts"), dict) else {}
+    cases = sc.get("cases", [])
+    det_fail = sum(1 for c in cases if c.get("result") == "fail")
+    score = sc.get("overall_score")
+    threshold = sc.get("threshold")
     return {
         "run_id": str(sc.get("run_id") or path.stem),
         "scorecard_path": str(path.resolve()),
@@ -336,13 +342,61 @@ def run_summary(path: Path) -> dict[str, Any] | None:
         "overall_result": str(sc.get("overall_result") or ""),
         "git_commit": str(sc.get("git_commit") or ""),
         "harness": resolve_harness(sc, path),
+        # Provenance stamps are additive/optional; null means "not recorded",
+        # which the client renders distinctly from any real value (P4).
+        "model": artifacts.get("model") if isinstance(artifacts.get("model"), str) else None,
+        "model_variant": artifacts.get("model_variant") if isinstance(artifacts.get("model_variant"), str) else None,
+        "harness_judge": artifacts.get("harness_judge") if isinstance(artifacts.get("harness_judge"), str) else None,
+        "overall_score": float(score) if isinstance(score, (int, float)) else None,
+        "threshold": float(threshold) if isinstance(threshold, (int, float)) else None,
+        "det_pass_count": len(cases) - det_fail,
+        "det_fail_count": det_fail,
         "visual_review_supplied": bool(vs.get("visual_review_supplied", False)),
         "pass_count": int(vs.get("pass_count") or 0),
         "fail_count": int(vs.get("fail_count") or 0),
         "needs_review_count": int(vs.get("needs_review_count") or 0),
         "not_reviewed_count": int(vs.get("not_reviewed_count") or 0),
-        "total_cases": int(vs.get("total_cases") or len(sc.get("cases", []))),
+        "total_cases": int(vs.get("total_cases") or len(cases)),
     }
+
+
+def run_cases(run_id: str) -> dict[str, Any]:
+    """Light per-case rows for one run — the baseline side of a run diff."""
+    path = find_run_scorecard(run_id)
+    if path is None or not path.is_file():
+        raise FileNotFoundError(f"run not found: {run_id}")
+    with path.open("r", encoding="utf-8") as handle:
+        sc = json.load(handle)
+    rows = []
+    for case in sc.get("cases", []):
+        vr = case.get("visual_review") if isinstance(case.get("visual_review"), dict) else {}
+        rows.append(
+            {
+                "key": _case_key(case),
+                "result": case.get("result"),
+                "score": case.get("score"),
+                "visual_status": vr.get("status") or "not_reviewed",
+                "visual_score": vr.get("overall_score", vr.get("score")),
+            }
+        )
+    return {"run_id": run_id, "cases": rows}
+
+
+def _with_provenance(summary: dict[str, Any], skill: str) -> dict[str, Any]:
+    """Attach recorded codegen provenance to an iteration summary (None = unrecorded)."""
+    summary["provenance"] = insd.iteration_provenance(skill, str(summary.get("iteration", "")))
+    return summary
+
+
+def skills_with_provenance() -> list[dict[str, Any]]:
+    skills = optd.list_skills()
+    for skill_overview in skills:
+        skill = skill_overview["skill"]
+        for summary in skill_overview["history"]:
+            _with_provenance(summary, skill)
+        if skill_overview.get("latest"):
+            _with_provenance(skill_overview["latest"], skill)
+    return skills
 
 
 def list_runs() -> list[dict[str, Any]]:
@@ -395,15 +449,24 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(self.read_optional_json(self.context.review_decisions_path))
             elif route == "/api/runs":
                 self.send_json(list_runs())
+            elif route == "/api/run-cases":
+                self.send_json(run_cases(query.get("run_id", [""])[0]))
+            elif route == "/api/registry":
+                self.send_json(insd.registry())
+            elif route == "/api/insights":
+                self.send_json(insd.insights())
             elif route == "/api/artifact":
                 self.send_artifact(query.get("path", [""])[0])
             elif route == "/api/optimization/skills":
-                self.send_json(optd.list_skills())
+                self.send_json(skills_with_provenance())
             elif route == "/api/optimization/skill":
                 self.send_json(optd.skill_overview(query.get("skill", [""])[0]))
             elif route == "/api/optimization/iteration":
                 self.send_json(
-                    optd.iteration_detail(query.get("skill", [""])[0], query.get("iteration", [""])[0])
+                    _with_provenance(
+                        optd.iteration_detail(query.get("skill", [""])[0], query.get("iteration", [""])[0]),
+                        query.get("skill", [""])[0],
+                    )
                 )
             elif route == "/api/optimization/active":
                 self.send_json(optd.active_runs())

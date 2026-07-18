@@ -1,9 +1,12 @@
 import type {
   ConfigDTO,
   FocusPreview,
+  InsightsDTO,
   IterationDetail,
   RawScorecard,
+  RegistryDTO,
   ReviewDecisionDoc,
+  RunCasesDTO,
   RunSummary,
   SelectionMode,
   SkillOverview
@@ -33,6 +36,10 @@ export const loadConfig = () => req<ConfigDTO>("/api/config");
 export const loadScorecard = () => req<RawScorecard>("/api/scorecard");
 export const loadReviewDecisions = () => req<ReviewDecisionDoc | null>("/api/review-decisions");
 export const loadRuns = () => req<RunSummary[]>("/api/runs");
+export const loadRunCases = (runId: string) =>
+  req<RunCasesDTO>(`/api/run-cases?run_id=${encodeURIComponent(runId)}`);
+export const loadRegistry = () => req<RegistryDTO>("/api/registry");
+export const loadInsights = () => req<InsightsDTO>("/api/insights");
 
 export const saveReviewDecisions = (doc: ReviewDecisionDoc) =>
   req<ReviewDecisionDoc>("/api/review-decisions", { method: "PUT", body: JSON.stringify(doc) });

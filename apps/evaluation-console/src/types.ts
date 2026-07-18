@@ -165,8 +165,14 @@ export interface AdaptedScorecard {
   deterministicResult: GateResult;
   overallScore: number;
   threshold: number;
+  schemaVersion: string;
   visualReviewSupplied: boolean; // false => Mode B
   harness: Harness; // backfilled from ConfigDTO.harness in the store when raw omits it
+  // Codegen model provenance from artifacts.model / artifacts.model_variant.
+  // null = the run did not record it ("unrecorded"), never a guessed value.
+  model: string | null;
+  modelVariant: string | null;
+  harnessJudge: string | null;
   categoryScores: Record<string, number>;
   cases: AdaptedCase[];
 }
@@ -212,12 +218,52 @@ export interface RunSummary {
   overall_result: GateResult | string;
   git_commit: string;
   harness?: string;
+  // Provenance stamps (null = not recorded by that run).
+  model?: string | null;
+  model_variant?: string | null;
+  harness_judge?: string | null;
+  overall_score?: number | null;
+  threshold?: number | null;
+  det_pass_count?: number;
+  det_fail_count?: number;
   visual_review_supplied: boolean;
   pass_count: number;
   fail_count: number;
   needs_review_count: number;
   not_reviewed_count: number;
   total_cases: number;
+}
+
+// ---- run diff (current run vs a chosen comparison baseline run) ----
+export interface RunCaseLite {
+  key: string;
+  result: string;
+  score: number | null;
+  visual_status: string;
+  visual_score: number | null;
+}
+
+export interface RunCasesDTO {
+  run_id: string;
+  cases: RunCaseLite[];
+}
+
+export type DiffBucket = "fixed" | "regressed" | "still_failing" | "added" | "removed";
+
+export interface BaselineDiff {
+  baselineRunId: string;
+  fixed: string[];        // fail -> pass
+  regressed: string[];    // pass -> fail
+  stillFailing: string[]; // fail -> fail
+  added: string[];        // case exists only in the current run
+  removed: string[];      // case exists only in the baseline run
+  scoreDelta: number | null; // overall_score(current) - overall_score(baseline)
+}
+
+/** A drill-down scope: aggregate signal -> the exact cases explaining it. */
+export interface CaseScope {
+  label: string;
+  keys: string[];
 }
 
 export interface FocusPreview {
@@ -274,6 +320,17 @@ export interface JournalEvent {
   [k: string]: unknown;
 }
 
+/** Recorded codegen provenance for one optimization iteration (from the
+ *  generated *.meta.json sidecars). null harness/model = the run predates
+ *  provenance stamping — rendered as "unrecorded", never guessed. */
+export interface IterationProvenance {
+  harness: string | null;
+  model_id: string | null;
+  model_variant: string | null;
+  temperature: number | null;
+  mixed: boolean;
+}
+
 export interface IterationSummary {
   iteration: string;
   is_baseline: boolean;
@@ -287,6 +344,7 @@ export interface IterationSummary {
   started_utc: string | null;
   finished_utc: string | null;
   has_runs: boolean;
+  provenance?: IterationProvenance | null;
 }
 
 export interface IndividualVerdict {
@@ -333,9 +391,91 @@ export interface SkillOverview {
 }
 
 // ============================================================================
+// Harness / model registry (mirrors apps/evaluation-console/harness-registry.json,
+// served by /api/registry with live pipeline defaults overlaid)
+// ============================================================================
+export type PriceBand = "very-low" | "low" | "medium" | "high" | "very-high";
+
+export interface ModelSpec {
+  id: string;
+  family: string;
+  name: string;
+  tier: string | null;
+  price_band: PriceBand | null;
+  price_usd_per_mtok: { input: number; output: number } | null;
+  native_vision: boolean | null;
+  effort_levels: string[];
+  context_k: number | null;
+  release: string | null;
+  notes: string | null;
+}
+
+export interface HarnessSpec {
+  id: string;
+  name: string;
+  binary: string;
+  provider: string;
+  provider_label: string;
+  auth: string;
+  multimodal: boolean;
+  vision_note: string;
+  vision_fallback_to?: string;
+  vision_fallback_for?: string[];
+  roles: string[];
+  default_model: string;
+  default_effort: string;
+  effort_mechanism: string;
+  catalog_source: string;
+  catalog_as_of: string;
+  defaults_source?: string;
+  models: ModelSpec[];
+}
+
+export interface RegistryDTO {
+  schema_version: string;
+  harnesses: HarnessSpec[];
+}
+
+// ---- observed model×harness insights (from /api/insights) ----
+export interface ComboMember {
+  skill: string;
+  iteration: string;
+  decision: LoopDecision;
+  status: string;
+  win_rate: number | null;
+  started_utc: string | null;
+}
+
+export interface ComboInsight {
+  harness: string; // "unrecorded" for legacy metas without a harness stamp
+  model_id: string;
+  model_variant: string | null;
+  iterations: number;
+  keeps: number;
+  rejects: number;
+  undecided: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  skills: string[];
+  keep_rate: number | null;
+  win_rate: number | null;
+  win_rate_stddev: number | null; // null = fewer than 2 scored iterations
+  scored_iterations: number;
+  mean_duration_s: number | null;
+  first_used: string | null;
+  last_used: string | null;
+  members: ComboMember[];
+}
+
+export interface InsightsDTO {
+  combos: ComboInsight[];
+}
+
+// ============================================================================
 // Skill Evaluation Console — UI state
 // ============================================================================
-export type Station = "evaluate" | "review" | "optimize" | "decide" | "promote";
+export type Station = "evaluate" | "review" | "optimize" | "decide" | "promote" | "compare";
 
 export type ConsoleOverlay =
   | null
