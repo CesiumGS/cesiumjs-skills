@@ -80,15 +80,123 @@ CesiumGS decides to publish to a private registry instead, add the required
 scope registry configuration in the consuming project or organization tooling,
 not in this public repository.
 
-The first public publish of the scoped package requires npm access to the
-`@cesium` organization and should use:
+### First Public Publish
+
+The first public publish requires an npm account with publish access to the
+`@cesium` organization and either two-factor authentication (2FA) or a granular
+access token that can publish with 2FA bypass. Run the release only after this
+package support has been merged, and publish from a clean checkout of the
+current `main` branch.
+
+Clone or update the repository and confirm the checkout exactly matches the
+remote `main` branch:
 
 ```bash
-npm publish --access public
+git clone https://github.com/CesiumGS/cesiumjs-skills.git
+cd cesiumjs-skills
+
+git fetch origin
+git switch main
+git pull --ff-only origin main
+
+test -z "$(git status --porcelain)" || {
+  git status --short
+  echo "Working tree is not clean; stopping."
+  exit 1
+}
+
+test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+  echo "Local main does not match origin/main; stopping."
+  exit 1
+}
 ```
 
-The `publishConfig.access` field in `package.json` keeps future publishes public
-by default for this scoped package.
+Confirm Node.js, npm, the public registry, and the package metadata:
+
+```bash
+node --version
+npm --version
+npm config get registry
+npm pkg get name version publishConfig
+```
+
+`node --version` must report Node.js 18 or newer. The package metadata should
+identify `@cesium/cesiumjs-skills`, version `0.3.0`, with public access. The
+registry should be `https://registry.npmjs.org/`.
+
+Authenticate if necessary, then verify which npm account will publish:
+
+```bash
+npm login --registry=https://registry.npmjs.org/
+npm whoami --registry=https://registry.npmjs.org/
+```
+
+Check that this exact version has not already been published:
+
+```bash
+npm view @cesium/cesiumjs-skills@0.3.0 version \
+  --registry=https://registry.npmjs.org/
+```
+
+For the first release, npm should return `E404 Not Found`. If it prints
+`0.3.0`, stop: npm package versions are immutable, so that version cannot be
+published again.
+
+Run the complete validation and inspect the package contents without publishing
+anything:
+
+```bash
+npm test
+npm run skills:list
+npm run pack:check
+npm publish --dry-run \
+  --access public \
+  --registry=https://registry.npmjs.org/
+```
+
+If every check passes and the dry run shows
+`@cesium/cesiumjs-skills@0.3.0`, perform the first public publish:
+
+```bash
+npm publish \
+  --access public \
+  --registry=https://registry.npmjs.org/
+```
+
+npm should prompt for a 2FA code when the account requires one. If npm instead
+returns an `EOTP` error, rerun the publish with the current authenticator code:
+
+```bash
+npm publish \
+  --access public \
+  --registry=https://registry.npmjs.org/ \
+  --otp="<six-digit-code>"
+```
+
+Verify the registry metadata after the publish completes:
+
+```bash
+npm view @cesium/cesiumjs-skills@0.3.0 \
+  name version dist-tags.latest dist.tarball \
+  --json \
+  --registry=https://registry.npmjs.org/
+```
+
+Finally, test the published artifact from a temporary consumer project rather
+than installing the package into this repository:
+
+```bash
+CESIUMJS_SKILLS_SMOKE_DIR="$(mktemp -d)"
+cd "$CESIUMJS_SKILLS_SMOKE_DIR"
+
+npm init --yes
+npm install --save-dev @cesium/cesiumjs-skills@0.3.0
+npx --yes skills@1.5.10 experimental_sync --agent codex -y
+```
+
+The `publishConfig.access` field in `package.json` keeps this scoped package
+public by default for future releases, but the explicit `--access public` flag
+is retained above to make the first-release intent unambiguous.
 
 ## Claude Code Plugin
 
