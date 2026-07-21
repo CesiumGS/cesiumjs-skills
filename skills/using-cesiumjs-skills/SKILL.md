@@ -26,17 +26,6 @@ This plugin provides 14 domain skills covering CesiumJS v1.143 (~551 public symb
 | `cesiumjs-models-particles` | glTF/GLB loading, KHR meshopt compression, CAD display extensions, animations, and particles |
 | `cesiumjs-core-utilities` | HTTP requests via Resource, Color, Event, error handling, helper functions |
 
-## Choose the Output Surface
-
-- For an application or bundler, use ES module imports from `"cesium"`.
-- For Sandcastle, including the July 2026 Sandcastle Copilot, omit imports and
-  access the same APIs through `Cesium.*`. Sandcastle supports `await` in the JS
-  pane.
-- Keep Copilot provider keys in Sandcastle's BYOK settings and Ion tokens in
-  runtime configuration. Never put either secret in shared Sandcastle code.
-- Review Copilot's proposed diff before applying it, then verify the console,
-  network requests, and rendered scene.
-
 ## Cross-Domain Questions
 
 When a question spans multiple domains, consult `docs/DOMAINS.md` — the definitive ownership map assigning every public CesiumJS class, function, and enum to exactly one skill.

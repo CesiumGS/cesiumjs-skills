@@ -940,8 +940,7 @@ These rules prevent activation collisions (multiple skills triggering for the sa
 ## July 2026 / CesiumJS 1.143 Coverage
 
 The [1.143 release](https://github.com/CesiumGS/cesium/releases/tag/1.143) has
-two feature additions and four runtime fixes. Each is owned by an active skill
-rather than duplicated across every consumer:
+two feature additions and four runtime fixes:
 
 | 1.143 surface | Canonical skill coverage |
 |---|---|
@@ -952,11 +951,10 @@ rather than duplicated across every consumer:
 | Invalid glTF sampler wrap-mode fallback to `TextureWrap.REPEAT` | `cesiumjs-models-particles/REFERENCE.md` authoring guidance |
 | Zero-width `BufferPointCollection` outlines no longer bleeding into fills | `cesiumjs-primitives` buffer guidance |
 
-July announcements extend the workflow surface beyond newly exported APIs:
+The July CAD announcement extends the workflow surface beyond newly exported APIs:
 
 | July-announced surface | Support boundary |
 |---|---|
-| [Sandcastle Copilot](https://cesium.com/blog/2026/07/07/introducing-cesiumjs-sandcastle-copilot/) | `using-cesiumjs-skills` explains global `Cesium.*` output, bring-your-own-provider keys, diff review, and console/network/render verification |
 | [CAD-style glTF lines, points, edges, and constant-LOD textures](https://cesium.com/blog/2026/07/09/introducing-cad-style-workflow-extensions-for-gltf/) | `cesiumjs-models-particles/REFERENCE.md` maps `EXT_mesh_primitive_restart`, `EXT_mesh_primitive_edge_visibility`, `BENTLEY_materials_line_style`, `BENTLEY_materials_point_style`, and `EXT_textureInfo_constant_lod` |
 | `BENTLEY_materials_planar_fill` | Explicitly marked upcoming and unsupported in 1.143; do not generate it as a working CesiumJS path |
 
