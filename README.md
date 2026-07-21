@@ -1,6 +1,10 @@
 # CesiumJS Agent Skills
 
-Curated agent skills for CesiumJS development — 14 domain skills covering ~550 public symbols across the CesiumJS v1.142 API surface.
+Curated agent skills for CesiumJS development — 14 domain skills covering ~551 public symbols across the CesiumJS v1.143 API surface.
+
+See the [July 2026 / CesiumJS 1.143 coverage matrix](docs/DOMAINS.md#july-2026--cesiumjs-1143-coverage)
+for the exact skill owner of every release addition, runtime fix, and announced
+workflow surface.
 
 ## Quick Start
 
@@ -44,17 +48,17 @@ These skills follow the [Agent Skills](https://agentskills.io/) open standard. C
 | -------------------------------- | ------------------------------------------------------------------------------------------------ |
 | **cesiumjs-viewer-setup**        | Initializing a CesiumJS app, configuring widgets, setting Ion tokens, bootstrapping a globe      |
 | **cesiumjs-camera**              | Positioning the camera, flyTo animations, constraining navigation, entity tracking               |
-| **cesiumjs-entities**            | Adding points/labels/models/polygons, loading GeoJSON/KML/CZML/GPX data through DataSources      |
-| **cesiumjs-3d-tiles**            | Loading tilesets or MVT, styling features, querying metadata, voxels, point clouds, clipping     |
+| **cesiumjs-entities**            | Adding graphics and time-segmented paths; loading GeoJSON/KML/CZML/GPX through DataSources       |
+| **cesiumjs-3d-tiles**            | Loading tilesets, compressed/CAD glTF, or MVT; styling, metadata, voxels, clipping               |
 | **cesiumjs-imagery**             | Adding/swapping base map layers, configuring imagery providers, split-screen comparisons         |
 | **cesiumjs-terrain-environment** | Configuring terrain, querying heights, atmosphere/sky/fog/lighting/shadows, panoramas            |
 | **cesiumjs-primitives**          | Performance-critical static/vector geometry, GeoJsonPrimitive, BufferPrimitive collections       |
 | **cesiumjs-materials-shaders**   | Fabric materials, ImageBasedLighting, post-processing effects, bloom, tonemapping                |
 | **cesiumjs-custom-shader**       | Writing GLSL shader bodies for Model/Cesium3DTileset/VoxelPrimitive; feature IDs, EXT_structural_metadata |
-| **cesiumjs-time-properties**     | Time-dynamic entity attributes, simulation clock, interpolation, sampled/callback properties     |
+| **cesiumjs-time-properties**     | Dynamic properties, simulation clock, interpolation, and interval/sampled path materials         |
 | **cesiumjs-spatial-math**        | Coordinate conversions, ellipsoid geometry, model matrices, intersection tests, projections      |
 | **cesiumjs-interaction**         | User clicks on the globe, multi-modifier shortcuts, entity/feature selection, hover, drag        |
-| **cesiumjs-models-particles**    | glTF/GLB model loading, edge display modes, animations, particle effects (fire, smoke)           |
+| **cesiumjs-models-particles**    | Compressed/CAD glTF/GLB loading, edge display, animations, and particle effects                  |
 | **cesiumjs-core-utilities**      | HTTP requests via Resource, Color, Event, error handling, helper functions                       |
 
 
@@ -73,7 +77,7 @@ By popular demand, this repository also ships as a **Claude Code plugin** with a
 ```
 cesiumjs-skills/
 ├── skills/                          # The product
-│   ├── cesiumjs-*/SKILL.md          # 14 domain skills (CesiumJS v1.142)
+│   ├── cesiumjs-*/SKILL.md          # 14 domain skills (CesiumJS v1.143)
 │   └── using-cesiumjs-skills/       # Bootstrap orientation skill
 ├── docs/
 │   ├── DOMAINS.md                   # Symbol ownership map
