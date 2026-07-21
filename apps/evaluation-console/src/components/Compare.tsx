@@ -206,7 +206,7 @@ function RateBar({ rate }: { rate: number | null }) {
   );
 }
 
-function RunsByHarness() {
+export function RunsByHarness() {
   const { runs, openOverlay } = useStore();
   const aggs = useMemo(() => harnessRunAgg(runs), [runs]);
   return (
@@ -391,7 +391,7 @@ function ComboRow({ combo }: { combo: ComboInsight }) {
   );
 }
 
-function Combos() {
+export function Combos() {
   const { insights } = useStore();
   const combos = insights?.combos ?? [];
   return (
@@ -437,7 +437,7 @@ function Combos() {
 /* ---------------------------------------------------------------------------
    TRENDS: run score across time or repository progression (run sequence).
    --------------------------------------------------------------------------- */
-function RunTrend() {
+export function RunTrend() {
   const { runs, switchRun, scorecard } = useStore();
   const [axis, setAxis] = useState<"time" | "sequence">("sequence");
 
@@ -576,7 +576,7 @@ function winRate(it: IterationSummary): number | null {
   return (wins / denom) * 100;
 }
 
-function SkillTrend() {
+export function SkillTrend() {
   const { skills, selectSkill, setStation } = useStore();
   const optimized = skills.filter((s) => s.history.some((h) => !h.is_baseline));
   const [skillId, setSkillId] = useState<string>(optimized[0]?.skill ?? "");

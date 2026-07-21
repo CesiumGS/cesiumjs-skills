@@ -48,7 +48,7 @@
         "timestamp": "2026-05-27T21:35:49.481406+00:00"
       },
       "latest_reviewed_decision": {
-        "iteration": "004",
+        "iteration": "001",
         "status": "reject",
         "compared_to": "baseline",
         "methodology": "3-parallel-independent-judges, majority vote per eval",
@@ -190,28 +190,28 @@
       "skill": "cesiumjs-time-properties",
       "scenario_count": 4,
       "current_best": {
-        "iteration": "003",
-        "wins": 2,
+        "iteration": "001",
+        "wins": 3,
         "losses": 0,
-        "ties": 2,
+        "ties": 1,
         "programmatic_correctness": 1.0,
         "api_accuracy": 1.0,
-        "visual_win_rate": 0.5,
+        "visual_win_rate": 0.75,
         "methodology": "3-parallel-independent-judges",
-        "timestamp": "2026-06-05T22:07:20.636351+00:00"
+        "timestamp": "2026-06-30T10:43:10.755653+00:00"
       },
       "latest_reviewed_decision": {
-        "iteration": "003",
+        "iteration": "001",
         "status": "keep",
         "compared_to": "baseline",
         "methodology": "3-parallel-independent-judges, majority vote per eval",
         "tally": {
-          "wins": 2,
+          "wins": 3,
           "losses": 0,
-          "ties": 2
+          "ties": 1
         },
         "critical_regressions": [],
-        "rationale_summary": "KEEP: Candidate won 2 scenarios vs 0 baseline wins"
+        "rationale_summary": "KEEP: Candidate won 3 scenarios vs 0 baseline wins"
       },
       "runner_mode_counts": {
         "global-js": 4
@@ -285,26 +285,26 @@
       "current_best": {
         "iteration": "001",
         "wins": 2,
-        "losses": 2,
-        "ties": 0,
+        "losses": 1,
+        "ties": 1,
         "programmatic_correctness": 1.0,
         "api_accuracy": 1.0,
         "visual_win_rate": 0.5,
         "methodology": "3-parallel-independent-judges",
-        "timestamp": "2026-05-26T21:23:41.109028+00:00"
+        "timestamp": "2026-06-30T11:06:20.234144+00:00"
       },
       "latest_reviewed_decision": {
-        "iteration": "004",
-        "status": "reject",
+        "iteration": "001",
+        "status": "keep",
         "compared_to": "baseline",
         "methodology": "3-parallel-independent-judges, majority vote per eval",
         "tally": {
-          "wins": 0,
+          "wins": 2,
           "losses": 1,
-          "ties": 3
+          "ties": 1
         },
         "critical_regressions": [],
-        "rationale_summary": "REJECT: Baseline won 1 scenarios vs 0 candidate wins"
+        "rationale_summary": "KEEP: Candidate won 2 scenarios vs 1 baseline wins"
       },
       "runner_mode_counts": {
         "global-js": 4
@@ -356,17 +356,17 @@
         "timestamp": "2026-06-05T22:01:56.166305+00:00"
       },
       "latest_reviewed_decision": {
-        "iteration": "003",
-        "status": "keep",
+        "iteration": "001",
+        "status": "reject",
         "compared_to": "baseline",
         "methodology": "3-parallel-independent-judges, majority vote per eval",
         "tally": {
-          "wins": 1,
-          "losses": 0,
-          "ties": 3
+          "wins": 0,
+          "losses": 1,
+          "ties": 0
         },
         "critical_regressions": [],
-        "rationale_summary": "KEEP: Candidate won 1 scenarios vs 0 baseline wins"
+        "rationale_summary": "REJECT: Judge loss on regression-critical scenario eval-001"
       },
       "runner_mode_counts": {
         "global-js": 4
@@ -418,17 +418,17 @@
         "timestamp": "2026-06-05T21:35:12.915899+00:00"
       },
       "latest_reviewed_decision": {
-        "iteration": "006",
-        "status": "keep",
+        "iteration": "001",
+        "status": "reject",
         "compared_to": "baseline",
         "methodology": "3-parallel-independent-judges, majority vote per eval",
         "tally": {
           "wins": 0,
-          "losses": 0,
-          "ties": 5
+          "losses": 1,
+          "ties": 4
         },
         "critical_regressions": [],
-        "rationale_summary": "KEEP: Tie (0 wins, 0 losses, 5 ties) - keeping current best"
+        "rationale_summary": "REJECT: Baseline won 1 scenarios vs 0 candidate wins"
       },
       "runner_mode_counts": {
         "global-js": 5

@@ -1,5 +1,4 @@
 ---
-
 name: cesiumjs-models-particles
 description: "CesiumJS models, glTF, and particle effects - Model, KHR_meshopt_compression, CAD glTF extensions, EdgeDisplayMode, ModelAnimation, ModelNode, ParticleSystem, emitters, GPM extensions. Use when loading compressed or CAD-style glTF/GLB models, controlling edge rendering, playing model animations, positioning particles, or working with geospatial positioning metadata."
 ---
@@ -270,8 +269,10 @@ A common failure mode is rendering a diffuse spherical blob instead of a recogni
 
 - **Use `CircleEmitter` or a narrow `ConeEmitter`** for upward-biased velocity. `SphereEmitter` and `BoxEmitter` radiate in all directions and produce blob-like shapes.
 - **Bias velocity strongly upward** -- emitters' local +Z is up in the `modelMatrix` frame; set `modelMatrix` via `Transforms.eastNorthUpToFixedFrame` so +Z is local up.
-- **Use a multi-second `minimumParticleLife` / `maximumParticleLife`** (e.g., 1.5–4.0) so particles travel far enough to form a visible column before fading.
-- **Scale particles over their lifetime** (`startScale` small, `endScale` 3–6x larger) so the plume widens with height, matching real smoke.
+- **Use a multi-second `minimumParticleLife` / `maximumParticleLife`** (e.g., 1.5-4.0) so particles travel far enough to form a visible column before fading.
+- **Scale particles over their lifetime** (`startScale` small, `endScale` 3-6x larger) so the plume widens with height, matching real smoke.
+- **Keep the emitter footprint smaller than the visible plume.** For crater smoke, use a small disk or point source; oversized ground ellipses read as the subject instead of a source marker.
+- **Avoid solving clipping by making the plume huge.** If the top is clipped, first increase camera range or lower particle life/speed/endScale; do not let the plume fill all four edges of the frame.
 - **Wait for several seconds of simulation time before screenshotting** -- the plume needs to develop. Advance the clock or use `viewer.clock.shouldAnimate = true` and wait.
 
 ### Smoke Trail
@@ -300,6 +301,63 @@ const smokeSystem = new ParticleSystem({
 });
 viewer.scene.primitives.add(smokeSystem);
 ```
+
+### Volcanic / Crater Smoke Calibration
+
+For terrain-scale smoke such as Mount St. Helens, use an oblique camera and a restrained source marker. The marker should confirm the emitter location without becoming a giant ground disk, and the plume should fit entirely in frame with terrain visible underneath.
+
+```js
+import { ParticleSystem, CircleEmitter, Color, Cartesian2, Transforms, Cartesian3 } from "cesium";
+
+viewer.clock.shouldAnimate = true;
+
+const sourcePosition = Cartesian3.fromDegrees(-122.1944, 46.1914, 2549);
+
+viewer.entities.add({
+  position: sourcePosition,
+  point: {
+    pixelSize: 10,
+    color: Color.ORANGE,
+    outlineColor: Color.BLACK,
+    outlineWidth: 2,
+  },
+});
+
+const craterSmoke = new ParticleSystem({
+  image: createRadialParticle(48, "rgba(180,180,180,0.75)"),
+  startColor: Color.LIGHTGRAY.withAlpha(0.65),
+  endColor: Color.WHITE.withAlpha(0.0),
+  startScale: 0.8,
+  endScale: 4.0,
+  emissionRate: 35,
+  minimumSpeed: 20.0,
+  maximumSpeed: 45.0,
+  minimumParticleLife: 2.0,
+  maximumParticleLife: 4.0,
+  imageSize: new Cartesian2(22, 22),
+  emitter: new CircleEmitter(35.0),
+  modelMatrix: Transforms.eastNorthUpToFixedFrame(sourcePosition),
+  lifetime: 20.0,
+  loop: true,
+});
+viewer.scene.primitives.add(craterSmoke);
+
+viewer.trackedEntity = undefined;
+viewer.camera.lookAt(
+  sourcePosition,
+  new Cesium.HeadingPitchRange(
+    Cesium.Math.toRadians(35),
+    Cesium.Math.toRadians(-22),
+    6500
+  )
+);
+```
+
+Use this pattern when a prompt asks for smoke over a named geographic source:
+
+- **Prefer a `point` or small billboard marker** over an `ellipse` unless the prompt specifically asks for a ground footprint.
+- **Keep the plume top, base, and source marker visible at once.** A clipped plume or missing marker is a framing failure even if particles are rendering.
+- **Use an oblique pitch for tall plumes.** Near-nadir views flatten the vertical volume into a gray blob.
 
 ### Emitter Types
 
@@ -363,26 +421,28 @@ viewer.scene.primitives.add(system);
 Particle effects should stand out against the map underneath, **not** against the sky or a featureless background. Two common framing failures:
 
 1. **Camera too close + shallow pitch** → the plume fills the frame and the map disappears behind it.
-2. **Camera too far + no pitch** → the plume becomes a tiny dot in a sea of imagery.
+2. **Camera too steep / near-nadir** → tall plumes flatten into a blob and the source geometry reads wrong.
 
-Use `viewer.camera.lookAt` with `HeadingPitchRange` to anchor on the emitter and dial in an oblique-to-overhead view that keeps the map context visible:
+Use `viewer.camera.lookAt` with `HeadingPitchRange` to anchor on the emitter and dial in an oblique view that keeps the map context visible:
 
 ```js
 const position = Cartesian3.fromDegrees(-122.1944, 46.1914, 2549);
+viewer.trackedEntity = undefined;
 viewer.camera.lookAt(
   position,
   new Cesium.HeadingPitchRange(
-    Cesium.Math.toRadians(45),   // heading
-    Cesium.Math.toRadians(-45),  // steeper pitch keeps street/terrain visible below
-    3000                         // range in meters (1500–5000 typical)
+    Cesium.Math.toRadians(35),   // heading
+    Cesium.Math.toRadians(-22),  // oblique pitch preserves plume height
+    6500                         // increase range until top and base fit
   )
 );
 ```
 
 Guidelines:
-- **Pitch in the −35° to −60° range** for top-down-with-context framing (e.g., fountains over a street grid).
-- **Pitch in the −10° to −25° range** for tall plumes where vertical extent matters (e.g., volcanic columns).
+- **Pitch in the -35° to -60° range** for short, ground-hugging effects where map context matters more than vertical extent.
+- **Pitch in the -10° to -30° range** for tall plumes where vertical volume matters (e.g., volcanic columns).
 - **Verify the marker/source is in-frame** by including a billboard or point at the emitter location; if the camera is wrong, the marker will be missing from the screenshot and the issue is obvious.
+- **Keep background terrain visible around the plume.** If particles touch multiple image edges, reduce particle scale/life/speed or increase camera range before taking the screenshot.
 - **Reset `viewer.trackedEntity = undefined`** before `lookAt`, or the tracked entity's reference frame will override your camera transform.
 
 ---

@@ -574,6 +574,81 @@ button {
   margin-top: var(--sp-3);
   padding: var(--sp-2);
 }
+.det-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.det-check {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: var(--sp-2);
+  align-items: flex-start;
+  padding: var(--sp-2);
+  border-radius: var(--r-1);
+  border-left: 2px solid var(--hairline-strong);
+  background: color-mix(in srgb, var(--surface) 46%, transparent);
+}
+.det-check.pass {
+  border-left-color: var(--pass);
+}
+.det-check.fail {
+  background: var(--fail-bg);
+  border-left-color: var(--fail);
+}
+.det-check.crit {
+  background: var(--fail-bg);
+  border-left-color: var(--crit);
+}
+.det-check-main {
+  min-width: 0;
+}
+.det-check-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.det-check-name {
+  color: var(--text);
+  font-size: var(--fs-100);
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.det-check-critical {
+  flex: 0 0 auto;
+  color: var(--crit);
+  font-family: var(--font-mono);
+  font-size: var(--fs-50);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.det-check-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: 2px;
+  color: var(--ink-machine);
+  font-family: var(--font-mono);
+  font-size: var(--fs-50);
+}
+.det-check-values,
+.det-check-detail {
+  margin-top: 3px;
+  color: var(--text-3);
+  font-size: var(--fs-50);
+  line-height: 1.35;
+}
+.det-check-values {
+  font-family: var(--font-mono);
+}
+.det-check-values b {
+  color: var(--text-2);
+  font-weight: var(--fw-medium);
+}
 
 /* contact strip (multi-angle) */
 .contact {
@@ -654,6 +729,9 @@ button {
   overflow-y: auto;
 }
 .band {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border-radius: var(--r-2);
   border: 1px solid var(--hairline);
   background: var(--canvas);
@@ -680,6 +758,11 @@ button {
   background: color-mix(in srgb, var(--ink-eye-bg) 40%, transparent);
 }
 .band-body {
+  min-height: 0;
+  max-height: clamp(220px, 36vh, 390px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: var(--sp-3);
 }
 .band-head .bh-score {

@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, Copy } from "lucide-react";
 import { useStore } from "../store";
 import { modelShort, relativeTime } from "../lib/format";
 import { LoopBadge, MetaTag, Pill, UnknownChip } from "./primitives";
+import { Combos, RunsByHarness, RunTrend, SkillTrend } from "./Compare";
 import type { BaselineDiff, IterationSummary, SkillOverview } from "../types";
 
 /** ▣ / ◈ / ⚑ ink law (P3): steel for the machine, amber for the eye, magenta for the human flag. */
@@ -398,6 +399,13 @@ export function EvaluateOverview() {
       <div className="dash-card">
         <ChangedVsBaseline diff={diff} />
       </div>
+
+      {/* PERFORMANCE OVER TIME — harness + model views brought to the front page. */}
+      <RunTrend />
+      <RunsByHarness />
+      <Combos />
+      <SkillTrend />
+
       <div className="dash-card">
         <ProvenanceCard />
       </div>

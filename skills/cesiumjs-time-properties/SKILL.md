@@ -157,6 +157,29 @@ position.setInterpolationOptions({ interpolationDegree: 5, interpolationAlgorith
 position.forwardExtrapolationType = ExtrapolationType.HOLD;
 ```
 
+For screenshot or evaluation scenes, a sampled path alone is often not enough. Add an obvious marker to the same moving entity (`point`, `billboard`, or `model`) so the current sample is recognizable at the clock's `currentTime`.
+
+```js
+import { Color } from "cesium";
+
+const aircraft = viewer.entities.add({
+  position,
+  point: {
+    pixelSize: 14,
+    color: Color.CYAN,
+    outlineColor: Color.BLACK,
+    outlineWidth: 2,
+    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+  },
+  path: {
+    width: 4,
+    leadTime: 180,
+    trailTime: 180,
+    material: Color.YELLOW,
+  },
+});
+```
+
 | Algorithm | Best For | Degree |
 |---|---|---|
 | `LinearApproximation` | Fast piecewise-linear | 1 (fixed) |
@@ -223,6 +246,8 @@ viewer.entities.add({
 });
 ```
 
+For robust visual recognition, do not rely only on an external model URI unless the asset is guaranteed to load. Pair the model with a `point` or `billboard` marker when the prompt expects the aircraft/satellite/vehicle itself to be visible.
+
 ### ReferenceProperty -- Cross-Entity Binding
 
 Links one entity's property to another by ID string (`"entityId#propertyPath"`).
@@ -234,6 +259,8 @@ viewer.entities.add({ id: "follower",
   position: ReferenceProperty.fromString(viewer.entities, "leader#position"),
   point: { pixelSize: 10 } });
 ```
+
+This is useful after loading CZML: keep the CZML-driven path in the data source, then add a normal viewer entity marker whose position references the CZML entity. That makes the current subject visible and easy to inspect without duplicating samples.
 
 ## Material Properties
 
@@ -366,7 +393,8 @@ const catmull = new CatmullRomSpline({ times: [0, 1, 2, 3], points: [p0, p1, p2,
 CZML streams time-dynamic data. The `document` packet sets the clock; entity packets use `epoch` + offset arrays for compact positions. Position format: `[secondsFromEpoch, lon, lat, alt, ...]`.
 
 ```js
-import { Viewer, CzmlDataSource } from "cesium";
+import { Viewer, CzmlDataSource, Color, ReferenceProperty } from "cesium";
+
 const czml = [
   { id: "document", version: "1.0", clock: {
       interval: "2025-06-15T00:00:00Z/2025-06-15T06:00:00Z",
@@ -376,20 +404,38 @@ const czml = [
     position: { epoch: "2025-06-15T00:00:00Z",
       cartographicDegrees: [0,-75,40,10000, 10800,-88,42,11000, 21600,-118,34,9000],
       interpolationAlgorithm: "LAGRANGE", interpolationDegree: 5 },
-    point: { pixelSize: 10, color: { rgba: [255,255,0,255] } },
+    point: { pixelSize: 12, color: { rgba: [0,255,255,255] },
+             outlineColor: { rgba: [0,0,0,255] }, outlineWidth: 2 },
     path: { width: { number: 3 }, leadTime: { number: 10800 }, trailTime: { number: 10800 },
-            material: { solidColor: { color: { rgba: [0,255,0,255] } } } } },
+            material: { solidColor: { color: { rgba: [255,255,0,255] } } } } },
 ];
-const ds = await CzmlDataSource.load(czml);
+
 const viewer = new Viewer("cesiumContainer", { shouldAnimate: true });
+const ds = await CzmlDataSource.load(czml);
 viewer.dataSources.add(ds);
-viewer.zoomTo(ds);
+
+// Optional robust marker: references the CZML entity position but lives in viewer.entities.
+viewer.entities.add({
+  id: "aircraft-marker",
+  position: ReferenceProperty.fromString(ds.entities, "aircraft#position"),
+  point: {
+    pixelSize: 16,
+    color: Color.CYAN,
+    outlineColor: Color.BLACK,
+    outlineWidth: 2,
+    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+  },
+});
+
+await viewer.zoomTo(ds);
 ```
 
 CZML accepts the enum name directly. To retain phase colors along a path, set
 `path.materialMode` to `"PORTIONS"` and provide `path.material` as an array of
 interval-tagged material packets. Keep `"WHOLE"` or omit the field for legacy
 whole-path behavior.
+
+For satellite-orbit CZML screenshots, keep the orbit path and the satellite marker distinct: the path proves the trajectory, while a large point or billboard at the current CZML position proves the satellite subject. If the view is global, use `disableDepthTestDistance: Number.POSITIVE_INFINITY` on the marker so it remains visible against the globe.
 
 ## EasingFunction -- Camera Flight Curves
 
@@ -408,9 +454,9 @@ viewer.camera.flyTo({
 
 A time-dynamic entity is useless if the camera is not framed on it. After building a flight or orbit, **always** explicitly frame the scene -- the default Viewer camera sits in space and will not auto-zoom to your entities. Three options, in order of preference for screenshots:
 
-1. **`viewer.zoomTo(entityOrDataSource)`** -- best-fit framing that returns a `Promise` once tilesets/data sources are ready. Use for CZML data sources and one-shot setups. For a single moving entity, this frames the entity's bounding sphere at its current sampled position, which often produces a near-ground view; for visualizing the full arc, prefer option 3.
+1. **`viewer.zoomTo(entityOrDataSource)`** -- best-fit framing that returns a `Promise` once tilesets/data sources are ready. Use for CZML data sources and one-shot local setups. For a single moving entity, this frames the entity's bounding sphere at its current sampled position, which often produces a near-ground close-up; for visualizing the full arc of a long route, prefer option 3.
 2. **`viewer.trackedEntity = entity`** -- locks the camera to follow the entity over time. Best when the path spans large distances (cross-country flights, orbits) and you want the entity centered every frame.
-3. **`viewer.camera.flyTo` / `setView`** with an explicit `Cartesian3.fromDegrees` or `Rectangle.fromDegrees` -- use when the path's extent is known and the default zoom is too wide (e.g., a JFK->LAX flight needs a continental-US framing, not a globe view).
+3. **`viewer.camera.flyTo` / `setView`** with an explicit `Cartesian3.fromDegrees` or `Rectangle.fromDegrees` -- use when the path's extent is known and the default zoom is too wide or too tight (e.g., a JFK->LAX flight needs a continental-US framing, not a clipped airport close-up or a full-globe view).
 
 ```js
 // Continental-US framing for a JFK -> LAX flight path
@@ -430,6 +476,8 @@ viewer.camera.setView({
 | Long-distance with continuous tracking | `viewer.trackedEntity = entity` |
 
 For path arcs that should be fully visible (lead + trail), zoom out enough that `leadTime + trailTime` of motion fits in the viewport. If the judge can only see a fragment of the arc, the framing is too tight. For orbits, set `leadTime` and `trailTime` to cover at least one half-orbit (e.g., ~2700 seconds for LEO) so the arc visibly wraps the planet.
+
+For long-distance flights such as JFK to LAX, set the clock to mid-flight, use `leadTime` and `trailTime` large enough to cover the route around the current time, add a visible aircraft marker, then use a continental rectangle. Do not call `zoomTo(aircraft)` for this composition unless the prompt asks for a close follow shot.
 
 ## Putting It Together: Animated Flight
 
@@ -461,8 +509,16 @@ position.setInterpolationOptions({ interpolationDegree: 5, interpolationAlgorith
 
 const aircraft = viewer.entities.add({
   availability: new TimeIntervalCollection([new TimeInterval({ start, stop })]),
-  position, orientation: new VelocityOrientationProperty(position),
+  position,
+  orientation: new VelocityOrientationProperty(position),
   model: { uri: "aircraft.glb", minimumPixelSize: 64 },
+  point: {
+    pixelSize: 14,
+    color: Color.CYAN,
+    outlineColor: Color.BLACK,
+    outlineWidth: 2,
+    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+  },
   path: {
     resolution: 1,
     width: 3,
@@ -482,6 +538,62 @@ await viewer.zoomTo(aircraft);
 // viewer.camera.setView({ destination: Rectangle.fromDegrees(-130, 20, -60, 50) });
 ```
 
+For a cross-country sampled flight, use the same clock/property pattern but replace local framing with a route-wide rectangle and keep the current-time marker visible:
+
+```js
+import {
+  Viewer, JulianDate, ClockRange, SampledPositionProperty, VelocityOrientationProperty,
+  TimeIntervalCollection, TimeInterval, Cartesian3, LagrangePolynomialApproximation,
+  Color, Rectangle,
+} from "cesium";
+
+const viewer = new Viewer("cesiumContainer", { shouldAnimate: true });
+const start = JulianDate.fromIso8601("2025-06-15T12:00:00Z");
+const stop = JulianDate.addHours(start, 6, new JulianDate());
+viewer.clock.startTime = start.clone();
+viewer.clock.stopTime = stop.clone();
+viewer.clock.currentTime = JulianDate.addHours(start, 3, new JulianDate());
+viewer.clock.clockRange = ClockRange.LOOP_STOP;
+viewer.clock.multiplier = 120;
+viewer.timeline.zoomTo(start, stop);
+
+const position = new SampledPositionProperty();
+position.addSample(start, Cartesian3.fromDegrees(-73.7781, 40.6413, 10000)); // JFK
+position.addSample(JulianDate.addHours(start, 1.5, new JulianDate()), Cartesian3.fromDegrees(-88.0, 41.8, 11500));
+position.addSample(JulianDate.addHours(start, 3, new JulianDate()), Cartesian3.fromDegrees(-99.0, 39.0, 12000));
+position.addSample(JulianDate.addHours(start, 4.5, new JulianDate()), Cartesian3.fromDegrees(-112.0, 36.5, 11000));
+position.addSample(stop, Cartesian3.fromDegrees(-118.4085, 33.9416, 9000)); // LAX
+position.setInterpolationOptions({
+  interpolationDegree: 5,
+  interpolationAlgorithm: LagrangePolynomialApproximation,
+});
+
+viewer.entities.add({
+  availability: new TimeIntervalCollection([new TimeInterval({ start, stop })]),
+  position,
+  orientation: new VelocityOrientationProperty(position),
+  point: {
+    pixelSize: 16,
+    color: Color.CYAN,
+    outlineColor: Color.BLACK,
+    outlineWidth: 2,
+    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+  },
+  path: {
+    resolution: 60,
+    width: 4,
+    leadTime: 10800,
+    trailTime: 10800,
+    material: Color.YELLOW,
+  },
+});
+
+viewer.clock.tick();
+viewer.camera.setView({
+  destination: Rectangle.fromDegrees(-130, 24, -66, 50),
+});
+```
+
 ## Performance Tips
 
 1. Prefer `SampledPositionProperty` over `CallbackProperty` for positions -- binary search is faster than per-frame callbacks.
@@ -494,6 +606,7 @@ await viewer.zoomTo(aircraft);
 8. Use `ClockStep.TICK_DEPENDENT` for deterministic replay; `SYSTEM_CLOCK_MULTIPLIER` varies with frame rate.
 9. Minimize `CallbackProperty` count -- each runs its function every frame.
 10. Prefer interval-based `PORTIONS` path materials; sampled materials trade smoother transitions for approximately one segment per `resolution` step.
+11. For evaluation screenshots, visual robustness matters: a slightly larger marker and explicit route-wide camera are preferable to a technically correct path that is clipped, unframed, or missing its subject.
 
 ## Screenshot Checklist for Time-Dynamic Scenes
 
@@ -502,9 +615,12 @@ Before capturing a screenshot of a time-dynamic scene, verify:
 1. **Clock is positioned mid-interval** -- set `viewer.clock.currentTime` away from `startTime` so the path has visible trail samples, then call `viewer.clock.tick()`.
 2. **Camera is framed on the entity** -- call `await viewer.zoomTo(entity)` or `viewer.camera.setView({ destination: Rectangle.fromDegrees(...) })`. Never rely on the default space-view camera. Match framing to path scale (see the Framing table above): local zoom for city flights, `Rectangle` for cross-country, high altitude for orbits.
 3. **`leadTime` and `trailTime` are set** on the entity's `path` graphic so the arc is actually drawn around the current time. For orbits, use values large enough to cover at least one half-orbit so the curve visibly wraps the globe.
-4. **Entity is within `availability`** -- the clock's `currentTime` must fall inside any `TimeIntervalCollection` you set, or the entity is culled.
-5. **`shouldAnimate: true`** if you expect the scene to advance between renders; otherwise advance manually.
-6. **Color-cycling materials** -- if using a `CallbackProperty` driving `Color.fromHsl`, any hue across the cycle is valid; do not assume a specific hue at screenshot time. The clock must be advanced past `startTime` for the cycle to have progressed off the initial hue.
+4. **The moving subject is visible at `currentTime`** -- add a `point`, `billboard`, or loaded `model` to the same entity. For global/orbit views, make the marker large enough to see and use `disableDepthTestDistance: Number.POSITIVE_INFINITY` when appropriate.
+5. **Entity is within `availability`** -- the clock's `currentTime` must fall inside any `TimeIntervalCollection` you set, or the entity is culled.
+6. **Cross-country routes use regional framing** -- JFK-to-LAX or similar flights should show the route context with `Rectangle.fromDegrees(...)`, not a close-up clipped line near one airport.
+7. **CZML subjects are not just paths** -- after loading a CZML data source, ensure the packet includes a visible `point`/`billboard`, or add a viewer entity marker using `ReferenceProperty.fromString(ds.entities, "id#position")`.
+8. **`shouldAnimate: true`** if you expect the scene to advance between renders; otherwise advance manually.
+9. **Color-cycling materials** -- if using a `CallbackProperty` driving `Color.fromHsl`, any hue across the cycle is valid; do not assume a specific hue at screenshot time. The clock must be advanced past `startTime` for the cycle to have progressed off the initial hue.
 
 ## Key Enums
 

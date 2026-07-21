@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 import { artifactUrl } from "../api";
 import type { AdaptedDimension, CaseView, RawCheck } from "../types";
-import { dimensionShortLabel } from "../lib/adapt";
+import { dimensionShortLabel, humanize } from "../lib/adapt";
 import { dimToneClass } from "../lib/dimtone";
 import {
   DecisionChip,
@@ -18,48 +18,96 @@ function jsonInline(v: unknown): string {
   return String(v);
 }
 
-function CheckRow({ c }: { c: RawCheck }) {
-  const cls = c.critical ? "check crit" : "check fail";
+function compactInline(v: unknown): string {
+  const raw = jsonInline(v);
+  return raw.length > 120 ? `${raw.slice(0, 117)}…` : raw;
+}
+
+function stripOrdinal(id: string): string {
+  return id.replace(/_\d+$/, "");
+}
+
+function patternValue(v: unknown): string | null {
+  if (!v || typeof v !== "object") return null;
+  const record = v as Record<string, unknown>;
+  const value = typeof record.match === "string" && record.match
+    ? record.match
+    : typeof record.pattern === "string" && record.pattern
+      ? record.pattern
+      : null;
+  return value;
+}
+
+function checkLabel(c: RawCheck): string {
+  if (c.type === "pattern_present" || c.type === "pattern_absent") {
+    const value = patternValue(c.actual) ?? patternValue(c.expected);
+    return value ? `Pattern · ${value}` : humanize(c.type);
+  }
+  return humanize(stripOrdinal(c.check_id || c.type));
+}
+
+function shouldShowExpectedActual(c: RawCheck): boolean {
+  if (c.expected === undefined && c.actual === undefined) return false;
+  if (
+    c.result === "pass" &&
+    ["no_runtime_errors", "code_runs", "pattern_present", "pattern_absent", "artifact_text_absent"].includes(c.type)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function DeterministicCheckRow({ c }: { c: RawCheck }) {
+  const passed = c.result === "pass";
+  const state = passed ? "pass" : c.critical ? "crit" : "fail";
+  const cls = `det-check ${passed ? "pass" : c.critical ? "crit" : "fail"}`;
+  const hasExpectedActual = shouldShowExpectedActual(c);
   return (
     <div className={cls}>
-      <StatusGlyph state={c.critical ? "crit" : "fail"} />
-      <div>
-        <div className="c-id">
-          {c.check_id}
-          {c.critical && <span className="c-crit-tag">CRITICAL</span>}
+      <StatusGlyph state={state} />
+      <div className="det-check-main">
+        <div className="det-check-title">
+          <span className="det-check-name" title={c.check_id}>
+            {checkLabel(c)}
+          </span>
+          {!passed && c.critical && <span className="det-check-critical">Critical</span>}
         </div>
-        <div className="c-exp">
-          exp <b>{jsonInline(c.expected)}</b> · act <b>{jsonInline(c.actual)}</b>
+        <div className="det-check-meta">
+          <span>{c.type}</span>
+          {c.category && <span>{humanize(c.category)}</span>}
         </div>
-        {c.detail && <div className="c-detail">{c.detail}</div>}
+        {hasExpectedActual && (
+          <div className="det-check-values">
+            Expected <b>{compactInline(c.expected)}</b> · Actual <b>{compactInline(c.actual)}</b>
+          </div>
+        )}
+        {c.detail && <div className="det-check-detail">{c.detail}</div>}
       </div>
-      <span className="mono" style={{ fontSize: "var(--fs-50)", color: "var(--text-3)" }}>
-        {c.type}
-      </span>
+    </div>
+  );
+}
+
+function DeterministicBreakdown({ checks }: { checks: RawCheck[] }) {
+  if (checks.length === 0) {
+    return <div className="empty-note">No deterministic checks recorded.</div>;
+  }
+  return (
+    <div className="det-check-list">
+      {checks.map((c) => (
+        <DeterministicCheckRow key={c.check_id} c={c} />
+      ))}
     </div>
   );
 }
 
 function CheckLedgerHero({ v }: { v: CaseView }) {
-  const fails = v.failedChecks;
   return (
     <div className="hero">
       <div className="ledger">
         <div className="ledger-head">
           ▣ deterministic check ledger · no render captured
         </div>
-        {fails.length === 0 ? (
-          <div className="checks-pass-row">
-            <StatusGlyph state="pass" /> All {v.checks.length} checks pass; nothing failing to inspect
-          </div>
-        ) : (
-          fails.map((c) => <CheckRow key={c.check_id} c={c} />)
-        )}
-        {fails.length > 0 && v.checks.length > fails.length && (
-          <div className="checks-pass-row">
-            <StatusGlyph state="pass" /> {v.checks.length - fails.length} more checks pass
-          </div>
-        )}
+        <DeterministicBreakdown checks={v.checks} />
       </div>
     </div>
   );
@@ -113,9 +161,7 @@ function QuantBand({ v }: { v: CaseView }) {
             <span style={{ color: "var(--crit)" }}> · {v.criticalFailedChecks.length} critical ✗</span>
           )}
         </div>
-        {v.failedChecks.slice(0, 4).map((c) => (
-          <CheckRow key={c.check_id} c={c} />
-        ))}
+        <DeterministicBreakdown checks={v.checks} />
       </div>
     </div>
   );
