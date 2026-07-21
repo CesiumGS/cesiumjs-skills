@@ -571,6 +571,7 @@ interface PaletteItem {
 }
 
 const STATIONS: { id: Station; label: string }[] = [
+  { id: "dashboard", label: "Dashboard" },
   { id: "evaluate", label: "Evaluate" },
   { id: "review", label: "Review" },
   { id: "optimize", label: "Optimize" },

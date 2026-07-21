@@ -475,7 +475,7 @@ export interface InsightsDTO {
 // ============================================================================
 // Skill Evaluation Console — UI state
 // ============================================================================
-export type Station = "evaluate" | "review" | "optimize" | "decide" | "promote" | "compare";
+export type Station = "dashboard" | "evaluate" | "review" | "optimize" | "decide" | "promote" | "compare";
 
 export type ConsoleOverlay =
   | null

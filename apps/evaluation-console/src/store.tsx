@@ -207,7 +207,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [iterationLoading, setIterationLoading] = useState(false);
   const [selectedScenarioIndex, setSelectedScenarioIndex] = useState(0);
 
-  const [station, setStationState] = useState<Station>("review");
+  const [station, setStationState] = useState<Station>("dashboard");
   const [filter, setFilterState] = useState<FilterKind>("all");
   const [facetSkill, setFacetSkillState] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);

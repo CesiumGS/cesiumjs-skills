@@ -2988,3 +2988,60 @@ button {
   font-size: var(--fs-300);
   line-height: 1.6;
 }
+
+/* ============================================================================
+   DASHBOARD STATION — Altitude 0 landing screen.
+   ============================================================================ */
+.station--dashboard {
+  margin-bottom: var(--sp-2);
+}
+.fresh-chip {
+  font: 500 11px/1 var(--mono);
+  color: var(--text-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+.fresh-chip.stale {
+  color: var(--warn, #d9a949);
+  border-color: color-mix(in srgb, var(--warn, #d9a949) 45%, transparent);
+}
+.dashboard-hero {
+  align-items: center;
+}
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+  align-items: start;
+}
+.dashboard-columns .dash-card {
+  margin: 0;
+}
+.dashboard-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.dashboard-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 600 11px/1 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  padding: 0 var(--sp-1);
+}
+.link-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+@media (max-width: 1280px) {
+  .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+}

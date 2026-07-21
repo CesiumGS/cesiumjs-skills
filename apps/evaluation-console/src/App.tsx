@@ -8,11 +8,20 @@ import { OptimizeInspector, OptimizeStage } from "./components/Optimize";
 import { DecideInspector, DecideStage } from "./components/Decide";
 import { EvaluateOverview, PromotePanel } from "./components/Overview";
 import { CompareStation } from "./components/Compare";
+import { DashboardStation } from "./components/Dashboard";
 import { Overlays, Toasts } from "./components/Overlays";
 
 function Body() {
   const { station } = useStore();
 
+  if (station === "dashboard") {
+    return (
+      <div className="body body--wide">
+        <Rail />
+        <DashboardStation />
+      </div>
+    );
+  }
   if (station === "evaluate") {
     return (
       <div className="body body--wide">

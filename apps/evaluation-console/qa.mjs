@@ -44,7 +44,43 @@ await page.goto(URL, { waitUntil: "networkidle" });
 await sleep(1500);
 
 // ---------------- BOOT / REVIEW ----------------
-await step("boot: Review station active, stream populated", async () => {
+await step("boot: Dashboard is the landing station", async () => {
+  const active = await $(".station.active .st-name");
+  assert(active === "Dashboard", `active station is ${active}`);
+  const kpis = await count(".kpi");
+  assert(kpis >= 5, `only ${kpis} KPI tiles`);
+  const hasTrend = await count(".dashboard-station svg, .dashboard-station table");
+  assert(hasTrend > 0, "no trend chart or tables on the dashboard");
+  await shot("dashboard-boot");
+  return `landing=Dashboard, ${kpis} KPIs`;
+});
+
+await step("dashboard: both units of analysis side by side + details links", async () => {
+  const cols = await count(".dashboard-columns .dashboard-col");
+  assert(cols === 2, `expected 2 dashboard columns, got ${cols}`);
+  const heads = await page.$$eval(".dashboard-col-head span", (els) => els.map((e) => e.textContent));
+  assert(heads.some((h) => /Harness/i.test(h)), "no Harness Performance column");
+  assert(heads.some((h) => /Model/i.test(h)), "no Model Performance column");
+  await page.click(".dashboard-col .link-pill");
+  await sleep(400);
+  const active = await $(".station.active .st-name");
+  assert(active === "Models & Harnesses", `Details link landed on ${active}`);
+  await press("0", 400);
+  return "2 columns, Details → Models & Harnesses";
+});
+
+await step("dashboard: freshness chip present, 0 returns from any station", async () => {
+  const chip = await $(".fresh-chip");
+  assert(chip && /Latest data/.test(chip), `freshness chip missing: ${chip}`);
+  await press("3", 400);
+  await press("0", 400);
+  const active = await $(".station.active .st-name");
+  assert(active === "Dashboard", `0 landed on ${active}`);
+  return `chip="${chip}"`;
+});
+
+await step("boot: Review station populated after pressing 2", async () => {
+  await press("2", 600);
   const active = await $(".station.active .st-name");
   assert(active === "Review", `active station is ${active}`);
   const rows = await count(".stream .row");

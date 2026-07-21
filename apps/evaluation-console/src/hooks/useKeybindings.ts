@@ -3,6 +3,7 @@ import type { Store } from "../store";
 import type { Station } from "../types";
 
 const STATION_BY_DIGIT: Record<string, Station> = {
+  "0": "dashboard",
   "1": "evaluate",
   "2": "review",
   "3": "optimize",

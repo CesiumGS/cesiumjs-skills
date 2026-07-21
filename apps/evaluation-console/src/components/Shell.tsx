@@ -1,4 +1,4 @@
-import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows } from "lucide-react";
+import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows, LayoutDashboard } from "lucide-react";
 import { useStore } from "../store";
 import type { Station } from "../types";
 import { modelShort, pluralize } from "../lib/format";
@@ -127,6 +127,17 @@ export function Rail() {
 
   return (
     <nav className="rail col" role="navigation" aria-label="Console navigation">
+      {/* Dashboard is the landing screen: altitude 0, above the lifecycle. */}
+      <button
+        className={`station station--dashboard${station === "dashboard" ? " active" : ""}`}
+        onClick={() => setStation("dashboard")}
+        aria-current={station === "dashboard"}
+      >
+        <LayoutDashboard size={13} aria-hidden />
+        <span className="st-name">Dashboard</span>
+        <span className="kbd" style={{ marginLeft: "auto" }}>0</span>
+      </button>
+
       <div className="rail-section">Lifecycle</div>
       {LIFECYCLE_STATIONS.map((st) => (
         <div key={st.id}>

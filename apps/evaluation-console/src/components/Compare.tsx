@@ -790,7 +790,7 @@ function Catalogs() {
 /* ---------------------------------------------------------------------------
    KPI stat tile (eval-dashboard idiom: big number, small uppercase label).
    --------------------------------------------------------------------------- */
-function Kpi({
+export function Kpi({
   label,
   value,
   sub,
