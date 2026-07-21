@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-time-properties
-description: "CesiumJS time, properties, and animation - Clock, JulianDate, TimeInterval, Property, SampledProperty, CallbackProperty, interpolation, splines, CZML temporal data. Use when making entity attributes time-dynamic, configuring the simulation clock, interpolating positions over time, or working with sampled or callback properties."
+description: "CesiumJS time, properties, and animation - Clock, JulianDate, TimeInterval, Property, SampledProperty, CallbackProperty, PathMode, interval and sampled path materials, interpolation, splines, CZML temporal data. Use when making entity attributes or path materials time-dynamic, configuring the simulation clock, interpolating positions, or working with sampled, interval, or callback properties."
 ---
 # CesiumJS Time, Properties & Animation
 
-Version baseline: CesiumJS v1.142
+Version baseline: CesiumJS v1.143
 
 Covers the temporal data-binding layer: Clock/JulianDate time system, the Property hierarchy that makes entity attributes change over time, interpolation algorithms, splines, and material properties. Properties live here (not with Entities) because SampledProperty and CallbackProperty are meaningless without Clock/JulianDate. The Material class (Fabric) belongs in cesiumjs-materials-shaders.
 
@@ -252,6 +252,84 @@ colorProp.addSample(JulianDate.addHours(t0, 6, new JulianDate()), Color.RED);
 const animated = new ColorMaterialProperty(colorProp);
 ```
 
+## Segmented Path Materials (1.143+)
+
+`PathMode.WHOLE` preserves the original behavior: the material evaluated at the
+current simulation time colors the entire visible path. Use
+`PathMode.PORTIONS` to keep past and future path portions colored by the
+material at each portion's time.
+
+Prefer interval materials for discrete phases because Cesium splits only at
+the interval boundaries:
+
+```js
+import {
+  Color, ColorMaterialProperty, CompositeMaterialProperty,
+  PathMode, TimeInterval,
+} from "cesium";
+
+const phases = new CompositeMaterialProperty();
+phases.intervals.addInterval(TimeInterval.fromIso8601({
+  iso8601: "2026-07-15T12:00:00Z/2026-07-15T12:02:00Z",
+  isStopIncluded: false,
+  data: new ColorMaterialProperty(Color.LIME),
+}));
+phases.intervals.addInterval(TimeInterval.fromIso8601({
+  iso8601: "2026-07-15T12:02:00Z/2026-07-15T12:04:00Z",
+  data: new ColorMaterialProperty(Color.ORANGE),
+}));
+
+viewer.entities.add({
+  position, // a time-dynamic PositionProperty
+  path: {
+    material: phases,
+    materialMode: PathMode.PORTIONS,
+    resolution: 30,
+    leadTime: 240,
+    trailTime: 240,
+    width: 6,
+  },
+});
+```
+
+`materialMode` is a `Property`, not only a fixed enum. Use a time-varying mode
+when the same path should switch rendering strategies during a simulation:
+
+```js
+import {
+  PathGraphics, PathMode, TimeInterval, TimeIntervalCollectionProperty,
+} from "cesium";
+
+const mode = new TimeIntervalCollectionProperty();
+mode.intervals.addInterval(TimeInterval.fromIso8601({
+  iso8601: "2026-07-15T12:00:00Z/2026-07-15T12:02:00Z",
+  isStopIncluded: false,
+  data: PathMode.PORTIONS,
+}));
+mode.intervals.addInterval(TimeInterval.fromIso8601({
+  iso8601: "2026-07-15T12:02:00Z/2026-07-15T12:04:00Z",
+  data: PathMode.WHOLE,
+}));
+
+const path = new PathGraphics({ material: phases, materialMode: mode });
+viewer.entities.add({ position, path });
+```
+
+For an interpolated color transition, pass a `SampledProperty(Color)` to
+`ColorMaterialProperty` and keep `materialMode: PathMode.PORTIONS`. Cesium
+creates split points at roughly each `resolution` step. Use the largest step
+that preserves the intended transition and bound `leadTime`/`trailTime`; tiny
+steps over long windows create many polylines.
+
+- Positive fractional resolutions are valid. In `PORTIONS` mode, a non-positive
+  resolution safely falls back to 60 seconds.
+- Keep the default `WHOLE` mode for constant materials; segmentation adds no
+  value.
+- CesiumJS 1.143 types include `materialMode` in
+  `PathGraphics.ConstructorOptions` but omit the instance member. Set it in the
+  constructor/entity object as above for TypeScript; direct runtime mutation is
+  valid JavaScript but needs a narrow local type augmentation or cast.
+
 ## Splines -- Parametric Curve Interpolation
 
 Splines use unitless parametric time (not JulianDate) for smooth animation curves.
@@ -307,6 +385,11 @@ const viewer = new Viewer("cesiumContainer", { shouldAnimate: true });
 viewer.dataSources.add(ds);
 viewer.zoomTo(ds);
 ```
+
+CZML accepts the enum name directly. To retain phase colors along a path, set
+`path.materialMode` to `"PORTIONS"` and provide `path.material` as an array of
+interval-tagged material packets. Keep `"WHOLE"` or omit the field for legacy
+whole-path behavior.
 
 ## EasingFunction -- Camera Flight Curves
 
@@ -410,6 +493,7 @@ await viewer.zoomTo(aircraft);
 7. Use `ExtrapolationType.HOLD` instead of duplicate trailing samples.
 8. Use `ClockStep.TICK_DEPENDENT` for deterministic replay; `SYSTEM_CLOCK_MULTIPLIER` varies with frame rate.
 9. Minimize `CallbackProperty` count -- each runs its function every frame.
+10. Prefer interval-based `PORTIONS` path materials; sampled materials trade smoother transitions for approximately one segment per `resolution` step.
 
 ## Screenshot Checklist for Time-Dynamic Scenes
 
@@ -424,7 +508,7 @@ Before capturing a screenshot of a time-dynamic scene, verify:
 
 ## Key Enums
 
-`ClockRange`: UNBOUNDED, CLAMPED, LOOP_STOP. `ClockStep`: TICK_DEPENDENT, SYSTEM_CLOCK_MULTIPLIER, SYSTEM_CLOCK. `ExtrapolationType`: NONE, HOLD, EXTRAPOLATE. `TimeStandard`: UTC, TAI. `ReferenceFrame`: FIXED, INERTIAL. `TrackingReferenceFrame` (v1.124+): AUTODETECT, ECI, ECEF, INERTIAL, ENU.
+`ClockRange`: UNBOUNDED, CLAMPED, LOOP_STOP. `ClockStep`: TICK_DEPENDENT, SYSTEM_CLOCK_MULTIPLIER, SYSTEM_CLOCK. `ExtrapolationType`: NONE, HOLD, EXTRAPOLATE. `PathMode` (v1.143+): WHOLE, PORTIONS. `TimeStandard`: UTC, TAI. `ReferenceFrame`: FIXED, INERTIAL. `TrackingReferenceFrame` (v1.124+): AUTODETECT, ECI, ECEF, INERTIAL, ENU.
 
 ## See Also
 

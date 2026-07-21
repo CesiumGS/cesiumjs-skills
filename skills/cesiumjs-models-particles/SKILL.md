@@ -1,11 +1,11 @@
 ---
 
 name: cesiumjs-models-particles
-description: "CesiumJS models, glTF, and particle effects - Model, EdgeDisplayMode, ModelAnimation, ModelNode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, controlling edge rendering, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata."
+description: "CesiumJS models, glTF, and particle effects - Model, KHR_meshopt_compression, CAD glTF extensions, EdgeDisplayMode, ModelAnimation, ModelNode, ParticleSystem, emitters, GPM extensions. Use when loading compressed or CAD-style glTF/GLB models, controlling edge rendering, playing model animations, positioning particles, or working with geospatial positioning metadata."
 ---
 # CesiumJS Models, glTF & Particle Effects
 
-Version baseline: CesiumJS v1.142.
+Version baseline: CesiumJS v1.143.
 
 ## Quick Reference
 
@@ -47,6 +47,13 @@ https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/Ce
 https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMan/Cesium_Man.glb
 https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMilkTruck/CesiumMilkTruck.glb
 ```
+
+CesiumJS 1.143 decodes `KHR_meshopt_compression` automatically, including the
+v1 attribute codec and `COLOR` filter. Do not import a decoder or private loader
+helper. When loading compressed glTF, CAD-style lines/points/edges, or
+constant-LOD textures, read [REFERENCE.md](REFERENCE.md) for the complete
+support and authoring matrix. The same loader behavior applies to glTF content
+inside 3D Tiles.
 
 ### Positioned Model with Heading
 

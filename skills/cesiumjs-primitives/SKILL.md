@@ -4,7 +4,7 @@ description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Ap
 ---
 # CesiumJS Primitives & Geometry
 
-> **Applies to:** CesiumJS v1.142+ (ES module imports, `??` instead of `defaultValue`)
+> **Applies to:** CesiumJS v1.143+ (ES module imports, `??` instead of `defaultValue`)
 
 ## Architecture
 
@@ -256,6 +256,10 @@ if (picked?.collection === points) {
 - `blendOption` is supported on all three buffer collections and enables alpha from `BufferPrimitiveMaterial#color`; `BufferPointCollection` also honors `outlineColor.alpha`.
 - Use `BlendOption.OPAQUE` only when every material is fully opaque; use `TRANSLUCENT` or mixed blending when alpha varies.
 
+In 1.143, `BufferPointCollection` no longer leaks `outlineColor` into the fill
+when `outlineWidth` is `0`. Set the width to `0` to disable outlines; remove
+transparent-outline workarounds that would otherwise complicate batching.
+
 ## GeoJsonPrimitive (Experimental, 1.142+)
 
 `GeoJsonPrimitive` loads GeoJSON directly into buffer primitive collections,
@@ -474,6 +478,12 @@ GPU-efficient viewport-aligned images -- far more performant than entities at sc
 > still target legacy WebGL 1 hardware.
 
 ### Basic Usage
+
+> **Compatibility fix (1.143):** billboard image loading no longer crashes when
+> an application replaces the global `Promise` implementation. Use the public
+> `image` property with a URL, loaded image, or canvas; use `setImage` for a
+> `Resource` or callback. Do not branch on native `Promise` identity or retain
+> compatibility shims for this bug.
 
 ```js
 import { BillboardCollection, Cartesian3, Color, NearFarScalar,

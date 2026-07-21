@@ -1,8 +1,8 @@
 # CesiumJS Skills Domain Mapping
 
-> **Version baseline:** CesiumJS v1.142 (2026-06-01)
-> **Last updated:** 2026-06-01
-> **Total public symbols assigned:** ~550
+> **Version baseline:** CesiumJS v1.143 (2026-07-01)
+> **Last updated:** 2026-07-15
+> **Total public symbols assigned:** ~551
 
 This document is the definitive source of truth for the CesiumJS skill decomposition. Every public class, function, and enum in CesiumJS is assigned to exactly one domain. Other domains may cross-reference a symbol, but only one domain **owns** it.
 
@@ -12,7 +12,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 |---|-----------|---------|----------------------------------|
 | 1 | `cesiumjs-viewer-setup` | ~70 | CesiumJS viewer setup - Viewer, CesiumWidget, widgets, Ion token, Scene configuration, SceneMode, factory helpers, geocoders, platform services. Use when initializing a CesiumJS application, configuring viewer widgets, setting Ion access tokens, creating default terrain or imagery, or bootstrapping a 3D globe. |
 | 2 | `cesiumjs-camera` | ~10 | CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, tracking entities, or converting between screen and world coordinates. |
-| 3 | `cesiumjs-entities` | ~60 | CesiumJS entities and data sources - Entity, EntityCollection, DataSource, GeoJsonDataSource, KmlDataSource, CzmlDataSource, Graphics types, Visualizers. Use when adding points, labels, models, polygons, or polylines to the map, loading GeoJSON/KML/CZML/GPX data, or working with the high-level Entity API. |
+| 3 | `cesiumjs-entities` | ~61 | CesiumJS entities and data sources - Entity, EntityCollection, DataSource, GeoJsonDataSource, KmlDataSource, CzmlDataSource, Graphics types, PathMode, Visualizers. Use when adding points, labels, models, polygons, polylines, or time-segmented paths to the map, loading GeoJSON/KML/CZML/GPX data, or working with the high-level Entity API. |
 | 4 | `cesiumjs-3d-tiles` | ~48 | CesiumJS 3D Tiles - Cesium3DTileset, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets or Mapbox Vector Tiles as runtime 3D Tiles, styling building/vector features, querying metadata properties, working with voxels or point clouds, or clipping spatial data. |
 | 5 | `cesiumjs-imagery` | ~30 | CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLayerCollection, WMS, WMTS, Bing, OpenStreetMap, ArcGIS, Mapbox, tile discard policies. Use when adding or swapping base map layers, configuring imagery providers, layering multiple map sources, or creating split-screen imagery comparisons. |
 | 6 | `cesiumjs-terrain-environment` | ~35 | CesiumJS terrain, globe, and environment - TerrainProvider, Globe, sampleTerrain, atmosphere, sky, fog, lighting, shadows, panoramas. Use when configuring terrain providers, querying terrain heights, customizing atmosphere or sky rendering, adding panoramas, or adjusting scene lighting and shadows. |
@@ -159,7 +159,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ---
 
-## Domain 3: cesiumjs-entities (~60 entries)
+## Domain 3: cesiumjs-entities (~61 entries)
 
 ### Entity Core
 - Entity
@@ -243,6 +243,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - LabelStyle
 - ColorBlendMode
 - ShadowMode
+- PathMode
 
 ### Ownership Rule
 > `*Graphics` classes belong here. `*Geometry` classes belong in cesiumjs-primitives. This is the Entity API vs Primitive API divide.
@@ -936,7 +937,28 @@ These rules prevent activation collisions (multiple skills triggering for the sa
 
 ---
 
-## Recently Added APIs (v1.120-v1.142)
+## July 2026 / CesiumJS 1.143 Coverage
+
+The [1.143 release](https://github.com/CesiumGS/cesium/releases/tag/1.143) has
+two feature additions and four runtime fixes:
+
+| 1.143 surface | Canonical skill coverage |
+|---|---|
+| `PathGraphics.materialMode` and `PathMode.PORTIONS` / `WHOLE` | `cesiumjs-entities` for the graphics API; `cesiumjs-time-properties` for interval, sampled, and CZML workflows |
+| Automatic `KHR_meshopt_compression` v1 attribute codec and `COLOR` filter decoding | `cesiumjs-models-particles/REFERENCE.md`; cross-reference from `cesiumjs-3d-tiles` |
+| Billboard loading with replaced global/custom `Promise` implementations | `cesiumjs-primitives` compatibility guidance |
+| Correct cartographic routing for internal `Scene.updateHeight` callbacks | `cesiumjs-terrain-environment` clamping guidance |
+| Invalid glTF sampler wrap-mode fallback to `TextureWrap.REPEAT` | `cesiumjs-models-particles/REFERENCE.md` authoring guidance |
+| Zero-width `BufferPointCollection` outlines no longer bleeding into fills | `cesiumjs-primitives` buffer guidance |
+
+The July CAD announcement extends the workflow surface beyond newly exported APIs:
+
+| July-announced surface | Support boundary |
+|---|---|
+| [CAD-style glTF lines, points, edges, and constant-LOD textures](https://cesium.com/blog/2026/07/09/introducing-cad-style-workflow-extensions-for-gltf/) | `cesiumjs-models-particles/REFERENCE.md` maps `EXT_mesh_primitive_restart`, `EXT_mesh_primitive_edge_visibility`, `BENTLEY_materials_line_style`, `BENTLEY_materials_point_style`, and `EXT_textureInfo_constant_lod` |
+| `BENTLEY_materials_planar_fill` | Explicitly marked upcoming and unsupported in 1.143; do not generate it as a working CesiumJS path |
+
+## Recently Added APIs (v1.120-v1.143)
 
 | Version | Addition | Domain |
 |---------|----------|--------|
@@ -959,6 +981,8 @@ These rules prevent activation collisions (multiple skills triggering for the sa
 | v1.142 | MVTDataProvider | 4 |
 | v1.142 | EdgeDisplayMode | 12 |
 | v1.142 | multiple KeyboardEventModifier keys in ScreenSpaceEventHandler | 11 |
+| v1.143 | PathMode, PathGraphics.materialMode | 3 (property workflows in 9) |
+| v1.143 | KHR_meshopt_compression decoding (loader behavior) | 12 (3D Tiles cross-reference in 4) |
 
 ---
 
