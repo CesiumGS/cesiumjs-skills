@@ -366,6 +366,7 @@ function buildHandoffDoc(state: ViewerState, focusPayload: Record<string, any>, 
 // ---------------------------------------------------------------------------
 class NotFoundError extends Error {}
 class ForbiddenError extends Error {}
+class PayloadTooLargeError extends Error {}
 
 function resolveRepoArtifact(ctx: EvalContext, pathText: string): string {
   const resolved = path.isAbsolute(pathText) ? path.resolve(pathText) : path.resolve(ctx.repoRoot, pathText);
@@ -412,6 +413,7 @@ function sendError(res: http.ServerResponse, exc: unknown): void {
   let status = 500;
   if (exc instanceof NotFoundError) status = 404;
   else if (exc instanceof ForbiddenError) status = 403;
+  else if (exc instanceof PayloadTooLargeError) status = 413;
   else if (exc instanceof SyntaxError) status = 400;
   const error = exc instanceof Error ? exc : new Error(String(exc));
   sendJson(res, { error: error.message, type: error.constructor.name }, status);
@@ -427,9 +429,16 @@ function sendFile(res: http.ServerResponse, filePath: string): void {
   res.end(data);
 }
 
+const MAX_BODY_BYTES = 1024 * 1024; // 1 MB — review decisions and focus payloads are small
+
 async function readBody(req: http.IncomingMessage): Promise<any> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
+  let total = 0;
+  for await (const chunk of req) {
+    total += (chunk as Buffer).length;
+    if (total > MAX_BODY_BYTES) throw new PayloadTooLargeError(`request body exceeds ${MAX_BODY_BYTES} bytes`);
+    chunks.push(chunk as Buffer);
+  }
   const raw = Buffer.concat(chunks).toString("utf-8");
   return raw ? JSON.parse(raw) : {};
 }
@@ -449,12 +458,48 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
   const stateDirOverride = options.stateDir ? path.resolve(options.stateDir) : null;
   let state = new ViewerState(ctx, path.resolve(options.scorecard), stateDirOverride ?? undefined);
 
+  const host = options.host ?? ctx.config.server.host;
+  const port = options.port ?? ctx.config.server.port;
+
+  // Browsers can reach loopback servers from any webpage (simple cross-origin
+  // POSTs need no CORS preflight, and DNS rebinding defeats the bind-address
+  // assumption), so validate Host on every request and Origin on mutations.
+  const allowedHostnames = new Set(["127.0.0.1", "localhost", "::1", "[::1]", host]);
+  const hostnameOf = (hostHeader: string): string => {
+    try {
+      return new URL(`http://${hostHeader}`).hostname;
+    } catch {
+      return "";
+    }
+  };
+  const rejectUntrusted = (req: http.IncomingMessage, method: string): void => {
+    const hostHeader = req.headers.host ?? "";
+    if (!allowedHostnames.has(hostnameOf(hostHeader))) {
+      throw new ForbiddenError(`untrusted Host header: '${hostHeader}'`);
+    }
+    if (method !== "GET" && method !== "HEAD") {
+      const origin = req.headers.origin;
+      if (origin) {
+        let originHost = "";
+        try {
+          originHost = new URL(origin).hostname;
+        } catch {
+          // fall through to rejection
+        }
+        if (!allowedHostnames.has(originHost)) {
+          throw new ForbiddenError(`cross-origin request rejected: '${origin}'`);
+        }
+      }
+    }
+  };
+
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
       const route = url.pathname;
       const method = req.method ?? "GET";
       console.error(`[eval-console] ${req.socket.remoteAddress} - ${method} ${route}`);
+      rejectUntrusted(req, method);
 
       if (method === "GET") {
         if (route === "/api/config") return sendJson(res, state.config());
@@ -557,8 +602,6 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
     }
   });
 
-  const host = options.host ?? ctx.config.server.host;
-  const port = options.port ?? ctx.config.server.port;
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, resolve);
