@@ -6,7 +6,7 @@ describe("loadContext", () => {
     const context = loadContext();
 
     expect(context.config.registry).toBe("config/harness-registry.json");
-    expect(context.registry.harnesses.map((harness) => harness.id)).toEqual(["codex", "opencode"]);
+    expect(context.registry.harnesses.map((harness) => harness.id)).toEqual(["codex", "opencode", "copilot"]);
     expect(context.resolveRole("codegen").harness.id).toBe("opencode");
     expect(context.resolveRole("codegen").variant).toBe("low");
   });

@@ -4,7 +4,7 @@ export type GateResult = "pass" | "fail";
 // The codegen harness a run was produced with (the "tested with" id). Mirrors the
 // shared harness registry, plus the first-class "unknown" bucket for legacy
 // fieldless runs. Widened so a new harness name still types.
-export type Harness = "opencode" | "codex" | "claude-code" | "unknown" | (string & {});
+export type Harness = "opencode" | "codex" | "copilot" | "claude-code" | "unknown" | (string & {});
 export type VisualStatus = "pass" | "fail" | "needs_review" | "not_reviewed" | "not_applicable";
 
 export interface RawCheck {

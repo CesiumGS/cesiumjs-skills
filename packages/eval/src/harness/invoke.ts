@@ -4,6 +4,7 @@
  */
 import "./opencodeDriver.js"; // side-effect: registers built-in drivers
 import "./codexDriver.js";
+import "./copilotDriver.js";
 import type { EvalContext, HarnessSpec, ResolvedAgent, RoleName } from "../config/types.js";
 import { AgentCall, driverFor } from "./driver.js";
 import type { CodexCall } from "./codexDriver.js";
