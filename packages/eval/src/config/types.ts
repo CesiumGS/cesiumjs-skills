@@ -28,6 +28,12 @@ export interface BrowserConfig {
   navigationTimeoutMs: number;
   screenshotTimeoutMs: number;
   ionPreflightAssetId: number;
+  /** Max time to wait for tile streams to settle before a screenshot. */
+  tileSettleTimeoutMs: number;
+  /** Poll interval while waiting for the scene to settle. */
+  tileSettlePollMs: number;
+  /** Consecutive settled polls required (tilesLoaded flickers as LOD refines). */
+  tileSettleQuietPolls: number;
 }
 
 export interface ServerConfig {

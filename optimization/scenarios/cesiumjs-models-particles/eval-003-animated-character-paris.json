@@ -65,6 +65,7 @@
     {
       "timing": "after_animation_start",
       "delay_ms": 9000,
+      "wait_for_tiles": false,
       "description": "Cesium Man character animated near the Eiffel Tower"
     }
   ],

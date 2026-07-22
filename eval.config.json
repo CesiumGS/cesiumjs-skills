@@ -22,7 +22,10 @@
     "viewport": { "width": 1280, "height": 720 },
     "navigationTimeoutMs": 60000,
     "screenshotTimeoutMs": 90000,
-    "ionPreflightAssetId": 1
+    "ionPreflightAssetId": 1,
+    "tileSettleTimeoutMs": 45000,
+    "tileSettlePollMs": 250,
+    "tileSettleQuietPolls": 3
   },
   "server": {
     "host": "127.0.0.1",

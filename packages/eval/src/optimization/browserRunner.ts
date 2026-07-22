@@ -294,8 +294,48 @@ export function addScreenshotQualityChecks(
       result: screenshot.passed ? "pass" : "fail",
       detail: screenshot.detail ?? "",
     });
+    const settle = screenshot.tile_settle;
+    // Only emit a tiles_loaded verdict when the scene gave a definite answer:
+    // opted-out shots have no check, and a missing viewer is already surfaced
+    // by scene-state and error checks.
+    if (settle && !settle.skipped && !settle.viewer_unavailable) {
+      checks.push({
+        check_id: `tiles_loaded:${screenshot.filename}`,
+        type: "tiles_loaded",
+        description: "Globe and 3D tileset tile streams finished loading before the screenshot was captured",
+        result: settle.settled ? "pass" : "fail",
+        detail: settle.settled
+          ? `scene settled after ${settle.waited_ms}ms`
+          : `tiles still loading when captured (waited ${settle.waited_ms}ms); image may not reflect the fully loaded scene`,
+      });
+    }
   }
   return withSummary(checksResult);
+}
+
+/**
+ * Fold the tile-settle outcome into a screenshot's quality report so a
+ * partial-load capture can never silently pass as a good screenshot.
+ */
+export function applySettleToQuality(quality: Record<string, any>, settle: SettleResult | null): Record<string, any> {
+  if (!settle) {
+    quality.tile_settle = { skipped: true };
+    return quality;
+  }
+  quality.tile_settle = {
+    settled: settle.settled,
+    timed_out: settle.timed_out,
+    viewer_unavailable: settle.viewer_unavailable,
+    waited_ms: settle.waited_ms,
+    polls: settle.polls,
+  };
+  if (settle.timed_out && !settle.viewer_unavailable) {
+    const warnings: string[] = (quality.warnings ??= []);
+    warnings.push(`tiles still loading when screenshot was captured (waited ${settle.waited_ms}ms for scene to settle)`);
+    quality.passed = false;
+    quality.detail = warnings.join("; ");
+  }
+  return quality;
 }
 
 // ---------------------------------------------------------------------------
@@ -381,6 +421,147 @@ const ORBIT_RESTORE_JS = `
   }
 }
 `;
+
+// ---------------------------------------------------------------------------
+// scene settle safeguard: never capture while tiles are still streaming
+// ---------------------------------------------------------------------------
+/**
+ * In-page probe of Cesium's tile-load state. Reports whether the globe
+ * (terrain + imagery for the current view) and every 3D tileset in the
+ * primitive tree have finished streaming. Defensive by design: scenes
+ * without a global `viewer` report `available: false` and scenes without
+ * a globe treat it as loaded. Also kicks `scene.requestRender()` so
+ * requestRenderMode scenes keep streaming while we wait.
+ */
+const SCENE_SETTLE_PROBE_JS = String.raw`
+() => {
+  if (typeof viewer === 'undefined' || !viewer || !viewer.scene) return { available: false };
+  const scene = viewer.scene;
+  const globe = scene.globe;
+  const globeLoaded = !globe || globe.show === false || globe.tilesLoaded === true;
+  let tilesetsTotal = 0;
+  let tilesetsLoaded = 0;
+  const visit = (collection) => {
+    if (!collection || typeof collection.length !== 'number' || typeof collection.get !== 'function') return;
+    for (let i = 0; i < collection.length; i++) {
+      let pr;
+      try { pr = collection.get(i); } catch (e) { continue; }
+      if (!pr) continue;
+      if (typeof pr.tilesLoaded === 'boolean') {
+        tilesetsTotal += 1;
+        if (pr.tilesLoaded) tilesetsLoaded += 1;
+      } else if (typeof pr.length === 'number' && typeof pr.get === 'function') {
+        visit(pr);
+      }
+    }
+  };
+  try { visit(scene.primitives); } catch (e) {}
+  try { scene.requestRender(); } catch (e) {}
+  return {
+    available: true,
+    globe_loaded: globeLoaded,
+    tilesets_total: tilesetsTotal,
+    tilesets_loaded: tilesetsLoaded,
+    settled: globeLoaded && tilesetsLoaded === tilesetsTotal,
+  };
+}
+`;
+
+/** Minimal Playwright Page surface used by waitForSceneSettled (unit-testable). */
+export interface SettlePage {
+  evaluate(script: string): Promise<unknown>;
+  waitForTimeout(ms: number): Promise<void>;
+}
+
+/**
+ * Invoke a string-form page function. Playwright only auto-invokes real
+ * Function objects; a string is evaluated as a plain expression, so a bare
+ * arrow-function source silently serializes to undefined without ever
+ * running. Wrapping it in an explicit call makes it actually execute.
+ */
+export function invokePageFunction(page: SettlePage, fnSource: string, arg?: unknown): Promise<unknown> {
+  return page.evaluate(`(${fnSource})(${arg === undefined ? "" : JSON.stringify(arg)})`);
+}
+
+export interface SettleOptions {
+  timeoutMs: number;
+  pollMs: number;
+  quietPolls: number;
+  /** Give up early if no global `viewer` appears within this budget. */
+  viewerGraceMs?: number;
+}
+
+export interface SettleResult {
+  settled: boolean;
+  timed_out: boolean;
+  viewer_unavailable: boolean;
+  waited_ms: number;
+  polls: number;
+  last_probe: Record<string, any> | null;
+}
+
+/**
+ * Poll the page until Cesium reports every tile stream finished for
+ * `quietPolls` consecutive polls (tilesLoaded flickers as LOD refines),
+ * or until `timeoutMs`. The caller decides what a timeout means; this
+ * helper only reports honestly what the scene said.
+ */
+export async function waitForSceneSettled(page: SettlePage, options: SettleOptions): Promise<SettleResult> {
+  const started = Date.now();
+  const viewerGraceMs = options.viewerGraceMs ?? 5_000;
+  let polls = 0;
+  let consecutive = 0;
+  let lastProbe: Record<string, any> | null = null;
+  let everAvailable = false;
+
+  for (;;) {
+    let probe: Record<string, any>;
+    try {
+      probe = ((await invokePageFunction(page, SCENE_SETTLE_PROBE_JS)) ?? { available: false }) as Record<string, any>;
+    } catch {
+      probe = { available: false };
+    }
+    polls += 1;
+    lastProbe = probe;
+    const elapsed = Date.now() - started;
+
+    if (probe.available) {
+      everAvailable = true;
+      consecutive = probe.settled ? consecutive + 1 : 0;
+      if (consecutive >= options.quietPolls) {
+        return { settled: true, timed_out: false, viewer_unavailable: false, waited_ms: elapsed, polls, last_probe: probe };
+      }
+    } else {
+      consecutive = 0;
+      if (!everAvailable && elapsed >= viewerGraceMs) {
+        return { settled: false, timed_out: false, viewer_unavailable: true, waited_ms: elapsed, polls, last_probe: probe };
+      }
+    }
+
+    if (elapsed >= options.timeoutMs) {
+      return {
+        settled: false,
+        timed_out: true,
+        viewer_unavailable: !everAvailable,
+        waited_ms: elapsed,
+        polls,
+        last_probe: probe,
+      };
+    }
+    await page.waitForTimeout(options.pollMs);
+  }
+}
+
+/**
+ * Whether a screenshot spec should wait for tiles to settle. Defaults to
+ * true; scenarios capturing a deliberate mid-animation moment opt out with
+ * `wait_for_tiles: false` on the shot (or scenario-wide).
+ */
+export function shouldWaitForTiles(spec: Record<string, any>, scenario: Record<string, any>): boolean {
+  if (spec.wait_for_tiles !== undefined) return spec.wait_for_tiles !== false;
+  if (scenario.wait_for_tiles !== undefined) return scenario.wait_for_tiles !== false;
+  return true;
+}
 
 export function screenshotSpecsFor(scenario: Record<string, any>): Array<Record<string, any>> {
   const specs = scenario.screenshots ?? [{ delay_ms: 3000, timing: "default", description: "default screenshot" }];
@@ -525,17 +706,35 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
       const specs = screenshotSpecsFor(run.scenario);
       const screenshotsTaken: Array<Record<string, any>> = [];
       const screenshotQuality: Array<Record<string, any>> = [];
+      const settleOptions: SettleOptions = {
+        timeoutMs: browserConfig.tileSettleTimeoutMs,
+        pollMs: browserConfig.tileSettlePollMs,
+        quietPolls: browserConfig.tileSettleQuietPolls,
+      };
 
       for (let i = 0; i < specs.length; i++) {
         const spec = specs[i];
         const delayMs = Number(spec.delay_ms ?? 1000);
         await page.waitForTimeout(i === 0 ? delayMs : delayMs - Number(specs[i - 1].delay_ms ?? 0));
         if (spec.cardinal_panorama) {
-          await page.evaluate(ORBIT_PANORAMA_JS, {
+          await invokePageFunction(page, ORBIT_PANORAMA_JS, {
             headingDegrees: Number(spec.heading_degrees ?? 0),
             index: Number(spec.index ?? i),
           });
           await page.waitForTimeout(250);
+        }
+        // Safeguard against partial-load captures: the fixed delay is only a
+        // floor. Before the shutter fires, wait until the globe and every 3D
+        // tileset report their tile streams finished (camera moves — panorama
+        // included — restart streaming). Timeouts are recorded, never hidden.
+        let settle: SettleResult | null = null;
+        if (shouldWaitForTiles(spec, run.scenario)) {
+          settle = await waitForSceneSettled(page, settleOptions);
+          if (settle.timed_out) {
+            console.warn(
+              `[render] ${run.scenario.id} shot ${i}: tiles still loading after ${settle.waited_ms}ms — capturing anyway and flagging`,
+            );
+          }
         }
         const filename = specs.length > 1 ? `screenshot-${i}.png` : "screenshot.png";
         const screenshotPath = path.join(run.runDir, filename);
@@ -546,13 +745,24 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
           delay_ms: delayMs,
           description: spec.description ?? "",
           filename,
+          tile_settle: settle
+            ? {
+                settled: settle.settled,
+                timed_out: settle.timed_out,
+                viewer_unavailable: settle.viewer_unavailable,
+                waited_ms: settle.waited_ms,
+                last_probe: settle.last_probe,
+              }
+            : { skipped: true },
         });
-        screenshotQuality.push(analyzeScreenshot(screenshotPath, browserConfig.viewport.width, browserConfig.viewport.height));
+        const quality = analyzeScreenshot(screenshotPath, browserConfig.viewport.width, browserConfig.viewport.height);
+        applySettleToQuality(quality, settle);
+        screenshotQuality.push(quality);
       }
 
       if (specs.some((spec) => spec.cardinal_panorama)) {
         try {
-          await page.evaluate(ORBIT_RESTORE_JS);
+          await invokePageFunction(page, ORBIT_RESTORE_JS);
           await page.waitForTimeout(100);
         } catch {
           // camera restore is best-effort

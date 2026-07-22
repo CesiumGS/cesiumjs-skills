@@ -71,6 +71,7 @@
     {
       "timing": "after_midflight",
       "delay_ms": 6000,
+      "wait_for_tiles": false,
       "description": "Animated flight at mid-route over central US"
     }
   ],

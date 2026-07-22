@@ -71,6 +71,7 @@
     {
       "timing": "after_midpoint",
       "delay_ms": 6000,
+      "wait_for_tiles": false,
       "description": "Sydney Harbour mid-flythrough"
     }
   ],
