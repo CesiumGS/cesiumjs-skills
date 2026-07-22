@@ -213,7 +213,7 @@ function ProvenanceCard() {
     model
       ? `# codegen model: ${model}${scorecard.modelVariant ? ` @ ${scorecard.modelVariant}` : ""}`
       : `# codegen model unrecorded by this run`,
-    `python3 evaluation/scripts/run-scorecard.py \\`,
+    `node packages/eval/bin/cesium-eval.js score \\`,
     `  ${harness && harness !== "unknown" ? `--harness ${harness} ` : ""}${model ? `--model ${model} ` : ""}${scorecard.modelVariant ? `--model-variant ${scorecard.modelVariant} ` : ""}--threshold ${scorecard.threshold}`
   ];
   const cmd = lines.join("\n");
@@ -429,7 +429,7 @@ export function EvaluateOverview() {
 }
 
 export function PromotePanel() {
-  const { skills, pushToast } = useStore();
+  const { skills } = useStore();
 
   const promotable = skills.filter((s) => s.latest?.decision === "KEEP");
 
@@ -438,22 +438,20 @@ export function PromotePanel() {
       <div className="section-title" style={{ marginTop: 0 }}>
         Promote
         <span className="section-sub">
-          The final lifecycle step: replace a live SKILL.md with the candidate that won its optimization round. Nothing here
-          runs automatically — you run the guarded command yourself, and the current version is archived first.
+          The final lifecycle step: confirm the candidates applied by the optimization loop. On KEEP, the loop archives the
+          previous SKILL.md and promotes the winning candidate automatically.
         </span>
       </div>
 
       {promotable.length === 0 ? (
         <div className="empty-note">
-          Nothing is ready to promote. Candidates appear here after the optimization loop (step 3) decides KEEP and you
-          verify the diff in Decide (step 4).
+          No promoted KEEP candidates yet. They appear here after the optimization loop accepts a candidate.
         </div>
       ) : (
         <div className="skill-grid">
           {promotable.map((s) => {
             const it = s.latest!;
             const c = it.counts;
-            const cmd = `python3 optimization/scripts/run-loop.py ${s.skill} --promote`;
             return (
               <div key={s.skill} className="skill-tile" style={{ cursor: "default" }}>
                 <div className="st-top">
@@ -461,7 +459,7 @@ export function PromotePanel() {
                   <LoopBadge decision="KEEP" rule={it.rule_fired} />
                 </div>
                 <div style={{ marginTop: "var(--sp-2)", fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
-                  Replaces <span className="mono">skills/{s.skill}/SKILL.md</span> with the{" "}
+                  Updated <span className="mono">skills/{s.skill}/SKILL.md</span> from the{" "}
                   <span className="mono">{it.iteration}</span> candidate
                   {it.finished_utc ? ` (won ${relativeTime(it.finished_utc)})` : ""}.
                 </div>
@@ -474,41 +472,8 @@ export function PromotePanel() {
                     <span>· SKILL.md {s.skill_md.lines} lines</span>
                   )}
                 </div>
-                <div
-                  style={{
-                    marginTop: "var(--sp-3)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--sp-2)",
-                    flexWrap: "wrap"
-                  }}
-                >
-                  <button
-                    onClick={() => pushToast(`Guarded: run  ${cmd}`, "info")}
-                    style={{
-                      background: "none",
-                      border: "1px solid var(--hairline-strong)",
-                      borderRadius: "var(--r-pill)",
-                      color: "var(--text)",
-                      padding: "var(--sp-1) var(--sp-3)",
-                      cursor: "pointer",
-                      fontSize: "var(--fs-100)"
-                    }}
-                  >
-                    <span aria-hidden>⚑ </span>Promote candidate → SKILL.md
-                  </button>
-                  <Pill tone="machine">guarded</Pill>
-                </div>
-                <div
-                  className="mono"
-                  style={{
-                    marginTop: "var(--sp-2)",
-                    fontSize: "var(--fs-50)",
-                    color: "var(--text-3)",
-                    userSelect: "all"
-                  }}
-                >
-                  {cmd}
+                <div style={{ marginTop: "var(--sp-3)" }}>
+                  <Pill tone="machine">promoted by loop</Pill>
                 </div>
               </div>
             );

@@ -8,7 +8,6 @@ import { fromRepoRoot, repoRelative, walkFiles } from "../lib/paths.js";
 import { gitLsFiles } from "../lib/proc.js";
 
 const SCANNED_ROOTS = [".architecture", "docs", "wiki", "optimization", "evaluation", "README.md", ".github/workflows"];
-const SKIP_FILES = new Set(["optimization/scripts/check-public-artifacts.py"]);
 const SKIP_PREFIXES = ["optimization/tests/", "packages/"];
 const SKIP_SUFFIXES = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
 
@@ -35,7 +34,6 @@ function trackedFiles(repoRoot: string): string[] {
     .filter(
       (relPath) =>
         isScannedRelPath(relPath) &&
-        !SKIP_FILES.has(relPath) &&
         !SKIP_PREFIXES.some((prefix) => relPath.startsWith(prefix)) &&
         fs.existsSync(path.join(repoRoot, relPath)) &&
         fs.statSync(path.join(repoRoot, relPath)).isFile(),

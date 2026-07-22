@@ -49,14 +49,14 @@ but older runs only stamped the harness (or nothing). Rather than guess, the
 console *recovers* provenance: each scored case points at the generated source it
 graded (`evidence_summary.actual_source_path`), and that source sits beside a
 `*.meta.json` recording the exact `harness` / `model_id` / `model_variant` it was
-produced with. `resolve_codegen_provenance` (in `evaluation/framework/scorecard.py`)
+produced with. `resolveCodegenProvenance` (in `packages/eval/src/evaluation/scorecard.ts`)
 walks a scorecard back to those metas and takes the majority — so the harness and
 model **always** resolve to a real value when the generated code is on disk, and
 stay an honest "not recorded" only when it genuinely cannot be recovered.
 
 This runs in three places, so nothing slips through:
 
-- **Forward** — `run-baseline-audit.py` stamps the recovered model at write time.
+- **Forward** — `cesium-eval audit` stamps the recovered model at write time.
 - **At read time** — the server fills any missing harness/model from the metas
   when it lists runs (a zero-cost lookup once a file is stamped).
 - **Backfill** — `node packages/eval/bin/cesium-eval.js backfill`
@@ -99,9 +99,9 @@ The Live station can start a baseline audit from the browser. `POST /api/live/la
 validates against the skills on disk (`GET /api/live/skills`), then spawns
 
 ```bash
-node packages/eval/bin/cesium-eval.js audit --all-skills \
-  --workspace <repo>/workspaces/cesium-workspace \
-  --output-dir evaluation/artifacts/audits/live-<UTC> --journal
+node packages/eval/bin/cesium-eval.js audit --skills all \
+  --output-dir evaluation/artifacts/audits/live-<UTC> \
+  --journal evaluation/artifacts/audits/live-<UTC>/progress.jsonl
 ```
 
 detached (`launch.json` + `launch.log` beside the artifacts record provenance and
@@ -127,7 +127,7 @@ required, and the terminal event tells you whether to collect the scorecard.
 ## The optimization bridge
 
 `f` (flag) in Review appends a case to the focus set. **Focus** in the rail hands it
-off, and the server writes `focus.json` via the real `build_focus`, restricted to the
+off, and the server writes `focus.json` via `buildFocus`, restricted to the
 human-confirmed flags, so review genuinely steers the loop:
 
 ```bash
@@ -146,5 +146,5 @@ node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --s
 | File | Purpose |
 |---|---|
 | `review-decisions.json` | Audit trail of grades + human overrides. |
-| `focus.json` | Confirmed-flag focus set for `run-all-evals.py --from-focus`. |
+| `focus.json` | Confirmed-flag focus set for `cesium-eval optimize all --from-focus`. |
 | `optimization-handoff.json` | Human-readable hand-off summary. |

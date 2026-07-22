@@ -454,8 +454,8 @@ function LiveEmptyState() {
         case journals to disk and streams here within a few seconds.
       </div>
       <pre className="le-cmd mono">
-        python3 optimization/scripts/run-all-evals.py --skills cesiumjs-camera{"\n"}
-        python3 evaluation/scripts/run-baseline-audit.py --skills all --journal &lt;dir&gt;/progress.jsonl
+        node packages/eval/bin/cesium-eval.js optimize all --skills cesiumjs-camera{"\n"}
+        node packages/eval/bin/cesium-eval.js audit --skills all --journal &lt;dir&gt;/progress.jsonl
       </pre>
     </div>
   );

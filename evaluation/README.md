@@ -15,9 +15,8 @@ The evaluation layer must not propose candidate skills, mutate `skills/`, write
 current-best metadata, or make promotion decisions. Those actions belong under
 `optimization/`.
 
-`node packages/eval/bin/cesium-eval.js validate --suite evaluation` enforces the code boundary:
-Python under `evaluation/` may not import `optimization/` or directly invoke
-optimizer scripts. Evaluation fixtures may still preserve historical
+`node packages/eval/bin/cesium-eval.js validate --suite evaluation` enforces the
+evaluation data contracts. Evaluation fixtures may still preserve historical
 optimization artifact paths as provenance.
 
 ## Feedback Incorporated
@@ -55,9 +54,9 @@ units along the intended axis.
 - `cases/` - public, deterministic evaluation cases.
 - `fixtures/` - tracked synthetic evidence bundles for case/check tests.
 - `schemas/` - JSON schemas for cases and evidence contracts.
-- `framework/` - pure evaluation code with no optimizer side effects.
-- `tests/` - unit tests for deterministic checks and case fixtures.
-- `scripts/run-scorecard.py` - CI-safe scorecard command for JSON/Markdown output.
+- `packages/eval/src/evaluation/` - pure evaluation code with no optimizer side effects.
+- `packages/eval/tests/` - unit tests for deterministic checks and case fixtures.
+- `cesium-eval score` - CI-safe scorecard command for JSON/Markdown output.
 - `artifacts/` - ignored local scorecards and captured evidence.
 
 ## Deterministic Contracts
@@ -187,10 +186,10 @@ and scenario requirements remain supporting evidence for auditability and
 failure diagnosis.
 The qualitative score can only *downgrade* a deterministically-passing baseline
 (a blocking failure flag → fail/needs_review); it can never upgrade a deterministic
-failure. The deterministic lane stays Python-owned and binding.
+failure. The deterministic lane stays TypeScript-owned and binding.
 
-**Single source of truth:** the judge lives in `evaluation/framework/judge/`
-(`static_judge.judge_render` + the `static-visual-v1` prompts). CI and the local
+The judge lives in `packages/eval/src/evaluation/staticJudge.ts`
+(`judgeRender` + the `static-visual-v1` prompts). CI and the local
 fan-out both call the same module via one runner:
 
 ```bash

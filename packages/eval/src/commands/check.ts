@@ -1,6 +1,7 @@
 /**
  * `cesium-eval check canonical-surface` — ensure active eval work stays in
- * optimization/ or evaluation/ (no legacy top-level eval dirs or stale refs).
+ * packages/eval, optimization/, or evaluation/ (no legacy top-level eval dirs
+ * or stale refs).
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -14,14 +15,14 @@ const ALLOWED_REFERENCE_FILES = new Set([
 ]);
 
 const FORBIDDEN_TOP_LEVEL_EVAL_DIRS: Record<string, string> = {
-  adapters: "optimization/framework/",
-  checks: "optimization/framework/",
-  decision: "optimization/framework/",
-  judges: "optimization/framework/",
-  proposer: "optimization/framework/",
-  scripts: "optimization/scripts/ or evaluation/scripts/",
+  adapters: "packages/eval/src/harness/",
+  checks: "packages/eval/src/evaluation/ or packages/eval/src/optimization/",
+  decision: "packages/eval/src/optimization/",
+  judges: "packages/eval/src/evaluation/ or packages/eval/src/optimization/",
+  proposer: "packages/eval/src/optimization/",
+  scripts: "packages/eval/src/commands/",
   tasks: "optimization/docs/",
-  tests: "optimization/tests/ or evaluation/tests/",
+  tests: "packages/eval/tests/",
 };
 
 const FORBIDDEN_TOP_LEVEL_EVAL_FILES: Record<string, string> = {
@@ -78,6 +79,6 @@ export async function checkCanonicalSurfaceCommand(repoRoot: string): Promise<nu
     for (const failure of failures) console.error(`  ${failure}`);
     return 1;
   }
-  console.log("[check canonical-surface] OK: eval work is scoped to optimization/ and evaluation/");
+  console.log("[check canonical-surface] OK: eval work is scoped to packages/eval, optimization/, and evaluation/");
   return 0;
 }
