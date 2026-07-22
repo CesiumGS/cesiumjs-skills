@@ -9,6 +9,7 @@ import { DecideInspector, DecideStage } from "./components/Decide";
 import { EvaluateOverview, PromotePanel } from "./components/Overview";
 import { CompareStation } from "./components/Compare";
 import { DashboardStation } from "./components/Dashboard";
+import { LiveStation } from "./components/Live";
 import { Overlays, Toasts } from "./components/Overlays";
 
 function Body() {
@@ -19,6 +20,14 @@ function Body() {
       <div className="body body--wide">
         <Rail />
         <DashboardStation />
+      </div>
+    );
+  }
+  if (station === "live") {
+    return (
+      <div className="body body--wide">
+        <Rail />
+        <LiveStation />
       </div>
     );
   }

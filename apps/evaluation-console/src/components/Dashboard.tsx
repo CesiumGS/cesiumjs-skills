@@ -2,7 +2,9 @@ import { useMemo } from "react";
 import { ArrowRight, Flag } from "lucide-react";
 import { useStore } from "../store";
 import { modelShort, pluralize, relativeTime } from "../lib/format";
-import { Combos, Kpi, RunsByHarness, RunTrend, SkillTrend } from "./Compare";
+import { HarnessChip, Kpi, ModelLeaderboard, RunsByHarness, RunTrend, SkillTrend } from "./Compare";
+import { LiveNowBanner } from "./Live";
+import type { RunSummary } from "../types";
 
 /* ============================================================================
    DASHBOARD — Altitude 0. The landing screen for the whole console.
@@ -23,6 +25,91 @@ function freshness(iso: string | null | undefined): { label: string; stale: bool
   if (!iso) return { label: "no runs on disk", stale: true };
   const days = (Date.now() - Date.parse(iso)) / 86_400_000;
   return { label: relativeTime(iso), stale: days > 7 };
+}
+
+/** Chip text for a run's harness, honest about gaps. The real codegen harness
+ *  always wins (recovered from metas when not stamped); only genuinely
+ *  harness-less runs fall back to their evidence source (fixtures / mixed). */
+function runSourceChip(r: RunSummary): string {
+  if (r.harness && r.harness !== "unknown") return r.harness;
+  if (r.source === "fixtures") return "fixtures";
+  if (r.source === "mixed") return "mixed";
+  return "unknown";
+}
+
+/* ---------------------------------------------------------------------------
+   RECENT RUNS: every recent run at a glance — verdict, score, evidence
+   source, judge coverage, size, age. Click a row to focus that run.
+   --------------------------------------------------------------------------- */
+function RecentRuns() {
+  const { runs, scorecard, switchRun, openOverlay } = useStore();
+  const recent = useMemo(
+    () => [...runs].sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc)).slice(0, 6),
+    [runs]
+  );
+  if (recent.length === 0) return null;
+  return (
+    <div className="dash-card recent-runs">
+      <div className="section-title">
+        Recent Runs
+        <span className="section-sub">
+          Newest first. The verdict combines automated checks and the visual review; the % is the automated-check score. Click a row to focus that run.
+        </span>
+        <span className="spacer" />
+        <button className="pill link-pill" onClick={() => openOverlay("harness")} title="Run Browser (h)">
+          Browse all {runs.length} <ArrowRight size={11} aria-hidden />
+        </button>
+      </div>
+      <ol className="rr-list">
+        {recent.map((r) => {
+          const focused = scorecard?.runId === r.run_id;
+          const pass = r.overall_result === "pass";
+          const scorePct = typeof r.overall_score === "number" ? `${Math.round(r.overall_score * 100)}%` : "—";
+          return (
+            <li key={r.run_id}>
+              <button
+                className={`rr-row${focused ? " focused" : ""}`}
+                onClick={() => void switchRun(r.run_id)}
+                title={`${r.run_id}\nClick to focus this run in every station.`}
+              >
+                <span className={`rr-verdict ${pass ? "pass" : "fail"}`}>{pass ? "PASS" : "FAIL"}</span>
+                <span className="rr-score mono">{scorePct}</span>
+                <span className="rr-bar" aria-hidden>
+                  <span
+                    className={`rr-fill ${pass ? "pass" : "fail"}`}
+                    style={{ width: `${Math.round((r.overall_score ?? 0) * 100)}%` }}
+                  />
+                </span>
+                <HarnessChip harness={runSourceChip(r)} />
+                {r.model ? (
+                  <span className="rr-model mono" title={`Codegen model recorded: ${r.model}`}>
+                    {modelShort(r.model)}
+                  </span>
+                ) : (
+                  <span className="rr-model unrecorded" title="Codegen model not recorded by this run.">
+                    model?
+                  </span>
+                )}
+                <span
+                  className={`rr-judge${r.visual_review_supplied ? "" : " off"}`}
+                  title={
+                    r.visual_review_supplied
+                      ? "Automated checks plus a judge panel that reviewed the rendered screenshots."
+                      : "Automated checks only — no judge reviewed the rendered screenshots."
+                  }
+                >
+                  {r.visual_review_supplied ? "checks + visual" : "checks only"}
+                </span>
+                <span className="rr-cases mono">{pluralize(r.total_cases, "case")}</span>
+                <span className="rr-when">{relativeTime(r.timestamp_utc)}</span>
+                {focused && <span className="rr-focus-tag">focused</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 export function DashboardStation() {
@@ -68,9 +155,15 @@ export function DashboardStation() {
         </span>
       </div>
 
-      {/* 1 — STATUS LINE: loaded verdict + the primary action. */}
+      {/* 0 — HAPPENING NOW: present only while an eval run is executing.
+          The dashboard stays results-oriented; the run's full anatomy
+          (phases, trials, journal) lives in the Live station this links to. */}
+      <LiveNowBanner />
+
+      {/* 1 — STATUS LINE: the focused run's verdict + the primary action. */}
       <div className="hero-card dashboard-hero">
         <div>
+          <div className="hero-eyebrow">Focused run</div>
           <div className="ov-big" style={{ color: pass ? "var(--pass)" : "var(--fail)" }}>
             {scorecard ? (pass ? "PASS" : "FAIL") : "—"}
           </div>
@@ -87,11 +180,14 @@ export function DashboardStation() {
                 eyes → Evaluate (1)
               </>
             ) : (
-              <>Open the loaded run → Evaluate (1)</>
+              <>Open the focused run → Evaluate (1)</>
             )}
           </button>
         </div>
       </div>
+
+      {/* 2 — ALL RECENT RUNS: the at-a-glance table the dashboard exists for. */}
+      <RecentRuns />
 
       {/* 2 — KPI ROW: runs, harnesses, models, one line each. */}
       <div className="kpi-row">
@@ -125,25 +221,14 @@ export function DashboardStation() {
       {/* 3 — THE ANCHOR CHART: score across runs, over time. */}
       <RunTrend />
 
-      {/* 4 — THE TWO UNITS OF ANALYSIS, side by side. */}
+      {/* 4 — THE TWO UNITS OF ANALYSIS, side by side. Each card carries its
+          own title and link into Models & Harnesses (key 6). */}
       <div className="dashboard-columns">
         <div className="dashboard-col">
-          <div className="dashboard-col-head">
-            <span>Harness Performance</span>
-            <button className="pill link-pill" onClick={() => setStation("compare")} title="Open Models & Harnesses">
-              Details <ArrowRight size={11} aria-hidden />
-            </button>
-          </div>
           <RunsByHarness />
         </div>
         <div className="dashboard-col">
-          <div className="dashboard-col-head">
-            <span>Model Performance</span>
-            <button className="pill link-pill" onClick={() => setStation("compare")} title="Open Models & Harnesses">
-              Details <ArrowRight size={11} aria-hidden />
-            </button>
-          </div>
-          <Combos />
+          <ModelLeaderboard />
         </div>
       </div>
 

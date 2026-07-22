@@ -35,7 +35,9 @@ DIST_ROOT = VIEWER_ROOT / "dist"
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(VIEWER_ROOT))
 from optimization.framework.scorecard_focus import build_focus  # noqa: E402
+from evaluation.framework.scorecard import resolve_codegen_provenance  # noqa: E402
 import insights_data as insd  # noqa: E402
+import live_data as livd  # noqa: E402
 import optimization_data as optd  # noqa: E402
 
 RUN_DIRS = [
@@ -60,6 +62,7 @@ class ViewerContext:
         self.scorecard = self._load_scorecard(self.scorecard_path)
         self.run_id = str(self.scorecard.get("run_id") or self.scorecard_path.stem)
         self.harness = resolve_harness(self.scorecard, self.scorecard_path)
+        self.source = resolve_source(self.scorecard)
         artifacts = self.scorecard.get("artifacts") or {}
         judge = artifacts.get("harness_judge") if isinstance(artifacts, dict) else None
         self.harness_judge = str(judge).strip() if isinstance(judge, str) and judge.strip() else ""
@@ -93,6 +96,7 @@ class ViewerContext:
             "focus_path": str(self.focus_path),
             "run_id": self.run_id,
             "harness": self.harness,
+            "source": self.source,
             "harness_judge": self.harness_judge,
         }
 
@@ -298,15 +302,16 @@ def build_handoff_doc(context: ViewerContext, focus_payload: dict[str, Any], sel
     }
 
 
-def resolve_harness(scorecard: dict[str, Any], scorecard_path: Path) -> str:
+def resolve_harness(scorecard: dict[str, Any], scorecard_path: Path, provenance: dict[str, str] | None = None) -> str:
     """Resolve the codegen harness a scorecard was produced with.
 
     The server is the SOLE inference site (the client never sees a path). Order:
     (1) the additive top-level ``harness`` field when a new run stamped it; else
-    (2) a token match on the audit DIRECTORY name, the only legacy signal; else
-    (3) the first-class ``unknown`` bucket. The run_id (scorecard-<utc>-<sha>) does
-    NOT encode the harness, so it is never parsed, and token-less dirs are never
-    silently defaulted to the pipeline default.
+    (2) a token match on the audit DIRECTORY name, a legacy signal; else
+    (3) the harness recovered from the evaluated code's ``*.meta.json`` (the
+    authoritative codegen record); else (4) the first-class ``unknown`` bucket.
+    The run_id (scorecard-<utc>-<sha>) does NOT encode the harness, so it is never
+    parsed, and nothing is silently defaulted to the pipeline default.
     """
     field = scorecard.get("harness")
     if isinstance(field, str) and field.strip():
@@ -318,7 +323,39 @@ def resolve_harness(scorecard: dict[str, Any], scorecard_path: Path) -> str:
         return "opencode"
     if "claude" in name:
         return "claude-code"
+    if provenance is None:
+        provenance = resolve_codegen_provenance(scorecard, REPO_ROOT)
+    recovered = provenance.get("harness")
+    if isinstance(recovered, str) and recovered.strip():
+        return recovered.strip()
     return "unknown"
+
+
+def resolve_source(scorecard: dict[str, Any]) -> str:
+    """Classify the run's evidence source: agent | fixtures | mixed.
+
+    New scorecards stamp ``artifacts.evidence_source`` at build time; for the
+    historical ones the same rule is derived here from the case evidence paths
+    (data already inside the document — derived, never guessed). Synthetic =
+    authored fixtures under evaluation/fixtures/; observed baseline captures
+    (``*-observed.evidence.json``) hold real rendered evidence and stay agent.
+    """
+    artifacts = scorecard.get("artifacts")
+    if isinstance(artifacts, dict):
+        stamped = artifacts.get("evidence_source")
+        if isinstance(stamped, str) and stamped in {"agent", "fixtures", "mixed"}:
+            return stamped
+    flags = []
+    for case in scorecard.get("cases", []):
+        if not isinstance(case, dict):
+            continue
+        path = str(case.get("evidence_path") or "").replace("\\", "/")
+        flags.append("evaluation/fixtures/" in path and not path.endswith("-observed.evidence.json"))
+    if flags and all(flags):
+        return "fixtures"
+    if any(flags):
+        return "mixed"
+    return "agent"
 
 
 def run_summary(path: Path) -> dict[str, Any] | None:
@@ -335,17 +372,32 @@ def run_summary(path: Path) -> dict[str, Any] | None:
     det_fail = sum(1 for c in cases if c.get("result") == "fail")
     score = sc.get("overall_score")
     threshold = sc.get("threshold")
+    # Provenance stamps are additive/optional. When a run predates stamping we
+    # recover (harness, model, effort) from the evaluated code's metas so the
+    # console ALWAYS shows a real harness/model — never a guess, never a blank.
+    # After backfill every file carries its own stamps, so this costs no I/O on
+    # the hot path (only genuinely unstamped documents pay the lookup).
+    model = artifacts.get("model") if isinstance(artifacts.get("model"), str) else None
+    model_variant = artifacts.get("model_variant") if isinstance(artifacts.get("model_variant"), str) else None
+    harness_field = sc.get("harness")
+    harness_stamped = isinstance(harness_field, str) and bool(harness_field.strip())
+    provenance = (
+        resolve_codegen_provenance(sc, REPO_ROOT)
+        if (model is None or not harness_stamped)
+        else {}
+    )
     return {
         "run_id": str(sc.get("run_id") or path.stem),
         "scorecard_path": str(path.resolve()),
         "timestamp_utc": str(sc.get("timestamp_utc") or ""),
         "overall_result": str(sc.get("overall_result") or ""),
         "git_commit": str(sc.get("git_commit") or ""),
-        "harness": resolve_harness(sc, path),
-        # Provenance stamps are additive/optional; null means "not recorded",
-        # which the client renders distinctly from any real value (P4).
-        "model": artifacts.get("model") if isinstance(artifacts.get("model"), str) else None,
-        "model_variant": artifacts.get("model_variant") if isinstance(artifacts.get("model_variant"), str) else None,
+        "harness": resolve_harness(sc, path, provenance),
+        "source": resolve_source(sc),
+        # Null means "not recorded" even after recovery — the client renders that
+        # distinctly from any real value (P4).
+        "model": model or provenance.get("model"),
+        "model_variant": model_variant or provenance.get("model_variant"),
         "harness_judge": artifacts.get("harness_judge") if isinstance(artifacts.get("harness_judge"), str) else None,
         "overall_score": float(score) if isinstance(score, (int, float)) else None,
         "threshold": float(threshold) if isinstance(threshold, (int, float)) else None,
@@ -454,7 +506,7 @@ class Handler(BaseHTTPRequestHandler):
             elif route == "/api/registry":
                 self.send_json(insd.registry())
             elif route == "/api/insights":
-                self.send_json(insd.insights())
+                self.send_json(insd.insights(list_runs()))
             elif route == "/api/artifact":
                 self.send_artifact(query.get("path", [""])[0])
             elif route == "/api/optimization/skills":
@@ -470,6 +522,10 @@ class Handler(BaseHTTPRequestHandler):
                 )
             elif route == "/api/optimization/active":
                 self.send_json(optd.active_runs())
+            elif route == "/api/live":
+                self.send_json(livd.live_status())
+            elif route == "/api/live/skills":
+                self.send_json({"skills": livd.available_skills()})
             else:
                 self.send_static(route)
         except Exception as exc:  # pragma: no cover
@@ -495,6 +551,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.handle_handoff(payload)
             elif route == "/api/select-run":
                 self.handle_select_run(payload)
+            elif route == "/api/live/launch":
+                self.send_json(livd.launch_run(payload))
             else:
                 self.send_response(HTTPStatus.NOT_FOUND)
                 self.end_headers()

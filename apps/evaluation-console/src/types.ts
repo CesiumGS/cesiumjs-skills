@@ -209,6 +209,7 @@ export interface ConfigDTO {
   run_id: string;
   harness?: string;        // server-resolved codegen harness (sole inference site)
   harness_judge?: string;  // qualitative-judge harness, for provenance disclosure
+  source?: "agent" | "fixtures" | "mixed"; // evidence source of the loaded run
 }
 
 export interface RunSummary {
@@ -218,6 +219,9 @@ export interface RunSummary {
   overall_result: GateResult | string;
   git_commit: string;
   harness?: string;
+  // Evidence source: agent = real harness/observed evidence; fixtures =
+  // synthetic checker fixtures; mixed = a sweep containing both.
+  source?: "agent" | "fixtures" | "mixed";
   // Provenance stamps (null = not recorded by that run).
   model?: string | null;
   model_variant?: string | null;
@@ -391,6 +395,64 @@ export interface SkillOverview {
 }
 
 // ============================================================================
+// Live eval-run progress (mirrors apps/evaluation-console/live_data.py, served
+// by /api/live and polled by the store while the console is visible)
+// ============================================================================
+export type LivePhaseState = "pending" | "active" | "done" | "failed";
+export type LiveRunStatus = "running" | "stalled";
+
+export interface LivePhase {
+  id: string;
+  label: string;
+  weight: number;
+  state: LivePhaseState;
+  started_utc: string | null;
+  trials_done: number | null;  // null = this phase has no countable trial artifacts
+  trials_total: number | null;
+}
+
+export interface LiveTrial {
+  scenario_id: string;
+  label: string;
+  runnable: boolean;
+  codegen_done: boolean;
+  render_done: boolean;
+  judged: boolean;
+}
+
+export interface LiveRun {
+  skill: string;
+  // Display label override (audits span skills; the loop rows derive from skill).
+  label?: string | null;
+  iteration: string;
+  kind: "iteration" | "baseline" | "audit";
+  // Audit runs: whether the visual-judge lane is part of this run.
+  judge?: boolean;
+  status: LiveRunStatus;
+  started_utc: string | null;
+  last_activity_utc: string | null;
+  elapsed_s: number | null;
+  current_phase: string | null;
+  current_phase_label: string | null;
+  phase_index: number;
+  phase_total: number;
+  phases: LivePhase[];
+  trials: LiveTrial[];
+  trials_total: number;
+  progress: number; // 0..1, weighted phases + real trial counts, never guessed
+  last_event: { event: string; step?: string | null; timestamp_utc?: string | null };
+  journal_tail: JournalEvent[];
+}
+
+export interface LiveStatusDTO {
+  generated_at: string;
+  running: boolean;
+  poll_ms: number;
+  max_age_s: number;
+  active: LiveRun[];
+}
+
+// ============================================================================
 // Harness / model registry (mirrors apps/evaluation-console/harness-registry.json,
 // served by /api/registry with live pipeline defaults overlaid)
 // ============================================================================
@@ -464,7 +526,9 @@ export interface ComboInsight {
   scored_iterations: number;
   mean_duration_s: number | null;
   first_used: string | null;
-  last_used: string | null;
+  last_used: string | null; // codegen recency: when this combo last generated code
+  last_evaluated: string | null; // when a run last evaluated code from this combo
+  last_active: string | null; // newer of generation or evaluation — the honest "recency"
   members: ComboMember[];
 }
 
@@ -475,7 +539,7 @@ export interface InsightsDTO {
 // ============================================================================
 // Skill Evaluation Console — UI state
 // ============================================================================
-export type Station = "dashboard" | "evaluate" | "review" | "optimize" | "decide" | "promote" | "compare";
+export type Station = "dashboard" | "live" | "evaluate" | "review" | "optimize" | "decide" | "promote" | "compare";
 
 export type ConsoleOverlay =
   | null

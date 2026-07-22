@@ -143,14 +143,56 @@ def _stddev(values: list[float]) -> float | None:
     return math.sqrt(sum((v - mean) ** 2 for v in values) / (len(values) - 1))
 
 
-def combo_insights() -> list[dict[str, Any]]:
+def _parse_ts(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _newer(a: str | None, b: str | None) -> str | None:
+    """The more recent of two ISO timestamps (either may be None/unparseable)."""
+    da, db = _parse_ts(a), _parse_ts(b)
+    if da is None:
+        return b if db is not None else None
+    if db is None:
+        return a
+    return a if da >= db else b
+
+
+def _run_activity_by_combo(runs: list[dict[str, Any]] | None) -> dict[tuple[str, str, str], str]:
+    """Latest evaluation timestamp per (harness, model, variant) across runs.
+
+    A scorecard run evaluates code produced by some codegen combo; folding its
+    timestamp into that combo's recency keeps the leaderboard honest about the
+    last time the combo was actually exercised, not just first generated.
+    """
+    latest: dict[tuple[str, str, str], str] = {}
+    for run in runs or []:
+        harness = run.get("harness")
+        model = run.get("model")
+        if not (isinstance(harness, str) and harness.strip()) or not (isinstance(model, str) and model.strip()):
+            continue
+        variant = run.get("model_variant")
+        key = (harness.strip(), model.strip(), (variant or "").strip() if isinstance(variant, str) else "")
+        ts = run.get("timestamp_utc")
+        if isinstance(ts, str) and ts.strip():
+            latest[key] = _newer(latest.get(key), ts) or ts
+    return latest
+
+
+def combo_insights(runs: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """Observed performance grouped by (harness, model, effort) combination.
 
     One row per combination actually present in the optimization artifacts.
     Stability = sample stddev of per-iteration visual win-rates (needs >= 2
     scored iterations; otherwise null — insufficient data, not "perfectly
     stable"). Iterations whose metas predate provenance stamping aggregate
-    under harness="unrecorded" so legacy data stays visible but honest.
+    under harness="unrecorded" so legacy data stays visible but honest. When
+    scorecard ``runs`` are supplied, each combo's recency also reflects the last
+    time a run evaluated code from that combo (``last_evaluated`` / ``last_active``).
     """
     rows: dict[tuple[str, str, str], dict[str, Any]] = {}
     for skill_overview in optd.list_skills():
@@ -240,13 +282,20 @@ def combo_insights() -> list[dict[str, Any]]:
                 ),
             }
         )
+    # Fold in the most recent evaluation of each combo so recency tracks the last
+    # time the combo was actually exercised, not just when its code was generated.
+    run_activity = _run_activity_by_combo(runs)
+    for combo in out:
+        key = (combo["harness"], combo["model_id"], combo["model_variant"] or "")
+        combo["last_evaluated"] = run_activity.get(key)
+        combo["last_active"] = _newer(combo["last_used"], combo["last_evaluated"])
     # Highest-volume combos first; unrecorded sinks to the bottom.
     out.sort(key=lambda r: (r["harness"] == UNRECORDED, -r["iterations"], r["model_id"]))
     return out
 
 
-def insights() -> dict[str, Any]:
-    return {"combos": combo_insights()}
+def insights(runs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    return {"combos": combo_insights(runs)}
 
 
 if __name__ == "__main__":  # smoke check

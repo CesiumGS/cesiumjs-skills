@@ -572,6 +572,7 @@ interface PaletteItem {
 
 const STATIONS: { id: Station; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
+  { id: "live", label: "Live" },
   { id: "evaluate", label: "Evaluate" },
   { id: "review", label: "Review" },
   { id: "optimize", label: "Optimize" },
@@ -700,6 +701,7 @@ const HELP_ROWS: { keys: string[]; desc: string }[] = [
   { keys: ["Esc"], desc: "Up one altitude / close the overlay" },
   { keys: ["1", "·", "5"], desc: "Lifecycle stations: Evaluate, Review, Optimize, Decide, Promote" },
   { keys: ["6"], desc: "Insights: Models & Harnesses" },
+  { keys: ["7"], desc: "Live: real-time progress of the eval run on this machine" },
   { keys: ["b"], desc: "Set the comparison baseline (in the Run Browser, h)" },
   { keys: ["a"], desc: "Accept (Review)" },
   { keys: ["f"], desc: "Flag into focus.json, the only loop seed (Review)" },

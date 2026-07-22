@@ -10,9 +10,11 @@ import {
 } from "react";
 import {
   exportHandoff,
+  launchRun,
   loadConfig,
   loadInsights,
   loadIteration,
+  loadLive,
   loadRegistry,
   loadReviewDecisions,
   loadRunCases,
@@ -22,6 +24,7 @@ import {
   saveReviewDecisions,
   selectRun
 } from "./api";
+import type { LaunchRecord, LaunchRequest } from "./api";
 import { adaptScorecard } from "./lib/adapt";
 import { autoGrade, matchesFilter, worstFirstSort } from "./lib/grade";
 import type {
@@ -38,6 +41,7 @@ import type {
   InsightsDTO,
   IterationDetail,
   ConsoleOverlay,
+  LiveStatusDTO,
   RegistryDTO,
   RunCaseLite,
   RunSummary,
@@ -81,6 +85,10 @@ export interface Store {
   // declared capability (registry) + observed model×harness performance (insights)
   registry: RegistryDTO | null;
   insights: InsightsDTO | null;
+
+  // live eval-run progress (polled from /api/live while the tab is visible)
+  live: LiveStatusDTO | null;
+  liveRunning: boolean;
 
   // comparison baseline: another run the loaded run is diffed against
   baselineRunId: string | null;
@@ -151,6 +159,7 @@ export interface Store {
   toggleTheme: () => void;
   pushToast: (message: string, tone?: Toast["tone"]) => void;
   doExport: () => Promise<void>;
+  launchEvalRun: (payload: LaunchRequest) => Promise<LaunchRecord | null>;
   switchRun: (runId: string) => Promise<void>;
   setActiveHarness: (h: Harness | null) => void;
   setBaselineRun: (runId: string | null) => void;
@@ -195,6 +204,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [saveStatus, setSaveStatus] = useState<Store["saveStatus"]>("idle");
   const [registry, setRegistry] = useState<RegistryDTO | null>(null);
   const [insights, setInsights] = useState<InsightsDTO | null>(null);
+  const [live, setLive] = useState<LiveStatusDTO | null>(null);
   const [baselineRunId, setBaselineRunId] = useState<string | null>(null);
   const [baselineCases, setBaselineCases] = useState<RunCaseLite[] | null>(null);
   const [baselineLoading, setBaselineLoading] = useState(false);
@@ -482,6 +492,66 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     window.setTimeout(() => setToasts((cur) => cur.filter((t) => t.id !== id)), 4200);
   }, []);
 
+  // ---------- live eval-run progress ----------
+  // Poll /api/live while the tab is visible: fast while a run is active, slow
+  // while idle. When the last active run reaches its terminal event, refresh
+  // the results surfaces (runs / skills / insights) so the console lands on
+  // the fresh outcome without a manual reload.
+  const liveRef = useRef<LiveStatusDTO | null>(null);
+  liveRef.current = live;
+  useEffect(() => {
+    let timer: number | null = null;
+    let disposed = false;
+
+    const schedule = (ms: number) => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => void tick(), ms);
+    };
+
+    const tick = async () => {
+      if (disposed) return;
+      if (document.hidden) return; // resumed by visibilitychange
+      try {
+        const next = await loadLive();
+        if (disposed) return;
+        const prev = liveRef.current;
+        setLive(next);
+        if (prev?.running && !next.running) {
+          const finished = prev.active.find((r) => r.status === "running");
+          pushToast(
+            finished ? `Eval run finished: ${finished.skill} ${finished.iteration} — refreshing results` : "Eval run finished — refreshing results",
+            "good"
+          );
+          const [skillList, runList, ins] = await Promise.all([
+            loadSkills().catch(() => null),
+            loadRuns().catch(() => null),
+            loadInsights().catch(() => null)
+          ]);
+          if (disposed) return;
+          if (skillList) setSkills(skillList);
+          if (runList) setRuns(runList);
+          if (ins) setInsights(ins);
+        }
+        schedule(next.running ? (next.poll_ms || 2500) : 8000);
+      } catch {
+        if (!disposed) schedule(8000); // server briefly away; keep last snapshot
+      }
+    };
+
+    const onVisible = () => {
+      if (!document.hidden) void tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    void tick();
+    return () => {
+      disposed = true;
+      if (timer) window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [pushToast]);
+
+  const liveRunning = live?.running ?? false;
+
   // ---------- review mutations ----------
   const applyDecision = useCallback(
     (key: string, decision: Decision, source: Source) => {
@@ -692,6 +762,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [caseViews, pushToast]);
 
+  // ---------- launching runs ----------
+  // POST the validated request; the server spawns the detached audit process
+  // and progress flows back through the journal the /api/live poll reads.
+  const launchEvalRun = useCallback(
+    async (payload: LaunchRequest): Promise<LaunchRecord | null> => {
+      try {
+        const rec = await launchRun(payload);
+        pushToast(
+          `Run launched: ${rec.skills.length} ${rec.skills.length === 1 ? "skill" : "skills"}, ${
+            rec.judge ? `visual judging on (${rec.n_judges} judges)` : "automated checks only"
+          }`,
+          "good"
+        );
+        setLiveMessage(`Eval run ${rec.launch_id} launched.`);
+        try {
+          setLive(await loadLive()); // Show the starting row immediately.
+        } catch {
+          /* the regular poll catches up */
+        }
+        return rec;
+      } catch (err) {
+        pushToast(`Launch failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
+        return null;
+      }
+    },
+    [pushToast]
+  );
+
   const switchRun = useCallback(
     async (runId: string) => {
       try {
@@ -717,6 +815,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     saveStatus,
     registry,
     insights,
+    live,
+    liveRunning,
     baselineRunId,
     baselineRun,
     baselineLoading,
@@ -776,6 +876,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setActiveHarness,
     setBaselineRun,
     setCaseScope,
+    launchEvalRun,
     reload: boot
   };
 

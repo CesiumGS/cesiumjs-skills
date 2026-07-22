@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Star } from "lucide-react";
 import { useStore } from "../store";
 import {
@@ -10,7 +11,7 @@ import {
   relativeTime,
   skillLabel
 } from "../lib/format";
-import { Pct, UnknownChip } from "./primitives";
+import { UnknownChip } from "./primitives";
 import type { ComboInsight, HarnessSpec, IterationSummary, ModelSpec, RunSummary } from "../types";
 
 /* ============================================================================
@@ -30,12 +31,28 @@ import type { ComboInsight, HarnessSpec, IterationSummary, ModelSpec, RunSummary
 
 const UNRECORDED = "unrecorded";
 
-function HarnessChip({ harness }: { harness: string }) {
+export function HarnessChip({ harness }: { harness: string }) {
   const unknown = harness === "unknown" || harness === UNRECORDED;
-  const label = unknown ? (harness === UNRECORDED ? "Unrecorded" : "Unknown") : harness;
+  const synthetic = harness === "fixtures" || harness === "mixed";
+  const label = unknown
+    ? harness === UNRECORDED
+      ? "Unrecorded"
+      : "Unknown"
+    : harness === "fixtures"
+      ? "Synthetic"
+      : harness === "mixed"
+        ? "Real + synthetic"
+        : harness;
   return (
-    <span className={`harness-pill${unknown ? " unrecorded" : ""}`} data-harness={unknown ? undefined : harness}>
-      <span className={`harness-dot${unknown ? " unknown" : ""}`} data-harness={unknown ? undefined : harness} aria-hidden />
+    <span
+      className={`harness-pill${unknown ? " unrecorded" : ""}${synthetic ? " synthetic" : ""}`}
+      data-harness={unknown || synthetic ? undefined : harness}
+    >
+      <span
+        className={`harness-dot${unknown ? " unknown" : ""}${synthetic ? " synthetic" : ""}`}
+        data-harness={unknown || synthetic ? undefined : harness}
+        aria-hidden
+      />
       {label}
     </span>
   );
@@ -141,10 +158,30 @@ interface HarnessRuns {
   latest: RunSummary | null;
 }
 
+/** Which row a run aggregates under. A stamped harness always wins; harness-less
+ *  runs group by their evidence source (fixtures / mixed sweeps) instead of all
+ *  piling into "unknown"; "unknown" is reserved for true unstamped agent runs. */
+function runBucket(r: RunSummary): string {
+  const harness = r.harness ?? "unknown";
+  if (harness !== "unknown") return harness;
+  if (r.source === "fixtures" || r.source === "mixed") return r.source;
+  return "unknown";
+}
+
+const BUCKET_HINTS: Record<string, string> = {
+  fixtures: "Hand-authored test fixtures that validate the evaluator itself — no AI agent involved.",
+  mixed: "Scores a mix of real agent output and hand-authored test fixtures in a single sweep.",
+  unknown: "These scorecards predate provenance stamping, so the producing harness is unknown."
+};
+
+function bucketRank(bucket: string): number {
+  return bucket === "unknown" ? 3 : bucket === "fixtures" ? 2 : bucket === "mixed" ? 1 : 0;
+}
+
 function harnessRunAgg(runs: RunSummary[]): HarnessRuns[] {
   const by = new Map<string, RunSummary[]>();
   for (const r of runs) {
-    const h = r.harness ?? "unknown";
+    const h = runBucket(r);
     (by.get(h) ?? by.set(h, []).get(h)!).push(r);
   }
   return [...by.entries()]
@@ -172,7 +209,7 @@ function harnessRunAgg(runs: RunSummary[]): HarnessRuns[] {
         )
       };
     })
-    .sort((a, b) => a.harness.localeCompare(b.harness));
+    .sort((a, b) => bucketRank(a.harness) - bucketRank(b.harness) || a.harness.localeCompare(b.harness));
 }
 
 function StabilityChip({ stddev, n, unit }: { stddev: number | null; n: number; unit: "%" | "pt" }) {
@@ -250,9 +287,9 @@ export function RunsByHarness() {
                 <th scope="row" className="hc-name">
                   <span className="cell-flex">
                     <HarnessChip harness={a.harness} />
-                    {a.harness === "unknown" && (
-                      <span className="hint-unrecorded" title="These scorecards predate harness stamping.">
-                        Not stamped
+                    {BUCKET_HINTS[a.harness] && (
+                      <span className="hint-unrecorded" title={BUCKET_HINTS[a.harness]}>
+                        {a.harness === "unknown" ? "Origin unknown" : a.harness === "fixtures" ? "Test data" : "Mixed evidence"}
                       </span>
                     )}
                   </span>
@@ -357,7 +394,9 @@ function ComboRow({ combo }: { combo: ComboInsight }) {
           {fmtDuration(combo.mean_duration_s)}
         </td>
         <td className="mono hc-num">{combo.skills.length}</td>
-        <td className="mono hc-latest">{combo.last_used ? relativeTime(combo.last_used) : "—"}</td>
+        <td className="mono hc-latest" title="Most recent time this combo generated code or was evaluated by a run.">
+          {combo.last_active ? relativeTime(combo.last_active) : "—"}
+        </td>
       </tr>
       {open && (
         <tr className="combo-members">
@@ -416,7 +455,7 @@ export function Combos() {
               <th scope="col" title="Visual win rate W/(W+L), with per-iteration stability.">Win Rate · Stability</th>
               <th scope="col">Avg Time</th>
               <th scope="col">Skills</th>
-              <th scope="col">Last Used</th>
+              <th scope="col" title="Most recent time this combo generated code or was evaluated by a run.">Last Active</th>
             </tr>
           </thead>
           <tbody>
@@ -435,7 +474,99 @@ export function Combos() {
 }
 
 /* ---------------------------------------------------------------------------
+   CHART SCAFFOLD: a real coordinate frame shared by both trend charts.
+   HTML gutters carry the tick text (so labels never stretch), the SVG carries
+   only geometry (non-scaling strokes), and data points are HTML elements so
+   they stay perfectly round, hoverable, and keyboard-focusable.
+   --------------------------------------------------------------------------- */
+interface XTick {
+  frac: number;
+  label: string;
+  sub?: string;
+  subClass?: string;
+}
+
+// Inner padding of the plot box, in fractions of each axis. Keeps extreme
+// points (100 %, first, last) from clipping while ticks share the mapping.
+const padY = (f: number) => 0.07 + f * 0.9;
+const padX = (f: number) => 0.035 + f * 0.93;
+
+function ChartScaffold({
+  height,
+  yTicks,
+  xTicks,
+  ariaLabel,
+  children,
+  overlay
+}: {
+  height: number;
+  yTicks: Array<{ frac: number; label: string }>;
+  xTicks: XTick[];
+  ariaLabel: string;
+  children: ReactNode;
+  overlay?: ReactNode;
+}) {
+  return (
+    <div className="chart-frame" style={{ gridTemplateRows: `${height}px auto` }}>
+      <div className="chart-y" aria-hidden>
+        {yTicks.map((t) => (
+          <span key={t.label} style={{ top: `${t.frac * 100}%` }}>
+            {t.label}
+          </span>
+        ))}
+      </div>
+      <div className="chart-plot" role="img" aria-label={ariaLabel}>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden focusable="false">
+          {yTicks.map((t) =>
+            t.frac > 0.95 ? null : (
+              <line
+                key={t.label}
+                x1={0}
+                x2={100}
+                y1={t.frac * 100}
+                y2={t.frac * 100}
+                stroke="var(--hairline)"
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+              />
+            )
+          )}
+          {children}
+        </svg>
+        {overlay}
+      </div>
+      <div aria-hidden />
+      <div className="chart-x">
+        {xTicks.map((t, i) => (
+          <span key={`${t.label}-${i}`} className="cx-tick" style={{ left: `${t.frac * 100}%` }}>
+            <span className="cx-l">{t.label}</span>
+            {t.sub && <span className={`cx-s${t.subClass ? ` ${t.subClass}` : ""}`}>{t.sub}</span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 0-100 % y axis, ticks every 25 points, 100 % at the top. */
+function scoreTicks(): Array<{ frac: number; label: string }> {
+  return [100, 75, 50, 25, 0].map((v) => ({ frac: padY(1 - v / 100), label: `${v}%` }));
+}
+
+/** Day-of-month labels; collapses to HH:MM when the previous tick is the same day. */
+function timeTickLabel(iso: string, prevIso: string | null): string {
+  const d = new Date(iso);
+  if (prevIso && new Date(prevIso).toDateString() === d.toDateString()) {
+    return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/* ---------------------------------------------------------------------------
    TRENDS: run score across time or repository progression (run sequence).
+   A real chart: y is the bounded steel score (0-100 %), x is labeled with run
+   dates, the pass threshold is drawn and named. A flat line at 100 % now
+   reads as exactly that -- every run passed everything.
    --------------------------------------------------------------------------- */
 export function RunTrend() {
   const { runs, switchRun, scorecard } = useStore();
@@ -447,45 +578,52 @@ export function RunTrend() {
       .sort((a, b) => a.timestamp_utc.localeCompare(b.timestamp_utc));
   }, [runs]);
 
-  if (points.length < 2) {
+  if (points.length === 0) {
     return (
       <div className="dash-card">
         <div className="section-title">
           Run Score Trend
           <span className="section-sub">Across runs, chronological or by run sequence.</span>
         </div>
-        <div className="empty-note">
-          {points.length === 0
-            ? "No scored runs on disk yet, so there is nothing to trend."
-            : "Only one scored run so far. A second run grows the trend."}
-        </div>
+        <div className="empty-note">No scored runs on disk yet, so there is nothing to trend.</div>
       </div>
     );
   }
 
-  const W = 860;
-  const H = 150;
-  const padX = 34;
-  const padY = 18;
+  const n = points.length;
   const t0 = Date.parse(points[0].timestamp_utc);
-  const t1 = Date.parse(points[points.length - 1].timestamp_utc);
-  const x = (r: RunSummary, i: number) => {
-    if (axis === "sequence" || t1 === t0) {
-      return points.length === 1 ? W / 2 : padX + (i / (points.length - 1)) * (W - padX * 2);
-    }
-    return padX + ((Date.parse(r.timestamp_utc) - t0) / (t1 - t0)) * (W - padX * 2);
+  const t1 = Date.parse(points[n - 1].timestamp_utc);
+  const fx = (r: RunSummary, i: number): number => {
+    if (n === 1) return 0.5;
+    if (axis === "sequence" || t1 === t0) return i / (n - 1);
+    return (Date.parse(r.timestamp_utc) - t0) / (t1 - t0);
   };
-  const y = (score: number) => padY + (1 - score) * (H - padY * 2);
-  const path = points
-    .map((r, i) => `${i === 0 ? "M" : "L"}${x(r, i).toFixed(1)},${y(r.overall_score as number).toFixed(1)}`)
+  const X = (r: RunSummary, i: number) => padX(fx(r, i)) * 100;
+  const Y = (score: number) => padY(1 - score) * 100;
+
+  const linePath = points
+    .map((r, i) => `${i === 0 ? "M" : "L"}${X(r, i).toFixed(2)},${Y(r.overall_score as number).toFixed(2)}`)
     .join(" ");
-  const threshold = points[points.length - 1].threshold;
+  const floorY = (padY(1) * 100).toFixed(2);
+  const areaPath =
+    n >= 2
+      ? `${linePath} L${X(points[n - 1], n - 1).toFixed(2)},${floorY} L${X(points[0], 0).toFixed(2)},${floorY} Z`
+      : null;
+  const threshold = points[n - 1].threshold;
+
+  // Label every run when few; subsample toward ~6 ticks when many.
+  const step = Math.max(1, Math.ceil(n / 6));
+  const tickPts = points.map((r, i) => ({ r, i })).filter(({ i }) => i % step === 0 || i === n - 1);
+  const xTicks: XTick[] = tickPts.map(({ r, i }, k) => ({
+    frac: padX(fx(r, i)),
+    label: timeTickLabel(r.timestamp_utc, k > 0 ? tickPts[k - 1].r.timestamp_utc : null)
+  }));
 
   return (
     <div className="dash-card">
       <div className="section-title">
         Run Score Trend
-        <span className="section-sub">▣ Steel overall score per run. Dot color is the run result.</span>
+        <span className="section-sub">▣ Overall score per run (y) across runs (x). Dot color is the run result.</span>
         <span className="spacer" />
         <div className="axis-toggle" role="tablist" aria-label="X axis">
           <button
@@ -506,60 +644,76 @@ export function RunTrend() {
           </button>
         </div>
       </div>
-      <div className="trend-chart trend-runs">
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="none" role="img" aria-label="Overall score per run">
-          {[0, 0.5, 1].map((g) => (
-            <line key={g} x1={padX} x2={W - padX} y1={y(g)} y2={y(g)} stroke="var(--hairline)" strokeWidth={1} />
-          ))}
-          {typeof threshold === "number" && (
-            <line
-              x1={padX}
-              x2={W - padX}
-              y1={y(threshold)}
-              y2={y(threshold)}
-              stroke="var(--defer)"
-              strokeWidth={1}
-              strokeDasharray="4 4"
-            />
-          )}
-          <path d={path} fill="none" stroke="var(--ink-machine)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-          {points.map((r, i) => {
-            const loaded = scorecard?.runId === r.run_id;
-            return (
-              <circle
-                key={r.run_id}
-                cx={x(r, i)}
-                cy={y(r.overall_score as number)}
-                r={loaded ? 6 : 4.5}
-                fill={r.overall_result === "pass" ? "var(--pass)" : "var(--fail)"}
-                stroke={loaded ? "var(--live)" : "var(--canvas)"}
-                strokeWidth={loaded ? 2.5 : 1.5}
-                style={{ cursor: "pointer" }}
-                role="button"
-                tabIndex={0}
-                aria-label={`${r.run_id}: ${Math.round((r.overall_score as number) * 100)}% ${r.overall_result}. Click to load.`}
-                onClick={() => void switchRun(r.run_id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void switchRun(r.run_id);
-                }}
+      <ChartScaffold
+        height={168}
+        yTicks={scoreTicks()}
+        xTicks={xTicks}
+        ariaLabel={`Overall score per run, ${n} ${pluralize(n, "run", "runs")}`}
+        overlay={
+          <>
+            {typeof threshold === "number" && (
+              <span
+                className={`chart-flag thr${threshold >= 0.85 ? " below" : ""}`}
+                style={{ top: `${Y(threshold)}%` }}
               >
-                <title>
-                  {r.run_id} · {Math.round((r.overall_score as number) * 100)}% · {r.overall_result} ·{" "}
-                  {r.git_commit.slice(0, 7)} · {r.timestamp_utc.slice(0, 16).replace("T", " ")}
-                </title>
-              </circle>
-            );
-          })}
-        </svg>
-      </div>
+                pass ≥ {Math.round(threshold * 100)}%
+              </span>
+            )}
+            {points.map((r, i) => {
+              const loaded = scorecard?.runId === r.run_id;
+              const pct = Math.round((r.overall_score as number) * 100);
+              return (
+                <button
+                  key={r.run_id}
+                  type="button"
+                  className={`chart-pt ${r.overall_result === "pass" ? "pass" : "fail"}${loaded ? " loaded" : ""}`}
+                  style={{ left: `${X(r, i)}%`, top: `${Y(r.overall_score as number)}%` }}
+                  title={`${r.run_id}\n${pct}% · ${r.overall_result} · ${r.total_cases} cases\n${r.timestamp_utc.slice(0, 16).replace("T", " ")} UTC · ${r.git_commit.slice(0, 7)}\nClick to focus this run.`}
+                  aria-label={`${r.run_id}: ${pct}% ${r.overall_result}. Click to focus this run.`}
+                  onClick={() => void switchRun(r.run_id)}
+                />
+              );
+            })}
+          </>
+        }
+      >
+        {typeof threshold === "number" && (
+          <line
+            x1={0}
+            x2={100}
+            y1={Y(threshold)}
+            y2={Y(threshold)}
+            stroke="var(--defer)"
+            strokeWidth={1}
+            strokeDasharray="4 4"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+        {areaPath && <path d={areaPath} fill="var(--ink-machine)" opacity={0.08} stroke="none" />}
+        {n >= 2 && (
+          <path
+            d={linePath}
+            fill="none"
+            stroke="var(--ink-machine)"
+            strokeWidth={1.6}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+      </ChartScaffold>
       <div className="trend-legend">
         <span><span className="dotex pass" /> Pass</span>
         <span><span className="dotex fail" /> Fail</span>
-        <span><span className="dotex thr" /> Threshold</span>
-        <span><span className="dotex loaded" /> Loaded run</span>
+        <span><span className="dotex thr" /> Pass threshold</span>
+        <span><span className="dotex loaded" /> Focused run</span>
         <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>
-          {axis === "sequence" ? "Even spacing in run order (repository progression)." : "True wall-clock spacing."}{" "}
-          Click a dot to load that run.
+          {n === 1
+            ? "One scored run so far — the trend grows with each run."
+            : axis === "sequence"
+              ? "Even spacing in run order (repository progression)."
+              : "True wall-clock spacing."}{" "}
+          Click a dot to focus that run.
         </span>
       </div>
     </div>
@@ -595,32 +749,43 @@ export function SkillTrend() {
   }
 
   const iters = skill.history.filter((h) => !h.is_baseline);
-  const W = 860;
-  const H = 134;
-  const padX = 30;
-  const padY = 16;
   const n = iters.length;
-  const x = (i: number) => (n === 1 ? W / 2 : padX + (i / (n - 1)) * (W - padX * 2));
-  const y = (pct: number) => padY + (1 - pct / 100) * (H - padY * 2);
+  const fx = (i: number) => (n === 1 ? 0.5 : i / (n - 1));
+  const X = (i: number) => padX(fx(i)) * 100;
+  const Y = (pct: number) => padY(1 - pct / 100) * 100;
 
   const points = iters.map((it, i) => ({ it, i, rate: winRate(it) }));
   const segments: string[] = [];
   let run: string[] = [];
   for (const p of points) {
     if (p.rate === null) {
-      if (run.length) segments.push(run.join(" "));
+      if (run.length > 1) segments.push(run.join(" "));
       run = [];
       continue;
     }
-    run.push(`${run.length ? "L" : "M"}${x(p.i).toFixed(1)},${y(p.rate).toFixed(1)}`);
+    run.push(`${run.length ? "L" : "M"}${X(p.i).toFixed(2)},${Y(p.rate).toFixed(2)}`);
   }
-  if (run.length) segments.push(run.join(" "));
+  if (run.length > 1) segments.push(run.join(" "));
+
+  // Label every iteration when few; subsample toward ~10 ticks when many.
+  const step = Math.max(1, Math.ceil(n / 10));
+  const xTicks: XTick[] = points
+    .filter((p) => p.i % step === 0 || p.i === n - 1)
+    .map((p) => ({
+      frac: padX(fx(p.i)),
+      label: `#${p.it.iteration}`,
+      sub: p.it.decision ?? (p.rate === null ? "unscored" : undefined),
+      subClass:
+        p.it.decision === "KEEP" ? "tick-keep" : p.it.decision === "REJECT" ? "tick-reject" : "tick-muted"
+    }));
 
   return (
     <div className="dash-card">
       <div className="section-title">
         Skill Optimization Trend
-        <span className="section-sub">▣ Visual win rate W/(W+L) per iteration. Gaps mean the judges did not score.</span>
+        <span className="section-sub">
+          ▣ Visual win rate W/(W+L) per iteration (y) across the loop (x). Gaps mean the judges did not score.
+        </span>
         <span className="spacer" />
         <label className="baseline-pick">
           <span>Skill</span>
@@ -643,38 +808,131 @@ export function SkillTrend() {
           Open in Optimize →
         </button>
       </div>
-      <div className="trend-chart">
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="none" role="img" aria-label="Win rate trend">
-          {[0, 50, 100].map((g) => (
-            <line key={g} x1={padX} x2={W - padX} y1={y(g)} y2={y(g)} stroke="var(--hairline)" strokeWidth={1} />
-          ))}
-          {segments.map((d, i) => (
-            <path key={i} d={d} fill="none" stroke="var(--ink-machine)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-          ))}
-          {points.map((p) =>
-            p.rate === null ? (
-              <circle key={p.i} cx={x(p.i)} cy={y(50)} r={3} fill="none" stroke="var(--unknown)" strokeWidth={1} strokeDasharray="2 2" />
-            ) : (
-              <circle key={p.i} cx={x(p.i)} cy={y(p.rate)} r={3.5} fill="var(--ink-machine)" />
-            )
-          )}
-        </svg>
-      </div>
-      <div className="skill-trend-ticks">
-        {points.map((p) => (
-          <span key={p.i} className="mono">
-            #{p.it.iteration}{" "}
-            {p.rate === null ? (
-              <span style={{ color: "var(--unknown)" }} title="Not scored">◌</span>
-            ) : (
-              <Pct value={p.rate} />
+      <ChartScaffold
+        height={150}
+        yTicks={scoreTicks()}
+        xTicks={xTicks}
+        ariaLabel={`Win rate per iteration for ${skillLabel(skill.skill)}, ${n} ${pluralize(n, "iteration", "iterations")}`}
+        overlay={
+          <>
+            <span className="chart-flag parity" style={{ top: `${Y(50)}%` }}>
+              parity
+            </span>
+            {points.map((p) =>
+              p.rate === null ? (
+                <span
+                  key={p.i}
+                  className="chart-pt none"
+                  style={{ left: `${X(p.i)}%`, top: `${Y(0)}%` }}
+                  title={`#${p.it.iteration}: not scored by the judges (no wins or losses) — a gap, not a zero.`}
+                />
+              ) : (
+                <span
+                  key={p.i}
+                  className="chart-pt machine"
+                  style={{ left: `${X(p.i)}%`, top: `${Y(p.rate)}%` }}
+                  title={`#${p.it.iteration} · ${Math.round(p.rate)}% win rate${p.it.decision ? ` · ${p.it.decision}` : ""}`}
+                />
+              )
             )}
-            {p.it.decision && (
-              <span className={p.it.decision === "KEEP" ? "tick-keep" : "tick-reject"}> {p.it.decision}</span>
-            )}
-          </span>
+          </>
+        }
+      >
+        <line
+          x1={0}
+          x2={100}
+          y1={Y(50)}
+          y2={Y(50)}
+          stroke="var(--unknown)"
+          strokeWidth={1}
+          strokeDasharray="3 4"
+          vectorEffect="non-scaling-stroke"
+        />
+        {segments.map((d, i) => (
+          <path
+            key={i}
+            d={d}
+            fill="none"
+            stroke="var(--ink-machine)"
+            strokeWidth={1.6}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
         ))}
+      </ChartScaffold>
+      <div className="trend-legend">
+        <span><span className="dotex machine" /> Scored iteration</span>
+        <span><span className="dotex none" /> Not scored (sits on the axis)</span>
+        <span><span className="dotex thr" /> Parity 50%</span>
+        <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>
+          {n === 1 ? "One iteration so far — the trend grows with the loop." : `${n} iterations.`} KEEP / REJECT
+          under each tick.
+        </span>
       </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   MODEL LEADERBOARD: the dashboard-sized answer to "which model is winning?".
+   Top observed model-and-effort combos by visual win rate; the full evidence
+   table lives on Models & Harnesses (key 6).
+   --------------------------------------------------------------------------- */
+export function ModelLeaderboard() {
+  const { insights, setStation } = useStore();
+  const combos = insights?.combos ?? [];
+
+  const ranked = useMemo(() => {
+    const scored = combos.filter((c) => c.win_rate !== null);
+    const unscored = combos.filter((c) => c.win_rate === null);
+    scored.sort((a, b) => (b.win_rate as number) - (a.win_rate as number) || b.iterations - a.iterations);
+    unscored.sort((a, b) => b.iterations - a.iterations);
+    return [...scored, ...unscored].slice(0, 6);
+  }, [combos]);
+
+  return (
+    <div className="dash-card">
+      <div className="section-title">
+        Model Performance
+        <span className="section-sub">▣ Top codegen combos by visual win rate, from the optimization metas.</span>
+        <span className="spacer" />
+        <button className="pill link-pill" onClick={() => setStation("compare")} title="Full observed table with stability, wall clock, and drill-down (key 6)">
+          Full table →
+        </button>
+      </div>
+      {ranked.length === 0 ? (
+        <div className="empty-note">No optimization iterations recorded yet, so no model evidence to rank.</div>
+      ) : (
+        <ol className="mlb-list">
+          {ranked.map((c, i) => (
+            <li key={`${c.harness}-${c.model_id}-${c.model_variant ?? "?"}`}>
+              <button className="mlb-row" onClick={() => setStation("compare")} title="Open the full observed table (key 6)">
+                <span className="mlb-rank mono">{c.win_rate === null ? "–" : i + 1}</span>
+                <span className="mlb-id">
+                  <HarnessChip harness={c.harness} />
+                  <span className="mono mlb-model">{modelShort(c.model_id)}</span>
+                  {c.model_variant ? (
+                    <span className="effort-chip">@{c.model_variant}</span>
+                  ) : (
+                    <span className="effort-chip unrecorded" title="Effort level not recorded by these runs.">
+                      @?
+                    </span>
+                  )}
+                </span>
+                <span className="mlb-rate">
+                  <RateBar rate={c.win_rate} />
+                  {c.win_rate === null && <UnknownChip small />}
+                </span>
+                <span className="mlb-sub" title="Iterations · KEEP decisions · skills · most recent generation or evaluation.">
+                  {pluralize(c.iterations, "iter")} · {c.keeps} kept · {pluralize(c.skills.length, "skill")}
+                  {c.last_active ? ` · ${relativeTime(c.last_active)}` : ""}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

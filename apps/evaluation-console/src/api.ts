@@ -3,6 +3,7 @@ import type {
   FocusPreview,
   InsightsDTO,
   IterationDetail,
+  LiveStatusDTO,
   RawScorecard,
   RegistryDTO,
   ReviewDecisionDoc,
@@ -40,6 +41,34 @@ export const loadRunCases = (runId: string) =>
   req<RunCasesDTO>(`/api/run-cases?run_id=${encodeURIComponent(runId)}`);
 export const loadRegistry = () => req<RegistryDTO>("/api/registry");
 export const loadInsights = () => req<InsightsDTO>("/api/insights");
+export const loadLive = () => req<LiveStatusDTO>("/api/live");
+export const loadLaunchSkills = () => req<{ skills: string[] }>("/api/live/skills");
+
+// ---- launching runs ----
+export interface LaunchRequest {
+  kind: "audit";
+  skills?: string[]; // omitted or empty = all skills
+  judge: boolean;
+  adapter: "opencode" | "codex";
+  n_judges: number;
+}
+
+export interface LaunchRecord {
+  launch_id: string;
+  kind: string;
+  pid: number;
+  skills: string[];
+  judge: boolean;
+  adapter: string;
+  n_judges: number;
+  journal: string;
+  log: string;
+  output_dir: string;
+  started_utc: string;
+}
+
+export const launchRun = (payload: LaunchRequest) =>
+  req<LaunchRecord>("/api/live/launch", { method: "POST", body: JSON.stringify(payload) });
 
 export const saveReviewDecisions = (doc: ReviewDecisionDoc) =>
   req<ReviewDecisionDoc>("/api/review-decisions", { method: "PUT", body: JSON.stringify(doc) });

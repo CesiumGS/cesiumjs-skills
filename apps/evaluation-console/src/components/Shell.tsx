@@ -1,8 +1,9 @@
-import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows, LayoutDashboard } from "lucide-react";
+import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows, LayoutDashboard, Radio, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { useStore } from "../store";
 import type { Station } from "../types";
-import { modelShort, pluralize } from "../lib/format";
+import { pluralize, relativeTime } from "../lib/format";
 import { ProvGlyph } from "./primitives";
+import { liveRunTitle } from "./Live";
 
 const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string }> = [
   { id: "evaluate", num: "1", name: "Evaluate" },
@@ -12,78 +13,145 @@ const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string }> = [
   { id: "promote", num: "5", name: "Promote" }
 ];
 
+/** "scorecard-20260721T142514Z-d3f47ec568b1" → "Jul 21 · 14:25 · d3f47ec". */
+function runShortLabel(runId: string | undefined, timestamp: string | undefined, commit: string | undefined): string {
+  if (timestamp) {
+    const d = new Date(timestamp);
+    const day = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
+    return commit ? `${day} ${time} · ${commit.slice(0, 7)}` : `${day} ${time}`;
+  }
+  return runId ? runId.slice(0, 24) : "no run loaded";
+}
+
+function sourceLabel(source: string | undefined, harness: string | undefined): { label: string; cls: string; hint: string } {
+  if (source === "fixtures")
+    return {
+      label: "Synthetic test data",
+      cls: "synthetic",
+      hint: "Scored against hand-authored test fixtures. This validates the evaluator itself — no AI agent was involved."
+    };
+  if (source === "mixed")
+    return {
+      label: "Real + synthetic",
+      cls: "synthetic",
+      hint: "This run scores a mix of real agent output and hand-authored test fixtures in a single sweep."
+    };
+  if (harness && harness !== "unknown")
+    return { label: harness, cls: "agent", hint: `Real agent output, generated with the ${harness} harness.` };
+  return {
+    label: "Origin unknown",
+    cls: "unknown",
+    hint: "This run predates provenance stamping, so the producing harness can't be determined."
+  };
+}
+
 export function TopStrip() {
   const {
     scorecard,
     config,
-    skills,
     theme,
     toggleTheme,
     openOverlay,
     counts,
     setStation,
-    activeHarness,
-    baselineRun
+    baselineRun,
+    live,
+    liveRunning
   } = useStore();
-  const running = skills.find((s) => s.running);
-  const modeB = scorecard && !scorecard.visualReviewSupplied;
-  // The badge labels what the LOADED cases were tested with (the loaded run's harness),
-  // not the transient run-list lens — switching the lens alone must not relabel the data.
-  const harness = scorecard?.harness ?? activeHarness ?? config?.harness ?? "—";
+  const liveRun = liveRunning ? live?.active.find((r) => r.status === "running") : undefined;
+  const judged = scorecard ? scorecard.visualReviewSupplied : null;
+  const src = sourceLabel(config?.source, scorecard?.harness ?? config?.harness);
+  const pass = scorecard?.overallResult === "pass";
+  const scorePct =
+    typeof scorecard?.overallScore === "number" ? `${Math.round(scorecard.overallScore * 100)}%` : null;
   return (
     <header className="topstrip" role="banner">
       <div className="brand">
         <img className="brand-mark" src="/cesium-logomark.svg" alt="" aria-hidden />
         Skill Evaluation Console
       </div>
-      <div className="run-meta">
-        <span>Run</span>
-        <span className="mono">{scorecard?.runId?.slice(0, 28) ?? config?.run_id ?? "—"}</span>
-        {scorecard?.gitCommit && <span className="mono">· {scorecard.gitCommit.slice(0, 7)}</span>}
-        <span className={`mode-badge${modeB ? " b" : ""}`}>{modeB ? "Mode B · Deterministic only" : "Reviewed"}</span>
-        <button
-          className="harness-badge"
-          data-harness={harness}
-          onClick={() => openOverlay("harness")}
-          title="Harness this run was tested with. Opens the Run Browser (h)."
-        >
-          <Layers size={11} aria-hidden /> {harness}
-        </button>
-        {scorecard?.model && (
-          <span className="model-badge" title={`Codegen model recorded by this run: ${scorecard.model}${scorecard.modelVariant ? ` @ ${scorecard.modelVariant}` : ""}`}>
-            {modelShort(scorecard.model)}
-            {scorecard.modelVariant && <span className="mb-effort">@{scorecard.modelVariant}</span>}
+
+      {/* The one piece of header state: which run the lifecycle stations are
+          reading. A labeled control, not a mystery string — click to switch. */}
+      <button
+        className="run-select"
+        onClick={() => openOverlay("harness")}
+        title={
+          scorecard
+            ? `Focused run: ${scorecard.runId}\nEvery lifecycle station (1–5) reads this run.\n${counts.total} cases · commit ${scorecard.gitCommit?.slice(0, 7) ?? "?"}\nClick to browse and switch runs (h).`
+            : "No run loaded. Click to browse runs (h)."
+        }
+      >
+        <span className="rs-label">Focused run</span>
+        <span className="rs-value">
+          {scorecard && <span className={`rs-dot ${pass ? "pass" : "fail"}`} aria-hidden />}
+          <span className="mono rs-id">
+            {runShortLabel(scorecard?.runId ?? config?.run_id, scorecard?.timestampUtc, scorecard?.gitCommit)}
           </span>
-        )}
-        <button
-          className="baseline-badge"
-          onClick={() => openOverlay("harness")}
-          title={
-            baselineRun
-              ? `Comparison baseline: ${baselineRun.run_id}. Change it from the Run Browser (h).`
-              : "No comparison baseline set. Pick one from the Run Browser (h)."
-          }
-        >
-          {baselineRun ? (
-            <>
-              vs <span className="mono">{baselineRun.run_id.slice(0, 22)}</span>
-            </>
-          ) : (
-            "No baseline"
+          {scorePct && (
+            <span
+              className={`rs-score mono ${pass ? "pass" : "fail"}`}
+              title="Overall verdict combines automated checks and the visual review; the percentage is the automated-check score."
+            >
+              {pass ? "PASS" : "FAIL"} · checks {scorePct}
+            </span>
           )}
-        </button>
-        <span>· {pluralize(counts.total, "case")}</span>
-        {typeof scorecard?.overallScore === "number" && (
-          <span>
-            · Overall <span className="mono">{scorecard.overallScore.toFixed(2).replace(/^0/, "")}</span>
+          <ChevronDown size={12} aria-hidden className="rs-chev" />
+        </span>
+      </button>
+
+      {scorecard && (
+        <div className="run-facts" aria-label="Focused run provenance">
+          <span
+            className={`fact-chip judge ${judged ? "on" : "off"}`}
+            title={
+              judged
+                ? "Every case ran automated checks, and a judge panel reviewed the rendered screenshots."
+                : "Only automated checks ran — no judge reviewed the rendered screenshots. Launch a new run from the Live station (7) with visual judging on to add that."
+            }
+          >
+            {judged ? <Eye size={11} aria-hidden /> : <EyeOff size={11} aria-hidden />}
+            {judged ? "Checks + visual review" : "No visual review"}
           </span>
-        )}
-      </div>
+          <button
+            className={`fact-chip source ${src.cls}`}
+            onClick={() => openOverlay("harness")}
+            title={`${src.hint} Opens the Run Browser (h).`}
+          >
+            <Layers size={11} aria-hidden /> {src.label}
+          </button>
+          <button
+            className="fact-chip baseline"
+            onClick={() => openOverlay("harness")}
+            title={
+              baselineRun
+                ? `Comparing against baseline ${baselineRun.run_id}. Change it from the Run Browser (h).`
+                : "No comparison baseline set. Pick one from the Run Browser (h)."
+            }
+          >
+            {baselineRun ? (
+              <>
+                vs <span className="mono">{runShortLabel(baselineRun.run_id, baselineRun.timestamp_utc, undefined)}</span>
+              </>
+            ) : (
+              "no baseline"
+            )}
+          </button>
+          <span className="fact-plain">{pluralize(counts.total, "case")}</span>
+          {scorecard.timestampUtc && <span className="fact-plain">{relativeTime(scorecard.timestampUtc)}</span>}
+        </div>
+      )}
       <span className="spacer" />
-      {running && (
-        <button className="live-pill" onClick={() => setStation("optimize")} title="Optimization loop in progress">
+      {liveRun && (
+        <button
+          className="live-pill"
+          onClick={() => setStation("live")}
+          title={`Eval run in progress: ${liveRunTitle(liveRun)}. Open the Live station (7).`}
+        >
           <span className="dot" aria-hidden />
-          <ProvGlyph kind="live" /> Optimizing {running.skill.replace("cesiumjs-", "")}
+          <ProvGlyph kind="live" /> {liveRunTitle(liveRun)}
+          <span className="mono">{Math.round(liveRun.progress * 100)}%</span>
         </button>
       )}
       <button className="icon-btn" title="Command palette (⌘K)" onClick={() => openOverlay("palette")}>
@@ -106,10 +174,13 @@ export function Rail() {
     needsYouCount,
     confirmedFlagKeys,
     skills,
+    live,
+    liveRunning,
     openOverlay,
     doExport
   } = useStore();
-  const running = skills.some((s) => s.running);
+  const running = liveRunning || skills.some((s) => s.running);
+  const stalledCount = (live?.active ?? []).filter((r) => r.status !== "running").length;
   const promotable = skills.filter((s) => s.latest?.decision === "KEEP").length;
 
   const badge = (id: Station) => {
@@ -135,7 +206,24 @@ export function Rail() {
       >
         <LayoutDashboard size={13} aria-hidden />
         <span className="st-name">Dashboard</span>
-        <span className="kbd" style={{ marginLeft: "auto" }}>0</span>
+      </button>
+
+      {/* Live sits between the landing screen and the lifecycle: "what is
+          happening right now" is an altitude of its own, not a lifecycle step. */}
+      <button
+        className={`station station--dashboard${station === "live" ? " active" : ""}`}
+        onClick={() => setStation("live")}
+        aria-current={station === "live"}
+        title={liveRunning ? "An eval run is in progress" : "No eval run in progress"}
+      >
+        <Radio size={13} aria-hidden />
+        <span className="st-name">Live</span>
+        {liveRunning && <span className="st-badge live rail-live-badge">●</span>}
+        {!liveRunning && stalledCount > 0 && (
+          <span className="st-badge" title={`${stalledCount} stalled run(s) on disk`}>
+            {stalledCount}
+          </span>
+        )}
       </button>
 
       <div className="rail-section">Lifecycle</div>
