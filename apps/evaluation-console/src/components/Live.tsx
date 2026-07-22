@@ -471,8 +471,11 @@ export function LiveStation() {
     <div className="overview dashboard-station">
       <div className="dash-head">
         <div>
-          <div className="dash-title">Live</div>
-          <div className="dash-sub">Real-time progress of eval runs executing on this machine, straight from the loop's journal.</div>
+          <div className="dash-title">Run Studies</div>
+          <div className="dash-sub">
+            Launch eval runs against the CLI and watch their real-time progress — phases, trials, and journal — straight
+            from disk.
+          </div>
         </div>
         <span className="spacer" />
         <span className={`fresh-chip${live ? "" : " stale"}`} title="Time of the latest /api/live poll.">
@@ -491,7 +494,7 @@ export function LiveStation() {
       {stalledRuns.length > 0 && (
         <>
           <div className="section-title" style={{ marginTop: "var(--sp-4)" }}>
-            Stalled on disk
+            Stalled on Disk
           </div>
           <div className="dash-sub" style={{ marginBottom: "var(--sp-3)" }}>
             Journals that started but reached no terminal event and have gone quiet — usually a loop that was
@@ -513,7 +516,7 @@ export function LiveNowBanner() {
   if (!run) return null;
   const pct = Math.round(run.progress * 100);
   return (
-    <button className="live-now-banner" onClick={() => setStation("live")} title="Open the Live station (7)">
+    <button className="live-now-banner" onClick={() => setStation("live")} title="Open Run Studies (7)">
       <span className="lrc-dot on" aria-hidden />
       <span className="lnb-label">
         Eval run in progress — <strong>{liveRunTitle(run)}</strong>

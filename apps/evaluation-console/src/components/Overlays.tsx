@@ -531,14 +531,41 @@ function HarnessOverlay() {
               >
                 <span className="harness-dot" data-harness={(r.harness ?? "unknown") === "unknown" ? undefined : r.harness} aria-hidden />
                 <span className="mono hr-id">{r.run_id.slice(0, 28)}</span>
-                <span className="mono" style={{ color: "var(--text-3)" }}>{r.git_commit.slice(0, 7)}</span>
+                <span
+                  className="mono"
+                  style={{ color: "var(--text-3)" }}
+                  title={`Git commit this run evaluated: ${r.git_commit}. Several runs can share a commit — the timestamp tells them apart.`}
+                >
+                  {r.git_commit.slice(0, 7)}
+                </span>
+                {r.kind === "audit" && (
+                  <span
+                    className="hr-kind"
+                    title="Audit-pipeline artifact: this scorecard was produced by an evaluator audit, not a regular eval sweep."
+                  >
+                    audit
+                  </span>
+                )}
                 <span className={`hr-result ${r.overall_result === "pass" ? "ok" : "bad"}`}>{r.overall_result || "—"}</span>
                 {typeof r.overall_score === "number" && (
                   <span className="mono" style={{ color: "var(--ink-machine)" }}>{Math.round(r.overall_score * 100)}%</span>
                 )}
-                <span className="mono" style={{ color: "var(--text-3)", marginLeft: "auto" }}>{r.timestamp_utc.slice(0, 16).replace("T", " ")}</span>
+                <span
+                  className="mono"
+                  style={{ color: "var(--text-3)", marginLeft: "auto" }}
+                  title="Run start (UTC, to the second) — the part that distinguishes same-commit runs."
+                >
+                  {r.timestamp_utc.slice(0, 19).replace("T", " ")}
+                </span>
                 {isBaseline && <span className="hr-baseline" title="The comparison baseline">Baseline</span>}
-                {loaded && <span className="hr-loaded">Loaded</span>}
+                {loaded && (
+                  <span
+                    className="hr-loaded"
+                    title="This is the focused run — the one every lifecycle station (1–5) is reading right now."
+                  >
+                    Focused
+                  </span>
+                )}
                 {!loaded && (
                   <button
                     className="hr-set-baseline"
@@ -571,13 +598,14 @@ interface PaletteItem {
 }
 
 const STATIONS: { id: Station; label: string }[] = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "live", label: "Live" },
-  { id: "evaluate", label: "Evaluate" },
-  { id: "review", label: "Review" },
-  { id: "optimize", label: "Optimize" },
-  { id: "decide", label: "Decide" },
-  { id: "promote", label: "Promote" }
+  { id: "dashboard", label: "Dashboard · all studies at a glance" },
+  { id: "live", label: "Run Studies · launch & watch eval runs" },
+  { id: "evaluate", label: "Evaluate · scorecard for the focused run" },
+  { id: "review", label: "Review · triage cases, flag failures" },
+  { id: "optimize", label: "Optimize · skill improvement loop" },
+  { id: "decide", label: "Decide · verify candidate vs baseline" },
+  { id: "promote", label: "Promote · ship KEEP winners live" },
+  { id: "compare", label: "Models & Harnesses · cross-run insights" }
 ];
 
 function fuzzy(q: string, text: string): boolean {
@@ -699,9 +727,10 @@ const HELP_ROWS: { keys: string[]; desc: string }[] = [
   { keys: ["gg", "G"], desc: "Jump to top (worst) / bottom" },
   { keys: ["Enter"], desc: "Commit the cursor to the stage" },
   { keys: ["Esc"], desc: "Up one altitude / close the overlay" },
+  { keys: ["0"], desc: "Dashboard: all studies at a glance" },
   { keys: ["1", "·", "5"], desc: "Lifecycle stations: Evaluate, Review, Optimize, Decide, Promote" },
   { keys: ["6"], desc: "Insights: Models & Harnesses" },
-  { keys: ["7"], desc: "Live: real-time progress of the eval run on this machine" },
+  { keys: ["7"], desc: "Run Studies: launch eval runs and watch them live" },
   { keys: ["b"], desc: "Set the comparison baseline (in the Run Browser, h)" },
   { keys: ["a"], desc: "Accept (Review)" },
   { keys: ["f"], desc: "Flag into focus.json, the only loop seed (Review)" },

@@ -219,6 +219,9 @@ export interface RunSummary {
   overall_result: GateResult | string;
   git_commit: string;
   harness?: string;
+  // Which artifact produced this row: a canonical eval scorecard or an audit
+  // pipeline's copy. Audit copies of an eval run are de-duplicated server-side.
+  kind?: "eval" | "audit";
   // Evidence source: agent = real harness/observed evidence; fixtures =
   // synthetic checker fixtures; mixed = a sweep containing both.
   source?: "agent" | "fixtures" | "mixed";

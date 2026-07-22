@@ -1,6 +1,6 @@
 import { useStore } from "../store";
 import type { IterationSummary, JournalEvent, ScenarioDetail } from "../types";
-import { modelShort } from "../lib/format";
+import { modelShort, relativeTime } from "../lib/format";
 import { LoopBadge, Pct, ProvGlyph, ScenarioChip } from "./primitives";
 
 /** The loaded iteration's recorded codegen provenance — or an honest "unrecorded". */
@@ -108,6 +108,7 @@ function IterationLog() {
         {nonBaseline.map((it) => {
           const sel = it.iteration === selectedIterationId;
           const failed = it.status === "failed";
+          const isNewest = it === nonBaseline[0];
           return (
             <div
               key={it.iteration}
@@ -125,6 +126,14 @@ function IterationLog() {
             >
               <span className="c-iter">{it.iteration}</span>
               <span style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", minWidth: 0 }}>
+                {isNewest && (
+                  <span
+                    className="fresh-chip latest"
+                    title={it.finished_utc ? `Most recent round · finished ${relativeTime(it.finished_utc)}` : "Most recent round"}
+                  >
+                    latest
+                  </span>
+                )}
                 {failed ? (
                   <span style={{ color: "var(--fail)", display: "inline-flex", alignItems: "center", gap: 4 }}>
                     <span aria-hidden>✗</span>
@@ -342,6 +351,15 @@ export function OptimizeStage() {
             <span>{selectedSkillData.iteration_count} Iterations</span>
             <span>· {selectedSkillData.kept} Kept</span>
             <span>· {selectedSkillData.rejected} Rejected</span>
+            {selectedSkillData.latest?.finished_utc && (
+              <span
+                title={`Newest iteration (${selectedSkillData.latest.iteration}) finished ${new Date(
+                  selectedSkillData.latest.finished_utc
+                ).toLocaleString()}. Everything below is this skill's full history, newest first.`}
+              >
+                · latest round {relativeTime(selectedSkillData.latest.finished_utc)}
+              </span>
+            )}
             <IterationProvenanceChips />
             {selectedSkillData.running && (
               <span style={{ color: "var(--live)", display: "inline-flex", alignItems: "center", gap: 4 }}>

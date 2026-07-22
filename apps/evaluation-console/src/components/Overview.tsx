@@ -437,11 +437,17 @@ export function PromotePanel() {
     <div className="overview">
       <div className="section-title" style={{ marginTop: 0 }}>
         Promote
-        <span className="section-sub">Guarded: promotion is a deliberate manual step.</span>
+        <span className="section-sub">
+          The final lifecycle step: replace a live SKILL.md with the candidate that won its optimization round. Nothing here
+          runs automatically — you run the guarded command yourself, and the current version is archived first.
+        </span>
       </div>
 
       {promotable.length === 0 ? (
-        <div className="empty-note">No KEEP candidates awaiting promotion.</div>
+        <div className="empty-note">
+          Nothing is ready to promote. Candidates appear here after the optimization loop (step 3) decides KEEP and you
+          verify the diff in Decide (step 4).
+        </div>
       ) : (
         <div className="skill-grid">
           {promotable.map((s) => {
@@ -453,6 +459,11 @@ export function PromotePanel() {
                 <div className="st-top">
                   <span className="st-name">{shortSkill(s.skill)}</span>
                   <LoopBadge decision="KEEP" rule={it.rule_fired} />
+                </div>
+                <div style={{ marginTop: "var(--sp-2)", fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
+                  Replaces <span className="mono">skills/{s.skill}/SKILL.md</span> with the{" "}
+                  <span className="mono">{it.iteration}</span> candidate
+                  {it.finished_utc ? ` (won ${relativeTime(it.finished_utc)})` : ""}.
                 </div>
                 <div className="stage-sub" style={{ marginTop: "var(--sp-2)" }}>
                   <MetaTag k="iter" v={it.iteration} />

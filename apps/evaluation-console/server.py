@@ -452,19 +452,26 @@ def skills_with_provenance() -> list[dict[str, Any]]:
 
 
 def list_runs() -> list[dict[str, Any]]:
+    # Canonical eval scorecards first: audit pipelines copy a scorecard (same
+    # run_id) into audits/, and showing both would render as a confusing
+    # duplicate row. First writer wins per run_id, so scorecards/ shadows
+    # audits/ and each run also carries which kind of artifact it is.
+    kind_by_dir = {
+        REPO_ROOT / "evaluation" / "artifacts" / "scorecards": "eval",
+        REPO_ROOT / "evaluation" / "artifacts" / "audits": "audit",
+    }
     runs: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for base in RUN_DIRS:
+    seen_ids: set[str] = set()
+    for base in sorted(RUN_DIRS, key=lambda d: 0 if kind_by_dir.get(d) == "eval" else 1):
         if not base.is_dir():
             continue
         for sc_path in sorted(base.glob("*/scorecard.json")):
-            key = str(sc_path.resolve())
-            if key in seen:
-                continue
-            seen.add(key)
             summary = run_summary(sc_path)
-            if summary:
-                runs.append(summary)
+            if not summary or summary["run_id"] in seen_ids:
+                continue
+            seen_ids.add(summary["run_id"])
+            summary["kind"] = kind_by_dir.get(base, "eval")
+            runs.append(summary)
     runs.sort(key=lambda r: r["timestamp_utc"], reverse=True)
     return runs
 

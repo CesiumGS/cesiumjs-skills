@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "../store";
 import { artifactUrl } from "../api";
+import { relativeTime } from "../lib/format";
 import type { IterationDetail, ScenarioDetail } from "../types";
 import { LoopBadge, ScenarioChip } from "./primitives";
 
@@ -153,8 +154,15 @@ function DiffViewer({ scn }: { scn: ScenarioDetail }) {
 }
 
 export function DecideStage() {
-  const { iterationDetail, selectedScenarioIndex } = useStore();
+  const { iterationDetail, selectedScenarioIndex, selectedSkillData } = useStore();
   const scn = iterationDetail?.scenarios[selectedScenarioIndex];
+
+  // Freshness: is the loaded iteration this skill's most recent round, or history?
+  const newest = selectedSkillData?.history
+    .slice()
+    .reverse()
+    .find((h) => !h.is_baseline);
+  const isLatestRound = newest != null && iterationDetail != null && newest.iteration === iterationDetail.iteration;
 
   if (!iterationDetail) {
     return (
@@ -179,6 +187,23 @@ export function DecideStage() {
           <div className="stage-sub">
             <span className="mono">{scn.scenario_id}</span>
             <span>· candidate vs baseline</span>
+            <span className="mono">· {iterationDetail.iteration}</span>
+            {iterationDetail.finished_utc && <span>· ran {relativeTime(iterationDetail.finished_utc)}</span>}
+            {newest != null &&
+              (isLatestRound ? (
+                <span className="fresh-chip latest" title="You are deciding on this skill's most recent optimization round.">
+                  latest round
+                </span>
+              ) : (
+                <span
+                  className="fresh-chip stale"
+                  title={`An older round is loaded. The most recent is ${newest.iteration}${
+                    newest.finished_utc ? ` (finished ${relativeTime(newest.finished_utc)})` : ""
+                  } — pick it in the Optimize iteration log.`}
+                >
+                  older round · latest is {newest.iteration}
+                </span>
+              ))}
           </div>
         </div>
         <ScenarioChip verdict={scn.verdict} count={scn.majority_count} />

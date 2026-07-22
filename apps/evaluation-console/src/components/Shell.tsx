@@ -1,16 +1,50 @@
-import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows, LayoutDashboard, Radio, ChevronDown, Eye, EyeOff } from "lucide-react";
+import type { ReactNode } from "react";
+import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows, LayoutDashboard, Rocket, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { useStore } from "../store";
 import type { Station } from "../types";
 import { pluralize, relativeTime } from "../lib/format";
 import { ProvGlyph } from "./primitives";
 import { liveRunTitle } from "./Live";
 
-const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string }> = [
-  { id: "evaluate", num: "1", name: "Evaluate" },
-  { id: "review", num: "2", name: "Review" },
-  { id: "optimize", num: "3", name: "Optimize" },
-  { id: "decide", num: "4", name: "Decide" },
-  { id: "promote", num: "5", name: "Promote" }
+/* The five lifecycle steps every focused run travels. Each carries a one-line
+   description (rendered in the rail) and a fuller hint (tooltip) so a first
+   visit to any station never requires guessing what it is for. */
+const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string; desc: string; hint: string }> = [
+  {
+    id: "evaluate",
+    num: "1",
+    name: "Evaluate",
+    desc: "Scorecard at a glance",
+    hint: "Read-only summary of the focused run: overall verdict, category scores, and how it compares to the baseline run."
+  },
+  {
+    id: "review",
+    num: "2",
+    name: "Review",
+    desc: "Triage & flag failures",
+    hint: "Walk the focused run's cases worst-first. Accept, flag, or defer each one — the cases you flag become the optimizer's focus set."
+  },
+  {
+    id: "optimize",
+    num: "3",
+    name: "Optimize",
+    desc: "Skill improvement loop",
+    hint: "Watch the autonomous loop propose and test SKILL.md candidates for each skill, seeded by the flags you confirmed in Review."
+  },
+  {
+    id: "decide",
+    num: "4",
+    name: "Decide",
+    desc: "Approve fixes",
+    hint: "Diff each candidate's renders against the current best and sanity-check the loop's KEEP / REJECT call before anything ships."
+  },
+  {
+    id: "promote",
+    num: "5",
+    name: "Promote",
+    desc: "Ship winners live",
+    hint: "The deliberate final step: overwrite a live SKILL.md with its KEEP candidate. The current version is archived first."
+  }
 ];
 
 /** "scorecard-20260721T142514Z-d3f47ec568b1" → "Jul 21 · 14:25 · d3f47ec". */
@@ -108,7 +142,7 @@ export function TopStrip() {
             title={
               judged
                 ? "Every case ran automated checks, and a judge panel reviewed the rendered screenshots."
-                : "Only automated checks ran — no judge reviewed the rendered screenshots. Launch a new run from the Live station (7) with visual judging on to add that."
+                : "Only automated checks ran — no judge reviewed the rendered screenshots. Launch a new run from Run Studies (7) with visual judging on to add that."
             }
           >
             {judged ? <Eye size={11} aria-hidden /> : <EyeOff size={11} aria-hidden />}
@@ -147,7 +181,7 @@ export function TopStrip() {
         <button
           className="live-pill"
           onClick={() => setStation("live")}
-          title={`Eval run in progress: ${liveRunTitle(liveRun)}. Open the Live station (7).`}
+          title={`Eval run in progress: ${liveRunTitle(liveRun)}. Open Run Studies (7).`}
         >
           <span className="dot" aria-hidden />
           <ProvGlyph kind="live" /> {liveRunTitle(liveRun)}
@@ -174,76 +208,133 @@ export function Rail() {
     needsYouCount,
     confirmedFlagKeys,
     skills,
+    scorecard,
+    config,
     live,
     liveRunning,
     openOverlay,
     doExport
   } = useStore();
-  const running = liveRunning || skills.some((s) => s.running);
+  const loopRunning = liveRunning || skills.some((s) => s.running);
   const stalledCount = (live?.active ?? []).filter((r) => r.status !== "running").length;
   const promotable = skills.filter((s) => s.latest?.decision === "KEEP").length;
+  const flagged = confirmedFlagKeys.length;
 
-  const badge = (id: Station) => {
-    if (id === "review") return needsYouCount ? <span className="st-badge hot">{needsYouCount}</span> : null;
+  /* Badges carry information, never decoration: each one answers "how many
+     things wait for me here?" or "is something running?" — and says which. */
+  const badge = (id: Station): ReactNode => {
+    if (id === "review")
+      return needsYouCount ? (
+        <span className="st-badge hot" title={`${pluralize(needsYouCount, "case")} in this run need your eyes`}>
+          {needsYouCount}
+        </span>
+      ) : null;
     if (id === "optimize")
-      return running ? (
-        <span className="st-badge live">●</span>
-      ) : (
-        <span className="st-badge">{skills.length}</span>
-      );
-    if (id === "decide") return promotable ? <span className="st-badge">{promotable}</span> : null;
-    if (id === "promote") return promotable ? <span className="st-badge">{promotable}</span> : null;
+      return loopRunning ? (
+        <span className="st-badge live" title="An optimization loop is running right now">
+          ●
+        </span>
+      ) : null;
+    if (id === "decide" || id === "promote")
+      return promotable ? (
+        <span
+          className="st-badge"
+          title={`${pluralize(promotable, "skill")} with a KEEP candidate ${
+            id === "decide" ? "awaiting your verification" : "ready to promote"
+          }`}
+        >
+          {promotable}
+        </span>
+      ) : null;
     return null;
   };
 
+  const item = (id: Station, lead: ReactNode, name: string, desc: string, hint: string, extra?: ReactNode) => (
+    <button
+      className={`station station--rich${station === id ? " active" : ""}`}
+      onClick={() => setStation(id)}
+      aria-current={station === id}
+      title={hint}
+    >
+      <span className="st-lead">{lead}</span>
+      <span className="st-text">
+        <span className="st-name">{name}</span>
+        <span className="st-desc">{desc}</span>
+      </span>
+      {extra}
+    </button>
+  );
+
   return (
     <nav className="rail col" role="navigation" aria-label="Console navigation">
-      {/* Dashboard is the landing screen: altitude 0, above the lifecycle. */}
-      <button
-        className={`station station--dashboard${station === "dashboard" ? " active" : ""}`}
-        onClick={() => setStation("dashboard")}
-        aria-current={station === "dashboard"}
-      >
-        <LayoutDashboard size={13} aria-hidden />
-        <span className="st-name">Dashboard</span>
-      </button>
-
-      {/* Live sits between the landing screen and the lifecycle: "what is
-          happening right now" is an altitude of its own, not a lifecycle step. */}
-      <button
-        className={`station station--dashboard${station === "live" ? " active" : ""}`}
-        onClick={() => setStation("live")}
-        aria-current={station === "live"}
-        title={liveRunning ? "An eval run is in progress" : "No eval run in progress"}
-      >
-        <Radio size={13} aria-hidden />
-        <span className="st-name">Live</span>
-        {liveRunning && <span className="st-badge live rail-live-badge">●</span>}
-        {!liveRunning && stalledCount > 0 && (
-          <span className="st-badge" title={`${stalledCount} stalled run(s) on disk`}>
+      {/* ── Altitude 0: the two screens that are NOT scoped to one run. ── */}
+      {item(
+        "dashboard",
+        <LayoutDashboard size={14} aria-hidden />,
+        "Dashboard",
+        "All studies at a glance",
+        "Cross-study overview: recent runs, skill health, and what needs your attention. The one screen not scoped to a single run. Shortcut: 0"
+      )}
+      {item(
+        "live",
+        <Rocket size={14} aria-hidden />,
+        "Run Studies",
+        "Launch & monitor runs",
+        "Your hands on the eval CLI: configure and kick off a new study, then watch its phases, trials, and journal live. Shortcut: 7",
+        liveRunning ? (
+          <span className="st-badge live" title="An eval run is executing right now">
+            ● live
+          </span>
+        ) : stalledCount > 0 ? (
+          <span className="st-badge" title={`${pluralize(stalledCount, "stalled run")} on disk — open to inspect`}>
             {stalledCount}
           </span>
-        )}
+        ) : null
+      )}
+
+      {/* ── The lifecycle: five steps, one focused run. The chip above step 1
+            anchors the whole section to the run being read, so "which run am I
+            looking at?" is answered before any station is opened. ── */}
+      <div className="rail-section">Run lifecycle</div>
+      <button
+        className="rail-runchip"
+        onClick={() => openOverlay("harness")}
+        title={
+          scorecard
+            ? `Focused run: ${scorecard.runId}\nEvaluate and Review read this run; the flags you confirm there seed Optimize → Decide → Promote.\nClick to switch runs (h).`
+            : "No run loaded yet. Click to browse runs (h)."
+        }
+      >
+        <span className="rail-runchip-label">Reading run</span>
+        <span className="rail-runchip-value mono">
+          {runShortLabel(scorecard?.runId ?? config?.run_id, scorecard?.timestampUtc, scorecard?.gitCommit)}
+          <ChevronDown size={11} aria-hidden />
+        </span>
       </button>
 
-      <div className="rail-section">Lifecycle</div>
       {LIFECYCLE_STATIONS.map((st) => (
         <div key={st.id}>
-          <button
-            className={`station${station === st.id ? " active" : ""}`}
-            onClick={() => setStation(st.id)}
-            aria-current={station === st.id}
-          >
-            <span className="st-num">{st.num}</span>
-            <span className="st-name">{st.name}</span>
-            {badge(st.id)}
-          </button>
+          {item(
+            st.id,
+            <span className="st-num">{st.num}</span>,
+            st.name,
+            st.desc,
+            `${st.hint} Shortcut: ${st.num}`,
+            badge(st.id)
+          )}
           {st.id === "review" && (
-            <button className="rail-sub" onClick={doExport} title="Hand the confirmed flags to the optimizer">
-              <Send size={12} /> Focus
-              <span className="st-badge hot" style={{ marginLeft: "auto" }}>
-                {confirmedFlagKeys.length}
-              </span>
+            <button
+              className={`rail-sub rail-handoff${flagged ? "" : " muted"}`}
+              onClick={doExport}
+              disabled={!flagged}
+              title={
+                flagged
+                  ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set — the optimizer only chases flagged cases.`
+                  : "Flag failing cases in Review first; the optimizer only chases what you flag."
+              }
+            >
+              <Send size={12} aria-hidden />
+              {flagged ? `Send ${pluralize(flagged, "flag")} → Optimize` : "No flags yet"}
             </button>
           )}
         </div>
@@ -252,15 +343,13 @@ export function Rail() {
       {/* Insights sit beside the lifecycle, not inside it: auditing models and
           harnesses is cross-run analysis, not a step in shipping one run. */}
       <div className="rail-section">Insights</div>
-      <button
-        className={`station${station === "compare" ? " active" : ""}`}
-        onClick={() => setStation("compare")}
-        aria-current={station === "compare"}
-      >
-        <span className="st-num">6</span>
-        <span className="st-name">Models &amp; Harnesses</span>
-        <GitCompareArrows size={12} aria-hidden />
-      </button>
+      {item(
+        "compare",
+        <GitCompareArrows size={14} aria-hidden />,
+        "Models & Harnesses",
+        "Compare across runs",
+        "Cross-run analysis: declared model/harness capability vs the performance actually observed on disk. Shortcut: 6"
+      )}
 
       <div className="rail-overlays">
         <div className="rail-section" style={{ paddingTop: 0 }}>

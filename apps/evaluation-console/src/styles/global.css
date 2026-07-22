@@ -244,6 +244,81 @@ button {
   background: var(--live-bg);
   color: var(--live);
 }
+/* Rich rail items: name + one-line purpose, so no station is a mystery word. */
+.station--rich {
+  align-items: flex-start;
+  padding: 8px var(--sp-3);
+}
+.station--rich .st-lead {
+  width: 16px;
+  flex: none;
+  display: inline-flex;
+  justify-content: center;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.station--rich .st-lead .st-num {
+  width: auto;
+}
+.station--rich.active .st-lead {
+  color: var(--text);
+}
+.station--rich .st-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.station--rich .st-desc {
+  font-size: var(--fs-50);
+  color: var(--text-3);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.station--rich .st-badge {
+  margin-top: 2px;
+  flex: none;
+}
+
+/* The focused-run anchor above the lifecycle: which run steps 1-5 are reading. */
+.rail-runchip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin: 0 var(--sp-1) var(--sp-2);
+  padding: 6px var(--sp-3);
+  border-radius: var(--r-2);
+  border: 1px dashed var(--hairline-strong);
+  color: var(--text-2);
+  font-size: var(--fs-50);
+  min-width: 0;
+  width: calc(100% - 2 * var(--sp-1));
+  text-align: left;
+}
+.rail-runchip:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.rail-runchip-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+.rail-runchip-value {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rail-sub {
   margin-left: 30px;
   padding: 7px var(--sp-3);
@@ -258,10 +333,37 @@ button {
   background: var(--surface-2);
   color: var(--text-2);
 }
+/* The Review → Optimize handoff: the one rail control that acts, not navigates. */
+.rail-handoff {
+  color: var(--ink-human);
+}
+.rail-handoff:hover {
+  color: var(--ink-human);
+  background: var(--ink-human-bg);
+}
+.rail-handoff.muted,
+.rail-handoff.muted:hover {
+  color: var(--text-3);
+  background: none;
+  cursor: default;
+}
+
+/* Freshness accent: marks the newest optimization round. Base .fresh-chip
+   styles (and the amber .stale variant) live with the Dashboard styles below. */
+.fresh-chip.latest {
+  color: var(--keep);
+  border-color: color-mix(in srgb, var(--keep) 45%, transparent);
+}
 .rail-overlays {
   margin-top: auto;
   padding-top: var(--sp-3);
   border-top: 1px solid var(--hairline);
+}
+/* Lens rows sit at the rail foot with no lifecycle indent. */
+.rail-overlays .rail-sub {
+  margin-left: 0;
+  width: 100%;
+  text-align: left;
 }
 
 /* ===================== FACET BAR ===================== */
@@ -1959,6 +2061,15 @@ button {
   border: 1px solid color-mix(in srgb, var(--harness) 42%, transparent);
   border-radius: var(--r-pill);
   padding: 0 6px;
+}
+/* Audit-pipeline artifact tag: distinguishes evaluator audits from eval sweeps. */
+.harness-run .hr-kind {
+  font-size: var(--fs-50);
+  color: var(--text-3);
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--r-pill);
+  padding: 0 6px;
+  white-space: nowrap;
 }
 
 /* ============================================================================
