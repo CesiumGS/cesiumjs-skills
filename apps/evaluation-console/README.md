@@ -21,7 +21,7 @@ so the lifecycle is one continuous journey instead of a tab switch:
 | **3 Optimize** | Watch the self-optimization loop per skill: a git-style iteration commit log, the pipeline train driven 1:1 by the real journal (red on `step_failed`), the per-scenario WIN/LOSS/TIE board, plus each iteration's **recorded codegen provenance** (harness / model / effort, or an honest "unrecorded"). |
 | **4 Decide** | Candidate-vs-baseline **visual diff** (swipe `x` / blink `X`), the lit 5-rule decision cascade, and the three de-aliased judges. |
 | **5 Promote** | The guarded hand-off of a KEEP candidate to the live `SKILL.md`. |
-| **6 Models** | Its own **Insights** rail station beside the lifecycle. KPI tiles (models available and exercised, pipeline default, best qualified win rate, iterations), the observed model-performance table (keep rate, win rate ± σ stability, average wall clock, recency, drill into Optimize), the per-skill optimization trend, and the full model catalogs with effort-aware cost meters. |
+| **6 Models** | Its own **Insights** rail station beside the lifecycle. KPI tiles (models available and exercised, pipeline default, best qualified win rate, iterations), the observed model-performance table (keep rate, win rate ± σ stability, average wall clock, recency, drill into Optimize), the per-skill optimization trend, and the declared model catalog per harness: grouped by vendor and sorted newest-release-first, with effort-aware cost meters, per-harness vision truth (a single banner carries the provider kill-switch), release dates and context windows, an exercised/never-run filter, and an Observed column that joins each row back to the optimization evidence on disk. |
 | **8 Harnesses** | The second **Insights** station. KPI tiles (harness count, runs, pass rate, average score, multimodal coverage), registry capability cards, and the runs-by-harness leaderboard. |
 | **7 Live** | Real-time progress of eval runs **while they are still running** — and the place to **launch** one. The server tails each run's progress journal (`journal.jsonl` for optimization loops, `progress.jsonl` for baseline audits) and counts artifacts on disk, so the animated progress bar, phase pipeline, and per-case board reflect only what has verifiably happened — agent phases earn credit at completion, never by guess. The **Launch an Eval Run** panel mirrors the real `cesium-eval audit` flag surface, grouped by role: skills (`--skills`), a Code Generation group (`--harness` provenance stamp; the codegen model is recovered from each baseline's meta sidecar, since audit has no model flag), and a Visual Judging group (`--no-judge` toggle, `--adapter`, `--judge-model`, `--n-judges`), with visual judging **on by default** (deterministic-only is an explicit downgrade with a warning) and a live command preview of the exact CLI invocation. It then POSTs to the server which spawns `cesium-eval audit --journal` detached. The UI polls every 2.5 s while a run is active; the Dashboard grows a "happening now" banner, the top strip shows a live pill, and the rail badge pulses. When a run finishes, a toast fires and the console refreshes so it lands in Recent Runs automatically. Runs quiet for 30 min are demoted to "stalled". |
 
@@ -32,9 +32,11 @@ fide, data-only description of the agent-CLI
 harnesses: Codex CLI (OpenAI · ChatGPT subscription, fully multimodal) and
 OpenCode CLI (GitHub Copilot subscription, **text only**: the provider disables
 vision account-wide, so image-bearing calls re-route to Codex). Each entry
-carries its model catalog with tier, a relative cost meter (Very low → Premium,
-effort-aware since reasoning bills as output tokens), native vision, effort
-levels, and context. **Adding a harness or model is adding an entry here**, with
+carries its model catalog with vendor, tier, a relative cost meter (Very low →
+Premium, effort-aware since reasoning bills as output tokens) backed by real
+per-M-token prices, native vision, effort levels, context window, and release
+date — enriched from the models.dev catalog snapshot that OpenCode caches
+locally. **Adding a harness or model is adding an entry here**, with
 no code changes. `/api/registry` overlays the role defaults from
 [`eval.config.json`](../../eval.config.json) at read time, so the cards always
 show what a run started today would actually use.

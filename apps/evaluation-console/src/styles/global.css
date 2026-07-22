@@ -2986,7 +2986,7 @@ button.verb-btn:disabled {
   box-shadow: 0 0 0 2px var(--live);
 }
 
-/* catalogs */
+/* catalog (declared availability tab) */
 .catalog-table .star {
   color: var(--defer);
   flex: none;
@@ -2999,9 +2999,123 @@ button.verb-btn:disabled {
   cursor: help;
   font-size: var(--fs-50);
 }
-.catalog-efforts {
+.catalog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+.harness-chip .hc-provider {
+  font-family: var(--font-sans);
+  font-size: var(--fs-50);
+  color: var(--text-3);
+}
+.catalog-filter button .mono {
+  font-size: var(--fs-50);
+  color: var(--text-3);
+}
+.catalog-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-50);
+  color: var(--defer);
+  background: var(--defer-bg);
+  border-radius: var(--r-md, 6px);
+  padding: 5px 10px;
+  margin-bottom: var(--sp-2);
+}
+.catalog-banner svg {
+  flex: none;
+}
+/* vendor group header rows: quiet uppercase dividers, not data rows */
+.catalog-group-row th {
+  padding: 12px 10px 4px;
+  border-bottom: 1px solid var(--hairline-strong);
+}
+.catalog-vendor-name {
+  font-size: var(--fs-50);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+.catalog-vendor-count {
+  margin-left: var(--sp-2);
+  font-size: var(--fs-50);
+  font-weight: 400;
+  color: var(--text-3);
+}
+/* two-line model cell: id on top, name + tier beneath — nothing overlaps */
+.catalog-table th[scope="row"].catalog-model {
+  min-width: 210px;
+  max-width: 280px;
+}
+.catalog-model-id {
+  white-space: nowrap;
+}
+.catalog-model-sub {
+  display: block;
+  font-size: var(--fs-50);
+  font-weight: 400;
+  color: var(--text-3);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vision-cell.on {
+  color: var(--pass);
+}
+.vision-cell.blocked {
+  color: var(--defer);
+  cursor: help;
+}
+.catalog-novision,
+.catalog-noeffort {
+  color: var(--text-3);
+  cursor: help;
+}
+.catalog-effort-range {
   font-size: var(--fs-50);
   color: var(--text-2);
+  white-space: nowrap;
+  cursor: help;
+}
+.catalog-effort-n {
+  margin-left: 5px;
+  font-size: var(--fs-50);
+  color: var(--text-3);
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+}
+.catalog-release {
+  white-space: nowrap;
+}
+.catalog-observed {
+  font-family: var(--font-mono);
+  font-size: var(--fs-50);
+  color: var(--ink-machine);
+  background: var(--ink-machine-bg, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--ink-machine) 40%, transparent);
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.catalog-observed:hover {
+  background: color-mix(in srgb, var(--ink-machine) 16%, transparent);
+}
+.catalog-unrun {
+  font-size: var(--fs-50);
+  color: var(--unknown);
+  border: 1px dashed var(--unknown);
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
+  white-space: nowrap;
+  cursor: help;
 }
 
 /* the compare tables inherit .matrix; give them comfortable row rhythm */

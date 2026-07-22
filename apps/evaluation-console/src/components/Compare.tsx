@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, Eye, EyeOff, Star } from "lucide-react";
 import { useStore } from "../store";
 import {
   fmtDuration,
@@ -18,11 +18,15 @@ import type { ComboInsight, HarnessSpec, IterationSummary, ModelSpec, RunSummary
    MODELS & HARNESSES (Insights, key 6).
    Two truths, visually separated and never conflated (the provenance rule):
      DECLARED  what the registry says a harness or model CAN do (capability
-               cards and catalogs: price, effort, vision metadata).
+               cards and the model catalog: vendor, price, effort, vision,
+               release metadata).
      OBSERVED  what the artifacts on disk actually recorded (run outcomes per
                harness; per model-and-effort combo: keep rate, win rate with
                stability, wall clock, recency) with drill-down to the exact
                iterations, then into Optimize for the evidence.
+   Three dashboards behind one segmented control: Harnesses (the harness as
+   the unit), Models (observed performance as the unit), Catalog (declared
+   availability as the unit, joined back to the evidence by one column).
    Ink law holds: deterministic rates are steel 0-1/%; the harness dimension is
    the categorical indigo; unknown renders dashed slate, never as a zero.
    Copy convention: Title Case for headers, sentence case for prose; only real
@@ -434,7 +438,7 @@ export function Combos() {
   const { insights } = useStore();
   const combos = insights?.combos ?? [];
   return (
-    <div className="dash-card">
+    <div className="dash-card" id="observed-combos">
       <div className="section-title">
         Model Performance, Observed
         <span className="section-sub">
@@ -875,69 +879,216 @@ export function SkillTrend() {
 }
 
 /* ---------------------------------------------------------------------------
-   DECLARED: full model catalogs, one harness at a time.
+   DECLARED: full model catalogs.
+   One harness at a time, grouped by vendor (who makes the model), newest
+   release first, with an OBSERVED column joining each row to the optimization
+   evidence on disk and an exercised/unexercised filter. The provenance rule
+   holds: catalog metadata is DECLARED; the Observed column is the only cell
+   that reads from artifacts, and it never guesses.
    --------------------------------------------------------------------------- */
-function CatalogTable({ spec }: { spec: HarnessSpec }) {
-  const effective = (m: ModelSpec): boolean | null => {
-    if (!spec.multimodal) return false; // Provider-level kill switch.
-    return m.native_vision;
-  };
+
+/** Aggregated observed evidence for one (harness, model): all effort variants folded together.
+ *  Keys use the bare model name (provider prefix stripped): iteration metas may record ids
+ *  through a different provider alias (e.g. openai/gpt-5.5) than the catalog lists. */
+interface CatalogEvidence {
+  iterations: number;
+  lastActive: string | null;
+}
+
+function observedEvidence(combos: ComboInsight[]): Map<string, CatalogEvidence> {
+  const map = new Map<string, CatalogEvidence>();
+  for (const c of combos) {
+    const key = `${c.harness}|${modelShort(c.model_id)}`;
+    const cur = map.get(key) ?? { iterations: 0, lastActive: null };
+    cur.iterations += c.iterations;
+    if (c.last_active && (!cur.lastActive || c.last_active > cur.lastActive)) cur.lastActive = c.last_active;
+    map.set(key, cur);
+  }
+  return map;
+}
+
+/** The evidence key for a catalog row. */
+function evidenceKey(spec: HarnessSpec, m: ModelSpec): string {
+  return `${spec.id}|${modelShort(m.id)}`;
+}
+
+const VENDOR_ORDER = ["OpenAI", "Anthropic", "Google", "Microsoft"];
+
+function vendorRank(vendor: string | null): number {
+  const idx = VENDOR_ORDER.indexOf(vendor ?? "");
+  return idx === -1 ? VENDOR_ORDER.length : idx;
+}
+
+/** Release-date recency inside a vendor group: newest first, unknown last. */
+function byReleaseDesc(a: ModelSpec, b: ModelSpec): number {
+  if ((a.release === null) !== (b.release === null)) return a.release === null ? 1 : -1;
+  if (a.release !== b.release) return (a.release ?? "") < (b.release ?? "") ? 1 : -1;
+  return a.id.localeCompare(b.id);
+}
+
+function EffortRange({ levels }: { levels: string[] }) {
+  if (!levels.length) {
+    return (
+      <span className="mono catalog-noeffort" title="No reasoning-effort control exposed for this model.">
+        —
+      </span>
+    );
+  }
+  const range = levels.length === 1 ? levels[0] : `${levels[0]}–${levels[levels.length - 1]}`;
+  return (
+    <span className="mono catalog-effort-range" title={`${levels.length} levels: ${levels.join(" · ")}`}>
+      {range}
+      <span className="catalog-effort-n">{levels.length}</span>
+    </span>
+  );
+}
+
+/** One cell, three truths: effective vision, natively capable but provider-blocked, or text-only. */
+function CatalogVisionCell({ spec, m }: { spec: HarnessSpec; m: ModelSpec }) {
+  if (m.native_vision === null) return <UnknownChip small />;
+  if (!m.native_vision) {
+    return (
+      <span className="mono catalog-novision" title="Natively text-only: the model itself accepts no images.">
+        —
+      </span>
+    );
+  }
+  if (spec.multimodal) {
+    return (
+      <span className="vision-cell on" title="Accepts image input, and this harness passes it through.">
+        <Eye size={13} aria-label="Vision available here" />
+      </span>
+    );
+  }
+  return (
+    <span className="vision-cell blocked" title={`Natively vision-capable, but blocked on this harness: ${spec.vision_note}`}>
+      <EyeOff size={13} aria-label="Vision blocked by this provider" />
+    </span>
+  );
+}
+
+type CatalogFilter = "all" | "run" | "unrun";
+
+function CatalogTable({
+  spec,
+  evidence,
+  filter,
+  onShowObserved
+}: {
+  spec: HarnessSpec;
+  evidence: Map<string, CatalogEvidence>;
+  filter: CatalogFilter;
+  onShowObserved: () => void;
+}) {
+  const groups = useMemo(() => {
+    const visible = spec.models.filter((m) => {
+      const seen = evidence.has(evidenceKey(spec, m));
+      return filter === "all" || (filter === "run" ? seen : !seen);
+    });
+    const byVendor = new Map<string, ModelSpec[]>();
+    for (const m of visible) {
+      const vendor = m.vendor ?? "Other";
+      (byVendor.get(vendor) ?? byVendor.set(vendor, []).get(vendor)!).push(m);
+    }
+    return [...byVendor.entries()]
+      .map(([vendor, models]) => ({ vendor, models: [...models].sort(byReleaseDesc) }))
+      .sort((a, b) => vendorRank(a.vendor) - vendorRank(b.vendor) || a.vendor.localeCompare(b.vendor));
+  }, [spec, evidence, filter]);
+
+  if (!groups.length) {
+    return (
+      <div className="empty-note">
+        {filter === "run"
+          ? "No model in this catalog has optimization evidence on disk yet."
+          : "Every model in this catalog has been exercised; nothing left untested."}
+      </div>
+    );
+  }
+
   return (
     <table className="matrix catalog-table">
-      <caption className="sr-only">{spec.name} model catalog with metadata.</caption>
+      <caption className="sr-only">{spec.name} model catalog, grouped by vendor, with observed evidence.</caption>
       <thead>
         <tr>
           <th scope="col">Model</th>
-          <th scope="col">Tier</th>
-          <th scope="col" title="Relative cost tier. Actual spend also scales with the reasoning effort used.">Cost</th>
-          <th scope="col" title="Can the model natively accept images?">Native Vision</th>
-          <th scope="col" title="What this harness and provider actually allow.">Available Here</th>
-          <th scope="col">Effort Levels</th>
+          <th scope="col" title="Relative per-token cost tier. Realized spend also scales with the reasoning effort used.">
+            Cost
+          </th>
+          <th scope="col" title="Whether image input actually works for this model on this harness.">
+            Vision
+          </th>
+          <th scope="col" title="Reasoning-effort levels the model exposes. Hover a value for the full list.">
+            Effort
+          </th>
           <th scope="col">Context</th>
           <th scope="col">Released</th>
+          <th scope="col" title="Optimization iterations recorded with this model on this harness: the observed side of the catalog.">
+            Observed
+          </th>
         </tr>
       </thead>
-      <tbody>
-        {spec.models.map((m) => {
-          const isDefault = m.id === spec.default_model;
-          return (
-            <tr key={m.id} className={isDefault ? "catalog-default" : undefined}>
-              <th scope="row" className="catalog-model">
-                <span className="cell-flex">
-                  {isDefault && <Star size={12} className="star" aria-label="Pipeline default" />}
-                  <span className="mono">{modelShort(m.id)}</span>
-                  {m.notes && (
-                    <span className="catalog-note" title={m.notes}>
-                      ⓘ
+      {groups.map((g) => (
+        <tbody key={g.vendor} className="catalog-vendor">
+          <tr className="catalog-group-row">
+            <th colSpan={7} scope="colgroup">
+              <span className="catalog-vendor-name">{g.vendor}</span>
+              <span className="catalog-vendor-count">{pluralize(g.models.length, "model")}</span>
+            </th>
+          </tr>
+          {g.models.map((m) => {
+            const isDefault = m.id === spec.default_model;
+            const seen = evidence.get(evidenceKey(spec, m));
+            return (
+              <tr key={m.id} className={isDefault ? "catalog-default" : undefined}>
+                <th scope="row" className="catalog-model">
+                  <span className="cell-flex">
+                    {isDefault && <Star size={12} className="star" aria-label="Pipeline default" />}
+                    <span className="mono catalog-model-id">{modelShort(m.id)}</span>
+                    {m.notes && (
+                      <span className="catalog-note" title={m.notes}>
+                        ⓘ
+                      </span>
+                    )}
+                  </span>
+                  <span className="catalog-model-sub">
+                    {m.name}
+                    {m.tier ? ` · ${titleWord(m.tier)}` : ""}
+                  </span>
+                </th>
+                <td>
+                  <CostMeter band={m.price_band} usd={m.price_usd_per_mtok} effort={isDefault ? spec.default_effort : null} />
+                </td>
+                <td>
+                  <CatalogVisionCell spec={spec} m={m} />
+                </td>
+                <td>
+                  <EffortRange levels={m.effort_levels} />
+                </td>
+                <td className="mono">{m.context_k ? `${m.context_k}k` : <UnknownChip small />}</td>
+                <td className="mono catalog-release" title={m.release ? relativeTime(m.release) : "Release date unknown."}>
+                  {m.release ?? <UnknownChip small />}
+                </td>
+                <td>
+                  {seen ? (
+                    <button
+                      className="catalog-observed"
+                      onClick={onShowObserved}
+                      title={`${pluralize(seen.iterations, "optimization iteration")} recorded with this model. Click to open the observed table.`}
+                    >
+                      {pluralize(seen.iterations, "iter")}
+                      {seen.lastActive ? ` · ${relativeTime(seen.lastActive)}` : ""}
+                    </button>
+                  ) : (
+                    <span className="catalog-unrun" title="Available here, but no optimization iteration or run has exercised it yet.">
+                      not run
                     </span>
                   )}
-                </span>
-              </th>
-              <td>{m.tier ? titleWord(m.tier) : <UnknownChip small />}</td>
-              <td>
-                <CostMeter band={m.price_band} usd={m.price_usd_per_mtok} effort={isDefault ? spec.default_effort : null} />
-              </td>
-              <td>
-                {m.native_vision === null ? (
-                  <UnknownChip small />
-                ) : m.native_vision ? (
-                  <Check size={13} className="glyph-pass" aria-label="Yes" />
-                ) : (
-                  <span className="mono">—</span>
-                )}
-              </td>
-              <td>
-                <VisionChip enabled={effective(m)} note={spec.multimodal ? undefined : spec.vision_note} />
-              </td>
-              <td className="mono catalog-efforts">
-                {m.effort_levels.length ? m.effort_levels.join(" · ") : <UnknownChip small />}
-              </td>
-              <td className="mono">{m.context_k ? `${m.context_k}k` : <UnknownChip small />}</td>
-              <td className="mono">{m.release ?? "—"}</td>
-            </tr>
-          );
-        })}
-      </tbody>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      ))}
     </table>
   );
 }
@@ -947,37 +1098,76 @@ function titleWord(value: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function Catalogs() {
-  const { registry } = useStore();
+function Catalogs({ onShowObserved }: { onShowObserved: () => void }) {
+  const { registry, insights } = useStore();
   const harnesses = registry?.harnesses ?? [];
+  const evidence = useMemo(() => observedEvidence(insights?.combos ?? []), [insights]);
   const [active, setActive] = useState<string>(harnesses[0]?.id ?? "");
+  const [filter, setFilter] = useState<CatalogFilter>("all");
   const spec = harnesses.find((h) => h.id === active) ?? harnesses[0] ?? null;
   if (!spec) return null;
+
+  const runCount = spec.models.filter((m) => evidence.has(evidenceKey(spec, m))).length;
+  const filters: Array<{ id: CatalogFilter; label: string; count: number; hint: string }> = [
+    { id: "all", label: "All", count: spec.models.length, hint: "Every model this harness can name." },
+    { id: "run", label: "Exercised", count: runCount, hint: "Models with optimization evidence on disk." },
+    {
+      id: "unrun",
+      label: "Never run",
+      count: spec.models.length - runCount,
+      hint: "Available, but no iteration or run has exercised them yet."
+    }
+  ];
+
   return (
     <div className="dash-card">
       <div className="section-title">
-        Model Catalogs
+        Model Catalog
         <span className="section-sub">
-          {spec.catalog_source}. Cost tiers are per-token; realized spend scales with reasoning effort, which bills
-          as output tokens.
+          {spec.catalog_source}. Grouped by vendor, newest release first; the Observed column joins each row to
+          the evidence on disk.
         </span>
       </div>
-      <div className="harness-switch" role="tablist" aria-label="Catalog harness">
-        {harnesses.map((h) => (
-          <button
-            key={h.id}
-            role="tab"
-            aria-selected={h.id === spec.id}
-            className={`harness-chip${h.id === spec.id ? " active" : ""}`}
-            data-harness={h.id}
-            onClick={() => setActive(h.id)}
-          >
-            {h.name}
-            <span className="hc-count">{h.models.length}</span>
-          </button>
-        ))}
+      <div className="catalog-controls">
+        <div className="harness-switch" role="tablist" aria-label="Catalog harness">
+          {harnesses.map((h) => (
+            <button
+              key={h.id}
+              role="tab"
+              aria-selected={h.id === spec.id}
+              className={`harness-chip${h.id === spec.id ? " active" : ""}`}
+              data-harness={h.id}
+              onClick={() => setActive(h.id)}
+              title={`${h.name} · ${h.provider_label}`}
+            >
+              {h.name}
+              <span className="hc-provider">{h.provider_label.split("·")[0].split("subscription")[0].trim()}</span>
+              <span className="hc-count">{h.models.length}</span>
+            </button>
+          ))}
+        </div>
+        <span className="spacer" />
+        <div className="seg-control catalog-filter" role="radiogroup" aria-label="Exercised filter">
+          {filters.map((f) => (
+            <button
+              key={f.id}
+              role="radio"
+              aria-checked={filter === f.id}
+              className={filter === f.id ? "active" : ""}
+              onClick={() => setFilter(f.id)}
+              title={f.hint}
+            >
+              {f.label} <span className="mono">{f.count}</span>
+            </button>
+          ))}
+        </div>
       </div>
-      <CatalogTable spec={spec} />
+      {!spec.multimodal && (
+        <div className="catalog-banner" role="note">
+          <EyeOff size={12} aria-hidden /> {spec.vision_note}
+        </div>
+      )}
+      <CatalogTable spec={spec} evidence={evidence} filter={filter} onShowObserved={onShowObserved} />
     </div>
   );
 }
@@ -1122,7 +1312,11 @@ export function ModelsStation() {
 
       <Combos />
       <SkillTrend />
-      <Catalogs />
+      <Catalogs
+        onShowObserved={() =>
+          document.getElementById("observed-combos")?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      />
     </div>
   );
 }

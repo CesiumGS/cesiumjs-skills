@@ -281,19 +281,9 @@ await step("evaluate: provenance card renders chips + reproduce sketch", async (
   return `${chips} provenance chips; sketch starts "${pre.split("\n")[0]}"`;
 });
 
-const insightsTab = async (name) => {
-  await page.evaluate((n) => {
-    const b = [...document.querySelectorAll(".seg-control button")].find((x) => x.textContent.trim() === n);
-    b && b.click();
-  }, name);
-  await sleep(350);
-};
-
-// ---------------- MODELS & HARNESSES (station 6) ----------------
-await step("models: station 6 renders registry cards for both harnesses", async () => {
-  await press("6", 600);
-  const seg = await count(".seg-control button");
-  assert(seg === 2, `segmented control buttons=${seg}`);
+// ---------------- MODELS (station 6) & HARNESSES (station 8) ----------------
+await step("harnesses: station 8 renders registry cards for both harnesses", async () => {
+  await press("8", 600);
   const kpis = await count(".kpi");
   assert(kpis >= 4, `harness KPIs=${kpis}`);
   const cards = await count(".hx-card");
@@ -303,14 +293,14 @@ await step("models: station 6 renders registry cards for both harnesses", async 
   const defaults = await page.evaluate(() =>
     [...document.querySelectorAll(".hx-card .hx-model")].map((el) => el.textContent.trim())
   );
-  await shot("models-cards");
+  await shot("harnesses-cards");
   assert(cards === 2, `hx-cards=${cards}`);
   assert(names.includes("Codex CLI") && names.includes("OpenCode CLI"), `names=${names}`);
   assert(defaults.every((d) => d.includes("gpt-5.6-sol")), `defaults=${defaults}`);
   return `${names.join(" + ")}; defaults ${defaults.join(", ")}`;
 });
 
-await step("models: vision asymmetry is explicit (codex vision, opencode text-only)", async () => {
+await step("harnesses: vision asymmetry is explicit (codex vision, opencode text-only)", async () => {
   const chips = await page.evaluate(() =>
     [...document.querySelectorAll(".hx-card")].map((card) => ({
       harness: card.getAttribute("data-harness"),
@@ -325,7 +315,7 @@ await step("models: vision asymmetry is explicit (codex vision, opencode text-on
 });
 
 await step("models: observed combos table renders with stability metadata", async () => {
-  await insightsTab("Models");
+  await press("6", 600);
   const kpis = await count(".kpi");
   assert(kpis >= 4, `model KPIs=${kpis}`);
   const rows = await count(".combo-table .combo-row");
@@ -350,43 +340,70 @@ await step("models: combo expands to member iterations and drills into Optimize"
   return `${members} members; drill landed on ${station}`;
 });
 
-await step("models: harness and model dashboards are separate views", async () => {
-  const onHarnesses = await page.evaluate(() => !!document.querySelector(".hx-card") && !document.querySelector(".combo-table"));
-  await insightsTab("Models");
-  const onModels = await page.evaluate(() => !!document.querySelector(".combo-table") && !document.querySelector(".hx-card"));
-  await insightsTab("Harnesses");
-  assert(onHarnesses, "Harnesses tab leaked model tables or lost harness cards");
-  assert(onModels, "Models tab leaked harness cards or lost the model table");
-  return "clean separation: Harnesses = cards + runs; Models = performance + catalogs";
+await step("models: models and harnesses are separate stations", async () => {
+  await press("8", 500);
+  const onHarnesses = await page.evaluate(() => !!document.querySelector(".hx-card") && !document.querySelector(".combo-table") && !document.querySelector(".catalog-table"));
+  await press("6", 500);
+  const onModels = await page.evaluate(() => !!document.querySelector(".combo-table") && !!document.querySelector(".catalog-table") && !document.querySelector(".hx-card"));
+  assert(onHarnesses, "Harnesses station leaked model tables or lost harness cards");
+  assert(onModels, "Models station leaked harness cards or lost the observed table / catalog");
+  return "clean separation: Harnesses = cards + runs; Models = observed evidence + declared catalog";
 });
 
-await step("models: run trend renders clickable dots + axis toggle", async () => {
-  await insightsTab("Harnesses");
+await step("dashboard: run trend renders clickable dots + axis toggle", async () => {
+  await press("0", 600);
   const dots = await count(".trend-runs circle");
   const toggles = await count(".axis-toggle button");
   assert(dots >= 2, `dots=${dots}`);
   assert(toggles === 2, `axis toggles=${toggles}`);
   await page.click(".axis-toggle button:last-child");
   await sleep(200);
+  await press("6", 500);
   return `${dots} run dots; axis toggles work`;
 });
 
-await step("models: catalogs list both harness tabs with default starred", async () => {
-  await insightsTab("Models");
+await step("catalog: vendor groups, filter chips, and starred default render", async () => {
+  await press("6", 500);
   const tabs = await page.evaluate(() =>
     [...document.querySelectorAll(".harness-switch .harness-chip")].map((el) => el.textContent.trim())
   );
   const starred = await count(".catalog-default");
-  const rows = await count(".catalog-table tbody tr");
-  await shot("models-catalog");
+  const rows = await count(".catalog-table tbody tr:not(.catalog-group-row)");
+  const groups = await count(".catalog-group-row");
+  const filters = await count(".catalog-filter button");
+  await shot("catalog");
   assert(tabs.length >= 2, `tabs=${tabs}`);
   assert(starred === 1, `starred defaults=${starred}`);
   assert(rows >= 6, `catalog rows=${rows}`);
-  return `tabs ${tabs.join(" | ")}; ${rows} models, 1 starred default`;
+  assert(groups >= 1, `vendor groups=${groups}`);
+  assert(filters === 3, `filter chips=${filters}`);
+  return `tabs ${tabs.join(" | ")}; ${rows} models in ${groups} vendor groups, 1 starred default, ${filters} filters`;
+});
+
+await step("catalog: releases populated and exercised filter narrows the table", async () => {
+  const releases = await page.evaluate(() =>
+    [...document.querySelectorAll(".catalog-release")].map((el) => el.textContent.trim())
+  );
+  const dated = releases.filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(r)).length;
+  assert(releases.length > 0 && dated === releases.length, `dated=${dated}/${releases.length}`);
+  const all = await count(".catalog-table tbody tr:not(.catalog-group-row)");
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll(".catalog-filter button")].find((x) => /Exercised/.test(x.textContent));
+    b && b.click();
+  });
+  await sleep(250);
+  const exercised = await count(".catalog-table tbody tr:not(.catalog-group-row)");
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll(".catalog-filter button")].find((x) => /All/.test(x.textContent));
+    b && b.click();
+  });
+  await sleep(250);
+  assert(exercised <= all, `exercised=${exercised} all=${all}`);
+  return `${dated}/${releases.length} rows carry a release date; filter ${all} -> ${exercised} rows`;
 });
 
 await step("models: unrecorded provenance stays dashed, never guessed", async () => {
-  await insightsTab("Models");
+  await press("6", 500);
   const unrecorded = await count(".combo-table .harness-pill.unrecorded");
   const note = await $(".honesty-note");
   assert(/unrecorded/i.test(note), "honesty note missing");
@@ -442,20 +459,19 @@ await step("copy: no prose em dashes in any station or overlay", async () => {
 });
 
 await step("copy: every table header starts uppercase", async () => {
-  await press("6", 400);
   const collect = () =>
     page.evaluate(() =>
       [...document.querySelectorAll("table th[scope=col]")]
         .map((th) => th.textContent.trim())
         .filter((t) => t && /^[a-z]/.test(t))
     );
+  await press("8", 400);
   const badHarnesses = await collect();
-  await insightsTab("Models");
+  await press("6", 400);
   const badModels = await collect();
-  await insightsTab("Harnesses");
   const bad = [...badHarnesses, ...badModels];
   assert(bad.length === 0, `lowercase headers: ${bad.join(", ")}`);
-  return "all column headers capitalized on both dashboards";
+  return "all column headers capitalized on both stations";
 });
 
 await step("cost: meter chips replace dollar-sign glyphs", async () => {
@@ -473,7 +489,6 @@ await step("cost: meter chips replace dollar-sign glyphs", async () => {
 
 await step("models: skill optimization trend renders with a skill picker", async () => {
   await press("6", 400);
-  await insightsTab("Models");
   const chart = await page.evaluate(() => {
     const titles = [...document.querySelectorAll(".section-title")].map((el) => el.textContent);
     return titles.some((t) => t.includes("Skill Optimization Trend"));
