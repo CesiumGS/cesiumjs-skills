@@ -297,19 +297,74 @@ button {
   background: var(--surface-2);
   color: var(--text-2);
 }
-/* The Review → Optimize handoff: the one rail control that acts, not navigates. */
+/* The Review → Optimize handoff: the one rail control that acts, not navigates.
+   A compact action card that mirrors the station anatomy (lead icon, name,
+   one-line status) so it reads as part of the lifecycle, not stray text. */
 .rail-handoff {
-  color: var(--ink-human);
-}
-.rail-handoff:hover {
-  color: var(--ink-human);
-  background: var(--ink-human-bg);
-}
-.rail-handoff.muted,
-.rail-handoff.muted:hover {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  width: calc(100% - 30px);
+  margin: 2px 0 4px 30px;
+  padding: 7px var(--sp-3);
+  border-radius: var(--r-2);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
   color: var(--text-3);
-  background: none;
+  text-align: left;
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+.rail-handoff:disabled {
   cursor: default;
+}
+.rail-handoff .rh-lead {
+  width: 16px;
+  flex: none;
+  display: inline-flex;
+  justify-content: center;
+  margin-top: 2px;
+}
+.rail-handoff .rh-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.rail-handoff .rh-name {
+  font-size: var(--fs-100);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.02em;
+}
+.rail-handoff .rh-desc {
+  font-size: var(--fs-50);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rail-handoff .rh-count {
+  flex: none;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-50);
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--ink-human) 18%, transparent);
+  color: var(--ink-human);
+}
+/* Armed: confirmed flags are ready to hand off. */
+.rail-handoff.ready {
+  border-color: color-mix(in srgb, var(--ink-human) 35%, transparent);
+  background: var(--ink-human-bg);
+  color: var(--ink-human);
+}
+.rail-handoff.ready .rh-desc {
+  color: color-mix(in srgb, var(--ink-human) 70%, var(--text-2));
+}
+.rail-handoff.ready:hover {
+  border-color: var(--ink-human);
 }
 
 /* Freshness accent: marks the newest optimization round. Base .fresh-chip

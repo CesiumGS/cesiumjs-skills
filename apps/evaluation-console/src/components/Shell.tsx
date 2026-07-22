@@ -269,6 +269,9 @@ export function Rail() {
   return (
     <nav className="rail col" role="navigation" aria-label="Console navigation">
       {/* ── Altitude 0: the two screens that are NOT scoped to one run. ── */}
+      <div className="rail-section" style={{ paddingTop: 0 }}>
+        Overview
+      </div>
       {item(
         "dashboard",
         <LayoutDashboard size={14} aria-hidden />,
@@ -310,7 +313,7 @@ export function Rail() {
           )}
           {st.id === "review" && (
             <button
-              className={`rail-sub rail-handoff${flagged ? "" : " muted"}`}
+              className={`rail-handoff${flagged ? " ready" : ""}`}
               onClick={doExport}
               disabled={!flagged}
               title={
@@ -321,12 +324,20 @@ export function Rail() {
                     : "Flag failing cases in Review first; the optimizer only chases what you confirm."
               }
             >
-              <Send size={12} aria-hidden />
-              {flagged
-                ? `Send ${pluralize(flagged, "confirmed flag")} → Optimize`
-                : suggestedFlagCount
-                  ? `${suggestedFlagCount} suggested · 0 confirmed`
-                  : "No flags yet"}
+              <span className="rh-lead">
+                <Send size={13} aria-hidden />
+              </span>
+              <span className="rh-text">
+                <span className="rh-name">Send to Optimize</span>
+                <span className="rh-desc">
+                  {flagged
+                    ? "Ready to hand off"
+                    : suggestedFlagCount
+                      ? `${suggestedFlagCount} suggested · 0 confirmed`
+                      : "No flags yet"}
+                </span>
+              </span>
+              {flagged > 0 && <span className="rh-count">{flagged}</span>}
             </button>
           )}
         </div>
