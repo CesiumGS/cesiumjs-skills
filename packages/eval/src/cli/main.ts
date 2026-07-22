@@ -1,0 +1,430 @@
+/**
+ * cesium-eval — unified CLI for the CesiumJS skill evaluation and
+ * self-optimization lifecycle.
+ *
+ * Configuration precedence: built-in defaults < eval.config.json < environment
+ * variables < command-line flags. Harnesses and models are declared in
+ * config/harness-registry.json — data, not code.
+ *
+ * Exit codes: 0 = pass/success, 1 = evaluation failure, 2 = usage/validation error.
+ */
+import { Command, Option } from "commander";
+import { loadContext } from "../config/load.js";
+import type { EvalContext } from "../config/types.js";
+
+const program = new Command();
+
+let cachedContext: EvalContext | null = null;
+function ctx(): EvalContext {
+  cachedContext ??= loadContext({ configPath: program.opts().config });
+  return cachedContext;
+}
+
+async function run(action: () => Promise<number>): Promise<void> {
+  try {
+    process.exitCode = await action();
+  } catch (exc: any) {
+    console.error(`error: ${exc?.message ?? exc}`);
+    process.exitCode = 2;
+  }
+}
+
+program
+  .name("cesium-eval")
+  .description("Evaluation and self-optimization platform for CesiumJS agent skills.")
+  .option("--config <path>", "path to eval.config.json (default: <repo>/eval.config.json)")
+  .version("1.0.0");
+
+// ---------------------------------------------------------------------------
+// evaluation lane
+// ---------------------------------------------------------------------------
+program
+  .command("score")
+  .description("Run the deterministic evaluation scorecard over fixtures or captured evidence.")
+  .option("--cases-root <dir>", "evaluation case manifests root")
+  .option("--fixtures-root <dir>", "synthetic fixture evidence root")
+  .addOption(new Option("--fixture-expectation <kind>", "which fixtures to run when --evidence is omitted").choices(["pass", "fail", "all"]).default("pass"))
+  .option("--evidence <path...>", "evidence JSON file(s) to score")
+  .option("--visual-review <path>", "qualitative visual review JSON to attach")
+  .option("--require-visual-review", "fail cases without a recorded visual review")
+  .option("--harness <id>", "codegen harness that produced the scored evidence")
+  .option("--model <id>", "codegen model id (stamped under artifacts.model)")
+  .option("--model-variant <id>", "codegen reasoning effort / variant")
+  .option("--threshold <number>", "pass threshold", parseFloat)
+  .option("--output-dir <dir>", "scorecard output directory")
+  .action((options) =>
+    run(async () => {
+      const { scoreCommand } = await import("../commands/score.js");
+      return scoreCommand(ctx(), options);
+    }),
+  );
+
+program
+  .command("case")
+  .description("Run one evaluation case against one evidence bundle.")
+  .argument("<case>", "path to evaluation case JSON")
+  .requiredOption("--evidence <path>", "path to captured evidence JSON")
+  .option("--output <path>", "write the result JSON here instead of stdout")
+  .action((casePath, options) =>
+    run(async () => {
+      const { caseCommand } = await import("../commands/score.js");
+      return caseCommand(casePath, options.evidence, options.output);
+    }),
+  );
+
+program
+  .command("audit")
+  .description("Run deterministic + visual-judge lanes over rendered baselines into one combined scorecard.")
+  .option("--skills <list>", "'all' or comma-separated skill ids", "all")
+  .option("--judge-model <id>", "judge model id (default: config/discovery)")
+  .option("--n-judges <n>", "panel size", (value) => Number.parseInt(value, 10))
+  .option("--no-judge", "skip the qualitative lane entirely")
+  .option("--visual-review <path>", "pre-judged visual-review JSON to inject")
+  .option("--emit-cases <path>", "write the audit work list and exit")
+  .option("--emit-visual-review <path>", "also write the assembled visual-review doc")
+  .option("--adapter <id>", "judge adapter: a registry harness id or 'fake'")
+  .option("--harness <id>", "codegen harness stamped into the scorecard")
+  .option("--bundle-root <dir>", "root containing recaptured rendered bundles")
+  .option("--threshold <number>", "pass threshold", parseFloat)
+  .option("--output-dir <dir>", "scorecard output directory")
+  .option("--journal <path>", "JSONL progress-journal path (streamed by the console)")
+  .action((options) =>
+    run(async () => {
+      const { auditCommand } = await import("../commands/audit.js");
+      return auditCommand(ctx(), options);
+    }),
+  );
+
+program
+  .command("judge")
+  .description("Run the static visual judge panel over one rendered bundle.")
+  .requiredOption("--bundle <dir>", "bundle directory with screenshot.png etc.")
+  .requiredOption("--case <path>", "path to the case JSON (scenario metadata)")
+  .option("--model <id>", "judge model id")
+  .option("--n-judges <n>", "panel size", (value) => Number.parseInt(value, 10))
+  .option("--adapter <id>", "judge adapter: a registry harness id or 'fake'")
+  .option("--emit-item <path>", "write the emitted item JSON to this path")
+  .action((options) =>
+    run(async () => {
+      const { judgeCommand } = await import("../commands/audit.js");
+      return judgeCommand(ctx(), options);
+    }),
+  );
+
+program
+  .command("capture")
+  .description("Capture before/after Cesium scene-state evidence for a case in a headless browser.")
+  .argument("<case>", "path to evaluation case JSON")
+  .requiredOption("--candidate-js <path>", "path to candidate JavaScript")
+  .option("--output <path>", "path to write evidence JSON")
+  .option("--run-checks", "run deterministic checks after capture")
+  .option("--no-headless", "show the browser window")
+  .action((casePath, options) =>
+    run(async () => {
+      const { captureCommand } = await import("../commands/capture.js");
+      return captureCommand(ctx(), { ...options, case: casePath });
+    }),
+  );
+
+program
+  .command("validate")
+  .description("Validate evaluation cases/fixtures and optimization scenario manifests.")
+  .addOption(new Option("--suite <suite>", "which validation suite to run").choices(["evaluation", "optimization", "all"]).default("all"))
+  .action((options) =>
+    run(async () => {
+      const { validateCommand } = await import("../commands/validate.js");
+      ctx(); // resolve repo root early for clear errors
+      return validateCommand(options.suite);
+    }),
+  );
+
+program
+  .command("backfill")
+  .description("Backfill codegen provenance (harness/model/effort) into historical scorecards.")
+  .option("--dry-run", "report changes without writing")
+  .option("--check", "exit non-zero if any scorecard is missing recoverable provenance (CI gate)")
+  .action((options) =>
+    run(async () => {
+      const { backfillCommand } = await import("../commands/backfill.js");
+      ctx();
+      return backfillCommand(options);
+    }),
+  );
+
+program
+  .command("serve")
+  .description("Serve the Skill Evaluation Console (SPA + JSON API) over the artifacts.")
+  .argument("<scorecard>", "path to the focused run's scorecard.json")
+  .option("--state-dir <dir>", "directory for review-decisions.json / focus.json")
+  .option("--host <host>", "bind host")
+  .option("--port <port>", "bind port (0 for ephemeral)", (value) => Number.parseInt(value, 10))
+  .option("--open", "open the system browser after start")
+  .action((scorecard, options) =>
+    run(async () => {
+      const { serveCommand } = await import("../commands/serve.js");
+      return serveCommand(ctx(), { ...options, scorecard });
+    }),
+  );
+
+// ---------------------------------------------------------------------------
+// optimization lane
+// ---------------------------------------------------------------------------
+const optimize = program.command("optimize").description("Self-optimization loop and its individual phases.");
+
+const agentSelectionOptions = (command: Command, roles: string[]): Command => {
+  for (const role of roles) {
+    command
+      .option(`--${role}-harness <id>`, `${role} harness (registry id)`)
+      .option(`--${role}-model <id>`, `${role} model id`)
+      .option(`--${role}-variant <id>`, `${role} reasoning effort / variant`);
+  }
+  return command;
+};
+
+const pickAgent = (options: Record<string, any>, role: string) => ({
+  harness: options[`${role}Harness`],
+  model: options[`${role}Model`],
+  variant: options[`${role}Variant`],
+});
+
+agentSelectionOptions(
+  optimize
+    .command("loop")
+    .description("Autonomous propose -> codegen -> render -> judge -> decide loop for one skill.")
+    .argument("<skill>", "skill id, e.g. cesiumjs-camera")
+    .option("--max-iterations <n>", "maximum iterations", (value) => Number.parseInt(value, 10))
+    .addOption(new Option("--stop-on <condition>", "stopping condition").choices(["plateau", "regression", "max"]))
+    .option("--plateau-n <n>", "consecutive ties to trigger plateau stop", (value) => Number.parseInt(value, 10))
+    .option("--proposer-history <n>", "iterations of history for the proposer", (value) => Number.parseInt(value, 10))
+    .option("--proposer-temperature <t>", "proposer temperature (metadata only)", parseFloat)
+    .option("--proposer-decision-path <path>", "decision record to seed the proposer"),
+  ["proposer", "codegen", "judge"],
+).action((skill, options) =>
+  run(async () => {
+    const { loopCommand } = await import("../optimization/loop.js");
+    return loopCommand(ctx(), {
+      skill,
+      maxIterations: options.maxIterations,
+      stopOn: options.stopOn,
+      plateauN: options.plateauN,
+      proposerHistory: options.proposerHistory,
+      proposerTemperature: options.proposerTemperature,
+      proposerDecisionPath: options.proposerDecisionPath,
+      proposer: pickAgent(options, "proposer"),
+      codegen: pickAgent(options, "codegen"),
+      judge: pickAgent(options, "judge"),
+    });
+  }),
+);
+
+agentSelectionOptions(
+  optimize
+    .command("all")
+    .description("Run the loop across every (or selected) skill, optionally scorecard-seeded.")
+    .option("--skills <list>", "'all' or comma-separated skill ids")
+    .option("--from-scorecard <path>", "derive focus from an evaluation scorecard")
+    .option("--from-focus <path>", "seed proposers from a scorecard-focus JSON")
+    .option("--max-iterations <n>", "maximum iterations per skill", (value) => Number.parseInt(value, 10))
+    .addOption(new Option("--stop-on <condition>", "stopping condition").choices(["plateau", "regression", "max"]))
+    .option("--plateau-n <n>", "consecutive ties to trigger plateau stop", (value) => Number.parseInt(value, 10))
+    .option("--continue-on-failure", "continue remaining skills after one fails")
+    .option("--dry-run", "print planned runs without executing"),
+  ["proposer", "codegen", "judge"],
+).action((options) =>
+  run(async () => {
+    const { optimizeAllCommand } = await import("../commands/optimize.js");
+    return optimizeAllCommand(ctx(), {
+      ...options,
+      proposer: pickAgent(options, "proposer"),
+      codegen: pickAgent(options, "codegen"),
+      judge: pickAgent(options, "judge"),
+    });
+  }),
+);
+
+agentSelectionOptions(
+  optimize
+    .command("propose")
+    .description("Propose a revised skill from evaluation history and coverage analysis.")
+    .argument("<skill>", "skill id")
+    .option("--iteration <id>", "iteration id (default: next)")
+    .option("--skill-path <path>", "current best skill file")
+    .option("--decision-path <path>", "last decision record")
+    .option("--coverage-path <path>", "coverage report path")
+    .option("--output-dir <dir>", "candidate output directory")
+    .option("--max-history <n>", "historical iterations in proposer context", (value) => Number.parseInt(value, 10))
+    .option("--temperature <t>", "temperature (metadata only)", parseFloat)
+    .option("--prompt-version <id>", "prompt template version"),
+  ["proposer"],
+).action((skill, options) =>
+  run(async () => {
+    const { proposeCommand } = await import("../optimization/proposer.js");
+    return proposeCommand(ctx(), { ...options, skill, ...pickAgent(options, "proposer") });
+  }),
+);
+
+optimize
+  .command("render")
+  .description("Render generated snippets in a headless browser into evidence bundles.")
+  .argument("<skill>", "skill id")
+  .option("--iteration <id>", "generated-code iteration", "candidate")
+  .option("--generated-dir <dir>", "directory containing generated JS (overrides iteration layout)")
+  .option("--output-dir <dir>", "run output directory (overrides iteration layout)")
+  .option("--only <list>", "comma-separated scenario ids to run")
+  .option("--timeout-ms <n>", "page navigation timeout", (value) => Number.parseInt(value, 10))
+  .action((skill, options) =>
+    run(async () => {
+      const { renderCommand } = await import("../optimization/browserRunner.js");
+      return renderCommand(ctx(), { ...options, skill });
+    }),
+  );
+
+agentSelectionOptions(
+  optimize
+    .command("generate-baselines")
+    .description("Generate baseline JS for all scenarios against the current best skills.")
+    .option("--skill <id>", "only generate for this skill")
+    .option("--iteration <id>", "output iteration label", "baseline")
+    .option("--force", "re-generate even if the .js exists")
+    .option("--only <list>", "comma-separated scenario ids"),
+  ["codegen"],
+).action((options) =>
+  run(async () => {
+    const { generateBaselinesCommand } = await import("../commands/optimize.js");
+    return generateBaselinesCommand(ctx(), { ...options, ...pickAgent(options, "codegen") });
+  }),
+);
+
+agentSelectionOptions(
+  optimize
+    .command("rejudge")
+    .description("Re-run judges + decision for an existing iteration without re-rendering.")
+    .argument("<skill>", "skill id")
+    .option("--baseline-iter <id>", "baseline iteration", "000")
+    .option("--candidate-iter <id>", "candidate iteration", "001")
+    .option("--output-iter <id>", "where to write decision.json (default: candidate iter)"),
+  ["judge"],
+).action((skill, options) =>
+  run(async () => {
+    const { rejudgeCommand } = await import("../commands/optimize.js");
+    const judge = pickAgent(options, "judge");
+    return rejudgeCommand(ctx(), {
+      skill,
+      baselineIter: options.baselineIter,
+      candidateIter: options.candidateIter,
+      outputIter: options.outputIter,
+      judgeHarness: judge.harness,
+      judgeModel: judge.model,
+      judgeVariant: judge.variant,
+    });
+  }),
+);
+
+optimize
+  .command("decide")
+  .description("Run the keep/reject decision engine over aggregated results.")
+  .argument("<skill>", "skill id")
+  .argument("<iteration>", "iteration id")
+  .requiredOption("--check-results <path>", "aggregated check results JSON")
+  .requiredOption("--judge-results <path>", "aggregated judge results JSON")
+  .requiredOption("--scenario-meta <path>", "scenario metadata JSON")
+  .option("--baselines <path>", "baselines.json path")
+  .option("--output <path>", "decision.json output path")
+  .option("--override <rationale>", "manual override rationale")
+  .addOption(new Option("--override-decision <decision>", "decision when overriding").choices(["KEEP", "REJECT"]))
+  .action((skill, iteration, options) =>
+    run(async () => {
+      const { decideCommand } = await import("../commands/optimize.js");
+      ctx();
+      return decideCommand({ ...options, skill, iteration });
+    }),
+  );
+
+optimize
+  .command("report")
+  .description("Generate the sanitized per-iteration summary and public status rollup.")
+  .argument("<skill>", "skill id")
+  .argument("<iteration>", "iteration id")
+  .requiredOption("--decision <path>", "decision.json path")
+  .requiredOption("--check-results <path>", "check results JSON")
+  .requiredOption("--judge-results <path>", "judge results JSON")
+  .requiredOption("--scenarios <dir>", "scenarios directory")
+  .option("--public-status <path>", "public-status.json path")
+  .option("--output-dir <dir>", "summary output directory")
+  .action((skill, iteration, options) =>
+    run(async () => {
+      const { reportCommand } = await import("../optimization/report.js");
+      return reportCommand(ctx().repoRoot, { ...options, skill, iteration });
+    }),
+  );
+
+optimize
+  .command("focus")
+  .description("Summarize deterministic scorecard failures for optimization focus.")
+  .argument("<scorecard>", "path to evaluation scorecard JSON")
+  .addOption(new Option("--format <format>", "output format").choices(["json", "markdown", "decision"]).default("json"))
+  .option("--skill <id>", "restrict decision output to one skill")
+  .option("--output <path>", "write the focus summary here")
+  .action((scorecard, options) =>
+    run(async () => {
+      const { focusCommand } = await import("../commands/optimize.js");
+      ctx();
+      return focusCommand({ ...options, scorecard });
+    }),
+  );
+
+optimize
+  .command("rebaseline")
+  .description("Record a scenario's current content hash as the new baseline.")
+  .argument("<skill>", "skill id")
+  .argument("<eval-id>", "scenario id (eval-NNN)")
+  .option("--dry-run", "report without writing baselines.json")
+  .action((skill, evalId, options) =>
+    run(async () => {
+      const { rebaselineCommand } = await import("../commands/optimize.js");
+      ctx();
+      return rebaselineCommand({ skill, evalId, dryRun: options.dryRun });
+    }),
+  );
+
+optimize
+  .command("coverage")
+  .description("Map skill sections/APIs to the scenarios that exercise them.")
+  .action(() =>
+    run(async () => {
+      const { coverageCommand } = await import("../commands/optimize.js");
+      ctx();
+      return coverageCommand();
+    }),
+  );
+
+// ---------------------------------------------------------------------------
+// repo checks
+// ---------------------------------------------------------------------------
+const check = program.command("check").description("Repository safety and hygiene gates.");
+
+check
+  .command("public-artifacts")
+  .description("Scan public docs and eval artifacts for private or unsafe references.")
+  .argument("[paths...]", "specific files/dirs to scan (default: tracked scan roots)")
+  .action((paths) =>
+    run(async () => {
+      const { checkPublicArtifactsCommand } = await import("../optimization/publicArtifacts.js");
+      return checkPublicArtifactsCommand(ctx().repoRoot, paths ?? []);
+    }),
+  );
+
+check
+  .command("canonical-surface")
+  .description("Ensure active eval work stays under optimization/ and evaluation/.")
+  .action(() =>
+    run(async () => {
+      const { checkCanonicalSurfaceCommand } = await import("../commands/check.js");
+      return checkCanonicalSurfaceCommand(ctx().repoRoot);
+    }),
+  );
+
+program.parseAsync().catch((exc) => {
+  console.error(`error: ${exc?.message ?? exc}`);
+  process.exitCode = 2;
+});

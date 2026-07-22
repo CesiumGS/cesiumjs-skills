@@ -1,0 +1,581 @@
+/**
+ * Read-only live progress for eval runs happening NOW: optimization-loop
+ * iterations and combined baseline audits, derived from journals plus
+ * on-disk artifacts. Also owns launching audits from the console.
+ */
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { readJson, readJsonl, readJsonOrNull, writeJsonPlain } from "../lib/json.js";
+import { fromRepoRoot, globFiles, listDirs, walkFiles } from "../lib/paths.js";
+import { parseTs } from "../lib/format.js";
+import { isFresh, journalFor, scenarioLabel } from "./optimizationData.js";
+import type { EvalContext } from "../config/types.js";
+
+const resultsRoot = () => fromRepoRoot("optimization", "results");
+const runsRoot = () => fromRepoRoot("optimization", "runs");
+const generatedRoot = () => fromRepoRoot("optimization", "generated");
+const scenariosRoot = () => fromRepoRoot("optimization", "scenarios");
+const auditsRoot = () => fromRepoRoot("evaluation", "artifacts", "audits");
+const fixturesRoot = () => fromRepoRoot("evaluation", "fixtures");
+
+const BUNDLE_REQUIRED = ["console.json", "programmatic-checks.json", "scene-state.json", "metadata.json", "screenshot-quality.json"];
+
+const ITER_PHASES: Array<[string, string, number]> = [
+  ["proposer", "Proposer", 0.16],
+  ["skills_adapter", "Codegen", 0.22],
+  ["browser_runner", "Render", 0.3],
+  ["judges", "Judges", 0.26],
+  ["decision", "Decision", 0.02],
+  ["report", "Report", 0.02],
+  ["archive", "Archive", 0.02],
+];
+
+const BASELINE_PHASES: Array<[string, string, number]> = [
+  ["baseline_check", "Baseline check", 0.04],
+  ["baseline_generation", "Baseline codegen", 0.38],
+  ["baseline_browser_eval", "Baseline render", 0.58],
+];
+
+const ITER_TERMINAL = new Set(["iteration_completed", "iteration_failed"]);
+const BASELINE_TERMINAL = new Set([
+  "baseline_check_completed",
+  "baseline_generation_failed",
+  "baseline_browser_eval_completed",
+  "baseline_browser_eval_failed",
+]);
+const AUDIT_TERMINAL = new Set(["audit_completed", "audit_failed"]);
+
+export const AUDIT_JOURNAL_NAME = "progress.jsonl";
+export const LAUNCH_META_NAME = "launch.json";
+
+// ---------------------------------------------------------------------------
+// scenario/trial helpers
+// ---------------------------------------------------------------------------
+function scenarios(skill: string): Array<Record<string, any>> {
+  const out: Array<Record<string, any>> = [];
+  for (const scenarioPath of globFiles(path.join(scenariosRoot(), skill), "eval-", ".json")) {
+    let data: any;
+    try {
+      data = readJson(scenarioPath);
+    } catch {
+      continue;
+    }
+    const scenarioId = String(data.id ?? path.basename(scenarioPath, ".json"));
+    const [, label] = scenarioLabel(`${scenarioId}-${data.name ?? path.basename(scenarioPath, ".json")}`);
+    out.push({
+      scenario_id: scenarioId,
+      label,
+      runnable: (data.runner_mode ?? "global-js") !== "review-only",
+    });
+  }
+  return out;
+}
+
+function bundleComplete(bundle: string): boolean {
+  if (!fs.existsSync(bundle)) return false;
+  if (!globFiles(bundle, "screenshot", ".png").length) return false;
+  return BUNDLE_REQUIRED.every((name) => fs.existsSync(path.join(bundle, name)));
+}
+
+function findBundle(runsDir: string, scenarioId: string): string | null {
+  const exact = path.join(runsDir, scenarioId);
+  if (fs.existsSync(exact) && fs.statSync(exact).isDirectory()) return exact;
+  for (const item of listDirs(runsDir)) {
+    if (item.startsWith(`${scenarioId}-`)) return path.join(runsDir, item);
+  }
+  return null;
+}
+
+function trials(skill: string, artifactIter: string): Array<Record<string, any>> {
+  const genDir = path.join(generatedRoot(), skill, artifactIter);
+  const runsDir = path.join(runsRoot(), skill, artifactIter);
+  return scenarios(skill).map((scenario) => {
+    const sid = scenario.scenario_id;
+    const bundle = findBundle(runsDir, sid);
+    return {
+      ...scenario,
+      codegen_done: fs.existsSync(path.join(genDir, `${sid}.js`)),
+      render_done: bundle !== null && bundleComplete(bundle),
+      judged: bundle !== null && fs.existsSync(path.join(bundle, "judge-verdicts.json")),
+    };
+  });
+}
+
+function lastArtifactMtime(skill: string, artifactIter: string): Date | null {
+  let newest: number | null = null;
+  for (const base of [path.join(generatedRoot(), skill, artifactIter), path.join(runsRoot(), skill, artifactIter)]) {
+    if (!fs.existsSync(base)) continue;
+    for (const filePath of walkFiles(base)) {
+      try {
+        const mtime = fs.statSync(filePath).mtimeMs;
+        if (newest === null || mtime > newest) newest = mtime;
+      } catch {
+        // raced deletion
+      }
+    }
+  }
+  return newest === null ? null : new Date(newest);
+}
+
+// ---------------------------------------------------------------------------
+// phase-state machine (journal -> pending|active|done|failed)
+// ---------------------------------------------------------------------------
+function phaseStates(
+  journal: Array<Record<string, any>>,
+  phases: Array<[string, string, number]>,
+  kind: "iteration" | "baseline",
+): Array<Record<string, any>> {
+  const rows = phases.map(([id, label, weight]) => ({ id, label, weight, state: "pending", started_utc: null as string | null }));
+  const byId = new Map(rows.map((row) => [row.id, row]));
+
+  const apply = (pid: string, eventKind: string, ts: unknown) => {
+    const row = byId.get(pid);
+    if (!row) return;
+    if (eventKind === "started" && row.state === "pending") {
+      row.state = "active";
+      row.started_utc = typeof ts === "string" ? ts : null;
+    } else if (eventKind === "completed" && row.state !== "failed") {
+      row.state = "done";
+    } else if (eventKind === "failed") {
+      row.state = "failed";
+    }
+  };
+
+  for (const event of journal) {
+    const name = String(event.event ?? "");
+    const ts = event.timestamp_utc;
+    if (kind === "iteration") {
+      if (["step_started", "step_completed", "step_failed"].includes(name)) {
+        apply(String(event.step ?? ""), name.split("_")[1], ts);
+      }
+    } else {
+      for (const [suffix, eventKind] of [
+        ["_started", "started"],
+        ["_completed", "completed"],
+        ["_failed", "failed"],
+      ] as const) {
+        if (name.endsWith(suffix)) {
+          apply(name.slice(0, -suffix.length), eventKind, ts);
+          break;
+        }
+      }
+    }
+  }
+  return rows;
+}
+
+function applyTrialCounts(phases: Array<Record<string, any>>, trialRows: Array<Record<string, any>>): void {
+  const runnable = trialRows.filter((t) => t.runnable);
+  const counts: Record<string, [number, number]> = {
+    skills_adapter: [trialRows.filter((t) => t.codegen_done).length, trialRows.length],
+    browser_runner: [runnable.filter((t) => t.render_done).length, runnable.length],
+    judges: [runnable.filter((t) => t.judged).length, runnable.length],
+    baseline_generation: [trialRows.filter((t) => t.codegen_done).length, trialRows.length],
+    baseline_browser_eval: [runnable.filter((t) => t.render_done).length, runnable.length],
+  };
+  for (const phase of phases) {
+    const doneTotal = counts[phase.id];
+    if (doneTotal === undefined) {
+      phase.trials_done = null;
+      phase.trials_total = null;
+    } else {
+      [phase.trials_done, phase.trials_total] = doneTotal;
+    }
+  }
+}
+
+function progressOf(phases: Array<Record<string, any>>): number {
+  let total = 0;
+  for (const phase of phases) {
+    if (phase.state === "done") total += phase.weight;
+    else if (phase.state === "active" || phase.state === "failed") {
+      const done = phase.trials_done;
+      const count = phase.trials_total;
+      if (done !== null && done !== undefined && count) total += phase.weight * Math.min(1, done / count);
+    }
+  }
+  return Math.round(Math.min(1, total) * 10_000) / 10_000;
+}
+
+// ---------------------------------------------------------------------------
+// optimization-loop live rows
+// ---------------------------------------------------------------------------
+function liveRun(
+  skill: string,
+  iteration: string,
+  journalIn: Array<Record<string, any>>,
+  maxAgeSeconds: number,
+): Record<string, any> | null {
+  if (!journalIn.length) return null;
+  const kind = iteration === "baseline" ? "baseline" : "iteration";
+
+  // Only the segment after the most recent start event describes this attempt.
+  let journal = journalIn;
+  const startEvents = kind === "baseline" ? new Set(["baseline_check_started"]) : new Set(["iteration_started"]);
+  for (let idx = journal.length - 1; idx >= 0; idx--) {
+    if (startEvents.has(String(journal[idx].event ?? ""))) {
+      journal = journal.slice(idx);
+      break;
+    }
+  }
+
+  const last = journal[journal.length - 1];
+  const lastEvent = String(last.event ?? "");
+  const terminal = kind === "baseline" ? BASELINE_TERMINAL : ITER_TERMINAL;
+  if (terminal.has(lastEvent)) return null;
+
+  const phases = phaseStates(journal, kind === "baseline" ? BASELINE_PHASES : ITER_PHASES, kind);
+  if (kind === "iteration" && journal.some((e) => e.step === "promote_current_best")) {
+    phases.push(...phaseStates(journal, [["promote_current_best", "Promote", 0]], "iteration"));
+  }
+
+  const trialRows = trials(skill, iteration);
+  applyTrialCounts(phases, trialRows);
+
+  const startedTs = parseTs(journal[0].timestamp_utc);
+  const journalTs = parseTs(last.timestamp_utc);
+  const artifactTs = lastArtifactMtime(skill, iteration);
+  const candidates = [journalTs, artifactTs].filter((ts): ts is Date => ts !== null);
+  const lastActivity = candidates.length ? new Date(Math.max(...candidates.map((ts) => ts.getTime()))) : null;
+
+  const status = lastActivity !== null && isFresh(lastActivity.toISOString(), maxAgeSeconds) ? "running" : "stalled";
+  const active = phases.find((p) => p.state === "active" || p.state === "failed") ?? null;
+  const doneCount = phases.filter((p) => p.state === "done").length;
+
+  return {
+    skill,
+    iteration,
+    kind,
+    status,
+    started_utc: startedTs?.toISOString() ?? null,
+    last_activity_utc: lastActivity?.toISOString() ?? null,
+    elapsed_s: startedTs !== null ? Math.max(0, Math.floor((Date.now() - startedTs.getTime()) / 1000)) : null,
+    current_phase: active?.id ?? null,
+    current_phase_label: active?.label ?? null,
+    phase_index: phases.length ? Math.min(doneCount + 1, phases.length) : 0,
+    phase_total: phases.length,
+    phases,
+    trials: trialRows,
+    trials_total: trialRows.length,
+    progress: progressOf(phases),
+    last_event: { event: lastEvent, step: last.step ?? null, timestamp_utc: last.timestamp_utc ?? null },
+    journal_tail: journal.slice(-12),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// combined baseline audits (journaled by `cesium-eval audit --journal`)
+// ---------------------------------------------------------------------------
+function auditPhaseSpec(judge: boolean): Array<[string, string, number]> {
+  if (judge) {
+    return [
+      ["judge", "Visual judge", 0.82],
+      ["score", "Deterministic score", 0.13],
+      ["write", "Scorecard", 0.05],
+    ];
+  }
+  return [
+    ["score", "Deterministic score", 0.85],
+    ["write", "Scorecard", 0.15],
+  ];
+}
+
+function auditPhases(journal: Array<Record<string, any>>, judge: boolean): Array<Record<string, any>> {
+  const rows = auditPhaseSpec(judge).map(([id, label, weight]) => ({
+    id,
+    label,
+    weight,
+    state: "pending",
+    started_utc: null as string | null,
+    trials_done: null as number | null,
+    trials_total: null as number | null,
+  }));
+  const byId = new Map(rows.map((row) => [row.id, row]));
+
+  const mark = (pid: string, state: string, ts: unknown = null) => {
+    const row = byId.get(pid);
+    if (!row) return;
+    if (state === "active" && row.state === "pending") {
+      row.state = "active";
+      row.started_utc = typeof ts === "string" ? ts : null;
+    } else if (state === "done" && row.state !== "failed") {
+      row.state = "done";
+    } else if (state === "failed") {
+      row.state = "failed";
+    }
+  };
+
+  for (const event of journal) {
+    const name = String(event.event ?? "");
+    const ts = event.timestamp_utc;
+    if (name === "judge_started") {
+      mark("judge", "active", ts);
+      const judgeRow = byId.get("judge");
+      if (judgeRow) {
+        judgeRow.trials_total = event.total ?? null;
+        judgeRow.trials_done = 0;
+      }
+    } else if (name === "judge_case_completed") {
+      const judgeRow = byId.get("judge");
+      if (judgeRow) {
+        judgeRow.trials_done = event.index ?? null;
+        judgeRow.trials_total = event.total ?? null;
+      }
+    } else if (name === "judge_completed") {
+      mark("judge", "done");
+    } else if (name === "scoring_started") {
+      mark("judge", "done");
+      mark("score", "active", ts);
+      const scoreRow = byId.get("score");
+      if (scoreRow) {
+        scoreRow.trials_total = event.total ?? null;
+        scoreRow.trials_done = 0;
+      }
+    } else if (name === "scoring_case_completed") {
+      const scoreRow = byId.get("score");
+      if (scoreRow) {
+        scoreRow.trials_done = event.index ?? null;
+        scoreRow.trials_total = event.total ?? null;
+      }
+    } else if (name === "scoring_completed") {
+      mark("score", "done");
+      mark("write", "active", ts);
+    } else if (name === "scorecard_written") {
+      mark("write", "done");
+    } else if (name === "audit_failed") {
+      const failing = rows.find((row) => row.state === "active") ?? rows[rows.length - 1];
+      failing.state = "failed";
+    }
+  }
+  return rows;
+}
+
+function auditTrials(journal: Array<Record<string, any>>): Array<Record<string, any>> {
+  const started = journal.find((e) => String(e.event) === "audit_started");
+  let roster: Array<[string, string]> = [];
+  if (started && Array.isArray(started.cases)) {
+    roster = started.cases
+      .filter((c: any) => c !== null && typeof c === "object")
+      .map((c: any) => [String(c.skill ?? ""), String(c.case_id ?? "")]);
+  }
+  const judged = new Set<string>();
+  const scored = new Set<string>();
+  for (const event of journal) {
+    const name = String(event.event ?? "");
+    const key = `${event.skill ?? ""}\u0000${event.case_id ?? ""}`;
+    if (name === "judge_case_completed") judged.add(key);
+    else if (name === "scoring_case_completed") scored.add(key);
+  }
+  if (!roster.length) {
+    roster = [...new Set([...judged, ...scored])].sort().map((key) => key.split("\u0000") as [string, string]);
+  }
+  const multiSkill = new Set(roster.map(([skill]) => skill)).size > 1;
+  return roster.map(([skill, caseId]) => {
+    const key = `${skill}\u0000${caseId}`;
+    const short = skill.replace(/^cesiumjs-/, "");
+    return {
+      scenario_id: multiSkill ? `${short}\u00b7${caseId}` : caseId,
+      label: multiSkill ? "" : short,
+      runnable: true,
+      codegen_done: false,
+      render_done: scored.has(key),
+      judged: judged.has(key),
+    };
+  });
+}
+
+function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, any> | null {
+  let journal = readJsonl(path.join(auditDir, AUDIT_JOURNAL_NAME));
+  const launchMeta = readJsonOrNull(path.join(auditDir, LAUNCH_META_NAME)) ?? {};
+  if (!journal.length) {
+    if (!Object.keys(launchMeta).length) return null;
+    const started = String(launchMeta.started_utc ?? "");
+    if (!isFresh(started, maxAgeSeconds)) return null; // dead launch, not live
+    journal = [{ timestamp_utc: started, event: "launch_accepted" }];
+  }
+
+  const last = journal[journal.length - 1];
+  const lastEvent = String(last.event ?? "");
+  if (AUDIT_TERMINAL.has(lastEvent)) return null;
+
+  const startedEvent = journal.find((e) => String(e.event) === "audit_started");
+  const judge = Boolean(startedEvent?.judge ?? launchMeta.judge ?? true);
+  const skills: string[] = [...(startedEvent?.skills ?? launchMeta.skills ?? [])];
+  const phases = auditPhases(journal, judge);
+  const trialRows = auditTrials(journal);
+
+  const startedTs = parseTs(journal[0].timestamp_utc);
+  const journalTs = parseTs(last.timestamp_utc);
+  let logTs: Date | null = null;
+  const logPath = path.join(auditDir, "launch.log");
+  if (fs.existsSync(logPath)) {
+    try {
+      logTs = new Date(fs.statSync(logPath).mtimeMs);
+    } catch {
+      logTs = null;
+    }
+  }
+  const candidates = [journalTs, logTs].filter((ts): ts is Date => ts !== null);
+  const lastActivity = candidates.length ? new Date(Math.max(...candidates.map((ts) => ts.getTime()))) : null;
+
+  const status = lastActivity !== null && isFresh(lastActivity.toISOString(), maxAgeSeconds) ? "running" : "stalled";
+  const active = phases.find((p) => p.state === "active" || p.state === "failed") ?? null;
+  const doneCount = phases.filter((p) => p.state === "done").length;
+  const label = skills.length === 1 ? `Audit \u00b7 ${skills[0]}` : "Combined audit";
+
+  return {
+    skill: skills.length === 1 ? skills[0] : "baseline-audit",
+    label: skills.length > 1 ? `${label} (${skills.length} skills)` : label,
+    iteration: path.basename(auditDir),
+    kind: "audit",
+    judge,
+    status,
+    started_utc: startedTs?.toISOString() ?? null,
+    last_activity_utc: lastActivity?.toISOString() ?? null,
+    elapsed_s: startedTs !== null ? Math.max(0, Math.floor((Date.now() - startedTs.getTime()) / 1000)) : null,
+    current_phase: active?.id ?? null,
+    current_phase_label: active?.label ?? null,
+    phase_index: phases.length ? Math.min(doneCount + 1, phases.length) : 0,
+    phase_total: phases.length,
+    phases,
+    trials: trialRows,
+    trials_total: trialRows.length,
+    progress: progressOf(phases),
+    last_event: { event: lastEvent, step: last.step ?? null, timestamp_utc: last.timestamp_utc ?? null },
+    journal_tail: journal.slice(-12),
+  };
+}
+
+function auditLiveRuns(maxAgeSeconds: number): Array<Record<string, any>> {
+  const rows: Array<Record<string, any>> = [];
+  if (!fs.existsSync(auditsRoot())) return rows;
+  for (const name of listDirs(auditsRoot())) {
+    const auditDir = path.join(auditsRoot(), name);
+    if (!fs.existsSync(path.join(auditDir, AUDIT_JOURNAL_NAME)) && !fs.existsSync(path.join(auditDir, LAUNCH_META_NAME))) continue;
+    try {
+      const run = auditLiveRun(auditDir, maxAgeSeconds);
+      if (run) rows.push(run);
+    } catch {
+      // One corrupt dir must not take down the endpoint.
+    }
+  }
+  return rows;
+}
+
+// ---------------------------------------------------------------------------
+// public API
+// ---------------------------------------------------------------------------
+export function liveStatus(ctx: EvalContext): Record<string, any> {
+  const maxAge = ctx.config.liveness.runningMaxAgeSeconds;
+  const active: Array<Record<string, any>> = [];
+  if (fs.existsSync(resultsRoot())) {
+    for (const skill of listDirs(resultsRoot())) {
+      for (const iteration of listDirs(path.join(resultsRoot(), skill))) {
+        const run = liveRun(skill, iteration, journalFor(skill, iteration), maxAge);
+        if (run) active.push(run);
+      }
+    }
+  }
+  active.push(...auditLiveRuns(maxAge));
+  active.sort((a, b) => {
+    if ((a.status !== "running") !== (b.status !== "running")) return a.status !== "running" ? 1 : -1;
+    const ta = parseTs(a.last_activity_utc)?.getTime() ?? 0;
+    const tb = parseTs(b.last_activity_utc)?.getTime() ?? 0;
+    return tb - ta;
+  });
+  return {
+    generated_at: new Date().toISOString(),
+    running: active.some((run) => run.status === "running"),
+    poll_ms: ctx.config.server.pollMs,
+    max_age_s: maxAge,
+    active,
+  };
+}
+
+export function availableSkills(): string[] {
+  return listDirs(fixturesRoot());
+}
+
+/**
+ * Validate and start a combined baseline audit as a detached child process;
+ * progress flows back exclusively through the journal.
+ */
+export function launchRun(ctx: EvalContext, payload: Record<string, any>): Record<string, any> {
+  const kind = String(payload.kind ?? "audit");
+  if (kind !== "audit") throw new Error(`unsupported launch kind: '${kind}' (supported: audit)`);
+
+  const known = availableSkills();
+  const requested = payload.skills;
+  let skills: string[];
+  if (requested === null || requested === undefined || (Array.isArray(requested) && !requested.length) || requested === "all" || requested === "ALL") {
+    skills = known;
+  } else {
+    if (!Array.isArray(requested)) throw new Error("skills must be a list of skill ids or omitted for all");
+    skills = requested.map(String);
+    const unknown = skills.filter((skill) => !known.includes(skill));
+    if (unknown.length) throw new Error(`unknown skill(s): ${unknown.join(", ")}`);
+  }
+  if (!skills.length) throw new Error("no skills available to audit");
+
+  const judge = Boolean(payload.judge ?? true);
+  const adapter = String(payload.adapter ?? ctx.resolveRole("judge").harness.id);
+  const validAdapters = new Set([...ctx.registry.harnesses.map((harness) => harness.id), "fake"]);
+  if (!validAdapters.has(adapter)) {
+    throw new Error(`unknown adapter: '${adapter}' (supported: ${[...validAdapters].sort().join(", ")})`);
+  }
+  const nJudges = Number(payload.n_judges ?? ctx.config.judgePanel.size);
+  if (!Number.isInteger(nJudges)) throw new Error("n_judges must be an integer");
+  if (nJudges < 1 || nJudges > 5) throw new Error("n_judges must be between 1 and 5");
+
+  const launchId = "live-" + new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const outDir = path.join(auditsRoot(), launchId);
+  fs.mkdirSync(outDir, { recursive: true });
+  const journalPath = path.join(outDir, AUDIT_JOURNAL_NAME);
+  const logPath = path.join(outDir, "launch.log");
+
+  // Re-invoke this same CLI entry point as a detached audit run.
+  const cliEntry = path.resolve(fileURLToPath(import.meta.url), "..", "..", "cli", "main.js");
+  const argv = [
+    cliEntry,
+    "audit",
+    "--skills",
+    skills.join(","),
+    "--journal",
+    journalPath,
+    "--output-dir",
+    outDir,
+    "--adapter",
+    adapter,
+    "--n-judges",
+    String(nJudges),
+  ];
+  if (!judge) argv.push("--no-judge");
+
+  const logFd = fs.openSync(logPath, "w");
+  const child = spawn(process.execPath, argv, {
+    cwd: ctx.repoRoot,
+    stdio: ["ignore", logFd, logFd],
+    detached: true, // survives console restarts; owns its group
+  });
+  child.unref();
+  fs.closeSync(logFd);
+
+  const record = {
+    launch_id: launchId,
+    kind: "audit",
+    pid: child.pid ?? -1,
+    skills,
+    judge,
+    adapter,
+    n_judges: nJudges,
+    argv: [process.execPath, ...argv],
+    journal: journalPath,
+    log: logPath,
+    output_dir: outDir,
+    started_utc: new Date().toISOString(),
+  };
+  writeJsonPlain(path.join(outDir, LAUNCH_META_NAME), record);
+  return record;
+}
