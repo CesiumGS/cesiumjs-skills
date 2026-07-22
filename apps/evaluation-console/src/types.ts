@@ -456,7 +456,7 @@ export interface LiveStatusDTO {
 }
 
 // ============================================================================
-// Harness / model registry (mirrors apps/evaluation-console/harness-registry.json,
+// Harness / model registry (mirrors config/harness-registry.json,
 // served by /api/registry with live pipeline defaults overlaid)
 // ============================================================================
 export type PriceBand = "very-low" | "low" | "medium" | "high" | "very-high";

@@ -6,7 +6,7 @@ Two truths, kept separate on purpose (the PM's provenance rule):
   DECLARED  — the harness/model registry: what harnesses exist, which provider
               backs them, whether they can see images, what models they expose
               and at what relative price/effort. Data lives in
-              ``harness-registry.json``; live pipeline defaults are overlaid
+              ``config/harness-registry.json``; live pipeline defaults are overlaid
               from the neutral ``harness`` package at read time so the console
               always reflects what a run started today would actually use.
   OBSERVED  — what the artifacts on disk actually recorded: per-iteration
@@ -31,7 +31,7 @@ import optimization_data as optd
 VIEWER_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = VIEWER_ROOT.parents[1]
 GENERATED = REPO_ROOT / "optimization" / "generated"
-REGISTRY_PATH = VIEWER_ROOT / "harness-registry.json"
+REGISTRY_PATH = REPO_ROOT / "config" / "harness-registry.json"
 
 UNRECORDED = "unrecorded"
 

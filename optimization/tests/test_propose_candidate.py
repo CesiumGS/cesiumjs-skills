@@ -39,7 +39,7 @@ def temp_workspace(tmp_path):
     (tmp_path / "optimization" / "results" / "test-skill" / "001").mkdir(parents=True)
     (tmp_path / "optimization" / "results" / "test-skill" / "002").mkdir(parents=True)
     (tmp_path / "optimization" / "candidates" / "test-skill").mkdir(parents=True)
-    (tmp_path / "optimization" / "framework" / "proposer" / "prompts").mkdir(parents=True)
+    (tmp_path / "optimization" / "prompts" / "proposer").mkdir(parents=True)
 
     # Create skill file
     skill_content = """---
@@ -181,7 +181,7 @@ Uncovered APIs ({uncovered_api_count}):
 
 Propose revised skill:
 """
-    (tmp_path / "optimization" / "framework" / "proposer" / "prompts" / "propose-v1.txt").write_text(template)
+    (tmp_path / "optimization" / "prompts" / "proposer" / "propose-v1.txt").write_text(template)
 
     return tmp_path
 
@@ -332,7 +332,7 @@ def test_format_coverage_gaps_empty():
 
 def test_build_prompt(temp_workspace):
     """Test building prompt from template and inputs."""
-    template_path = temp_workspace / "optimization" / "framework" / "proposer" / "prompts" / "propose-v1.txt"
+    template_path = temp_workspace / "optimization" / "prompts" / "proposer" / "propose-v1.txt"
     current_skill = "# Test Skill\nContent here"
     decision = {
         "decision": "REJECT",
@@ -499,7 +499,7 @@ def test_call_proposer_mocked():
 
 def test_proposer_prompt_requires_research_pass():
     """The proposer prompt should require evidence-backed research before edits."""
-    prompt_path = REPO_ROOT / "optimization" / "framework" / "proposer" / "prompts" / "propose-v1.txt"
+    prompt_path = REPO_ROOT / "optimization" / "prompts" / "proposer" / "propose-v1.txt"
     prompt = prompt_path.read_text()
     assert "private research pass" in prompt
     assert "research/sub-agent tooling" in prompt
@@ -526,7 +526,7 @@ def test_main_missing_template(temp_workspace, monkeypatch, capsys):
     monkeypatch.chdir(temp_workspace)
 
     # Remove template
-    (temp_workspace / "optimization" / "framework" / "proposer" / "prompts" / "propose-v1.txt").unlink()
+    (temp_workspace / "optimization" / "prompts" / "proposer" / "propose-v1.txt").unlink()
 
     sys.argv = ["propose-candidate.py", "test-skill"]
 

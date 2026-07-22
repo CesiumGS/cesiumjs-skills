@@ -138,7 +138,7 @@
       "description": "As the framework, I need one judge that compares baseline and candidate evidence pairwise and returns a structured verdict.",
       "acceptanceCriteria": [
         "Create optimization/framework/judges/single.py with a function judge(scenario, baseline_bundle, candidate_bundle, judge_model_id, judge_protocol_version, seed) returning { verdict: 'BASELINE' | 'CANDIDATE' | 'TIE', rationale: str, model_id, protocol_version }",
-        "Prompt template lives in optimization/framework/judges/prompts/pairwise-v1.txt and is referenced by version",
+        "Prompt template lives in optimization/prompts/judges/pairwise-v1.txt and is referenced by version",
         "Randomizes which side is presented as 'A' vs 'B' using the provided seed; records the mapping in the returned record",
         "Refuses to run if OpenCode CLI auth is unavailable for the configured judge model",
         "Tests pass for verdict parsing and label randomization given a mocked model response",
@@ -219,7 +219,7 @@
       "description": "As the framework, I need an agent that reads history and proposes a revised skill so the loop improves itself autonomously.",
       "acceptanceCriteria": [
         "Create optimization/scripts/propose-candidate.py that receives <skill> and reads: current best skill content, last decision record, per-scenario verdicts + rationales for last N iterations (configurable), coverage report",
-        "Calls OpenCode CLI with a versioned prompt template at optimization/framework/proposer/prompts/propose-v1.txt",
+        "Calls OpenCode CLI with a versioned prompt template at optimization/prompts/proposer/propose-v1.txt",
         "Outputs a candidate skill file at optimization/candidates/<skill>/<iteration>/SKILL.md and hypothesis.md describing the change and the scenario evidence it addresses",
         "Records proposer model id, prompt version, temperature, seed in optimization/candidates/<skill>/<iteration>/proposer-metadata.json",
         "Refuses to run if OpenCode CLI auth is unavailable for the configured proposer model",

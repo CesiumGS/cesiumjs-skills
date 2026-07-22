@@ -545,7 +545,7 @@ def main() -> int:
     coverage = load_coverage(args.coverage_path, args.skill)
 
     # Build prompt
-    template_path = Path(f"optimization/framework/proposer/prompts/{args.prompt_version}.txt")
+    template_path = Path(f"optimization/prompts/proposer/{args.prompt_version}.txt")
     if not template_path.exists():
         print(f"Error: Prompt template not found: {template_path}", file=sys.stderr)
         return 1

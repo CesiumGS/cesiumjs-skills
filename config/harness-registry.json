@@ -30,6 +30,7 @@
       "default_model": "gpt-5.6-sol",
       "default_effort": "low",
       "effort_mechanism": "-c model_reasoning_effort=<level>",
+      "discovery": null,
       "catalog_source": "Curated; Codex CLI has no model-list command, so entries mirror the ChatGPT-subscription models the pipeline can name via --model",
       "catalog_as_of": "2026-07-18",
       "models": [
@@ -169,6 +170,11 @@
       "default_model": "github-copilot/gpt-5.6-sol",
       "default_effort": "low",
       "effort_mechanism": "--variant <level>",
+      "discovery": {
+        "args": ["models", "github-copilot"],
+        "prefer_family": "gpt-5.6",
+        "prefer_suffix": "-sol"
+      },
       "catalog_source": "Live snapshot of `opencode models github-copilot`",
       "catalog_as_of": "2026-07-18",
       "models": [

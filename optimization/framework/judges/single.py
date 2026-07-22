@@ -83,7 +83,7 @@ def judge(
         )
 
     # Load prompt template
-    prompt_path = Path(__file__).parent / 'prompts' / f'{judge_protocol_version}.txt'
+    prompt_path = Path(__file__).resolve().parents[2] / 'prompts' / 'judges' / f'{judge_protocol_version}.txt'
     if not prompt_path.exists():
         raise ValueError(f"Prompt template not found: {prompt_path}")
 

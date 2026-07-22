@@ -73,7 +73,7 @@ BLOCKING_FAILURE_FLAGS = {
     "camera_inside_geometry",
 }
 
-PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+PROMPTS_DIR = Path(__file__).resolve().parents[2] / "prompts" / "judge"
 
 
 def _default_adapter() -> Adapter:
