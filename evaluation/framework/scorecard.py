@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -322,6 +323,114 @@ def _visual_summary(
     }
 
 
+def _is_synthetic_evidence(evidence_path: Any) -> bool:
+    """Synthetic = authored fixture evidence under evaluation/fixtures/.
+
+    Observed captures (``*-observed.evidence.json``) live there too but hold
+    real rendered-bundle evidence, so they count as agent evidence.
+    """
+    path = str(evidence_path or "").replace("\\", "/")
+    return "evaluation/fixtures/" in path and not path.endswith("-observed.evidence.json")
+
+
+def _evidence_source(cases: list[dict[str, Any]]) -> str:
+    """Classify where a scorecard's evidence came from, from the evidence paths.
+
+    ``fixtures`` = every case scored synthetic fixture evidence;
+    ``agent``    = none did (real harness-produced or observed evidence);
+    ``mixed``    = both appear (surfaced, not hidden).
+    """
+    flags = [_is_synthetic_evidence(case.get("evidence_path")) for case in cases]
+    if flags and all(flags):
+        return "fixtures"
+    if any(flags):
+        return "mixed"
+    return "agent"
+
+
+def _load_meta_for_source(repo_root: Path, source_path: Any) -> dict[str, Any] | None:
+    """Load the codegen ``*.meta.json`` that sits beside a generated source file.
+
+    The optimization pipeline writes ``optimization/generated/<skill>/<iter>/
+    eval-NNN.js`` next to ``eval-NNN.meta.json`` (harness, model_id,
+    model_variant). Returns ``None`` when the path is missing or unreadable —
+    provenance is recovered, never guessed.
+    """
+    if not isinstance(source_path, str) or not source_path.strip():
+        return None
+    rel = source_path.strip().replace("\\", "/")
+    meta_path = (repo_root / rel).with_suffix(".meta.json")
+    if not meta_path.is_file():
+        return None
+    try:
+        with meta_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _case_source_path(repo_root: Path, case: dict[str, Any]) -> str | None:
+    """The generated source a case was scored against.
+
+    Prefers the stamped ``evidence_summary.actual_source_path`` (already inside
+    the scorecard, no extra I/O); falls back to the evidence file's own
+    ``source_path`` only when the summary lacks it.
+    """
+    summary = case.get("evidence_summary")
+    if isinstance(summary, dict):
+        src = summary.get("actual_source_path")
+        if isinstance(src, str) and src.strip():
+            return src.strip()
+    evidence_path = case.get("evidence_path")
+    if isinstance(evidence_path, str) and evidence_path.strip():
+        candidate = repo_root / evidence_path.strip().replace("\\", "/")
+        if candidate.is_file():
+            try:
+                with candidate.open("r", encoding="utf-8") as handle:
+                    evidence = json.load(handle)
+            except (OSError, json.JSONDecodeError):
+                return None
+            if isinstance(evidence, dict):
+                src = evidence.get("source_path")
+                if isinstance(src, str) and src.strip():
+                    return src.strip()
+    return None
+
+
+def resolve_codegen_provenance(
+    scorecard: dict[str, Any], repo_root: Path | None = None
+) -> dict[str, str]:
+    """Recover the codegen (harness, model, model_variant) a scorecard evaluated.
+
+    Provenance lives in the generated code's ``*.meta.json`` beside each source
+    file; this walks the scorecard's cases back to those metas and returns the
+    majority combination. Cases with no recoverable source (pure synthetic
+    fixtures) simply do not vote. Returns only the keys it can prove — an empty
+    dict means nothing was recoverable, so callers keep an honest "not recorded"
+    rather than defaulting silently.
+    """
+    repo_root = repo_root or Path.cwd()
+    combos: Counter[tuple[Any, Any, Any]] = Counter()
+    for case in scorecard.get("cases", []):
+        if not isinstance(case, dict):
+            continue
+        meta = _load_meta_for_source(repo_root, _case_source_path(repo_root, case))
+        if meta:
+            combos[(meta.get("harness"), meta.get("model_id"), meta.get("model_variant"))] += 1
+    if not combos:
+        return {}
+    harness, model, variant = combos.most_common(1)[0][0]
+    out: dict[str, str] = {}
+    if isinstance(harness, str) and harness.strip():
+        out["harness"] = harness.strip()
+    if isinstance(model, str) and model.strip():
+        out["model"] = model.strip()
+    if isinstance(variant, str) and variant.strip():
+        out["model_variant"] = variant.strip()
+    return out
+
+
 def build_scorecard(
     inputs: list[ScorecardInput],
     *,
@@ -407,6 +516,10 @@ def build_scorecard(
         artifacts_out.setdefault("model", model)
     if model_variant:
         artifacts_out.setdefault("model_variant", model_variant)
+    # Evidence source is derived, never guessed: synthetic fixture evidence and
+    # real agent-produced evidence must stay distinguishable downstream (the
+    # console groups fixture runs separately from harness runs).
+    artifacts_out.setdefault("evidence_source", _evidence_source(cases))
 
     result = {
         "schema_version": SCORECARD_SCHEMA_VERSION,

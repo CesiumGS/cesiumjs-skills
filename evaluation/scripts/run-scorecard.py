@@ -219,6 +219,15 @@ def main(argv: list[str] | None = None) -> int:
         model=args.model,
         model_variant=args.model_variant,
     )
+    # Metadata honesty guard: real agent evidence scored without a harness id
+    # would land in the console's "unknown" bucket. Say so loudly at produce
+    # time, when the operator can still re-run with --harness.
+    if not args.harness and scorecard["artifacts"].get("evidence_source") != "fixtures":
+        print(
+            "[run-scorecard] warning: agent-produced evidence scored without --harness; "
+            "this run will group under 'unknown' in the console. Pass --harness <id> to stamp it.",
+            file=sys.stderr,
+        )
 
     output_dir = Path(args.output_dir) if args.output_dir else DEFAULT_OUTPUT_ROOT / scorecard["run_id"]
     if not output_dir.is_absolute():

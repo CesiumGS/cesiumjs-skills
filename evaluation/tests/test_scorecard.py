@@ -7,7 +7,12 @@ from pathlib import Path
 
 from jsonschema import Draft7Validator
 
-from evaluation.framework.scorecard import ScorecardInput, build_scorecard, scorecard_to_markdown
+from evaluation.framework.scorecard import (
+    ScorecardInput,
+    build_scorecard,
+    resolve_codegen_provenance,
+    scorecard_to_markdown,
+)
 from evaluation.runner import run_case
 
 
@@ -324,3 +329,67 @@ def test_scorecard_stamps_model_provenance_under_artifacts() -> None:
     assert "harness" not in bare
     assert "model" not in bare["artifacts"]
     assert "model_variant" not in bare["artifacts"]
+
+
+def test_resolve_codegen_provenance_recovers_from_metas(tmp_path: Path) -> None:
+    # A generated source file beside its meta.json, the way the optimization
+    # pipeline lays them down.
+    gen = tmp_path / "optimization" / "generated" / "cesiumjs-camera" / "baseline"
+    gen.mkdir(parents=True)
+    (gen / "eval-001.js").write_text("// generated\n")
+    (gen / "eval-001.meta.json").write_text(
+        json.dumps({"harness": "opencode", "model_id": "openai/gpt-5.5", "model_variant": "medium"})
+    )
+
+    scorecard = {
+        "cases": [
+            {
+                "case_id": "eval-101",
+                "skill": "cesiumjs-camera",
+                "evidence_summary": {
+                    "actual_source_path": "optimization/generated/cesiumjs-camera/baseline/eval-001.js"
+                },
+            }
+        ]
+    }
+    prov = resolve_codegen_provenance(scorecard, tmp_path)
+    assert prov == {"harness": "opencode", "model": "openai/gpt-5.5", "model_variant": "medium"}
+
+    # A pure-fixtures run (no recoverable source) recovers nothing — never guessed.
+    assert resolve_codegen_provenance({"cases": [{"case_id": "x"}]}, tmp_path) == {}
+
+
+def test_scorecard_stamps_evidence_source() -> None:
+    case = _case()
+    result = run_case(case, _evidence(PASS_EVIDENCE_PATH))
+
+    fixture_inputs = [ScorecardInput(case=case, result=result, evidence_path=str(PASS_EVIDENCE_PATH))]
+    fixture_run = build_scorecard(
+        fixture_inputs,
+        threshold=0.95,
+        commit="abc123",
+        timestamp_utc="2026-05-27T00:00:00+00:00",
+    )
+    _scorecard_validator().validate(fixture_run)
+    assert fixture_run["artifacts"]["evidence_source"] == "fixtures"
+
+    agent_inputs = [
+        ScorecardInput(case=case, result=result, evidence_path="evaluation/artifacts/runs/eval-001.evidence.json")
+    ]
+    agent_run = build_scorecard(
+        agent_inputs,
+        threshold=0.95,
+        commit="abc123",
+        timestamp_utc="2026-05-27T00:00:00+00:00",
+        harness="codex",
+    )
+    _scorecard_validator().validate(agent_run)
+    assert agent_run["artifacts"]["evidence_source"] == "agent"
+
+    mixed_run = build_scorecard(
+        fixture_inputs + agent_inputs,
+        threshold=0.95,
+        commit="abc123",
+        timestamp_utc="2026-05-27T00:00:00+00:00",
+    )
+    assert mixed_run["artifacts"]["evidence_source"] == "mixed"
