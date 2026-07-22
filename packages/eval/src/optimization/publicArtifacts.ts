@@ -42,7 +42,8 @@ function trackedFiles(repoRoot: string): string[] {
     .sort();
 }
 
-function resolveTargets(repoRoot: string, args: string[]): string[] {
+/** Resolve the concrete file list a scan will cover (for reporting). */
+export function resolveTargets(repoRoot: string, args: string[]): string[] {
   if (!args.length) return trackedFiles(repoRoot);
   const targets = new Set<string>();
   for (const raw of args) {
@@ -79,16 +80,4 @@ export function scanPublicArtifacts(repoRoot: string, args: string[] = []): stri
     });
   }
   return hits;
-}
-
-export async function checkPublicArtifactsCommand(repoRoot: string, args: string[]): Promise<number> {
-  const targets = resolveTargets(repoRoot, args);
-  const hits = scanPublicArtifacts(repoRoot, args);
-  if (hits.length) {
-    console.error("[check public-artifacts] FAIL: public-safety scan matched:");
-    for (const hit of hits) console.error(`  ${hit}`);
-    return 1;
-  }
-  console.log(`[check public-artifacts] OK: scanned ${targets.length} files`);
-  return 0;
 }

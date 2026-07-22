@@ -6,11 +6,15 @@
  * variables < command-line flags. Harnesses and models are declared in
  * config/harness-registry.json — data, not code.
  *
- * Exit codes: 0 = pass/success, 1 = evaluation failure, 2 = usage/validation error.
+ * Exit codes: 0 = pass/success, 1 = failure (evaluation failure or runtime
+ * error), 2 = command-line usage error.
  */
-import { Command, Option } from "commander";
+import { createRequire } from "node:module";
+import { Command, CommanderError, InvalidArgumentError, Option } from "commander";
 import { loadContext } from "../config/load.js";
 import type { EvalContext } from "../config/types.js";
+
+const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
 
 const program = new Command();
 
@@ -25,15 +29,31 @@ async function run(action: () => Promise<number>): Promise<void> {
     process.exitCode = await action();
   } catch (exc: any) {
     console.error(`error: ${exc?.message ?? exc}`);
-    process.exitCode = 2;
+    process.exitCode = 1;
   }
+}
+
+function parseFloatArg(value: string): number {
+  const parsed = Number.parseFloat(value);
+  if (Number.isNaN(parsed)) throw new InvalidArgumentError(`'${value}' is not a number.`);
+  return parsed;
+}
+
+function parseIntArg(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) throw new InvalidArgumentError(`'${value}' is not an integer.`);
+  return parsed;
 }
 
 program
   .name("cesium-eval")
   .description("Evaluation and self-optimization platform for CesiumJS agent skills.")
   .option("--config <path>", "path to eval.config.json (default: <repo>/eval.config.json)")
-  .version("1.0.0");
+  .version(version)
+  // Usage errors (unknown flags, missing args, bad choices) exit 2; --help and
+  // --version exit 0. Runtime failures inside actions exit 1 via run(). Must be
+  // set before subcommands are created so they inherit the override.
+  .exitOverride();
 
 // ---------------------------------------------------------------------------
 // evaluation lane
@@ -50,7 +70,7 @@ program
   .option("--harness <id>", "codegen harness that produced the scored evidence")
   .option("--model <id>", "codegen model id (stamped under artifacts.model)")
   .option("--model-variant <id>", "codegen reasoning effort / variant")
-  .option("--threshold <number>", "pass threshold", parseFloat)
+  .option("--threshold <number>", "pass threshold", parseFloatArg)
   .option("--output-dir <dir>", "scorecard output directory")
   .action((options) =>
     run(async () => {
@@ -77,7 +97,7 @@ program
   .description("Run deterministic + visual-judge lanes over rendered baselines into one combined scorecard.")
   .option("--skills <list>", "'all' or comma-separated skill ids", "all")
   .option("--judge-model <id>", "judge model id (default: config/discovery)")
-  .option("--n-judges <n>", "panel size", (value) => Number.parseInt(value, 10))
+  .option("--n-judges <n>", "panel size", parseIntArg)
   .option("--no-judge", "skip the qualitative lane entirely")
   .option("--visual-review <path>", "pre-judged visual-review JSON to inject")
   .option("--emit-cases <path>", "write the audit work list and exit")
@@ -85,7 +105,7 @@ program
   .option("--adapter <id>", "judge adapter: a registry harness id or 'fake'")
   .option("--harness <id>", "codegen harness stamped into the scorecard")
   .option("--bundle-root <dir>", "root containing recaptured rendered bundles")
-  .option("--threshold <number>", "pass threshold", parseFloat)
+  .option("--threshold <number>", "pass threshold", parseFloatArg)
   .option("--output-dir <dir>", "scorecard output directory")
   .option("--journal <path>", "JSONL progress-journal path (streamed by the console)")
   .action((options) =>
@@ -101,7 +121,7 @@ program
   .requiredOption("--bundle <dir>", "bundle directory with screenshot.png etc.")
   .requiredOption("--case <path>", "path to the case JSON (scenario metadata)")
   .option("--model <id>", "judge model id")
-  .option("--n-judges <n>", "panel size", (value) => Number.parseInt(value, 10))
+  .option("--n-judges <n>", "panel size", parseIntArg)
   .option("--adapter <id>", "judge adapter: a registry harness id or 'fake'")
   .option("--emit-item <path>", "write the emitted item JSON to this path")
   .action((options) =>
@@ -157,7 +177,7 @@ program
   .argument("<scorecard>", "path to the focused run's scorecard.json")
   .option("--state-dir <dir>", "directory for review-decisions.json / focus.json")
   .option("--host <host>", "bind host")
-  .option("--port <port>", "bind port (0 for ephemeral)", (value) => Number.parseInt(value, 10))
+  .option("--port <port>", "bind port (0 for ephemeral)", parseIntArg)
   .option("--open", "open the system browser after start")
   .action((scorecard, options) =>
     run(async () => {
@@ -192,21 +212,23 @@ agentSelectionOptions(
     .command("loop")
     .description("Autonomous propose -> codegen -> render -> judge -> decide loop for one skill.")
     .argument("<skill>", "skill id, e.g. cesiumjs-camera")
-    .option("--max-iterations <n>", "maximum iterations", (value) => Number.parseInt(value, 10))
+    .option("--max-iterations <n>", "maximum iterations", parseIntArg)
     .addOption(new Option("--stop-on <condition>", "stopping condition").choices(["plateau", "regression", "max"]))
-    .option("--plateau-n <n>", "consecutive ties to trigger plateau stop", (value) => Number.parseInt(value, 10))
-    .option("--proposer-history <n>", "iterations of history for the proposer", (value) => Number.parseInt(value, 10))
-    .option("--proposer-temperature <t>", "proposer temperature (metadata only)", parseFloat)
+    .option("--plateau-n <n>", "consecutive ties to trigger plateau stop", parseIntArg)
+    .option("--promote", "apply KEEP candidates to skills/<skill>/SKILL.md (default: stage for human review and stop)")
+    .option("--proposer-history <n>", "iterations of history for the proposer", parseIntArg)
+    .option("--proposer-temperature <t>", "proposer temperature (metadata only)", parseFloatArg)
     .option("--proposer-decision-path <path>", "decision record to seed the proposer"),
   ["proposer", "codegen", "judge"],
 ).action((skill, options) =>
   run(async () => {
-    const { loopCommand } = await import("../optimization/loop.js");
+    const { loopCommand } = await import("../commands/optimize.js");
     return loopCommand(ctx(), {
       skill,
       maxIterations: options.maxIterations,
       stopOn: options.stopOn,
       plateauN: options.plateauN,
+      promote: options.promote,
       proposerHistory: options.proposerHistory,
       proposerTemperature: options.proposerTemperature,
       proposerDecisionPath: options.proposerDecisionPath,
@@ -224,9 +246,10 @@ agentSelectionOptions(
     .option("--skills <list>", "'all' or comma-separated skill ids")
     .option("--from-scorecard <path>", "derive focus from an evaluation scorecard")
     .option("--from-focus <path>", "seed proposers from a scorecard-focus JSON")
-    .option("--max-iterations <n>", "maximum iterations per skill", (value) => Number.parseInt(value, 10))
+    .option("--max-iterations <n>", "maximum iterations per skill", parseIntArg)
     .addOption(new Option("--stop-on <condition>", "stopping condition").choices(["plateau", "regression", "max"]))
-    .option("--plateau-n <n>", "consecutive ties to trigger plateau stop", (value) => Number.parseInt(value, 10))
+    .option("--plateau-n <n>", "consecutive ties to trigger plateau stop", parseIntArg)
+    .option("--promote", "apply KEEP candidates to skills/<skill>/SKILL.md (default: stage for human review and stop)")
     .option("--continue-on-failure", "continue remaining skills after one fails")
     .option("--dry-run", "print planned runs without executing"),
   ["proposer", "codegen", "judge"],
@@ -252,16 +275,29 @@ agentSelectionOptions(
     .option("--decision-path <path>", "last decision record")
     .option("--coverage-path <path>", "coverage report path")
     .option("--output-dir <dir>", "candidate output directory")
-    .option("--max-history <n>", "historical iterations in proposer context", (value) => Number.parseInt(value, 10))
-    .option("--temperature <t>", "temperature (metadata only)", parseFloat)
+    .option("--max-history <n>", "historical iterations in proposer context", parseIntArg)
+    .option("--temperature <t>", "temperature (metadata only)", parseFloatArg)
     .option("--prompt-version <id>", "prompt template version"),
   ["proposer"],
 ).action((skill, options) =>
   run(async () => {
-    const { proposeCommand } = await import("../optimization/proposer.js");
+    const { proposeCommand } = await import("../commands/optimize.js");
     return proposeCommand(ctx(), { ...options, skill, ...pickAgent(options, "proposer") });
   }),
 );
+
+optimize
+  .command("promote")
+  .description("Apply a staged KEEP candidate to skills/<skill>/SKILL.md (the human promotion gate).")
+  .argument("<skill>", "skill id")
+  .argument("<iteration>", "iteration id, e.g. 001")
+  .action((skill, iteration) =>
+    run(async () => {
+      const { promoteCommand } = await import("../commands/optimize.js");
+      ctx();
+      return promoteCommand({ skill, iteration });
+    }),
+  );
 
 optimize
   .command("render")
@@ -271,10 +307,10 @@ optimize
   .option("--generated-dir <dir>", "directory containing generated JS (overrides iteration layout)")
   .option("--output-dir <dir>", "run output directory (overrides iteration layout)")
   .option("--only <list>", "comma-separated scenario ids to run")
-  .option("--timeout-ms <n>", "page navigation timeout", (value) => Number.parseInt(value, 10))
+  .option("--timeout-ms <n>", "page navigation timeout", parseIntArg)
   .action((skill, options) =>
     run(async () => {
-      const { renderCommand } = await import("../optimization/browserRunner.js");
+      const { renderCommand } = await import("../commands/optimize.js");
       return renderCommand(ctx(), { ...options, skill });
     }),
   );
@@ -353,7 +389,7 @@ optimize
   .option("--output-dir <dir>", "summary output directory")
   .action((skill, iteration, options) =>
     run(async () => {
-      const { reportCommand } = await import("../optimization/report.js");
+      const { reportCommand } = await import("../commands/optimize.js");
       return reportCommand(ctx().repoRoot, { ...options, skill, iteration });
     }),
   );
@@ -409,7 +445,7 @@ check
   .argument("[paths...]", "specific files/dirs to scan (default: tracked scan roots)")
   .action((paths) =>
     run(async () => {
-      const { checkPublicArtifactsCommand } = await import("../optimization/publicArtifacts.js");
+      const { checkPublicArtifactsCommand } = await import("../commands/check.js");
       return checkPublicArtifactsCommand(ctx().repoRoot, paths ?? []);
     }),
   );
@@ -425,6 +461,11 @@ check
   );
 
 program.parseAsync().catch((exc) => {
+  if (exc instanceof CommanderError) {
+    // commander already printed the message; help/version are success paths.
+    process.exitCode = exc.exitCode === 0 ? 0 : 2;
+    return;
+  }
   console.error(`error: ${exc?.message ?? exc}`);
-  process.exitCode = 2;
+  process.exitCode = 1;
 });

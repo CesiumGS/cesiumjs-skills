@@ -1,11 +1,24 @@
 /**
- * `cesium-eval check canonical-surface` — ensure active eval work stays in
- * packages/eval, optimization/, or evaluation/ (no legacy top-level eval dirs
- * or stale refs).
+ * `cesium-eval check ...` — repository safety and hygiene gates:
+ * public-artifacts (private-reference scan) and canonical-surface (no legacy
+ * top-level eval dirs or stale refs).
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { gitLsFiles } from "../lib/proc.js";
+import { resolveTargets, scanPublicArtifacts } from "../optimization/publicArtifacts.js";
+
+export async function checkPublicArtifactsCommand(repoRoot: string, args: string[]): Promise<number> {
+  const targets = resolveTargets(repoRoot, args);
+  const hits = scanPublicArtifacts(repoRoot, args);
+  if (hits.length) {
+    console.error("[check public-artifacts] FAIL: public-safety scan matched:");
+    for (const hit of hits) console.error(`  ${hit}`);
+    return 1;
+  }
+  console.log(`[check public-artifacts] OK: scanned ${targets.length} files`);
+  return 0;
+}
 
 const ALLOWED_REFERENCE_FILES = new Set([
   ".gitignore",
