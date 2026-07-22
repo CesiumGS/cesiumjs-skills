@@ -91,7 +91,7 @@ program
   .action((options) =>
     run(async () => {
       const { auditCommand } = await import("../commands/audit.js");
-      return auditCommand(ctx(), options);
+      return auditCommand(ctx(), { ...options, noJudge: options.judge === false });
     }),
   );
 
@@ -122,7 +122,7 @@ program
   .action((casePath, options) =>
     run(async () => {
       const { captureCommand } = await import("../commands/capture.js");
-      return captureCommand(ctx(), { ...options, case: casePath });
+      return captureCommand(ctx(), { ...options, case: casePath, noHeadless: options.headless === false });
     }),
   );
 
