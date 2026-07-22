@@ -539,7 +539,7 @@ function HarnessOverlay() {
                 <span
                   className="mono"
                   style={{ color: "var(--text-3)" }}
-                  title={`Git commit this run evaluated: ${r.git_commit}. Several runs can share a commit — the timestamp tells them apart.`}
+                  title={`Git commit this run evaluated: ${r.git_commit}. Several runs can share a commit; the timestamp tells them apart.`}
                 >
                   {r.git_commit.slice(0, 7)}
                 </span>
@@ -558,7 +558,7 @@ function HarnessOverlay() {
                 <span
                   className="mono"
                   style={{ color: "var(--text-3)", marginLeft: "auto" }}
-                  title="Run start (UTC, to the second) — the part that distinguishes same-commit runs."
+                  title="Run start (UTC, to the second); the part that distinguishes same-commit runs."
                 >
                   {r.timestamp_utc.slice(0, 19).replace("T", " ")}
                 </span>
@@ -566,7 +566,7 @@ function HarnessOverlay() {
                 {loaded && (
                   <span
                     className="hr-loaded"
-                    title="This is the focused run — the one every lifecycle station (1–5) is reading right now."
+                    title="This is the focused run, the one every lifecycle station (1–5) is reading right now."
                   >
                     Focused
                   </span>
@@ -610,7 +610,8 @@ const STATIONS: { id: Station; label: string }[] = [
   { id: "optimize", label: "Optimize · skill improvement loop" },
   { id: "decide", label: "Decide · verify candidate vs baseline" },
   { id: "promote", label: "Promote · ship KEEP winners live" },
-  { id: "compare", label: "Models & Harnesses · cross-run insights" }
+  { id: "models", label: "Models · catalogs & observed win rates" },
+  { id: "harnesses", label: "Harnesses · capability & run outcomes" }
 ];
 
 function fuzzy(q: string, text: string): boolean {
@@ -734,8 +735,9 @@ const HELP_ROWS: { keys: string[]; desc: string }[] = [
   { keys: ["Esc"], desc: "Up one altitude / close the overlay" },
   { keys: ["0"], desc: "Dashboard: all studies at a glance" },
   { keys: ["1", "·", "5"], desc: "Lifecycle stations: Evaluate, Review, Optimize, Decide, Promote" },
-  { keys: ["6"], desc: "Insights: Models & Harnesses" },
+  { keys: ["6"], desc: "Insights: Models" },
   { keys: ["7"], desc: "Run Studies: launch eval runs and watch them live" },
+  { keys: ["8"], desc: "Insights: Harnesses" },
   { keys: ["b"], desc: "Set the comparison baseline (in the Run Browser, h)" },
   { keys: ["a"], desc: "Accept (Review)" },
   { keys: ["f"], desc: "Flag into focus.json, the only loop seed (Review)" },
@@ -780,13 +782,13 @@ function Help() {
       {/* Chrome legend: the guidance that used to live only in hover tooltips
           (fact chips, history ticks, phase chips) — readable without a mouse. */}
       <div className="help-legend">
-        <div className="help-legend-title">Reading the chrome</div>
-        <div className="help-legend-row"><b>Checks + visual review / No visual review</b> — whether a judge panel actually looked at the rendered screenshots, or only automated checks ran.</div>
-        <div className="help-legend-row"><b>Source chip</b> — who produced the scored output: a real agent harness, synthetic test fixtures, or unknown (pre-provenance runs).</div>
-        <div className="help-legend-row"><b>vs baseline chip</b> — the comparison run every delta is measured against; set or clear it from the Run Browser (h).</div>
-        <div className="help-legend-row"><b>History ticks</b> (Optimize rail rows) — one tick per iteration: green KEEP, red REJECT, gray baseline/failed, newest on the right.</div>
-        <div className="help-legend-row"><b>Phase chips</b> (Run Studies) — the run's pipeline phases; a count like 3/14 is real artifacts on disk, a pulse means running with nothing countable.</div>
-        <div className="help-legend-row"><b>Promotion states</b> — <b>staged</b>: a KEEP candidate awaits your approval (SKILL.md untouched); <b>promoted</b>: applied with the previous version archived.</div>
+        <div className="help-legend-title">Reading the Chrome</div>
+        <div className="help-legend-row"><b>Checks + Visual Review / No Visual Review</b>: whether a judge panel actually looked at the rendered screenshots, or only automated checks ran.</div>
+        <div className="help-legend-row"><b>Source chip</b>: who produced the scored output: a real agent harness, synthetic test fixtures, or unknown (pre-provenance runs).</div>
+        <div className="help-legend-row"><b>vs baseline chip</b>: the comparison run every delta is measured against; set or clear it from the Run Browser (h).</div>
+        <div className="help-legend-row"><b>History ticks</b> (Optimize rail rows): one tick per iteration: green KEEP, red REJECT, gray baseline/failed, newest on the right.</div>
+        <div className="help-legend-row"><b>Phase chips</b> (Run Studies): the run's pipeline phases; a count like 3/14 is real artifacts on disk, a pulse means running with nothing countable.</div>
+        <div className="help-legend-row"><b>Promotion states</b>: <b>staged</b>: a KEEP candidate awaits your approval (SKILL.md untouched); <b>promoted</b>: applied with the previous version archived.</div>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ export function HarnessChip({ harness }: { harness: string }) {
     : harness === "fixtures"
       ? "Synthetic"
       : harness === "mixed"
-        ? "Real + synthetic"
+        ? "Real + Synthetic"
         : harness;
   return (
     <span
@@ -169,7 +169,7 @@ function runBucket(r: RunSummary): string {
 }
 
 const BUCKET_HINTS: Record<string, string> = {
-  fixtures: "Hand-authored test fixtures that validate the evaluator itself — no AI agent involved.",
+  fixtures: "Hand-authored test fixtures that validate the evaluator itself; no AI agent involved.",
   mixed: "Scores a mix of real agent output and hand-authored test fixtures in a single sweep.",
   unknown: "These scorecards predate provenance stamping, so the producing harness is unknown."
 };
@@ -709,7 +709,7 @@ export function RunTrend() {
         <span><span className="dotex loaded" /> Focused run</span>
         <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>
           {n === 1
-            ? "One scored run so far — the trend grows with each run."
+            ? "One scored run so far; the trend grows with each run."
             : axis === "sequence"
               ? "Even spacing in run order (repository progression)."
               : "True wall-clock spacing."}{" "}
@@ -824,7 +824,7 @@ export function SkillTrend() {
                   key={p.i}
                   className="chart-pt none"
                   style={{ left: `${X(p.i)}%`, top: `${Y(0)}%` }}
-                  title={`#${p.it.iteration}: not scored by the judges (no wins or losses) — a gap, not a zero.`}
+                  title={`#${p.it.iteration}: not scored by the judges (no wins or losses); a gap, not a zero.`}
                 />
               ) : (
                 <span
@@ -866,73 +866,10 @@ export function SkillTrend() {
         <span><span className="dotex none" /> Not scored (sits on the axis)</span>
         <span><span className="dotex thr" /> Parity 50%</span>
         <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>
-          {n === 1 ? "One iteration so far — the trend grows with the loop." : `${n} iterations.`} KEEP / REJECT
+          {n === 1 ? "One iteration so far; the trend grows with the loop." : `${n} iterations.`} KEEP / REJECT
           under each tick.
         </span>
       </div>
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------------------------
-   MODEL LEADERBOARD: the dashboard-sized answer to "which model is winning?".
-   Top observed model-and-effort combos by visual win rate; the full evidence
-   table lives on Models & Harnesses (key 6).
-   --------------------------------------------------------------------------- */
-export function ModelLeaderboard() {
-  const { insights, setStation } = useStore();
-  const combos = insights?.combos ?? [];
-
-  const ranked = useMemo(() => {
-    const scored = combos.filter((c) => c.win_rate !== null);
-    const unscored = combos.filter((c) => c.win_rate === null);
-    scored.sort((a, b) => (b.win_rate as number) - (a.win_rate as number) || b.iterations - a.iterations);
-    unscored.sort((a, b) => b.iterations - a.iterations);
-    return [...scored, ...unscored].slice(0, 6);
-  }, [combos]);
-
-  return (
-    <div className="dash-card">
-      <div className="section-title">
-        Model Performance
-        <span className="section-sub">▣ Top codegen combos by visual win rate, from the optimization metas.</span>
-        <span className="spacer" />
-        <button className="pill link-pill" onClick={() => setStation("compare")} title="Full observed table with stability, wall clock, and drill-down (key 6)">
-          Full table →
-        </button>
-      </div>
-      {ranked.length === 0 ? (
-        <div className="empty-note">No optimization iterations recorded yet, so no model evidence to rank.</div>
-      ) : (
-        <ol className="mlb-list">
-          {ranked.map((c, i) => (
-            <li key={`${c.harness}-${c.model_id}-${c.model_variant ?? "?"}`}>
-              <button className="mlb-row" onClick={() => setStation("compare")} title="Open the full observed table (key 6)">
-                <span className="mlb-rank mono">{c.win_rate === null ? "–" : i + 1}</span>
-                <span className="mlb-id">
-                  <HarnessChip harness={c.harness} />
-                  <span className="mono mlb-model">{modelShort(c.model_id)}</span>
-                  {c.model_variant ? (
-                    <span className="effort-chip">@{c.model_variant}</span>
-                  ) : (
-                    <span className="effort-chip unrecorded" title="Effort level not recorded by these runs.">
-                      @?
-                    </span>
-                  )}
-                </span>
-                <span className="mlb-rate">
-                  <RateBar rate={c.win_rate} />
-                  {c.win_rate === null && <UnknownChip small />}
-                </span>
-                <span className="mlb-sub" title="Iterations · KEEP decisions · skills · most recent generation or evaluation.">
-                  {pluralize(c.iterations, "iter")} · {c.keeps} kept · {pluralize(c.skills.length, "skill")}
-                  {c.last_active ? ` · ${relativeTime(c.last_active)}` : ""}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
     </div>
   );
 }
@@ -1071,10 +1008,10 @@ export function Kpi({
 }
 
 /* ---------------------------------------------------------------------------
-   HARNESSES DASHBOARD — the harness as the unit of analysis: what each harness
-   is, and how scorecard runs behave per harness over time.
+   HARNESSES STATION (key 8): the harness as the unit of analysis: what each
+   harness is, and how scorecard runs behave per harness.
    --------------------------------------------------------------------------- */
-function HarnessesDashboard() {
+export function HarnessesStation() {
   const { registry, runs } = useStore();
   const harnesses = registry?.harnesses ?? [];
 
@@ -1089,7 +1026,16 @@ function HarnessesDashboard() {
   const stamped = runs.filter((r) => (r.harness ?? "unknown") !== "unknown").length;
 
   return (
-    <>
+    <div className="overview compare-station">
+      <div className="dash-head">
+        <div>
+          <div className="dash-title">Harnesses</div>
+          <div className="dash-sub">
+            Declared capability (registry) beside observed run outcomes (artifacts), kept separate on purpose.
+          </div>
+        </div>
+      </div>
+
       <div className="kpi-row">
         <Kpi label="Harnesses" value={String(harnesses.length)} sub="Registered in the registry" tone="brand" />
         <Kpi label="Runs on Disk" value={String(runs.length)} sub={`${stamped} stamped with a harness`} />
@@ -1119,16 +1065,15 @@ function HarnessesDashboard() {
       )}
 
       <RunsByHarness />
-      <RunTrend />
-    </>
+    </div>
   );
 }
 
 /* ---------------------------------------------------------------------------
-   MODELS DASHBOARD — the model as the unit of analysis: what is available at
-   what cost, and how each exercised model actually performed.
+   MODELS STATION (key 6): the model as the unit of analysis: what is available
+   at what cost, and how each exercised model actually performed.
    --------------------------------------------------------------------------- */
-function ModelsDashboard() {
+export function ModelsStation() {
   const { registry, insights } = useStore();
   const harnesses = registry?.harnesses ?? [];
   const combos = insights?.combos ?? [];
@@ -1142,7 +1087,16 @@ function ModelsDashboard() {
   const defaultSpec = harnesses[0];
 
   return (
-    <>
+    <div className="overview compare-station">
+      <div className="dash-head">
+        <div>
+          <div className="dash-title">Models</div>
+          <div className="dash-sub">
+            Declared catalogs and cost tiers (registry) beside observed win rates (optimization metas).
+          </div>
+        </div>
+      </div>
+
       <div className="kpi-row">
         <Kpi
           label="Models Available"
@@ -1169,36 +1123,6 @@ function ModelsDashboard() {
       <Combos />
       <SkillTrend />
       <Catalogs />
-    </>
-  );
-}
-
-/* ---------------------------------------------------------------------------
-   The workspace: one insights surface, two dashboards.
-   --------------------------------------------------------------------------- */
-export function CompareStation() {
-  const [tab, setTab] = useState<"harnesses" | "models">("harnesses");
-  return (
-    <div className="overview compare-station">
-      <div className="dash-head">
-        <div>
-          <div className="dash-title">Models &amp; Harnesses</div>
-          <div className="dash-sub">
-            Declared capability (registry) beside observed performance (artifacts), kept separate on purpose.
-          </div>
-        </div>
-        <span className="spacer" />
-        <div className="seg-control" role="tablist" aria-label="Insights dashboard">
-          <button role="tab" aria-selected={tab === "harnesses"} className={tab === "harnesses" ? "active" : ""} onClick={() => setTab("harnesses")}>
-            Harnesses
-          </button>
-          <button role="tab" aria-selected={tab === "models"} className={tab === "models" ? "active" : ""} onClick={() => setTab("models")}>
-            Models
-          </button>
-        </div>
-      </div>
-
-      {tab === "harnesses" ? <HarnessesDashboard /> : <ModelsDashboard />}
     </div>
   );
 }

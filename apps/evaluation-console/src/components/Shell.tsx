@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows, LayoutDashboard, Rocket, ChevronDown, Eye, EyeOff, TrendingUp, RotateCcw } from "lucide-react";
+import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, Cpu, Bot, LayoutDashboard, Rocket, ChevronDown, Eye, EyeOff, TrendingUp, RotateCcw } from "lucide-react";
 import { useStore } from "../store";
 import type { Station } from "../types";
 import { pluralize, relativeTime } from "../lib/format";
@@ -22,7 +22,7 @@ const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string; desc: 
     num: "2",
     name: "Review",
     desc: "Triage & flag failures",
-    hint: "Walk the focused run's cases worst-first. Accept, flag, or defer each one — the cases you flag become the optimizer's focus set."
+    hint: "Walk the focused run's cases worst-first. Accept, flag, or defer each one; the cases you flag become the optimizer's focus set."
   },
   {
     id: "optimize",
@@ -61,20 +61,20 @@ function runShortLabel(runId: string | undefined, timestamp: string | undefined,
 function sourceLabel(source: string | undefined, harness: string | undefined): { label: string; cls: string; hint: string } {
   if (source === "fixtures")
     return {
-      label: "Synthetic test data",
+      label: "Synthetic Test Data",
       cls: "synthetic",
-      hint: "Scored against hand-authored test fixtures. This validates the evaluator itself — no AI agent was involved."
+      hint: "Scored against hand-authored test fixtures. This validates the evaluator itself; no AI agent was involved."
     };
   if (source === "mixed")
     return {
-      label: "Real + synthetic",
+      label: "Real + Synthetic",
       cls: "synthetic",
       hint: "This run scores a mix of real agent output and hand-authored test fixtures in a single sweep."
     };
   if (harness && harness !== "unknown")
     return { label: harness, cls: "agent", hint: `Real agent output, generated with the ${harness} harness.` };
   return {
-    label: "Origin unknown",
+    label: "Origin Unknown",
     cls: "unknown",
     hint: "This run predates provenance stamping, so the producing harness can't be determined."
   };
@@ -117,7 +117,7 @@ export function TopStrip() {
             : "No run loaded. Click to browse runs (h)."
         }
       >
-        <span className="rs-label">Focused run</span>
+        <span className="rs-label">Focused Run</span>
         <span className="rs-value">
           {scorecard && <span className={`rs-dot ${pass ? "pass" : "fail"}`} aria-hidden />}
           <span className="mono rs-id">
@@ -128,7 +128,7 @@ export function TopStrip() {
               className={`rs-score mono ${pass ? "pass" : "fail"}`}
               title="Overall verdict combines automated checks and the visual review; the percentage is the automated-check score."
             >
-              {pass ? "PASS" : "FAIL"} · checks {scorePct}
+              {pass ? "PASS" : "FAIL"} · Checks {scorePct}
             </span>
           )}
           <ChevronDown size={12} aria-hidden className="rs-chev" />
@@ -142,11 +142,11 @@ export function TopStrip() {
             title={
               judged
                 ? "Every case ran automated checks, and a judge panel reviewed the rendered screenshots."
-                : "Only automated checks ran — no judge reviewed the rendered screenshots. Launch a new run from Run Studies (7) with visual judging on to add that."
+                : "Only automated checks ran; no judge reviewed the rendered screenshots. Launch a new run from Run Studies (7) with visual judging on to add that."
             }
           >
             {judged ? <Eye size={11} aria-hidden /> : <EyeOff size={11} aria-hidden />}
-            {judged ? "Checks + visual review" : "No visual review"}
+            {judged ? "Checks + Visual Review" : "No Visual Review"}
           </span>
           <button
             className={`fact-chip source ${src.cls}`}
@@ -169,7 +169,7 @@ export function TopStrip() {
                 vs <span className="mono">{runShortLabel(baselineRun.run_id, baselineRun.timestamp_utc, undefined)}</span>
               </>
             ) : (
-              "no baseline"
+              "No Baseline"
             )}
           </button>
           <span className="fact-plain">{pluralize(counts.total, "case")}</span>
@@ -209,8 +209,6 @@ export function Rail() {
     confirmedFlagKeys,
     suggestedFlagCount,
     skills,
-    scorecard,
-    config,
     live,
     liveRunning,
     openOverlay,
@@ -286,34 +284,19 @@ export function Rail() {
         "Your hands on the eval CLI: configure and kick off a new study, then watch its phases, trials, and journal live. Shortcut: 7",
         liveRunning ? (
           <span className="st-badge live" title="An eval run is executing right now">
-            ● live
+            ● Live
           </span>
         ) : stalledCount > 0 ? (
-          <span className="st-badge" title={`${pluralize(stalledCount, "stalled run")} on disk — open to inspect`}>
+          <span className="st-badge" title={`${pluralize(stalledCount, "stalled run")} on disk; open to inspect`}>
             {stalledCount}
           </span>
         ) : null
       )}
 
-      {/* ── The lifecycle: five steps, one focused run. The chip above step 1
-            anchors the whole section to the run being read, so "which run am I
-            looking at?" is answered before any station is opened. ── */}
-      <div className="rail-section">Run lifecycle</div>
-      <button
-        className="rail-runchip"
-        onClick={() => openOverlay("harness")}
-        title={
-          scorecard
-            ? `Focused run: ${scorecard.runId}\nEvaluate and Review read this run; the flags you confirm there seed Optimize → Decide → Promote.\nClick to switch runs (h).`
-            : "No run loaded yet. Click to browse runs (h)."
-        }
-      >
-        <span className="rail-runchip-label">Reading run</span>
-        <span className="rail-runchip-value mono">
-          {runShortLabel(scorecard?.runId ?? config?.run_id, scorecard?.timestampUtc, scorecard?.gitCommit)}
-          <ChevronDown size={11} aria-hidden />
-        </span>
-      </button>
+      {/* ── The lifecycle: five steps, one focused run. The Focused Run control
+            in the top strip is the single anchor for which run these stations
+            read; the rail stays a pure navigator. ── */}
+      <div className="rail-section">Run Lifecycle</div>
 
       {LIFECYCLE_STATIONS.map((st) => (
         <div key={st.id}>
@@ -332,9 +315,9 @@ export function Rail() {
               disabled={!flagged}
               title={
                 flagged
-                  ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set — the optimizer only chases human-confirmed flags.`
+                  ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set. The optimizer only chases human-confirmed flags.`
                   : suggestedFlagCount
-                    ? `${pluralize(suggestedFlagCount, "machine-suggested flag")} await your confirmation — confirm each in Review (e) before handing off.`
+                    ? `${pluralize(suggestedFlagCount, "machine-suggested flag")} await your confirmation. Confirm each in Review (e) before handing off.`
                     : "Flag failing cases in Review first; the optimizer only chases what you confirm."
               }
             >
@@ -353,11 +336,18 @@ export function Rail() {
           harnesses is cross-run analysis, not a step in shipping one run. */}
       <div className="rail-section">Insights</div>
       {item(
-        "compare",
-        <GitCompareArrows size={14} aria-hidden />,
-        "Models & Harnesses",
-        "Compare across runs",
-        "Cross-run analysis: declared model/harness capability vs the performance actually observed on disk. Shortcut: 6"
+        "models",
+        <Cpu size={14} aria-hidden />,
+        "Models",
+        "Catalogs & win rates",
+        "The model as the unit of analysis: declared catalogs and cost tiers beside observed keep and win rates from the artifacts on disk. Shortcut: 6"
+      )}
+      {item(
+        "harnesses",
+        <Bot size={14} aria-hidden />,
+        "Harnesses",
+        "Capability & run outcomes",
+        "The harness as the unit of analysis: registry capability cards beside run-level scorecard outcomes per harness. Shortcut: 8"
       )}
 
       <div className="rail-overlays">

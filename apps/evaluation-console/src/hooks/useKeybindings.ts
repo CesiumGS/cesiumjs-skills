@@ -9,8 +9,9 @@ const STATION_BY_DIGIT: Record<string, Station> = {
   "3": "optimize",
   "4": "decide",
   "5": "promote",
-  "6": "compare",
-  "7": "live"
+  "6": "models",
+  "7": "live",
+  "8": "harnesses"
 };
 
 function isTyping(el: EventTarget | null): boolean {

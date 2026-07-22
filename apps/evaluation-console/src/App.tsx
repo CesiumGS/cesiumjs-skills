@@ -7,7 +7,7 @@ import { ReviewInspector, ReviewStage } from "./components/Review";
 import { OptimizeInspector, OptimizeStage } from "./components/Optimize";
 import { DecideInspector, DecideStage } from "./components/Decide";
 import { EvaluateOverview, PromotePanel } from "./components/Overview";
-import { CompareStation } from "./components/Compare";
+import { HarnessesStation, ModelsStation } from "./components/Compare";
 import { DashboardStation } from "./components/Dashboard";
 import { LiveStation } from "./components/Live";
 import { Overlays, Toasts } from "./components/Overlays";
@@ -39,11 +39,19 @@ function Body() {
       </div>
     );
   }
-  if (station === "compare") {
+  if (station === "models") {
     return (
       <div className="body body--wide">
         <Rail />
-        <CompareStation />
+        <ModelsStation />
+      </div>
+    );
+  }
+  if (station === "harnesses") {
+    return (
+      <div className="body body--wide">
+        <Rail />
+        <HarnessesStation />
       </div>
     );
   }

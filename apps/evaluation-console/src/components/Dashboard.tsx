@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { ArrowRight, Flag } from "lucide-react";
 import { useStore } from "../store";
 import { modelShort, pluralize, relativeTime } from "../lib/format";
-import { HarnessChip, Kpi, ModelLeaderboard, RunsByHarness, RunTrend, SkillTrend } from "./Compare";
+import { HarnessChip, Kpi, RunTrend } from "./Compare";
 import { LiveNowBanner } from "./Live";
 import type { RunSummary } from "../types";
 
@@ -12,17 +12,16 @@ import type { RunSummary } from "../types";
    Best-practice ordering (inverted pyramid):
      1. Status line: the single most important fact (latest run verdict) plus
         the freshness of the data, with the one primary action.
-     2. KPI row: five glanceable numbers spanning runs, harnesses, and models.
+     2. Recent runs and the KPI row: glanceable numbers spanning runs,
+        harnesses, and models.
      3. Performance over time: the run-score trend, the anchor chart.
-     4. Side-by-side units of analysis: harness outcomes beside the observed
-        model leaderboard — the two questions the console exists to answer.
-     5. Per-skill optimization trend, the drill-down teaser.
-   Every panel links into the deeper station that owns its data. The dashboard
-   is read-only: it never mutates review state.
+     4. Links into the Models (6) and Harnesses (8) stations, which own the
+        deeper per-unit analysis. The dashboard never duplicates their panels.
+   The dashboard is read-only: it never mutates review state.
    ============================================================================ */
 
 function freshness(iso: string | null | undefined): { label: string; stale: boolean } {
-  if (!iso) return { label: "no runs on disk", stale: true };
+  if (!iso) return { label: "none on disk", stale: true };
   const days = (Date.now() - Date.parse(iso)) / 86_400_000;
   return { label: relativeTime(iso), stale: days > 7 };
 }
@@ -95,14 +94,14 @@ function RecentRuns() {
                   title={
                     r.visual_review_supplied
                       ? "Automated checks plus a judge panel that reviewed the rendered screenshots."
-                      : "Automated checks only — no judge reviewed the rendered screenshots."
+                      : "Automated checks only; no judge reviewed the rendered screenshots."
                   }
                 >
-                  {r.visual_review_supplied ? "checks + visual" : "checks only"}
+                  {r.visual_review_supplied ? "Checks + Visual" : "Checks Only"}
                 </span>
                 <span className="rr-cases mono">{pluralize(r.total_cases, "case")}</span>
                 <span className="rr-when">{relativeTime(r.timestamp_utc)}</span>
-                {focused && <span className="rr-focus-tag">focused</span>}
+                {focused && <span className="rr-focus-tag">Focused</span>}
               </button>
             </li>
           );
@@ -150,8 +149,8 @@ export function DashboardStation() {
         </div>
         <span className="spacer" />
         <span className={`fresh-chip${fresh.stale ? " stale" : ""}`} title="Timestamp of the newest scorecard run on disk.">
-          Latest data {fresh.label}
-          {fresh.stale && " · stale"}
+          Latest Data {fresh.label}
+          {fresh.stale && " · Stale"}
         </span>
       </div>
 
@@ -164,13 +163,13 @@ export function DashboardStation() {
           A det-only run must not read as a full PASS: the visual gate never ran. */}
       <div className="hero-card dashboard-hero">
         <div>
-          <div className="hero-eyebrow">Focused run</div>
+          <div className="hero-eyebrow">Focused Run</div>
           {scorecard && pass && !scorecard.visualReviewSupplied ? (
             <>
               <div className="ov-big" style={{ color: "var(--defer)" }}>INCOMPLETE</div>
               <div className="stage-sub" style={{ marginTop: "var(--sp-1)" }}>
                 <span style={{ color: "var(--pass)" }}>checks PASS</span>
-                <span style={{ color: "var(--unknown)" }}>· visual unreviewed — nobody looked at the renders</span>
+                <span style={{ color: "var(--unknown)" }}>· visual unreviewed, nobody looked at the renders</span>
               </div>
             </>
           ) : (
@@ -232,19 +231,26 @@ export function DashboardStation() {
       {/* 3 — THE ANCHOR CHART: score across runs, over time. */}
       <RunTrend />
 
-      {/* 4 — THE TWO UNITS OF ANALYSIS, side by side. Each card carries its
-          own title and link into Models & Harnesses (key 6). */}
-      <div className="dashboard-columns">
-        <div className="dashboard-col">
-          <RunsByHarness />
-        </div>
-        <div className="dashboard-col">
-          <ModelLeaderboard />
-        </div>
+      {/* 4 — WHERE TO DIG DEEPER: the per-unit analysis lives in its own
+          station now; the dashboard links instead of duplicating panels. */}
+      <div className="dashboard-links">
+        <button className="insight-link" onClick={() => setStation("models")} title="Open the Models station (key 6)">
+          <span className="il-title">
+            Models <ArrowRight size={12} aria-hidden />
+          </span>
+          <span className="il-sub">Catalogs and cost tiers beside observed win rates per model.</span>
+        </button>
+        <button
+          className="insight-link"
+          onClick={() => setStation("harnesses")}
+          title="Open the Harnesses station (key 8)"
+        >
+          <span className="il-title">
+            Harnesses <ArrowRight size={12} aria-hidden />
+          </span>
+          <span className="il-sub">Capability cards beside run outcomes per harness.</span>
+        </button>
       </div>
-
-      {/* 5 — DRILL-DOWN TEASER: one skill's optimization trajectory. */}
-      <SkillTrend />
     </div>
   );
 }
