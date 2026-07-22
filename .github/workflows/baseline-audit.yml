@@ -5,7 +5,7 @@ name: Baseline Audit (deterministic + qualitative)
 # (static 0-10 visual judge) needs rendered baselines, which live under the
 # gitignored optimization/runs/ — so it renders them first and runs nightly /
 # on demand, posting an advisory result. Both lanes share ONE entrypoint:
-# evaluation/scripts/run-baseline-audit.py.
+# `cesium-eval audit`.
 
 on:
   pull_request:
@@ -13,12 +13,14 @@ on:
       - 'skills/**'
       - 'evaluation/**'
       - 'optimization/scenarios/**'
+      - 'packages/eval/**'
       - '.github/workflows/baseline-audit.yml'
   push:
     branches: [main]
     paths:
       - 'skills/**'
       - 'evaluation/**'
+      - 'packages/eval/**'
   workflow_dispatch:
     inputs:
       skills:
@@ -51,18 +53,19 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.11'
-          cache: 'pip'
-      - run: pip install -r requirements.txt
-      - name: Enforce eval/optimization import boundary
-        run: python3 evaluation/scripts/validate-evaluation.py
-      - name: Unit tests (judge + audit, FakeAdapter; CI-safe)
-        run: python3 -m pytest -q evaluation/tests
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build --workspace @cesiumjs-skills/eval
+      - name: Validate evaluation cases and fixtures
+        run: node packages/eval/bin/cesium-eval.js validate --suite evaluation
+      - name: Unit tests (checks, scorecard, judges; CI-safe)
+        run: npm test --workspace @cesiumjs-skills/eval
       - name: Deterministic baseline audit over tracked evidence (binding gate)
         run: |
-          python3 evaluation/scripts/run-baseline-audit.py \
+          node packages/eval/bin/cesium-eval.js audit \
             --skills "${{ github.event.inputs.skills || 'all' }}" \
             --no-judge \
             --output-dir evaluation/artifacts/audits/ci-deterministic
@@ -85,17 +88,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - run: |
-          pip install -r requirements.txt
-          playwright install chromium
-          playwright install-deps chromium
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+      - run: |
+          npm ci
+          npm run build --workspace @cesiumjs-skills/eval
+          npx playwright install --with-deps chromium
       - name: Install agent CLI
         env:
           AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
@@ -143,10 +143,10 @@ jobs:
           # into optimization/runs/<skill>/baseline (1 iteration is enough to
           # establish the baseline bundle the audit judges).
           SKILLS="${{ github.event.inputs.skills || 'all' }}"
-          python3 optimization/scripts/run-all-evals.py \
+          node packages/eval/bin/cesium-eval.js optimize all \
             --skills "$SKILLS" \
             --proposer-harness "$AGENT_HARNESS" \
-            --eval-harness "$AGENT_HARNESS" \
+            --codegen-harness "$AGENT_HARNESS" \
             --judge-harness "$AGENT_HARNESS" \
             --max-iterations 1 \
             --stop-on max || true
@@ -162,7 +162,7 @@ jobs:
           OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
           OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
         run: |
-          CMD=(python3 evaluation/scripts/run-baseline-audit.py \
+          CMD=(node packages/eval/bin/cesium-eval.js audit \
             --skills "${{ github.event.inputs.skills || 'all' }}" \
             --adapter "$AGENT_HARNESS" \
             --n-judges "${{ github.event.inputs.n_judges || '3' }}" \
@@ -174,20 +174,10 @@ jobs:
       - name: Sanitize before upload
         if: always()
         run: |
-          python3 optimization/scripts/check-public-artifacts.py
+          node packages/eval/bin/cesium-eval.js check public-artifacts
           bash optimization/scripts/check-secrets.sh
           find optimization/runs/ evaluation/artifacts/ -name '*.html' -delete || true
-      - name: Build audit dashboard
-        if: always()
-        run: |
-          SC=""
-          if [ -f evaluation/artifacts/audits/ci/scorecard.json ]; then
-            SC="evaluation/artifacts/audits/ci/scorecard.json"
-          else
-            SC=$(find evaluation/artifacts/audits/ci -name scorecard.json -type f -print 2>/dev/null | head -1)
-          fi
-          if [ -n "$SC" ]; then python3 evaluation/scripts/build-audit-ui.py "$SC" --output evaluation/artifacts/audits/ci/audit.html; fi
-      - name: Upload audit scorecard + dashboard
+      - name: Upload audit scorecard
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -195,4 +185,3 @@ jobs:
           path: |
             evaluation/artifacts/audits/ci/scorecard.*
             evaluation/artifacts/audits/ci/**/scorecard.*
-            evaluation/artifacts/audits/ci/audit.html

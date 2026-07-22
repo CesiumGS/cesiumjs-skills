@@ -28,12 +28,12 @@ on:
         default: 'true'
         type: boolean
       opencode_model:
-        description: 'Fallback OpenCode model id/alias (blank uses openai/gpt-5.5 role defaults)'
+        description: 'Fallback OpenCode model id/alias (blank uses role defaults)'
         required: false
         default: ''
         type: string
       agent_harness:
-        description: 'Agent CLI harness for proposer/eval/judge phases'
+        description: 'Agent CLI harness for proposer/codegen/judge phases'
         required: false
         default: 'opencode'
         type: choice
@@ -58,25 +58,20 @@ jobs:
         with:
           fetch-depth: 0  # Full history for baseline lookups
 
-      - name: Check canonical eval surface
-        run: python3 optimization/scripts/check-canonical-eval-surface.py
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install Python dependencies
-        run: |
-          pip install -r requirements.txt
-          playwright install chromium
-          playwright install-deps chromium
-
-      - name: Set up Node for agent CLI
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies and build eval CLI
+        run: |
+          npm ci
+          npm run build --workspace @cesiumjs-skills/eval
+          npx playwright install --with-deps chromium
+
+      - name: Check canonical eval surface
+        run: node packages/eval/bin/cesium-eval.js check canonical-surface
 
       - name: Install agent CLI
         env:
@@ -149,18 +144,18 @@ jobs:
           OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
         run: |
           if [ "${{ steps.determine-skill.outputs.skill }}" = "all" ]; then
-            python3 optimization/scripts/run-all-evals.py \
+            node packages/eval/bin/cesium-eval.js optimize all \
               --skills all \
               --proposer-harness "$AGENT_HARNESS" \
-              --eval-harness "$AGENT_HARNESS" \
+              --codegen-harness "$AGENT_HARNESS" \
               --judge-harness "$AGENT_HARNESS" \
               --max-iterations ${{ steps.determine-skill.outputs.max_iterations }} \
               --stop-on ${{ steps.determine-skill.outputs.stop_on }}
           else
-            python3 optimization/scripts/run-loop.py \
+            node packages/eval/bin/cesium-eval.js optimize loop \
               ${{ steps.determine-skill.outputs.skill }} \
               --proposer-harness "$AGENT_HARNESS" \
-              --eval-harness "$AGENT_HARNESS" \
+              --codegen-harness "$AGENT_HARNESS" \
               --judge-harness "$AGENT_HARNESS" \
               --max-iterations ${{ steps.determine-skill.outputs.max_iterations }} \
               --stop-on ${{ steps.determine-skill.outputs.stop_on }}
@@ -170,7 +165,7 @@ jobs:
         if: always()
         run: |
           # Run public safety check on all eval artifacts
-          python3 optimization/scripts/check-public-artifacts.py
+          node packages/eval/bin/cesium-eval.js check public-artifacts
 
           # Also run secrets check to be extra safe
           bash optimization/scripts/check-secrets.sh

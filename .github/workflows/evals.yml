@@ -7,13 +7,10 @@ on:
       - "optimization/**"
       - "evaluation/**"
       - "docs/**"
-      - "optimization/scripts/validate-evals.py"
-      - "evaluation/scripts/validate-evaluation.py"
-      - "optimization/scripts/check-canonical-eval-surface.py"
-      - "optimization/scripts/check-public-artifacts.py"
-      - "optimization/scripts/check-secrets.sh"
-      - "optimization/scripts/run-public-eval.py"
-      - "optimization/scripts/run-all-evals.py"
+      - "packages/eval/**"
+      - "apps/evaluation-console/**"
+      - "config/**"
+      - "eval.config.json"
       - ".architecture/**"
       - "wiki/**"
       - ".github/workflows/evals.yml"
@@ -23,13 +20,10 @@ on:
       - "optimization/**"
       - "evaluation/**"
       - "docs/**"
-      - "optimization/scripts/validate-evals.py"
-      - "evaluation/scripts/validate-evaluation.py"
-      - "optimization/scripts/check-canonical-eval-surface.py"
-      - "optimization/scripts/check-public-artifacts.py"
-      - "optimization/scripts/check-secrets.sh"
-      - "optimization/scripts/run-public-eval.py"
-      - "optimization/scripts/run-all-evals.py"
+      - "packages/eval/**"
+      - "apps/evaluation-console/**"
+      - "config/**"
+      - "eval.config.json"
       - ".architecture/**"
       - "wiki/**"
       - ".github/workflows/evals.yml"
@@ -51,51 +45,39 @@ jobs:
           sudo mv gitleaks /usr/local/bin/
           gitleaks version
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
-
-      - name: Set up Node for evaluation console
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: apps/evaluation-console/package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build eval CLI
+        run: npm run build --workspace @cesiumjs-skills/eval
 
       - name: Build evaluation console
-        run: |
-          npm ci --prefix apps/evaluation-console
-          npm run build --prefix apps/evaluation-console
-
-      - name: Compile Python eval tooling
-        run: python3 -m compileall -q harness optimization/scripts optimization/framework optimization/tests evaluation
+        run: npm run build --workspace @cesiumjs-skills/evaluation-console
 
       - name: Run unit tests
-        run: pytest -q harness/tests optimization/tests evaluation/tests
+        run: npm test --workspace @cesiumjs-skills/eval
 
-      - name: Validate public eval manifests
-        run: python3 optimization/scripts/validate-evals.py
-
-      - name: Validate deterministic evaluation cases
-        run: python3 evaluation/scripts/validate-evaluation.py
+      - name: Validate eval manifests (evaluation + optimization lanes)
+        run: node packages/eval/bin/cesium-eval.js validate --suite all
 
       - name: Run deterministic baseline audit
         run: |
-          python3 evaluation/scripts/run-baseline-audit.py \
+          node packages/eval/bin/cesium-eval.js audit \
             --skills all \
             --no-judge \
             --output-dir evaluation/artifacts/audits/ci-smoke
 
       - name: Check canonical eval surface
-        run: python3 optimization/scripts/check-canonical-eval-surface.py
+        run: node packages/eval/bin/cesium-eval.js check canonical-surface
 
       - name: Scan public docs and eval artifacts
-        run: python3 optimization/scripts/check-public-artifacts.py
+        run: node packages/eval/bin/cesium-eval.js check public-artifacts
 
       - name: Check for secrets in tracked content
         run: bash optimization/scripts/check-secrets.sh
