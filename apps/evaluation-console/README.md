@@ -22,6 +22,7 @@ so the lifecycle is one continuous journey instead of a tab switch:
 | **4 Decide** | Candidate-vs-baseline **visual diff** (swipe `x` / blink `X`), the lit 5-rule decision cascade, and the three de-aliased judges. |
 | **5 Promote** | The guarded hand-off of a KEEP candidate to the live `SKILL.md`. |
 | **6 Models & Harnesses** | Its own **Insights** rail group beside the lifecycle, split into two analysis dashboards behind a segmented control. **Harnesses**: KPI tiles (harness count, runs, pass rate, average score, multimodal coverage), registry capability cards, the runs-by-harness leaderboard, and the run-score trend. **Models**: KPI tiles (models available and exercised, pipeline default, best qualified win rate, iterations), the observed model-performance leaderboard (keep rate, win rate ± σ stability, average wall clock, recency, drill into Optimize), the per-skill optimization trend, and the full model catalogs with effort-aware cost meters. |
+| **7 Live** | Real-time progress of eval runs **while they are still running** — and the place to **launch** one. The server tails each run's progress journal (`journal.jsonl` for optimization loops, `progress.jsonl` for baseline audits) and counts artifacts on disk, so the animated progress bar, phase pipeline, and per-case board reflect only what has verifiably happened — agent phases earn credit at completion, never by guess. The **Launch an Eval Run** panel picks skills, judge count, and adapter, with visual judging **on by default** (deterministic-only is an explicit downgrade with a warning), then POSTs to the server which spawns `run-baseline-audit.py --journal` detached. The UI polls every 2.5 s while a run is active; the Dashboard grows a "happening now" banner, the top strip shows a live pill, and the rail badge pulses. When a run finishes, a toast fires and the console refreshes so it lands in Recent Runs automatically. Runs quiet for 30 min are demoted to "stalled". |
 
 ## The harness/model registry
 
@@ -39,6 +40,33 @@ run started today would actually use.
 Declared capability and observed performance are kept visually separate, and
 "unrecorded" provenance (legacy artifacts that predate stamping) renders as a
 dashed chip: grouped, visible, never guessed.
+
+### Codegen provenance recovery
+
+Every scorecard should name the codegen **harness** and **model** it evaluated,
+but older runs only stamped the harness (or nothing). Rather than guess, the
+console *recovers* provenance: each scored case points at the generated source it
+graded (`evidence_summary.actual_source_path`), and that source sits beside a
+`*.meta.json` recording the exact `harness` / `model_id` / `model_variant` it was
+produced with. `resolve_codegen_provenance` (in `evaluation/framework/scorecard.py`)
+walks a scorecard back to those metas and takes the majority — so the harness and
+model **always** resolve to a real value when the generated code is on disk, and
+stay an honest "not recorded" only when it genuinely cannot be recovered.
+
+This runs in three places, so nothing slips through:
+
+- **Forward** — `run-baseline-audit.py` stamps the recovered model at write time.
+- **At read time** — the server fills any missing harness/model from the metas
+  when it lists runs (a zero-cost lookup once a file is stamped).
+- **Backfill** — `python3 evaluation/scripts/backfill-scorecard-provenance.py`
+  stamps `harness`, `artifacts.model`, `artifacts.model_variant`, and
+  `artifacts.evidence_source` onto historical scorecards in place. It is
+  idempotent (`--dry-run` previews, `--check` is a CI gate) and never overwrites
+  a real value.
+
+Model Performance recency reflects the **last time a combo was active** — the
+newer of when its code was generated and when a run last evaluated it — so a
+fresh audit over months-old baselines reads as "just now", not "21d ago".
 
 The central legibility law: the deterministic **machine** speaks steel + mono + `%`
 (▣); the **visual judge** speaks amber + prose + `/10` (◈); a **human** override
@@ -66,6 +94,38 @@ The server binds `127.0.0.1:8933` by default. It reads the scorecard and the
 
 Dev with hot reload: `npm run dev` (Vite at 127.0.0.1:5174, proxying `/api` to 8933).
 
+## Launching runs & progress journals
+
+The Live station can start a baseline audit from the browser. `POST /api/live/launch`
+(`{"kind": "audit", "skills": [...], "judge": true, "n_judges": 3, "adapter": "opencode"}`)
+validates against the skills on disk (`GET /api/live/skills`), then spawns
+
+```bash
+python3 evaluation/scripts/run-baseline-audit.py --all-skills \
+  --workspace <repo>/workspaces/cesium-workspace \
+  --output-dir evaluation/artifacts/audits/live-<UTC> --journal
+```
+
+detached (`launch.json` + `launch.log` beside the artifacts record provenance and
+capture output). Only whitelisted skills/adapters and a fixed argv are accepted — no
+shell, no free-form arguments.
+
+`--journal` makes the audit stream an append-only JSONL journal to
+`<output-dir>/progress.jsonl`: `audit_started` (with the full case roster),
+`judge_started` / `judge_case_completed` / `judge_completed`,
+`scoring_started` / `scoring_case_completed` / `scoring_completed`,
+`scorecard_written`, and finally `audit_completed` or `audit_failed`. Each line is
+flushed as it happens, so anything can follow along — the console's Live tab, a
+`tail -f`, or a CI step:
+
+```bash
+python3 evaluation/scripts/run-baseline-audit.py ... --journal &
+tail -f <output-dir>/progress.jsonl | jq -r '[.timestamp_utc, .event] | @tsv'
+```
+
+The same flag works headless in CI: the journal is plain JSONL on disk, no server
+required, and the terminal event tells you whether to collect the scorecard.
+
 ## The optimization bridge
 
 `f` (flag) in Review appends a case to the focus set. **Focus** in the rail hands it
@@ -78,7 +138,7 @@ python3 optimization/scripts/run-all-evals.py --from-focus <focus.json> --skills
 
 ## Keyboard
 
-`1`–`6` stations · `j`/`k` move · `gg`/`G` ends · `a`/`f`/`d` accept/flag/defer ·
+`1`–`7` stations (`7` = Live) · `j`/`k` move · `gg`/`G` ends · `a`/`f`/`d` accept/flag/defer ·
 `e` confirm+advance · `u` undo · `space` details · `z` lightbox · `[`/`]` shots/scenarios ·
 `x` swipe · `X` blink · `m` Skill × Category Matrix · `t` trends · `h` Run Browser · `b` set baseline (in the Run Browser) ·
 `⌘K` palette · `T` theme · `?` help · `Esc` close.
