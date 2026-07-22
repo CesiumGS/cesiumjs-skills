@@ -37,10 +37,10 @@ run_test() {
 
 # Section: Validate Public Artifacts
 echo "=== Section: Validate Public Artifacts ==="
-run_test "Validate eval manifests" python3 optimization/scripts/validate-evals.py
-run_test "Validate deterministic evaluation cases" python3 evaluation/scripts/validate-evaluation.py
-run_test "Check canonical eval surface" python3 optimization/scripts/check-canonical-eval-surface.py
-run_test "Check public artifacts" python3 optimization/scripts/check-public-artifacts.py
+run_test "Validate eval manifests" node packages/eval/bin/cesium-eval.js validate --suite optimization
+run_test "Validate deterministic evaluation cases" node packages/eval/bin/cesium-eval.js validate --suite evaluation
+run_test "Check canonical eval surface" node packages/eval/bin/cesium-eval.js check canonical-surface
+run_test "Check public artifacts" node packages/eval/bin/cesium-eval.js check public-artifacts
 run_test "Check secrets" bash optimization/scripts/check-secrets.sh
 
 # Section: Run a Single Scenario (requires tokens)
@@ -75,7 +75,7 @@ EOF
     fi
 
     run_test "Run single scenario (browser)" \
-        python3 optimization/scripts/run-public-eval.py "$TEST_SKILL" \
+        node packages/eval/bin/cesium-eval.js optimize render "$TEST_SKILL" \
             --iteration "$TEST_ITERATION" \
             --only "$TEST_EVAL_ID"
 
@@ -107,7 +107,7 @@ fi
 
 # Section: Coverage Analysis
 echo "=== Section: Coverage Analysis ==="
-run_test "Analyze coverage" python3 optimization/scripts/analyze-coverage.py
+run_test "Analyze coverage" node packages/eval/bin/cesium-eval.js optimize coverage
 
 # Verify coverage.json exists
 if [ -f "optimization/results/coverage.json" ]; then
@@ -125,25 +125,18 @@ fi
 echo "=== Section: Scenario Rebaseline ==="
 # Verify the rebaseline command without dirtying tracked baselines.
 run_test "Rebaseline scenario dry run" \
-    python3 optimization/scripts/rebaseline-scenario.py cesiumjs-camera eval-001 --dry-run
+    node packages/eval/bin/cesium-eval.js optimize rebaseline cesiumjs-camera eval-001 --dry-run
 
 # Section: Decision Reproduction (conceptual test)
 echo "=== Section: Decision Reproduction ==="
-# We can't fully test this without real history artifacts, but verify the script exists
-if [ -f "optimization/scripts/make-decision.py" ]; then
-    echo ">>> Decision engine script available"
-    echo "    ✓ Found optimization/scripts/make-decision.py"
-    # Verify it at least shows help
-    if python3 optimization/scripts/make-decision.py --help > /dev/null 2>&1; then
-        echo "    ✓ Script --help works"
-    else
-        echo "    ✗ Script --help failed"
-        FAILED=1
-    fi
+# We can't fully test this without real history artifacts, but verify the command works
+if node packages/eval/bin/cesium-eval.js optimize decide --help > /dev/null 2>&1; then
+    echo ">>> Decision engine command available"
+    echo "    ✓ optimize decide --help works"
     echo ""
 else
-    echo ">>> Decision engine script missing"
-    echo "    ✗ Missing optimization/scripts/make-decision.py"
+    echo ">>> Decision engine command missing"
+    echo "    ✗ optimize decide --help failed"
     FAILED=1
     echo ""
 fi
@@ -152,20 +145,20 @@ fi
 echo "=== Section: Full Autonomous Loop ==="
 
 run_test "Plan all-skill loop commands" \
-    python3 optimization/scripts/run-all-evals.py --dry-run --max-iterations 1
+    node packages/eval/bin/cesium-eval.js optimize all --dry-run --max-iterations 1
 
 if [ -z "${CESIUM_ION_TOKEN:-}" ] || { ! command -v opencode > /dev/null 2>&1 && ! command -v codex > /dev/null 2>&1; }; then
     echo ">>> Skipping full loop test (requires CESIUM_ION_TOKEN and an agent CLI harness)"
     echo "    Note: Set CESIUM_ION_TOKEN and install/authenticate opencode or codex to test full loop commands"
     echo ""
 else
-    # For smoke test, we'll verify the script at least accepts the arguments
+    # For smoke test, we'll verify the command at least accepts the arguments
     # We won't actually run a full iteration (too expensive)
-    echo ">>> Verifying run-loop.py accepts documented arguments"
-    if python3 optimization/scripts/run-loop.py --help > /dev/null 2>&1; then
-        echo "    ✓ Loop script --help works"
+    echo ">>> Verifying optimize loop accepts documented arguments"
+    if node packages/eval/bin/cesium-eval.js optimize loop --help > /dev/null 2>&1; then
+        echo "    ✓ Loop command --help works"
     else
-        echo "    ✗ Loop script --help failed"
+        echo "    ✗ Loop command --help failed"
         FAILED=1
     fi
     echo ""
@@ -174,9 +167,9 @@ fi
 # Section: Local Artifact Safety
 echo "=== Section: Local Artifact Safety ==="
 # Re-run safety checks to verify they still pass after smoke tests
-run_test "Final deterministic evaluation validation" python3 evaluation/scripts/validate-evaluation.py
-run_test "Final canonical eval surface check" python3 optimization/scripts/check-canonical-eval-surface.py
-run_test "Final public artifacts check" python3 optimization/scripts/check-public-artifacts.py
+run_test "Final deterministic evaluation validation" node packages/eval/bin/cesium-eval.js validate --suite evaluation
+run_test "Final canonical eval surface check" node packages/eval/bin/cesium-eval.js check canonical-surface
+run_test "Final public artifacts check" node packages/eval/bin/cesium-eval.js check public-artifacts
 run_test "Final secrets check" bash optimization/scripts/check-secrets.sh
 
 # Summary

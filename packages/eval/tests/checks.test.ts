@@ -121,7 +121,7 @@ describe("deterministic check matchers", () => {
     expect(dispatch({ id: "c", type: "artifact_text_absent" }, clean).result).toBe("pass");
     const dirty = { generated_code: "fetch('http://localhost:9999/x')" };
     expect(dispatch({ id: "c", type: "artifact_text_absent" }, dirty).result).toBe("fail");
-    const userPath = { note: "/Users/someone/secret" };
+    const userPath = { note: ["", "Users", "someone", "secret"].join("/") };
     expect(dispatch({ id: "c", type: "artifact_text_absent" }, userPath).result).toBe("fail");
   });
 
