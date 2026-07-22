@@ -17,7 +17,6 @@ import * as insightsData from "../console/insightsData.js";
 import * as liveData from "../console/liveData.js";
 import type { EvalContext } from "../config/types.js";
 
-const runDirs = () => [fromRepoRoot("evaluation", "artifacts", "audits"), fromRepoRoot("evaluation", "artifacts", "scorecards")];
 const scenariosRootDir = () => fromRepoRoot("optimization", "scenarios");
 const distRoot = () => fromRepoRoot("apps", "evaluation-console", "dist");
 
@@ -168,18 +167,26 @@ function runSummary(ctx: EvalContext, scorecardPath: string): Record<string, any
 }
 
 function listRuns(ctx: EvalContext): Array<Record<string, any>> {
+  // Canonical eval scorecards first: audit pipelines copy a scorecard (same
+  // run_id) into audits/, and showing both would render as a confusing
+  // duplicate row. First writer wins per run_id, so scorecards/ shadows
+  // audits/, and each run carries which kind of artifact it is.
+  const bases: Array<{ dir: string; kind: "eval" | "audit" }> = [
+    { dir: fromRepoRoot("evaluation", "artifacts", "scorecards"), kind: "eval" },
+    { dir: fromRepoRoot("evaluation", "artifacts", "audits"), kind: "audit" },
+  ];
   const runs: Array<Record<string, any>> = [];
-  const seen = new Set<string>();
-  for (const base of runDirs()) {
-    if (!fs.existsSync(base)) continue;
-    for (const dir of listDirs(base)) {
-      const scPath = path.join(base, dir, "scorecard.json");
+  const seenIds = new Set<string>();
+  for (const { dir, kind } of bases) {
+    if (!fs.existsSync(dir)) continue;
+    for (const name of listDirs(dir)) {
+      const scPath = path.join(dir, name, "scorecard.json");
       if (!fs.existsSync(scPath)) continue;
-      const key = path.resolve(scPath);
-      if (seen.has(key)) continue;
-      seen.add(key);
       const summary = runSummary(ctx, scPath);
-      if (summary) runs.push(summary);
+      if (!summary || seenIds.has(summary.run_id)) continue;
+      seenIds.add(summary.run_id);
+      summary.kind = kind;
+      runs.push(summary);
     }
   }
   runs.sort((a, b) => (a.timestamp_utc < b.timestamp_utc ? 1 : a.timestamp_utc > b.timestamp_utc ? -1 : 0));
