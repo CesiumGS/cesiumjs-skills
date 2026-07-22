@@ -450,7 +450,7 @@ export function PromotePanel() {
       await navigator.clipboard.writeText(cmd);
       pushToast("Command copied to clipboard", "good");
     } catch {
-      pushToast(`Copy failed — command: ${cmd}`, "bad");
+      pushToast(`Copy failed. Command: ${cmd}`, "bad");
     }
   };
 
@@ -489,7 +489,7 @@ export function PromotePanel() {
       <div className="section-title" style={{ marginTop: 0 }}>
         Promote
         <span className="section-sub">
-          The human gate: a KEEP candidate is only <em>staged</em> by the loop — nothing touches a live SKILL.md until you
+          The human gate: a KEEP candidate is only <em>staged</em> by the loop; nothing touches a live SKILL.md until you
           promote it here (or run the CLI command). The current version is archived first.
         </span>
       </div>
@@ -555,7 +555,7 @@ export function PromotePanel() {
         <>
           <div className="section-title">Unverified state</div>
           <div className="dash-sub" style={{ marginBottom: "var(--sp-3)" }}>
-            These KEEPs carry neither a staging marker nor a promotion archive — the console will not guess. Inspect{" "}
+            These KEEPs carry neither a staging marker nor a promotion archive; the console will not guess. Inspect{" "}
             <span className="mono">optimization/history/&lt;skill&gt;/</span> to confirm what shipped.
           </div>
           <div className="skill-grid">

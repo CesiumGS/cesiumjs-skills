@@ -503,7 +503,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .then(() => setSaveStatus("saved"))
         .catch(() => {
           setSaveStatus("error");
-          pushToastRef.current?.("Saving review decisions failed — your grades are not persisted. Retry from the action bar.", "bad");
+          pushToastRef.current?.("Saving review decisions failed. Your grades are not persisted; retry from the action bar.", "bad");
         });
     }, 400);
   }, []);
@@ -570,7 +570,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (prev?.running && !next.running) {
           const finished = prev.active.find((r) => r.status === "running");
           pushToast(
-            finished ? `Eval run finished: ${finished.skill} ${finished.iteration} — refreshing results` : "Eval run finished — refreshing results",
+            finished ? `Eval run finished: ${finished.skill} ${finished.iteration}. Refreshing results.` : "Eval run finished. Refreshing results.",
             "good"
           );
           const [skillList, runList, ins] = await Promise.all([
@@ -804,7 +804,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // be confirmed in Review first (press e / the Confirm button).
     const flags = caseViews.filter((v) => v.decision === "flag" && v.source === "human");
     if (!flags.length) {
-      pushToast("No confirmed flags to hand off — confirm suggested flags in Review first", "bad");
+      pushToast("No confirmed flags to hand off. Confirm suggested flags in Review first.", "bad");
       return;
     }
     try {

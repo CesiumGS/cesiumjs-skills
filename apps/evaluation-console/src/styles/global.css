@@ -283,42 +283,6 @@ button {
   flex: none;
 }
 
-/* The focused-run anchor above the lifecycle: which run steps 1-5 are reading. */
-.rail-runchip {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  margin: 0 var(--sp-1) var(--sp-2);
-  padding: 6px var(--sp-3);
-  border-radius: var(--r-2);
-  border: 1px dashed var(--hairline-strong);
-  color: var(--text-2);
-  font-size: var(--fs-50);
-  min-width: 0;
-  width: calc(100% - 2 * var(--sp-1));
-  text-align: left;
-}
-.rail-runchip:hover {
-  background: var(--surface-2);
-  color: var(--text);
-}
-.rail-runchip-label {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-3);
-}
-.rail-runchip-value {
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .rail-sub {
   margin-left: 30px;
   padding: 7px var(--sp-3);
@@ -3283,20 +3247,39 @@ button.verb-btn:disabled {
 .dashboard-hero {
   align-items: center;
 }
-.dashboard-columns {
+/* Link cards into the Models (6) and Harnesses (8) stations. */
+.dashboard-links {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-4);
-  align-items: start;
+  align-items: stretch;
 }
-.dashboard-columns .dash-card {
-  margin: 0;
-}
-.dashboard-col {
-  min-width: 0;
+.insight-link {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+  align-items: flex-start;
+  gap: var(--sp-1);
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-2);
+  padding: var(--sp-3) var(--sp-4);
+  color: inherit;
+  cursor: pointer;
+  transition: border-color var(--t-fast);
+}
+.insight-link:hover { border-color: var(--brand); }
+.insight-link .il-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-100);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+.insight-link .il-sub {
+  font-size: var(--fs-50);
+  color: var(--text-3);
 }
 .link-pill {
   display: inline-flex;
@@ -3304,7 +3287,7 @@ button.verb-btn:disabled {
   gap: 4px;
 }
 @media (max-width: 1280px) {
-  .dashboard-columns {
+  .dashboard-links {
     grid-template-columns: 1fr;
   }
 }
@@ -3912,91 +3895,6 @@ button.chart-pt:focus-visible {
 }
 
 /* ============================================================================
-   MODEL LEADERBOARD — the dashboard-sized model answer.
-   ============================================================================ */
-.mlb-list {
-  list-style: none;
-  margin: var(--sp-3) 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-.mlb-row {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 130px;
-  grid-template-areas: "rank id rate" "rank sub rate";
-  align-items: center;
-  column-gap: var(--sp-3);
-  row-gap: 2px;
-  width: 100%;
-  text-align: left;
-  background: var(--surface-2);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-2);
-  padding: 7px 10px;
-  cursor: pointer;
-  color: inherit;
-  transition: border-color var(--t-fast);
-}
-.mlb-row:hover { border-color: var(--brand); }
-.mlb-rank {
-  grid-area: rank;
-  font-size: var(--fs-75);
-  color: var(--text-3);
-  text-align: center;
-}
-.mlb-id {
-  grid-area: id;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-}
-.mlb-model {
-  font-size: var(--fs-75);
-  color: var(--text-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.mlb-rate {
-  grid-area: rate;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  justify-self: end;
-}
-.mlb-rate { min-width: 120px; }
-.mlb-rate .hc-rate {
-  position: relative;
-  display: inline-block;
-  min-width: 110px;
-}
-.mlb-rate .hc-bar {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 12px;
-  border-radius: 3px;
-  background: var(--ink-machine);
-}
-.mlb-rate .hc-rate-num {
-  position: relative;
-  font-size: var(--fs-75);
-  color: var(--text-1);
-}
-.mlb-sub {
-  grid-area: sub;
-  font-size: var(--fs-50);
-  color: var(--text-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ============================================================================
    RECENT RUNS — the dashboard's at-a-glance run table.
    ============================================================================ */
 .rr-list {
@@ -4122,11 +4020,12 @@ button.chart-pt:focus-visible {
 .launch-panel .section-title svg { color: var(--live); }
 .launch-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--sp-4) var(--sp-5);
   margin-top: var(--sp-3);
 }
 .launch-field { min-width: 0; }
+.launch-span { grid-column: 1 / -1; }
 .launch-field.launch-go {
   grid-column: 1 / -1;
   display: flex;
@@ -4134,17 +4033,84 @@ button.chart-pt:focus-visible {
   gap: var(--sp-4);
 }
 .launch-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-size: var(--fs-40);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-3);
   margin-bottom: var(--sp-2);
 }
+.launch-flag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-40);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-1);
+  padding: 0 5px;
+}
+.launch-role {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-2);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+.launch-role legend {
+  font-size: var(--fs-50);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  padding: 0 var(--sp-2);
+}
+.launch-hint {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-50);
+  color: var(--text-3);
+  max-width: 52ch;
+}
+.launch-model {
+  display: flex;
+  flex-direction: column;
+}
+.launch-model select {
+  align-self: flex-start;
+  min-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-1);
+  color: var(--text);
+  font-size: var(--fs-100);
+  padding: 5px 8px;
+}
+.launch-model select:disabled { opacity: 0.5; }
+.launch-cmd {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-1);
+  font-size: var(--fs-50);
+  color: var(--text-2);
+  overflow-x: auto;
+  white-space: pre;
+}
 .launch-skills,
 .launch-steppers {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+@media (max-width: 1100px) {
+  .launch-grid { grid-template-columns: 1fr; }
 }
 .lk-chip {
   font-size: var(--fs-50);
@@ -4175,7 +4141,10 @@ button.chart-pt:focus-visible {
   padding: 2px 0;
   cursor: pointer;
 }
-.judge-toggle.on { color: var(--pass); }
+.judge-toggle.on { color: var(--text); }
+.judge-toggle .jt-state { font-weight: var(--fw-semibold); }
+.judge-toggle.on .jt-state,
+.judge-toggle.on svg { color: var(--pass); }
 .judge-toggle .jt-track {
   position: relative;
   width: 30px;
@@ -4187,8 +4156,8 @@ button.chart-pt:focus-visible {
   flex: none;
 }
 .judge-toggle.on .jt-track {
-  background: color-mix(in srgb, var(--pass) 35%, var(--surface-3));
-  border-color: var(--pass);
+  background: color-mix(in srgb, var(--pass) 26%, var(--surface-3));
+  border-color: color-mix(in srgb, var(--pass) 65%, var(--hairline-strong));
 }
 .judge-toggle .jt-knob {
   position: absolute;

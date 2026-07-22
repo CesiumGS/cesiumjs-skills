@@ -192,16 +192,16 @@ export function DecideStage() {
             {newest != null &&
               (isLatestRound ? (
                 <span className="fresh-chip latest" title="You are deciding on this skill's most recent optimization round.">
-                  latest round
+                  Latest Round
                 </span>
               ) : (
                 <span
                   className="fresh-chip stale"
                   title={`An older round is loaded. The most recent is ${newest.iteration}${
                     newest.finished_utc ? ` (finished ${relativeTime(newest.finished_utc)})` : ""
-                  } — pick it in the Optimize iteration log.`}
+                  }; pick it in the Optimize iteration log.`}
                 >
-                  older round · latest is {newest.iteration}
+                  Older Round · Latest: {newest.iteration}
                 </span>
               ))}
           </div>

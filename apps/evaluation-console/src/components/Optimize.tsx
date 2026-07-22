@@ -352,7 +352,7 @@ export function OptimizeStage() {
             navigator.clipboard
               .writeText(lastHandoff.command)
               .then(() => pushToast("Command copied to clipboard", "good"))
-              .catch(() => pushToast(`Copy failed — command: ${lastHandoff.command}`, "bad"));
+              .catch(() => pushToast(`Copy failed. Command: ${lastHandoff.command}`, "bad"));
           }}
         >
           Copy command
