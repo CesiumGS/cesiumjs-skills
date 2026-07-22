@@ -15,7 +15,7 @@ const RUNGS: { name: string; label: string }[] = [
   { name: "rule_5_tie_keep_current", label: "tie → keep current" }
 ];
 
-function DiffViewer({ scn }: { scn: ScenarioDetail }) {
+function DiffViewer({ scn, roundLabel }: { scn: ScenarioDetail; roundLabel?: string }) {
   const { diffMode, swipePos, setSwipePos, setDiffMode } = useStore();
   const frameRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -69,34 +69,54 @@ function DiffViewer({ scn }: { scn: ScenarioDetail }) {
   };
 
   const swiping = diffMode === "swipe";
+  const blinking = diffMode === "blink";
   const showCand = swiping || blinkShowCand;
+  const canSwipe = swiping && Boolean(baseline) && Boolean(candidate);
+
+  /* Identity plates: dim whichever side is (mostly) hidden right now, and in
+     blink mode light the one currently on screen so a glance answers
+     "which frame am I looking at?" */
+  const baseDim = blinking ? blinkShowCand : canSwipe && swipePos < 12;
+  const candDim = blinking ? !blinkShowCand : canSwipe && swipePos > 88;
+  const frameCls = `diff-stageframe${canSwipe ? " swiping" : ""}${
+    blinking && candidate ? (blinkShowCand ? " blink-cand" : " blink-base") : ""
+  }`;
+
+  // Scrub from anywhere in the frame — not just the 2px divider.
+  const onFrameDown = (e: React.MouseEvent) => {
+    if (!canSwipe) return;
+    e.preventDefault();
+    draggingRef.current = true;
+    updateFromClientX(e.clientX);
+  };
 
   return (
     <div className="diff">
-      <div className="diff-stageframe" ref={frameRef}>
+      <div className={frameCls} ref={frameRef} onMouseDown={onFrameDown} onDoubleClick={() => canSwipe && setSwipePos(50)}>
         {!baseline && !candidate ? (
           <div className="empty-note">No renders captured for this scenario.</div>
         ) : (
           <>
-            {/* BASELINE fills the frame. Hidden in blink while the candidate flashes. */}
+            {/* BASELINE fills the frame; in swipe mode it owns the LEFT of the divider.
+                Hidden in blink while the candidate flashes. */}
             {baseline ? (
               <div
                 className="diff-img"
-                style={diffMode === "blink" && blinkShowCand && candidate ? { visibility: "hidden" } : undefined}
+                style={blinking && blinkShowCand && candidate ? { visibility: "hidden" } : undefined}
               >
                 <img src={artifactUrl(baseline)} alt={`baseline · ${scn.label}`} loading="lazy" />
               </div>
             ) : (
               <div className="empty-note">baseline render missing</div>
             )}
-            <span className="diff-tag base">baseline (best)</span>
 
-            {/* CANDIDATE — clipped to swipePos in swipe mode, flashed in blink mode. */}
-            {candidate ? (
+            {/* CANDIDATE — same geometry as the baseline, clip-path revealed from the
+                RIGHT of the divider in swipe mode (never resized), flashed in blink mode. */}
+            {candidate && (
               <div
                 className="diff-clip"
                 style={{
-                  width: swiping ? `${swipePos}%` : "100%",
+                  clipPath: canSwipe ? `inset(0 0 0 ${swipePos}%)` : undefined,
                   visibility: showCand ? "visible" : "hidden"
                 }}
               >
@@ -104,12 +124,29 @@ function DiffViewer({ scn }: { scn: ScenarioDetail }) {
                   <img src={artifactUrl(candidate)} alt={`candidate · ${scn.label}`} loading="lazy" />
                 </div>
               </div>
-            ) : (
-              <span className="diff-tag cand">candidate missing</span>
             )}
-            {candidate && <span className="diff-tag cand">candidate</span>}
 
-            {swiping && candidate && baseline && (
+            {/* Identity plates — baseline anchored left, candidate anchored right,
+                matching the swipe geometry (left of handle = baseline). */}
+            <span className={`diff-plate base${baseDim ? " dim" : ""}${blinking && !blinkShowCand ? " lit" : ""}`}>
+              <span className="dp-dot" aria-hidden />
+              <span className="dp-name">Baseline</span>
+              <span className="dp-sub">current best</span>
+            </span>
+            {candidate ? (
+              <span className={`diff-plate cand${candDim ? " dim" : ""}${blinking && blinkShowCand ? " lit" : ""}`}>
+                <span className="dp-dot" aria-hidden />
+                <span className="dp-name">Candidate</span>
+                {roundLabel && <span className="dp-sub">round {roundLabel}</span>}
+              </span>
+            ) : (
+              <span className="diff-plate cand missing">
+                <span className="dp-dot" aria-hidden />
+                <span className="dp-name">Candidate missing</span>
+              </span>
+            )}
+
+            {canSwipe && (
               <div
                 className="diff-handle"
                 style={{ left: `${swipePos}%` }}
@@ -122,11 +159,17 @@ function DiffViewer({ scn }: { scn: ScenarioDetail }) {
                   } else if (e.key === "ArrowRight") {
                     e.preventDefault();
                     setSwipePos(swipePos + step);
+                  } else if (e.key === "Home") {
+                    e.preventDefault();
+                    setSwipePos(0);
+                  } else if (e.key === "End") {
+                    e.preventDefault();
+                    setSwipePos(100);
                   }
                 }}
                 tabIndex={0}
                 role="slider"
-                aria-label="reveal candidate vs baseline"
+                aria-label="comparison divider — baseline left, candidate right"
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(swipePos)}
@@ -141,12 +184,31 @@ function DiffViewer({ scn }: { scn: ScenarioDetail }) {
           <button className={swiping ? "on" : ""} onClick={() => setDiffMode("swipe")}>
             swipe
           </button>
-          <button className={diffMode === "blink" ? "on" : ""} onClick={() => setDiffMode("blink")}>
+          <button className={blinking ? "on" : ""} onClick={() => setDiffMode("blink")}>
             blink
           </button>
         </span>
-        <span className="mono" style={{ fontSize: "var(--fs-50)", color: "var(--text-3)", marginLeft: "auto" }}>
-          [ ] scenario
+
+        {/* Live legend: in swipe, how the frame is split; in blink, which side is showing. */}
+        {(baseline || candidate) && (
+          <span className="diff-readout mono" aria-live="polite">
+            {blinking && candidate ? (
+              <>
+                showing&nbsp;
+                <b className={blinkShowCand ? "cand" : "base"}>{blinkShowCand ? "candidate" : "baseline"}</b>
+              </>
+            ) : canSwipe ? (
+              <>
+                <b className="base">baseline {Math.round(swipePos)}%</b>
+                <span className="sep">⇆</span>
+                <b className="cand">{100 - Math.round(swipePos)}% candidate</b>
+              </>
+            ) : null}
+          </span>
+        )}
+
+        <span className="mono diff-hint">
+          {blinking ? "auto-flipping every 600ms · [ ] scenario" : "drag to compare · dbl-click recenters · [ ] scenario"}
         </span>
       </div>
     </div>
@@ -209,7 +271,7 @@ export function DecideStage() {
         <ScenarioChip verdict={scn.verdict} count={scn.majority_count} />
       </div>
 
-      <DiffViewer scn={scn} />
+      <DiffViewer scn={scn} roundLabel={iterationDetail.iteration} />
     </main>
   );
 }

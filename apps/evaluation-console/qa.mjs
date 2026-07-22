@@ -557,9 +557,9 @@ await step("decide: diff frame + swipe handle drag changes reveal", async () => 
     await sleep(300);
     const w = await page.evaluate(() => {
       const c = document.querySelector(".diff-clip");
-      return c ? c.style.width : null;
+      return c ? c.style.clipPath : null;
     });
-    moved = `clip width=${w}`;
+    moved = `clip-path=${w}`;
   }
   await shot("decide-swipe");
   assert(hasImg >= 1, `diff images=${hasImg}`);
