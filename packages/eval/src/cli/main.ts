@@ -102,8 +102,8 @@ program
   .option("--visual-review <path>", "pre-judged visual-review JSON to inject")
   .option("--emit-cases <path>", "write the audit work list and exit")
   .option("--emit-visual-review <path>", "also write the assembled visual-review doc")
-  .option("--adapter <id>", "judge adapter: a registry harness id or 'fake'")
-  .option("--harness <id>", "codegen harness stamped into the scorecard")
+  .option("--judge-harness <id>", "judge harness: a registry harness id or 'fake'")
+  .option("--codegen-harness <id>", "codegen harness stamped into the scorecard")
   .option("--bundle-root <dir>", "root containing recaptured rendered bundles")
   .option("--threshold <number>", "pass threshold", parseFloatArg)
   .option("--output-dir <dir>", "scorecard output directory")
@@ -122,7 +122,7 @@ program
   .requiredOption("--case <path>", "path to the case JSON (scenario metadata)")
   .option("--model <id>", "judge model id")
   .option("--n-judges <n>", "panel size", parseIntArg)
-  .option("--adapter <id>", "judge adapter: a registry harness id or 'fake'")
+  .option("--harness <id>", "judge harness: a registry harness id or 'fake'")
   .option("--emit-item <path>", "write the emitted item JSON to this path")
   .action((options) =>
     run(async () => {

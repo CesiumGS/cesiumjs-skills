@@ -198,13 +198,13 @@ fan-out both call the same module via one runner:
 node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
 
 # Both lanes (qualitative screenshot judge, 3-judge median panel):
-node packages/eval/bin/cesium-eval.js audit --skills all --adapter opencode --judge-model auto --n-judges 3
+node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness opencode --judge-model auto --n-judges 3
 
 # Same qualitative lane through Codex CLI:
-node packages/eval/bin/cesium-eval.js audit --skills all --adapter codex --judge-model auto --n-judges 3
+node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness codex --judge-model auto --n-judges 3
 
 # Same qualitative lane through GitHub Copilot CLI:
-node packages/eval/bin/cesium-eval.js audit --skills all --adapter copilot --judge-model auto --n-judges 3
+node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness copilot --judge-model auto --n-judges 3
 
 # Review results in the evaluation console:
 node packages/eval/bin/cesium-eval.js serve evaluation/artifacts/audits/<run_id>/scorecard.json --open

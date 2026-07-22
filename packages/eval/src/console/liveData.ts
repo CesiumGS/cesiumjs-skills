@@ -523,23 +523,24 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (!skills.length) throw new Error("no skills available to audit");
 
   const judge = Boolean(payload.judge ?? true);
-  const adapter = String(payload.adapter ?? ctx.resolveRole("judge").harness.id);
-  const validAdapters = new Set([...ctx.registry.harnesses.map((harness) => harness.id), "fake"]);
-  if (!validAdapters.has(adapter)) {
-    throw new Error(`unknown adapter: '${adapter}' (supported: ${[...validAdapters].sort().join(", ")})`);
+  const judgeHarness = String(payload.judge_harness ?? ctx.resolveRole("judge").harness.id);
+  const validJudgeHarnesses = new Set([...ctx.registry.harnesses.map((harness) => harness.id), "fake"]);
+  if (!validJudgeHarnesses.has(judgeHarness)) {
+    throw new Error(`unknown judge_harness: '${judgeHarness}' (supported: ${[...validJudgeHarnesses].sort().join(", ")})`);
   }
   const nJudges = Number(payload.n_judges ?? ctx.config.judgePanel.size);
   if (!Number.isInteger(nJudges)) throw new Error("n_judges must be an integer");
   if (nJudges < 1 || nJudges > 5) throw new Error("n_judges must be between 1 and 5");
 
-  // Optional codegen provenance stamp (mirrors audit --harness). Must be a real
-  // registry harness: "fake" is a judge-lane smoke adapter, not a codegen origin.
+  // Optional codegen provenance stamp (mirrors audit --codegen-harness). Must be
+  // a real registry harness: "fake" is a judge-lane smoke harness, not a codegen
+  // origin.
   let codegenHarness: string | null = null;
-  if (payload.harness !== undefined && payload.harness !== null && payload.harness !== "") {
-    codegenHarness = String(payload.harness);
+  if (payload.codegen_harness !== undefined && payload.codegen_harness !== null && payload.codegen_harness !== "") {
+    codegenHarness = String(payload.codegen_harness);
     const validHarnesses = new Set(ctx.registry.harnesses.map((harness) => harness.id));
     if (!validHarnesses.has(codegenHarness)) {
-      throw new Error(`unknown harness: '${codegenHarness}' (supported: ${[...validHarnesses].sort().join(", ")})`);
+      throw new Error(`unknown codegen_harness: '${codegenHarness}' (supported: ${[...validHarnesses].sort().join(", ")})`);
     }
   }
 
@@ -581,14 +582,14 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     journalPath,
     "--output-dir",
     outDir,
-    "--adapter",
-    adapter,
+    "--judge-harness",
+    judgeHarness,
     "--n-judges",
     String(nJudges),
   ];
   if (!judge) argv.push("--no-judge");
   if (judgeModel) argv.push("--judge-model", judgeModel);
-  if (codegenHarness) argv.push("--harness", codegenHarness);
+  if (codegenHarness) argv.push("--codegen-harness", codegenHarness);
   if (threshold !== null) argv.push("--threshold", String(threshold));
   if (bundleRoot) argv.push("--bundle-root", bundleRoot);
 
@@ -607,10 +608,10 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     pid: child.pid ?? -1,
     skills,
     judge,
-    adapter,
+    judge_harness: judgeHarness,
     n_judges: nJudges,
     judge_model: judgeModel,
-    harness: codegenHarness,
+    codegen_harness: codegenHarness,
     threshold,
     bundle_root: bundleRoot,
     argv: [process.execPath, ...argv],

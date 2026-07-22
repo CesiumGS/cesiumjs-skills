@@ -298,7 +298,7 @@ function LaunchPanel() {
   const [mode, setMode] = useState<"all" | "custom">("all");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [judge, setJudge] = useState(true);
-  const [adapter, setAdapter] = useState<string>("opencode");
+  const [judgeHarness, setJudgeHarness] = useState<string>("opencode");
   const [nJudges, setNJudges] = useState(3);
   const [judgeModel, setJudgeModel] = useState("");
   const [codegenHarness, setCodegenHarness] = useState("");
@@ -308,13 +308,13 @@ function LaunchPanel() {
   const [busy, setBusy] = useState(false);
 
   // The registry is the single source of truth for harnesses and their model
-  // catalogs; "fake" is the CI smoke adapter the server also accepts.
-  const adapters = [...(registry?.harnesses.map((h) => h.id) ?? ["opencode", "codex"]), "fake"];
+  // catalogs; "fake" is the CI smoke harness the server also accepts.
+  const judgeHarnesses = [...(registry?.harnesses.map((h) => h.id) ?? ["opencode", "codex"]), "fake"];
   const codegenHarnesses = registry?.harnesses.filter((h) => h.roles.includes("codegen")).map((h) => h.id) ?? [
     "opencode",
     "codex"
   ];
-  const adapterModels = registry?.harnesses.find((h) => h.id === adapter)?.models ?? [];
+  const judgeHarnessModels = registry?.harnesses.find((h) => h.id === judgeHarness)?.models ?? [];
 
   useEffect(() => {
     let disposed = false;
@@ -349,17 +349,17 @@ function LaunchPanel() {
     const parts = [
       "cesium-eval audit",
       `--skills ${allSelected ? "all" : selectedSkills.join(",") || "<none>"}`,
-      `--adapter ${adapter}`,
+      `--judge-harness ${judgeHarness}`,
       `--n-judges ${nJudges}`
     ];
     if (!judge) parts.push("--no-judge");
     if (judge && judgeModel) parts.push(`--judge-model ${judgeModel}`);
-    if (codegenHarness) parts.push(`--harness ${codegenHarness}`);
+    if (codegenHarness) parts.push(`--codegen-harness ${codegenHarness}`);
     if (threshold) parts.push(`--threshold ${threshold}`);
     if (bundleRoot) parts.push(`--bundle-root ${bundleRoot}`);
     parts.push("--journal <run-dir>/progress.jsonl", "--output-dir <run-dir>");
     return parts.join(" \\\n  ");
-  }, [allSelected, selectedSkills, adapter, nJudges, judge, judgeModel, codegenHarness, threshold, bundleRoot]);
+  }, [allSelected, selectedSkills, judgeHarness, nJudges, judge, judgeModel, codegenHarness, threshold, bundleRoot]);
 
   const launch = async () => {
     setBusy(true);
@@ -368,10 +368,10 @@ function LaunchPanel() {
         kind: "audit",
         skills: allSelected ? undefined : [...picked],
         judge,
-        adapter,
+        judge_harness: judgeHarness,
         n_judges: nJudges,
         judge_model: judge && judgeModel ? judgeModel : undefined,
-        harness: codegenHarness || undefined,
+        codegen_harness: codegenHarness || undefined,
         threshold: threshold ? Number(threshold) : undefined,
         bundle_root: bundleRoot || undefined
       });
@@ -431,7 +431,7 @@ function LaunchPanel() {
           <legend>Code Generation</legend>
           <div className="launch-field">
             <div className="launch-label">
-              Codegen Harness <code className="launch-flag">--harness</code>
+              Codegen Harness <code className="launch-flag">--codegen-harness</code>
             </div>
             <div className="launch-steppers" role="radiogroup" aria-label="Codegen harness stamp">
               <button
@@ -502,19 +502,19 @@ function LaunchPanel() {
           </div>
 
           <div className="launch-field">
-            <div className="launch-label" id="launch-adapter-label">
-              Judge Harness <code className="launch-flag">--adapter</code>
+            <div className="launch-label" id="launch-judge-harness-label">
+              Judge Harness <code className="launch-flag">--judge-harness</code>
             </div>
-            <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-adapter-label">
-              {adapters.map((a) => (
+            <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judge-harness-label">
+              {judgeHarnesses.map((a) => (
                 <button
                   key={a}
-                  className={`lk-chip${adapter === a ? " on" : ""}`}
+                  className={`lk-chip${judgeHarness === a ? " on" : ""}`}
                   role="radio"
-                  aria-checked={adapter === a}
+                  aria-checked={judgeHarness === a}
                   disabled={!judge}
                   onClick={() => {
-                    setAdapter(a);
+                    setJudgeHarness(a);
                     setJudgeModel("");
                   }}
                   title={a === "fake" ? "Canned CI smoke responses, no real LLM calls" : `Judge via the ${a} harness`}
@@ -532,11 +532,11 @@ function LaunchPanel() {
               </span>
               <select
                 value={judgeModel}
-                disabled={!judge || adapter === "fake"}
+                disabled={!judge || judgeHarness === "fake"}
                 onChange={(e) => setJudgeModel(e.target.value)}
               >
                 <option value="">auto (discovered)</option>
-                {adapterModels.map((m) => (
+                {judgeHarnessModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.id}
                   </option>
@@ -625,8 +625,8 @@ function LaunchPanel() {
                 </span>
                 <span>
                   {judge
-                    ? `Judging on · ${nJudges}-judge panel · harness ${adapter} · model ${judgeModel || "auto"}${
-                        adapter === "fake" ? " (no real LLM calls)" : " (real LLM calls per case)"
+                    ? `Judging on · ${nJudges}-judge panel · harness ${judgeHarness} · model ${judgeModel || "auto"}${
+                        judgeHarness === "fake" ? " (no real LLM calls)" : " (real LLM calls per case)"
                       }`
                     : "Checks only · no judge calls"}
                 </span>
