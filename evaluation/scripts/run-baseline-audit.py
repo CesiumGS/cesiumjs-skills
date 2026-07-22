@@ -67,6 +67,7 @@ from evaluation.framework.scorecard import (  # noqa: E402
     build_scorecard,
     git_commit,
     make_run_id,
+    resolve_codegen_provenance,
     write_scorecard,
 )
 from evaluation.runner import run_case  # noqa: E402
@@ -341,6 +342,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     parser.add_argument("--output-dir", default=None)
+    parser.add_argument(
+        "--journal",
+        default=None,
+        help=(
+            "Optional JSONL progress-journal path. One flushed line per event "
+            "(audit_started, judge_case_completed, ..., audit_completed) so the "
+            "evaluation console's Live station and CI log collectors can stream "
+            "progress while the audit runs."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -355,6 +366,34 @@ def resolve_skills(spec: str) -> list[str]:
             f"unknown skill(s): {', '.join(unknown)}. Available: {', '.join(available)}"
         )
     return requested
+
+
+class ProgressJournal:
+    """Append-only JSONL progress events, one flushed line per event.
+
+    The same journaling pattern the optimization loop uses: any consumer (the
+    evaluation console's Live station, a CI step tailing the file) reads
+    incremental progress without coupling to this process, and a crashed run
+    leaves a truthful partial trail instead of silence.
+    """
+
+    def __init__(self, path: Path | None):
+        self.path = path
+        if path is not None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("")  # Fresh journal per invocation.
+
+    def emit(self, event: str, **payload: Any) -> None:
+        if self.path is None:
+            return
+        record = {
+            "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "event": event,
+            **payload,
+        }
+        with self.path.open("a") as fh:
+            fh.write(json.dumps(record) + "\n")
+            fh.flush()
 
 
 # --- main ----------------------------------------------------------------
@@ -398,6 +437,40 @@ def main(argv: list[str] | None = None) -> int:
     commit = git_commit(REPO_ROOT)
     run_id = make_run_id(timestamp_utc, commit)
 
+    journal_path: Path | None = None
+    if args.journal:
+        journal_path = Path(args.journal)
+        if not journal_path.is_absolute():
+            journal_path = REPO_ROOT / journal_path
+    journal = ProgressJournal(journal_path)
+    journal.emit(
+        "audit_started",
+        run_id=run_id,
+        skills=skills,
+        case_count=len(audit_cases),
+        cases=[{"skill": c.skill, "case_id": c.case_id} for c in audit_cases],
+        judge=bool(args.visual_review) or not args.no_judge,
+        adapter=args.adapter,
+        n_judges=args.n_judges,
+        harness=args.harness,
+    )
+
+    try:
+        return _run_audit(args, audit_cases, case_keys, timestamp_utc, commit, run_id, journal)
+    except BaseException as exc:  # Truthful trail even on crash/interrupt.
+        journal.emit("audit_failed", error=f"{type(exc).__name__}: {exc}")
+        raise
+
+
+def _run_audit(
+    args: argparse.Namespace,
+    audit_cases: list[AuditCase],
+    case_keys: set[tuple[str, str]],
+    timestamp_utc: str,
+    commit: str,
+    run_id: str,
+    journal: ProgressJournal,
+) -> int:
     # --- Lane 2: qualitative -------------------------------------------
     visual_review: dict[str, Any] | None = None
     judged_baseline_count = 0
@@ -421,7 +494,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             adapter = OpenCodeCliAdapter()
         items: list[dict[str, Any]] = []
-        for c in audit_cases:
+        journal.emit("judge_started", total=len(audit_cases), adapter=args.adapter, n_judges=args.n_judges)
+        for idx, c in enumerate(audit_cases, start=1):
             config = JudgeConfig(
                 adapter=adapter,
                 model=args.judge_model,
@@ -432,6 +506,15 @@ def main(argv: list[str] | None = None) -> int:
             items.append(item)
             if item.get("status") not in (None, "not_reviewed"):
                 judged_baseline_count += 1
+            journal.emit(
+                "judge_case_completed",
+                skill=c.skill,
+                case_id=c.case_id,
+                index=idx,
+                total=len(audit_cases),
+                status=item.get("status"),
+            )
+        journal.emit("judge_completed", judged_count=judged_baseline_count, total=len(audit_cases))
         visual_review = {
             "schema_version": "1.0",
             "reviewer": "screenshot-visual-judge",
@@ -455,11 +538,13 @@ def main(argv: list[str] | None = None) -> int:
         if visual_errors:
             for error in visual_errors:
                 print(f"[baseline-audit] visual-review {error}", file=sys.stderr)
+            journal.emit("audit_failed", error=f"visual-review validation: {len(visual_errors)} error(s)")
             return 2
 
     # --- Lane 1: deterministic + assemble combined scorecard -----------
     inputs: list[ScorecardInput] = []
-    for c in audit_cases:
+    journal.emit("scoring_started", total=len(audit_cases))
+    for idx, c in enumerate(audit_cases, start=1):
         result = run_case(c.case, c.evidence)
         inputs.append(
             ScorecardInput(
@@ -470,6 +555,15 @@ def main(argv: list[str] | None = None) -> int:
                 evidence_summary=evidence_summary(c.evidence, c.evidence_path, c.bundle_dir),
             )
         )
+        journal.emit(
+            "scoring_case_completed",
+            skill=c.skill,
+            case_id=c.case_id,
+            index=idx,
+            total=len(audit_cases),
+            result=result.result,
+        )
+    journal.emit("scoring_completed", total=len(audit_cases))
 
     require_visual_review = visual_review is not None
     scorecard = build_scorecard(
@@ -484,6 +578,19 @@ def main(argv: list[str] | None = None) -> int:
         harness_judge=args.adapter,
     )
 
+    # Stamp the codegen model/harness recovered from the evaluated code's metas so
+    # every run self-describes its provenance (harness, model, effort). The audit
+    # declares the harness via --harness; the model is recovered from the same
+    # *.meta.json the baselines were generated with, never guessed.
+    provenance = resolve_codegen_provenance(scorecard, REPO_ROOT)
+    artifacts = scorecard.setdefault("artifacts", {})
+    if provenance.get("model"):
+        artifacts.setdefault("model", provenance["model"])
+    if provenance.get("model_variant"):
+        artifacts.setdefault("model_variant", provenance["model_variant"])
+    if provenance.get("harness") and not scorecard.get("harness"):
+        scorecard["harness"] = provenance["harness"]
+
     output_dir = Path(args.output_dir) if args.output_dir else DEFAULT_OUTPUT_ROOT / scorecard["run_id"]
     if not output_dir.is_absolute():
         output_dir = REPO_ROOT / output_dir
@@ -495,7 +602,16 @@ def main(argv: list[str] | None = None) -> int:
         for error in errors:
             location = ".".join(str(part) for part in error.path) or "<root>"
             print(f"[baseline-audit] schema error at {location}: {error.message}", file=sys.stderr)
+        journal.emit("audit_failed", error=f"scorecard schema: {len(errors)} error(s)")
         return 2
+
+    journal.emit(
+        "scorecard_written",
+        run_id=scorecard["run_id"],
+        path=relative_path(json_path),
+        overall_result=scorecard["overall_result"],
+        overall_score=scorecard.get("overall_score"),
+    )
 
     print(f"[baseline-audit] wrote {relative_path(json_path)}")
     print(f"[baseline-audit] wrote {relative_path(md_path)}")
@@ -504,6 +620,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[baseline-audit] visual_result={scorecard['visual_summary']['result']}")
     print(f"[baseline-audit] overall_result={scorecard['overall_result']}")
     print(f"[baseline-audit] judged_baseline_count={judged_baseline_count}")
+    journal.emit(
+        "audit_completed",
+        run_id=scorecard["run_id"],
+        overall_result=scorecard["overall_result"],
+        deterministic_result=scorecard["deterministic_result"],
+        visual_result=scorecard["visual_summary"]["result"],
+    )
     return 0 if scorecard["overall_result"] == "pass" else 1
 
 
