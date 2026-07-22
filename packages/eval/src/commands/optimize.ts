@@ -12,12 +12,42 @@ import { decide, loadBaselines } from "../optimization/decisionEngine.js";
 import { buildFocus, focusToDecision, focusToMarkdown } from "../optimization/scorecardFocus.js";
 import { judgePanel, writeJudgeVerdicts } from "../optimization/pairwiseJudge.js";
 import { generateScenarioCode } from "../optimization/skillsAdapter.js";
-import { AgentSelection, LoopOptions, loopCommand } from "../optimization/loop.js";
+import type { CheckResultEntry, JudgeResultEntry, ScenarioMetaEntry } from "../optimization/types.js";
+import { AgentSelection, LoopOptions, loopCommand, updateCurrentBest } from "../optimization/loop.js";
 import { describeAgent, invokeAgent } from "../harness/invoke.js";
 import type { EvalContext } from "../config/types.js";
 
+// The CLI layer (src/cli/main.ts) imports every optimize command from this
+// module; domain modules that still host their own command adapters are
+// re-exported here so the wiring surface stays consistent.
+export { loopCommand } from "../optimization/loop.js";
+export { proposeCommand } from "../optimization/proposer.js";
+export { renderCommand } from "../optimization/browserRunner.js";
+export { reportCommand } from "../optimization/report.js";
+
 const scenariosRoot = () => fromRepoRoot("optimization", "scenarios");
 const resultsRoot = () => fromRepoRoot("optimization", "results");
+
+// ---------------------------------------------------------------------------
+// optimize promote — the human promotion gate
+// ---------------------------------------------------------------------------
+export async function promoteCommand(options: { skill: string; iteration: string }): Promise<number> {
+  const candidateDir = fromRepoRoot("optimization", "candidates", options.skill, options.iteration);
+  const candidatePath = path.join(candidateDir, "SKILL.md");
+  if (!fs.existsSync(candidatePath)) {
+    console.error(`Error: candidate skill not found: ${repoRelative(candidatePath)}`);
+    return 1;
+  }
+  const currentBestPath = fromRepoRoot("skills", options.skill, "SKILL.md");
+  if (!fs.existsSync(currentBestPath)) {
+    console.error(`Error: current skill file not found: ${repoRelative(currentBestPath)}`);
+    return 1;
+  }
+  updateCurrentBest(options.skill, options.iteration);
+  fs.rmSync(path.join(candidateDir, "PROMOTED-PENDING.md"), { force: true });
+  console.log(`[promote] applied ${repoRelative(candidatePath)} -> ${repoRelative(currentBestPath)}`);
+  return 0;
+}
 
 export function discoverSkills(): string[] {
   return listDirs(scenariosRoot()).filter((name) => globFiles(path.join(scenariosRoot(), name), "eval-", ".json").length > 0);
@@ -236,16 +266,19 @@ export async function rejudgeCommand(ctx: EvalContext, options: RejudgeOptions):
   const candidateRoot = fromRepoRoot("optimization", "runs", options.skill, candidateIter);
 
   const described = describeAgent(ctx, "judge", overrides);
-  const call = (prompt: string, files: string[]) => invokeAgent(ctx, "judge", { prompt, files, disableTools: true, overrides });
+  const call = async (prompt: string, files: string[]) => {
+    const invocation = await invokeAgent(ctx, "judge", { prompt, files, disableTools: true, overrides });
+    return { text: invocation.text, agent: invocation.agent };
+  };
 
   console.log(
     `== Re-judging ${options.skill}: ${baselineIter} vs ${candidateIter} with ${described.harness} ` +
       `model=${described.model} variant=${described.variant} ==`,
   );
 
-  const judgeResults: Array<Record<string, any>> = [];
-  const checkResults: Array<Record<string, any>> = [];
-  const scenarioMeta: Array<Record<string, any>> = [];
+  const judgeResults: JudgeResultEntry[] = [];
+  const checkResults: CheckResultEntry[] = [];
+  const scenarioMeta: ScenarioMetaEntry[] = [];
 
   for (const scenario of scenarios) {
     const sid = scenario.id;
@@ -259,7 +292,7 @@ export async function rejudgeCommand(ctx: EvalContext, options: RejudgeOptions):
 
     console.log(`  judging ${sid} (${path.basename(baselineBundle)} vs ${path.basename(candidateBundle)}) ...`);
     try {
-      const result = judgePanel(scenario, { path: baselineBundle }, { path: candidateBundle }, {
+      const result = await judgePanel(scenario, { path: baselineBundle }, { path: candidateBundle }, {
         call,
         harness: described.harness,
         model: described.model,
@@ -267,6 +300,7 @@ export async function rejudgeCommand(ctx: EvalContext, options: RejudgeOptions):
         protocol: ctx.config.judgePanel.pairwiseProtocol,
         promptsDir: fromRepoRoot("optimization", "prompts", "judges"),
         seeds: ctx.config.judgePanel.seeds,
+        flipSalt: candidateIter,
       });
       writeJudgeVerdicts(result, path.join(candidateBundle, "judge-verdicts.json"));
       console.log(`    -> ${result.verdict} (${result.majority_count}/${ctx.config.judgePanel.seeds.length})`);
@@ -461,7 +495,7 @@ export async function generateBaselinesCommand(ctx: EvalContext, options: Genera
         continue;
       }
       try {
-        const { outputPath } = generateScenarioCode(ctx, { skill, iteration, skillPath, scenario, overrides });
+        const { outputPath } = await generateScenarioCode(ctx, { skill, iteration, skillPath, scenario, overrides });
         console.log(`  + ${skill}/${scenario.id}: ${repoRelative(outputPath)}`);
         generated += 1;
       } catch (exc: any) {

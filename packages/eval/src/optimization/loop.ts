@@ -12,25 +12,29 @@ import { sha256Text } from "../lib/proc.js";
 import { generateScenarioCode } from "./skillsAdapter.js";
 import { renderCommand } from "./browserRunner.js";
 import { judgePanel, writeJudgeVerdicts } from "./pairwiseJudge.js";
-import { decide, loadBaselines } from "./decisionEngine.js";
+import { decide, environmentMismatch, loadBaselines } from "./decisionEngine.js";
 import { computeScores, generateSummaryMarkdown, updatePublicStatus } from "./report.js";
 import { scanPublicArtifacts } from "./publicArtifacts.js";
 import { proposeCommand } from "./proposer.js";
 import { describeAgent, invokeAgent } from "../harness/invoke.js";
+import { loadScenario } from "./types.js";
+import type { CheckResultEntry, JudgeResultEntry, ScenarioMetaEntry } from "./types.js";
 import type { EvalContext } from "../config/types.js";
 
 // ---------------------------------------------------------------------------
-// journal (with secret redaction on persisted strings)
+// journal (persisted strings are scrubbed of local paths/URLs)
 // ---------------------------------------------------------------------------
 const HOME_PATH_RE = /(?:\/Users\/|\/home\/|C:\\Users\\)[^/\\\s:'"]+[/\\]/g;
 const LOCAL_URL_RE = /https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/g;
 
-export function redactSecrets(text: string): string {
+/** Scrub machine-local home paths and loopback URLs from journal strings.
+ * (Not a secret scanner — gitleaks and `check public-artifacts` cover that.) */
+export function redactLocalPaths(text: string): string {
   return text.replace(LOCAL_URL_RE, "<redacted-local-url>").replace(HOME_PATH_RE, "<redacted-path>/");
 }
 
 function jsonSafe(value: unknown): unknown {
-  if (typeof value === "string") return redactSecrets(value);
+  if (typeof value === "string") return redactLocalPaths(value);
   if (Array.isArray(value)) return value.map(jsonSafe);
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, jsonSafe(item)]));
@@ -64,6 +68,12 @@ export interface LoopOptions {
   maxIterations?: number;
   stopOn?: "plateau" | "regression" | "max";
   plateauN?: number;
+  /**
+   * Human promotion gate: only when true are KEEP candidates applied to
+   * skills/<skill>/SKILL.md. Otherwise a KEEP is staged as PROMOTED-PENDING.md
+   * and the loop stops so a human can review and run `optimize promote`.
+   */
+  promote?: boolean;
   proposer?: AgentSelection;
   codegen?: AgentSelection;
   judge?: AgentSelection;
@@ -103,7 +113,7 @@ async function runProposerStep(ctx: EvalContext, options: LoopOptions, iteration
   }
 }
 
-function runCodegenStep(ctx: EvalContext, options: LoopOptions, iteration: string, candidatePath: string): StepResult {
+async function runCodegenStep(ctx: EvalContext, options: LoopOptions, iteration: string, candidatePath: string): Promise<StepResult> {
   console.log(`\n=== Iteration ${iteration}: Codegen ===`);
   const scenarioFiles = scenarioFilesFor(options.skill);
   if (!scenarioFiles.length) {
@@ -112,8 +122,8 @@ function runCodegenStep(ctx: EvalContext, options: LoopOptions, iteration: strin
   let generated = 0;
   for (const scenarioFile of scenarioFiles) {
     try {
-      const scenario = readJson(scenarioFile);
-      const { outputPath } = generateScenarioCode(ctx, {
+      const scenario = loadScenario(scenarioFile);
+      const { outputPath } = await generateScenarioCode(ctx, {
         skill: options.skill,
         iteration,
         skillPath: candidatePath,
@@ -148,7 +158,7 @@ async function runRenderStep(ctx: EvalContext, options: LoopOptions, iteration: 
 
 export function expectedBundleCount(skill: string): number {
   return scenarioFilesFor(skill)
-    .map(readJson)
+    .map(loadScenario)
     .filter((scenario) => (scenario.runner_mode ?? "global-js") !== "review-only").length;
 }
 
@@ -194,7 +204,7 @@ export function getBaselineDir(skill: string, currentIteration: string): string 
   return fs.existsSync(baseline) ? baseline : null;
 }
 
-function runJudgesStep(ctx: EvalContext, options: LoopOptions, iteration: string, runsDir: string): StepResult {
+async function runJudgesStep(ctx: EvalContext, options: LoopOptions, iteration: string, runsDir: string): Promise<StepResult> {
   console.log(`\n=== Iteration ${iteration}: Judge Panel ===`);
   const scenarioFiles = scenarioFilesFor(options.skill);
   const baselineDir = getBaselineDir(options.skill, iteration);
@@ -207,15 +217,17 @@ function runJudgesStep(ctx: EvalContext, options: LoopOptions, iteration: string
 
   const overrides = options.judge;
   const described = describeAgent(ctx, "judge", overrides);
-  const call = (prompt: string, files: string[]) =>
-    invokeAgent(ctx, "judge", { prompt, files, disableTools: true, overrides });
+  const call = async (prompt: string, files: string[]) => {
+    const invocation = await invokeAgent(ctx, "judge", { prompt, files, disableTools: true, overrides });
+    return { text: invocation.text, agent: invocation.agent };
+  };
 
-  const judgeResults: Array<Record<string, any>> = [];
+  const judgeResults: JudgeResultEntry[] = [];
   const unavailable: string[] = [];
   for (const scenarioFile of scenarioFiles) {
     let scenarioId = path.basename(scenarioFile, ".json");
     try {
-      const scenario = readJson(scenarioFile);
+      const scenario = loadScenario(scenarioFile);
       scenarioId = scenario.id;
       const scenarioName = scenario.name ?? scenarioId;
       const baselineBundle = findBundle(baselineDir, scenarioId, scenarioName);
@@ -227,7 +239,7 @@ function runJudgesStep(ctx: EvalContext, options: LoopOptions, iteration: string
         continue;
       }
 
-      const result = judgePanel(scenario, { path: baselineBundle }, { path: candidateBundle }, {
+      const result = await judgePanel(scenario, { path: baselineBundle }, { path: candidateBundle }, {
         call,
         harness: described.harness,
         model: described.model,
@@ -235,6 +247,7 @@ function runJudgesStep(ctx: EvalContext, options: LoopOptions, iteration: string
         protocol: ctx.config.judgePanel.pairwiseProtocol,
         promptsDir: fromRepoRoot("optimization", "prompts", "judges"),
         seeds: ctx.config.judgePanel.seeds,
+        flipSalt: iteration,
       });
       writeJudgeVerdicts(result, path.join(candidateBundle, "judge-verdicts.json"));
       if (result.judge_unavailable) unavailable.push(scenarioId);
@@ -259,18 +272,28 @@ function runJudgesStep(ctx: EvalContext, options: LoopOptions, iteration: string
   return { success: true, judge_results: judgeResults, error: null };
 }
 
+/** First available bundle metadata.json under a runs dir (environment fingerprint). */
+function bundleEnvironment(runsDir: string | null): Record<string, any> | null {
+  if (!runsDir || !fs.existsSync(runsDir)) return null;
+  for (const name of listDirs(runsDir)) {
+    const metaPath = path.join(runsDir, name, "metadata.json");
+    if (fs.existsSync(metaPath)) return readJson(metaPath);
+  }
+  return null;
+}
+
 function runDecisionStep(
   options: LoopOptions,
   iteration: string,
   runsDir: string,
-  judgeResults: Array<Record<string, any>>,
+  judgeResults: JudgeResultEntry[],
 ): StepResult {
   console.log(`\n=== Iteration ${iteration}: Decision Engine ===`);
-  const checkResults: Array<Record<string, any>> = [];
-  const scenarioMeta: Array<Record<string, any>> = [];
+  const checkResults: CheckResultEntry[] = [];
+  const scenarioMeta: ScenarioMetaEntry[] = [];
 
   for (const scenarioFile of scenarioFilesFor(options.skill)) {
-    const scenario = readJson(scenarioFile);
+    const scenario = loadScenario(scenarioFile);
     const bundle = findBundle(runsDir, scenario.id, scenario.name ?? scenario.id);
     if (bundle === null) continue;
     const checksFile = path.join(bundle, "programmatic-checks.json");
@@ -298,6 +321,18 @@ function runDecisionStep(
 
   const baselines = loadBaselines(fromRepoRoot("optimization", "results", "baselines.json"));
   const decision = decide(checkResults, judgeResults, scenarioMeta, baselines);
+
+  // Attribute environment drift (browser, GPU, codegen model) explicitly so a
+  // degradation caused outside the skill content is visible in the record.
+  const envMismatch = environmentMismatch(
+    bundleEnvironment(getBaselineDir(options.skill, iteration)),
+    bundleEnvironment(runsDir),
+  );
+  if (Object.keys(envMismatch).length) {
+    decision.environment_mismatch = envMismatch;
+    console.warn(`  ! Environment mismatch vs baseline: ${Object.keys(envMismatch).join(", ")}`);
+    console.warn("    Observed differences may stem from causes outside the skill content.");
+  }
   writeJsonPlain(path.join(resultsDir, "decision.json"), decision);
 
   console.log(`  Decision: ${decision.decision}`);
@@ -363,7 +398,9 @@ function archiveIteration(skill: string, iteration: string, decision: string): v
   console.log(`  Archived to ${repoRelative(historyDir)}`);
 }
 
-function updateCurrentBest(skill: string, iteration: string): void {
+/** Apply a KEEP candidate to the canonical skill file (with a backup). Only
+ * called behind the human promotion gate (`--promote` or `optimize promote`). */
+export function updateCurrentBest(skill: string, iteration: string): void {
   const candidatePath = fromRepoRoot("optimization", "candidates", skill, iteration, "SKILL.md");
   const currentBestPath = fromRepoRoot("skills", skill, "SKILL.md");
   if (!fs.existsSync(candidatePath)) {
@@ -377,6 +414,14 @@ function updateCurrentBest(skill: string, iteration: string): void {
   fs.copyFileSync(candidatePath, currentBestPath);
   console.log(`  Updated current best: ${repoRelative(currentBestPath)}`);
   console.log(`  Backup saved: ${repoRelative(backupPath)}`);
+}
+
+/** Stage a KEEP candidate for human review instead of applying it. */
+export function stagePromotion(skill: string, iteration: string): string {
+  const candidatePath = fromRepoRoot("optimization", "candidates", skill, iteration, "SKILL.md");
+  const pendingPath = fromRepoRoot("optimization", "candidates", skill, iteration, "PROMOTED-PENDING.md");
+  fs.copyFileSync(candidatePath, pendingPath);
+  return pendingPath;
 }
 
 // ---------------------------------------------------------------------------
@@ -404,7 +449,7 @@ async function ensureCurrentBestBaseline(ctx: EvalContext, options: LoopOptions,
 
   console.log("  Baseline evidence missing or incomplete; generating current-best baseline.");
   writeJournalEvent(journalPath, "baseline_generation_started", { skill, iteration: "baseline", current_best: currentBest });
-  const adapterResult = runCodegenStep(ctx, options, "baseline", currentBest);
+  const adapterResult = await runCodegenStep(ctx, options, "baseline", currentBest);
   if (!adapterResult.success) {
     writeJournalEvent(journalPath, "baseline_generation_failed", { skill, iteration: "baseline", result: adapterResult });
     return { success: false, runs_dir: null, reused: false, error: adapterResult.error };
@@ -458,9 +503,11 @@ export async function loopCommand(ctx: EvalContext, options: LoopOptions): Promi
     let iterationsRun = 0;
     let consecutiveTies = 0;
     let lastDecision: string | null = null;
+    let promotionStagedStop: string | null = null;
 
     const shouldStop = (): string | null => {
       if (stopRequested) return "SIGINT received";
+      if (promotionStagedStop) return promotionStagedStop;
       if (iterationsRun >= maxIterations) return `Reached max iterations (${maxIterations})`;
       if (stopOn === "regression" && lastDecision === "REJECT") return "First REJECT encountered (stop-on=regression)";
       if (stopOn === "plateau" && consecutiveTies >= plateauN) return `Plateau detected: ${plateauN} consecutive ties`;
@@ -490,7 +537,7 @@ export async function loopCommand(ctx: EvalContext, options: LoopOptions): Promi
 
       let candidatePath = "";
       let runsDir = "";
-      let judgeResults: Array<Record<string, any>> = [];
+      let judgeResults: JudgeResultEntry[] = [];
       let decisionData: Record<string, any> | null = null;
 
       const steps: Array<{ id: string; run: () => Promise<StepResult> | StepResult }> = [
@@ -513,9 +560,9 @@ export async function loopCommand(ctx: EvalContext, options: LoopOptions): Promi
         },
         {
           id: "judges",
-          run: () => {
-            const result = runJudgesStep(ctx, options, iteration, runsDir);
-            if (result.success) judgeResults = result.judge_results as Array<Record<string, any>>;
+          run: async () => {
+            const result = await runJudgesStep(ctx, options, iteration, runsDir);
+            if (result.success) judgeResults = result.judge_results as JudgeResultEntry[];
             return result;
           },
         },
@@ -555,9 +602,18 @@ export async function loopCommand(ctx: EvalContext, options: LoopOptions): Promi
       writeJournalEvent(journalPath, "step_completed", { skill, iteration, step: "archive" });
 
       if (decision === "KEEP") {
-        writeJournalEvent(journalPath, "step_started", { skill, iteration, step: "promote_current_best" });
-        updateCurrentBest(skill, iteration);
-        writeJournalEvent(journalPath, "step_completed", { skill, iteration, step: "promote_current_best" });
+        if (options.promote) {
+          writeJournalEvent(journalPath, "step_started", { skill, iteration, step: "promote_current_best" });
+          updateCurrentBest(skill, iteration);
+          writeJournalEvent(journalPath, "step_completed", { skill, iteration, step: "promote_current_best" });
+        } else {
+          const stagedPath = stagePromotion(skill, iteration);
+          writeJournalEvent(journalPath, "promotion_staged", { skill, iteration, staged_path: stagedPath });
+          console.log("\n=== KEEP staged for human review (run with --promote to apply automatically) ===");
+          console.log(`  Staged candidate: ${repoRelative(stagedPath)}`);
+          console.log(`  Apply with: cesium-eval optimize promote ${skill} ${iteration}`);
+          promotionStagedStop = `KEEP staged for human promotion (iteration ${iteration})`;
+        }
         consecutiveTies = 0;
       } else if (decision === "REJECT") {
         consecutiveTies = 0;

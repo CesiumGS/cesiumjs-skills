@@ -3,7 +3,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseVerdict, judgePanel } from "../src/optimization/pairwiseJudge.js";
-import { parseJudgeJson, judgeRender, fakeJudgeCall } from "../src/evaluation/judge/staticJudge.js";
+import { parseJudgeJson, judgeRender, fakeJudgeCall, type JudgeCall } from "../src/evaluation/judge/staticJudge.js";
+import { hashSeed, mulberry32 } from "../src/lib/random.js";
 
 const tempDirs: string[] = [];
 afterEach(() => {
@@ -67,7 +68,7 @@ describe("judgePanel", () => {
     fs.writeFileSync(path.join(promptsDir, "pairwise-v1.txt"), "Compare {scenario_id}: A={screenshots_a} B={screenshots_b}");
     let callIndex = 0;
     return judgePanel(scenario, { path: baseline }, { path: candidate }, {
-      call: () => callResults[Math.min(callIndex++, callResults.length - 1)],
+      call: async () => ({ text: callResults[Math.min(callIndex++, callResults.length - 1)] }),
       harness: "opencode",
       model: "test-model",
       variant: "low",
@@ -77,30 +78,161 @@ describe("judgePanel", () => {
     });
   }
 
-  it("takes the majority verdict", () => {
+  it("takes the majority verdict", async () => {
     // Seeded label mapping determines BASELINE/CANDIDATE; a TIE answer is mapping-independent.
-    const result = panelWith(['{"verdict": "TIE", "rationale": "same"}']);
+    const result = await panelWith(['{"verdict": "TIE", "rationale": "same"}']);
     expect(result.verdict).toBe("TIE");
     expect(result.majority_count).toBe(3);
     expect(result.judge_unavailable).toBe(false);
   });
 
-  it("marks the panel unavailable when any judge fails", () => {
-    const result = panelWith(["garbage response"]);
+  it("marks the panel unavailable when any judge fails", async () => {
+    const result = await panelWith(["garbage response"]);
     expect(result.judge_unavailable).toBe(true);
     expect(result.verdict).toBeNull();
   });
 
-  it("requires distinct seeds", () => {
-    expect(() => panelWith(['{"verdict": "TIE", "rationale": "x"}'], [1, 1, 2])).toThrow(/different/);
+  it("requires distinct seeds", async () => {
+    await expect(panelWith(['{"verdict": "TIE", "rationale": "x"}'], [1, 1, 2])).rejects.toThrow(/different/);
   });
 
-  it("keeps label mapping deterministic per seed", () => {
-    const first = panelWith(['{"verdict": "A", "rationale": "x"}']);
-    const second = panelWith(['{"verdict": "A", "rationale": "x"}']);
+  it("keeps label mapping deterministic per seed", async () => {
+    const first = await panelWith(['{"verdict": "A", "rationale": "x"}']);
+    const second = await panelWith(['{"verdict": "A", "rationale": "x"}']);
     expect(first.individual_verdicts.map((v) => v.label_mapping)).toEqual(
       second.individual_verdicts.map((v) => v.label_mapping),
     );
+  });
+
+  function panelForScenario(scenarioId: string, onPrompt?: (prompt: string, files: string[]) => void) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "cesium-eval-panel-"));
+    tempDirs.push(root);
+    const baseline = makeBundle(root, "baseline");
+    const candidate = makeBundle(root, "candidate");
+    const promptsDir = path.join(root, "prompts");
+    fs.mkdirSync(promptsDir);
+    fs.writeFileSync(
+      path.join(promptsDir, "pairwise-v1.txt"),
+      "Compare {scenario_id}: A={screenshots_a} console={console_a} B={screenshots_b} console={console_b}",
+    );
+    return {
+      baseline,
+      candidate,
+      result: judgePanel({ ...scenario, id: scenarioId }, { path: baseline }, { path: candidate }, {
+        call: async (prompt, files) => {
+          onPrompt?.(prompt, files);
+          return { text: '{"verdict": "TIE", "rationale": "same"}' };
+        },
+        harness: "opencode",
+        model: "test-model",
+        variant: "low",
+        protocol: "pairwise-v1",
+        promptsDir,
+        seeds: [42, 123, 789],
+      }),
+    };
+  }
+
+  it("varies the A/B label arrangement across scenarios (no frozen counterbalancing)", async () => {
+    const arrangements = new Set(
+      await Promise.all(
+        ["eval-001", "eval-002", "eval-003", "eval-004", "eval-005", "eval-006"].map(async (id) =>
+          JSON.stringify((await panelForScenario(id).result).individual_verdicts.map((v) => v.label_mapping.A)),
+        ),
+      ),
+    );
+    expect(arrangements.size).toBeGreaterThan(1);
+  });
+
+  it("never leaks bundle paths into the prompt and attaches neutral filenames", async () => {
+    const prompts: string[] = [];
+    const attached: string[][] = [];
+    const { baseline, candidate, result } = panelForScenario("eval-001", (prompt, files) => {
+      prompts.push(prompt);
+      attached.push(files);
+    });
+    await result;
+    for (const prompt of prompts) {
+      expect(prompt).not.toContain(baseline);
+      expect(prompt).not.toContain(candidate);
+      expect(prompt).not.toContain("baseline");
+      expect(prompt).toContain("candidate-a-frame-1.png");
+      expect(prompt).toContain("candidate-b-frame-1.png");
+    }
+    expect(prompts.length).toBe(3);
+    for (const files of attached) {
+      expect(files.map((f) => path.basename(f)).sort()).toEqual(["candidate-a-frame-1.png", "candidate-b-frame-1.png"]);
+      for (const file of files) expect(file).not.toContain("baseline");
+    }
+  });
+
+  it("records real artifact paths only in the verdict record", async () => {
+    const { baseline, candidate, result } = panelForScenario("eval-001");
+    for (const verdict of (await result).individual_verdicts) {
+      const sources = Object.values(verdict.screenshot_sources as Record<string, string>);
+      expect(sources.some((source) => source.startsWith(baseline))).toBe(true);
+      expect(sources.some((source) => source.startsWith(candidate))).toBe(true);
+    }
+  });
+
+  it("stamps the agent the call actually used (vision-fallback provenance)", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "cesium-eval-panel-"));
+    tempDirs.push(root);
+    const baseline = makeBundle(root, "base");
+    const candidate = makeBundle(root, "cand");
+    const promptsDir = path.join(root, "prompts");
+    fs.mkdirSync(promptsDir);
+    fs.writeFileSync(path.join(promptsDir, "pairwise-v1.txt"), "Compare {scenario_id}");
+    const result = await judgePanel(scenario, { path: baseline }, { path: candidate }, {
+      // Simulates invokeAgent rerouting to a vision-capable fallback.
+      call: async () => ({
+        text: '{"verdict": "TIE", "rationale": "same"}',
+        agent: { harness: "codex", model: "gpt-5.2", variant: "high" },
+      }),
+      harness: "opencode",
+      model: "configured-model",
+      variant: "low",
+      protocol: "pairwise-v1",
+      promptsDir,
+      seeds: [42, 123, 789],
+    });
+    for (const verdict of result.individual_verdicts) {
+      expect(verdict.harness).toBe("codex");
+      expect(verdict.model_id).toBe("gpt-5.2");
+      expect(verdict.model_variant).toBe("high");
+    }
+  });
+
+  it("resolves an ambiguous even split to TIE instead of insertion order", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "cesium-eval-panel-"));
+    tempDirs.push(root);
+    const baseline = makeBundle(root, "base");
+    const candidate = makeBundle(root, "cand");
+    const promptsDir = path.join(root, "prompts");
+    fs.mkdirSync(promptsDir);
+    fs.writeFileSync(path.join(promptsDir, "pairwise-v1.txt"), "Compare {scenario_id}");
+    const seeds = [1, 2, 3, 4];
+    // Answer so mapped verdicts are exactly BASELINE, BASELINE, CANDIDATE, CANDIDATE.
+    const labelFor = (seed: number, want: "BASELINE" | "CANDIDATE"): "A" | "B" => {
+      const flip = mulberry32(hashSeed(seed, scenario.id, ""))() < 0.5; // flip => A=BASELINE
+      return want === "BASELINE" ? (flip ? "A" : "B") : flip ? "B" : "A";
+    };
+    let callIndex = 0;
+    const result = await judgePanel(scenario, { path: baseline }, { path: candidate }, {
+      call: async () => {
+        const index = callIndex++;
+        const want = index < 2 ? "BASELINE" : "CANDIDATE";
+        return { text: JSON.stringify({ verdict: labelFor(seeds[index], want), rationale: "x" }) };
+      },
+      harness: "opencode",
+      model: "test-model",
+      variant: "low",
+      protocol: "pairwise-v1",
+      promptsDir,
+      seeds,
+    });
+    expect(result.judge_unavailable).toBe(false);
+    expect(result.verdict).toBe("TIE");
   });
 });
 
@@ -111,7 +243,7 @@ describe("static judge", () => {
     expect(parseJudgeJson("nothing")).toBeNull();
   });
 
-  function renderWith(call: (prompt: string) => string, withScreenshot = true) {
+  function renderWith(call: JudgeCall, withScreenshot = true) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "cesium-eval-judge-"));
     tempDirs.push(root);
     const bundle = path.join(root, "bundle");
@@ -122,7 +254,7 @@ describe("static judge", () => {
     fs.writeFileSync(path.join(promptsDir, "static-visual-v1.system.txt"), "You are a judge. {lens}");
     fs.writeFileSync(path.join(promptsDir, "static-visual-v1.user.txt"), "Scenario {scenario_id}: {screenshots}");
     return judgeRender({ skill: "cesiumjs-camera", id: "eval-101", name: "n", prompt: "p" }, bundle, {
-      call: (prompt) => call(prompt),
+      call,
       model: "test-model",
       nJudges: 3,
       seeds: [42, 123, 789],
@@ -131,15 +263,15 @@ describe("static judge", () => {
     });
   }
 
-  it("emits a passing item for a clean render", () => {
-    const item = renderWith(fakeJudgeCall());
+  it("emits a passing item for a clean render", async () => {
+    const item = await renderWith(fakeJudgeCall());
     expect(item.status).toBe("pass");
     expect(item.overall_score).toBeGreaterThanOrEqual(7);
     expect(item.judge.n_parsed).toBe(3);
     expect(item.case_id).toBe("eval-101");
   });
 
-  it("applies the liveness gate and blocks", () => {
+  it("applies the liveness gate and blocks", async () => {
     const dead = JSON.stringify({
       dimensions: {
         render_liveness: { score: 1, failure_modes: ["black_frame_ion_auth"] },
@@ -154,21 +286,21 @@ describe("static judge", () => {
       band: "FAIL",
       rationale: "black frame",
     });
-    const item = renderWith(() => dead);
+    const item = await renderWith(async () => ({ text: dead }));
     expect(item.status).toBe("fail");
     expect(item.overall_score).toBeLessThanOrEqual(2);
     expect(item.judge.gates_triggered).toContain("liveness_gate");
     expect(item.failure_flags).toContain("black_frame_ion_auth");
   });
 
-  it("returns not_reviewed when the bundle has no screenshot", () => {
-    const item = renderWith(fakeJudgeCall(), false);
+  it("returns not_reviewed when the bundle has no screenshot", async () => {
+    const item = await renderWith(fakeJudgeCall(), false);
     expect(item.status).toBe("not_reviewed");
     expect(item.score).toBeNull();
   });
 
-  it("returns needs_review when every judge is unparseable", () => {
-    const item = renderWith(() => "garbage");
+  it("returns needs_review when every judge is unparseable", async () => {
+    const item = await renderWith(async () => ({ text: "garbage" }));
     expect(item.status).toBe("needs_review");
     expect(item.blocking).toBe(true);
     expect(item.judge.per_judge).toHaveLength(3);

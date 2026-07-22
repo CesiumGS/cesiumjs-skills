@@ -193,8 +193,10 @@ function makeJudgeCall(ctx: EvalContext, adapter: string, model: string | undefi
   if (adapter === "fake") return { call: fakeJudgeCall(), model: model ?? "fake" };
   const overrides = { harness: adapter, model };
   const described = describeAgent(ctx, "judge", overrides);
-  const call: JudgeCall = (prompt, files, addDirs) =>
-    invokeAgent(ctx, "judge", { prompt, files, addDirs, allowedTools: [], overrides });
+  const call: JudgeCall = async (prompt, files, addDirs) => {
+    const invocation = await invokeAgent(ctx, "judge", { prompt, files, addDirs, allowedTools: [], overrides });
+    return { text: invocation.text, agent: invocation.agent };
+  };
   return { call, model: described.model };
 }
 
@@ -257,7 +259,7 @@ export async function auditCommand(ctx: EvalContext, options: AuditOptions): Pro
   });
 
   try {
-    return runAudit(ctx, options, { auditCases, caseKeys, timestampUtc, commit, runId, journal, adapterName, codegenHarness, nJudges });
+    return await runAudit(ctx, options, { auditCases, caseKeys, timestampUtc, commit, runId, journal, adapterName, codegenHarness, nJudges });
   } catch (exc: any) {
     journal.emit("audit_failed", { error: `${exc?.constructor?.name ?? "Error"}: ${exc?.message ?? exc}` });
     throw exc;
@@ -276,7 +278,7 @@ interface AuditRun {
   nJudges: number;
 }
 
-function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun): number {
+async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun): Promise<number> {
   const { auditCases, caseKeys, timestampUtc, commit, runId, journal, adapterName, codegenHarness, nJudges } = run;
 
   // --- Lane 2: qualitative ------------------------------------------------
@@ -295,8 +297,8 @@ function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun): numbe
     const { call, model } = makeJudgeCall(ctx, adapterName, options.judgeModel);
     const items: Array<Record<string, any>> = [];
     journal.emit("judge_started", { total: auditCases.length, adapter: adapterName, n_judges: nJudges });
-    auditCases.forEach((auditCase, index) => {
-      const item = judgeRender(caseMetaFor(auditCase), auditCase.bundleDir ?? "", {
+    for (const [index, auditCase] of auditCases.entries()) {
+      const item = await judgeRender(caseMetaFor(auditCase), auditCase.bundleDir ?? "", {
         call,
         model,
         nJudges,
@@ -313,7 +315,7 @@ function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun): numbe
         total: auditCases.length,
         status: item.status ?? null,
       });
-    });
+    }
     journal.emit("judge_completed", { judged_count: judgedCount, total: auditCases.length });
     visualReview = {
       schema_version: "1.0",
@@ -419,7 +421,7 @@ export async function judgeCommand(
 ): Promise<number> {
   const adapterName = options.adapter ?? ctx.resolveRole("judge").harness.id;
   const { call, model } = makeJudgeCall(ctx, adapterName, options.model);
-  const item = judgeRender(readJson(options.case), options.bundle, {
+  const item = await judgeRender(readJson(options.case), options.bundle, {
     call,
     model,
     nJudges: options.nJudges ?? ctx.config.judgePanel.size,

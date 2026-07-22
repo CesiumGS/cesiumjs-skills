@@ -64,13 +64,22 @@ function codexProfileFor(role: RoleName, hasImages: boolean): string | null {
   return null;
 }
 
-export function ensureAgentAvailable(ctx: EvalContext, role: RoleName, overrides?: AgentRequest["overrides"]): void {
-  const agent = ctx.resolveRole(role, overrides ?? {});
-  driverFor(agent.harness).ensureAvailable(agent.harness);
+/** The agent that actually handled a call (post vision-fallback rerouting). */
+export interface ResolvedAgentInfo {
+  harness: string;
+  model: string;
+  variant: string | null;
 }
 
-/** Invoke the configured agent for a role and return the assistant text. */
-export function invokeAgent(ctx: EvalContext, role: RoleName, request: AgentRequest): string {
+export interface AgentInvocation {
+  text: string;
+  /** Truthful provenance: reflects any vision-fallback reroute. */
+  agent: ResolvedAgentInfo;
+}
+
+/** Invoke the configured agent for a role; returns the assistant text plus
+ * the agent that actually made the call (for truthful artifact provenance). */
+export async function invokeAgent(ctx: EvalContext, role: RoleName, request: AgentRequest): Promise<AgentInvocation> {
   let agent = ctx.resolveRole(role, request.overrides ?? {});
   let model = resolveModel(agent);
   const hasImages = Boolean(request.files?.length);
@@ -105,7 +114,13 @@ export function invokeAgent(ctx: EvalContext, role: RoleName, request: AgentRequ
     timeoutSeconds: agent.timeoutSeconds,
     profile: codexProfileFor(role, hasImages),
   };
-  return driverFor(agent.harness).invoke(agent.harness, call);
+  const text = await driverFor(agent.harness).invoke(agent.harness, call);
+  return { text, agent: { harness: agent.harness.id, model, variant: agent.variant } };
+}
+
+export function ensureAgentAvailable(ctx: EvalContext, role: RoleName, overrides?: AgentRequest["overrides"]): void {
+  const agent = ctx.resolveRole(role, overrides ?? {});
+  driverFor(agent.harness).ensureAvailable(agent.harness);
 }
 
 /** Describe the fully-resolved agent for stamping into artifacts/metadata. */

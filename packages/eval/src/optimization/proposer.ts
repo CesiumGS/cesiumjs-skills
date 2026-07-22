@@ -127,6 +127,22 @@ export function stripPreamble(text: string): string {
   return text;
 }
 
+/** Human-readable notes for environment drift recorded in the decision. */
+function formatEnvironmentNotes(mismatch: Record<string, { baseline: unknown; candidate: unknown }> | undefined): string {
+  if (!mismatch || !Object.keys(mismatch).length) {
+    return "None. The baseline and candidate were rendered in matching environments.";
+  }
+  const lines = Object.entries(mismatch).map(
+    ([key, delta]) => `- ${key}: baseline=${JSON.stringify(delta.baseline)} candidate=${JSON.stringify(delta.candidate)}`,
+  );
+  return [
+    "The following environment differences were detected between the baseline and candidate evidence.",
+    "Losses may stem from these causes (browser, GPU, or model changes) rather than the skill content —",
+    "do not over-correct the skill for failures plausibly explained by them:",
+    ...lines,
+  ].join("\n");
+}
+
 function renderTemplate(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (whole, key: string) => (key in values ? String(values[key]) : whole));
 }
@@ -251,6 +267,7 @@ export async function proposeCommand(ctx: EvalContext, options: ProposeOptions):
     last_decision: decision.decision ?? "UNKNOWN",
     last_rule: decision.rule_fired ?? "unknown",
     last_rationale: decision.rationale ?? "No rationale provided",
+    environment_notes: formatEnvironmentNotes(decision.environment_mismatch),
     wins: decision.counts?.wins ?? 0,
     losses: decision.counts?.losses ?? 0,
     ties: decision.counts?.ties ?? 0,
@@ -268,14 +285,14 @@ export async function proposeCommand(ctx: EvalContext, options: ProposeOptions):
       `temperature=${options.temperature ?? 1.0})...`,
   );
   const researchDirs = ["skills", "optimization", "wiki"].map((dir) => fromRepoRoot(dir)).filter(fs.existsSync);
-  const raw = invokeAgent(ctx, "proposer", {
+  const invocation = await invokeAgent(ctx, "proposer", {
     prompt,
     allowedTools: ["Read", "Grep", "Glob"],
     addDirs: researchDirs,
     title: "skill optimization proposer",
     overrides,
   });
-  const candidateSkill = stripPreamble(raw);
+  const candidateSkill = stripPreamble(invocation.text);
   const hypothesis = generateHypothesis(decision, history, coverage);
 
   fs.mkdirSync(outputDir, { recursive: true });
@@ -285,9 +302,9 @@ export async function proposeCommand(ctx: EvalContext, options: ProposeOptions):
   writeJsonPlain(path.join(outputDir, "proposer-metadata.json"), {
     skill: options.skill,
     iteration,
-    harness: described.harness,
-    model_id: described.model,
-    model_variant: described.variant,
+    harness: invocation.agent.harness,
+    model_id: invocation.agent.model,
+    model_variant: invocation.agent.variant,
     temperature: options.temperature ?? 1.0,
     prompt_version: promptVersion,
     timestamp_utc: new Date().toISOString(),

@@ -1,4 +1,4 @@
-You are a CesiumJS evaluation judge comparing two code implementations (Candidate A and Candidate B) for the same scenario. Screenshot PNG files for both candidates are attached to this prompt and their artifact paths are listed for traceability.
+You are a CesiumJS evaluation judge comparing two code implementations (Candidate A and Candidate B) for the same scenario. Screenshot PNG files for both candidates are attached to this prompt under neutral filenames (candidate-a-frame-N.png / candidate-b-frame-N.png).
 
 Your task is to inspect the attached screenshots directly and determine which implementation better satisfies the scenario requirements. Anchor your reasoning first in visible screenshot evidence, then corroborate with deterministic programmatic checks, screenshot-quality checks, console output, scene state, and the scenario requirements.
 
@@ -17,7 +17,7 @@ Your task is to inspect the attached screenshots directly and determine which im
 
 # Evidence for Candidate A
 
-**Screenshot Artifact Path(s)**:
+**Attached Screenshot(s)**:
 {screenshots_a}
 
 **Console Output**:
@@ -31,7 +31,7 @@ Your task is to inspect the attached screenshots directly and determine which im
 
 # Evidence for Candidate B
 
-**Screenshot Artifact Path(s)**:
+**Attached Screenshot(s)**:
 {screenshots_b}
 
 **Console Output**:

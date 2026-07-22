@@ -2,14 +2,26 @@
  * Pairwise judging: a single seeded judge compares baseline vs candidate
  * bundles blind (A/B label randomization), and a panel of N judges takes a
  * majority vote. The LLM call is injected so the logic stays unit testable.
+ *
+ * Blinding: the A/B flip is derived from (seed, scenario id, salt) so the
+ * arrangement varies across scenarios/iterations; screenshots are staged
+ * under neutral filenames and evidence text is scrubbed of bundle paths so
+ * the prompt cannot reveal which side is the baseline. Real artifact paths
+ * live only in the persisted verdict record (`screenshot_sources`).
  */
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { readJson, writeJsonPlain } from "../lib/json.js";
-import { mulberry32 } from "../lib/random.js";
+import { hashSeed, mulberry32 } from "../lib/random.js";
 
-/** One pairwise LLM call: rendered prompt + attached screenshots -> raw text. */
-export type PairwiseCall = (prompt: string, files: string[]) => string;
+/** One pairwise LLM call: rendered prompt + attached screenshots -> raw text
+ * plus the agent that actually made the call (for truthful provenance). */
+export interface PairwiseCallResult {
+  text: string;
+  agent?: { harness: string; model: string; variant: string | null };
+}
+export type PairwiseCall = (prompt: string, files: string[]) => Promise<PairwiseCallResult>;
 
 export interface PairwiseJudgeOptions {
   call: PairwiseCall;
@@ -20,6 +32,8 @@ export interface PairwiseJudgeOptions {
   protocol: string;
   promptsDir: string;
   seed: number;
+  /** Extra entropy for the blind A/B flip (e.g. the iteration id). */
+  flipSalt?: string;
 }
 
 export type Verdict = "BASELINE" | "CANDIDATE" | "TIE";
@@ -35,6 +49,8 @@ export interface JudgeVerdict {
   protocol_version: string;
   label_mapping: Record<"A" | "B", "BASELINE" | "CANDIDATE">;
   seed: number;
+  /** Neutral attached filename -> real artifact path (traceability lives here, not in the prompt). */
+  screenshot_sources: Record<string, string>;
 }
 
 interface BundleEvidence {
@@ -98,9 +114,18 @@ function formatChecks(checksData: Record<string, any>): string {
   return parts.join("\n");
 }
 
-function describeScreenshots(paths: string[], side: string): string {
-  if (!paths.length) return `(no screenshots captured for Candidate ${side})`;
-  return paths.map((p, idx) => `- Candidate ${side}, frame ${idx + 1}: ${p}`).join("\n");
+function describeScreenshots(neutralNames: string[], side: string): string {
+  if (!neutralNames.length) return `(no screenshots captured for Candidate ${side})`;
+  return neutralNames.map((name, idx) => `- Candidate ${side}, frame ${idx + 1} (attached as ${name})`).join("\n");
+}
+
+/** Scrub bundle paths from evidence text so the prompt cannot de-anonymize a side. */
+function sanitizeEvidenceText(text: string, redactions: Array<[string, string]>): string {
+  let out = text;
+  for (const [needle, token] of redactions) {
+    if (needle) out = out.split(needle).join(token);
+  }
+  return out;
 }
 
 function renderTemplate(template: string, values: Record<string, string>): string {
@@ -152,18 +177,19 @@ export function parseVerdict(responseText: string): { verdict: "A" | "B" | "TIE"
 }
 
 /** Compare baseline vs candidate bundles blind and return a structured verdict. */
-export function judgePairwise(
+export async function judgePairwise(
   scenario: Record<string, any>,
   baselineBundle: { path: string },
   candidateBundle: { path: string },
   options: PairwiseJudgeOptions,
-): JudgeVerdict {
+): Promise<JudgeVerdict> {
   const promptPath = path.join(options.promptsDir, `${options.protocol}.txt`);
   if (!fs.existsSync(promptPath)) throw new Error(`Prompt template not found: ${promptPath}`);
   const template = fs.readFileSync(promptPath, "utf-8");
 
-  // Seeded blind A/B assignment (deterministic per seed).
-  const flip = mulberry32(options.seed)() < 0.5;
+  // Blind A/B assignment: deterministic per (seed, scenario, salt) so the
+  // arrangement varies across scenarios instead of being frozen per seed.
+  const flip = mulberry32(hashSeed(options.seed, String(scenario.id ?? ""), options.flipSalt ?? ""))() < 0.5;
   const [bundleA, bundleB] = flip ? [baselineBundle, candidateBundle] : [candidateBundle, baselineBundle];
   const labelMapping: JudgeVerdict["label_mapping"] = flip
     ? { A: "BASELINE", B: "CANDIDATE" }
@@ -171,41 +197,73 @@ export function judgePairwise(
 
   const evidenceA = loadEvidence(bundleA.path);
   const evidenceB = loadEvidence(bundleB.path);
-  const screenshotFiles = [...evidenceA.screenshots, ...evidenceB.screenshots];
 
-  const prompt = renderTemplate(template, {
-    scenario_id: scenario.id,
-    scenario_name: scenario.name,
-    scenario_description: scenario.description,
-    scenario_prompt: scenario.prompt,
-    expected_behaviors: (scenario.expected_behaviors ?? []).map((behavior: string) => `- ${behavior}`).join("\n"),
-    visual_expectations: scenario.visual_expectations ?? "N/A",
-    screenshots_a: describeScreenshots(evidenceA.screenshots, "A"),
-    console_a: formatConsole(evidenceA.console),
-    checks_a: formatChecks(evidenceA.checks),
-    scene_state_a: JSON.stringify(evidenceA.scene_state, null, 2),
-    screenshots_b: describeScreenshots(evidenceB.screenshots, "B"),
-    console_b: formatConsole(evidenceB.console),
-    checks_b: formatChecks(evidenceB.checks),
-    scene_state_b: JSON.stringify(evidenceB.scene_state, null, 2),
-  });
+  // Stage screenshots under neutral filenames so neither the prompt text nor
+  // the attached files can reveal which side is the baseline.
+  const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), "cesium-eval-judge-"));
+  const screenshotSources: Record<string, string> = {};
+  const stageSide = (sources: string[], side: "a" | "b"): string[] =>
+    sources.map((source, index) => {
+      const neutralName = `candidate-${side}-frame-${index + 1}.png`;
+      const staged = path.join(stagingDir, neutralName);
+      fs.copyFileSync(source, staged);
+      screenshotSources[neutralName] = source;
+      return staged;
+    });
 
-  const responseText = options.call(prompt, screenshotFiles);
-  const parsed = parseVerdict(responseText);
-  const finalVerdict: Verdict = parsed.verdict === "TIE" ? "TIE" : labelMapping[parsed.verdict];
+  try {
+    const stagedA = stageSide(evidenceA.screenshots, "a");
+    const stagedB = stageSide(evidenceB.screenshots, "b");
+    const screenshotFiles = [...stagedA, ...stagedB];
 
-  return {
-    verdict: finalVerdict,
-    rationale: parsed.rationale,
-    harness: options.harness,
-    model_id: options.model ?? `${options.harness}-default`,
-    model_variant: options.variant,
-    screenshot_input_mode: "attached_image_files",
-    screenshots_attached: screenshotFiles.length,
-    protocol_version: options.protocol,
-    label_mapping: labelMapping,
-    seed: options.seed,
-  };
+    const redactions: Array<[string, string]> = [
+      [path.resolve(bundleA.path), "<candidate-a-evidence>"],
+      [path.dirname(path.resolve(bundleA.path)), "<candidate-a-runs>"],
+      [path.resolve(bundleB.path), "<candidate-b-evidence>"],
+      [path.dirname(path.resolve(bundleB.path)), "<candidate-b-runs>"],
+    ];
+    const scrub = (text: string) => sanitizeEvidenceText(text, redactions);
+
+    const prompt = renderTemplate(template, {
+      scenario_id: scenario.id,
+      scenario_name: scenario.name,
+      scenario_description: scenario.description,
+      scenario_prompt: scenario.prompt,
+      expected_behaviors: (scenario.expected_behaviors ?? []).map((behavior: string) => `- ${behavior}`).join("\n"),
+      visual_expectations: scenario.visual_expectations ?? "N/A",
+      screenshots_a: describeScreenshots(stagedA.map((p) => path.basename(p)), "A"),
+      console_a: scrub(formatConsole(evidenceA.console)),
+      checks_a: scrub(formatChecks(evidenceA.checks)),
+      scene_state_a: scrub(JSON.stringify(evidenceA.scene_state, null, 2)),
+      screenshots_b: describeScreenshots(stagedB.map((p) => path.basename(p)), "B"),
+      console_b: scrub(formatConsole(evidenceB.console)),
+      checks_b: scrub(formatChecks(evidenceB.checks)),
+      scene_state_b: scrub(JSON.stringify(evidenceB.scene_state, null, 2)),
+    });
+
+    const response = await options.call(prompt, screenshotFiles);
+    const parsed = parseVerdict(response.text);
+    const finalVerdict: Verdict = parsed.verdict === "TIE" ? "TIE" : labelMapping[parsed.verdict];
+
+    // Provenance: prefer what the invocation reports it actually used (vision
+    // fallback may have rerouted) over the configured judge agent.
+    const actual = response.agent;
+    return {
+      verdict: finalVerdict,
+      rationale: parsed.rationale,
+      harness: actual?.harness ?? options.harness,
+      model_id: actual?.model ?? options.model ?? `${options.harness}-default`,
+      model_variant: actual?.variant ?? options.variant,
+      screenshot_input_mode: "attached_image_files",
+      screenshots_attached: screenshotFiles.length,
+      protocol_version: options.protocol,
+      label_mapping: labelMapping,
+      seed: options.seed,
+      screenshot_sources: screenshotSources,
+    };
+  } finally {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+  }
 }
 
 export interface PanelOptions extends Omit<PairwiseJudgeOptions, "seed"> {
@@ -221,22 +279,23 @@ export interface PanelResult {
   protocol_version: string;
 }
 
-/** Invoke one judge per seed and compute the majority verdict. */
-export function judgePanel(
+/** Invoke one judge per seed (concurrently) and compute the majority verdict. */
+export async function judgePanel(
   scenario: Record<string, any>,
   baselineBundle: { path: string },
   candidateBundle: { path: string },
   options: PanelOptions,
-): PanelResult {
+): Promise<PanelResult> {
   const seeds = options.seeds;
   if (new Set(seeds).size !== seeds.length) {
     throw new Error(`panel seeds must all be different, got ${JSON.stringify(seeds)}`);
   }
 
-  const individual: Array<Record<string, any>> = seeds.map((seed, index) => {
-    try {
-      const verdict = judgePairwise(scenario, baselineBundle, candidateBundle, { ...options, seed });
-      return {
+  const individual: Array<Record<string, any>> = await Promise.all(
+    seeds.map(async (seed, index) => {
+      try {
+        const verdict = await judgePairwise(scenario, baselineBundle, candidateBundle, { ...options, seed });
+        return {
         judge_index: index,
         verdict: verdict.verdict,
         rationale: verdict.rationale,
@@ -246,18 +305,20 @@ export function judgePanel(
         protocol_version: verdict.protocol_version,
         label_mapping: verdict.label_mapping,
         seed: verdict.seed,
+        screenshot_sources: verdict.screenshot_sources,
       };
-    } catch (exc: any) {
-      return {
-        judge_index: index,
-        verdict: null,
-        error: String(exc?.message ?? exc),
-        harness: options.harness,
-        model_id: options.model,
-        seed,
-      };
-    }
-  });
+      } catch (exc: any) {
+        return {
+          judge_index: index,
+          verdict: null,
+          error: String(exc?.message ?? exc),
+          harness: options.harness,
+          model_id: options.model,
+          seed,
+        };
+      }
+    }),
+  );
 
   const valid = individual.filter((entry) => entry.verdict !== null);
   if (valid.length < seeds.length) {
@@ -285,6 +346,14 @@ export function judgePanel(
         majorityVerdict = verdict as Verdict;
         majorityCount = count;
       }
+    }
+    // Ambiguous split between BASELINE and CANDIDATE (e.g. 2-2 on an even
+    // panel): never let map insertion order pick a winner — resolve to TIE.
+    const topCount = Math.max(...counts.values());
+    const leaders = [...counts.entries()].filter(([, count]) => count === topCount).map(([verdict]) => verdict);
+    if (leaders.length > 1 && leaders.some((verdict) => verdict !== "TIE")) {
+      majorityVerdict = "TIE";
+      majorityCount = topCount;
     }
   }
 

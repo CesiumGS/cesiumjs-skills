@@ -2,10 +2,9 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { spawnSync } from "node:child_process";
 import type { HarnessSpec } from "../config/types.js";
 import { AgentCall, HarnessDriver, registerDriver } from "./driver.js";
-import { HarnessInvocationError, HarnessNotFoundError, cleanSubprocessEnv, formatPrompt, which } from "./shared.js";
+import { HarnessInvocationError, HarnessNotFoundError, cleanSubprocessEnv, formatPrompt, runSubprocess, which } from "./shared.js";
 
 /**
  * Optional profile support: `CODEX_PROFILE` (or `CODEX_<ROLE>_PROFILE`,
@@ -47,7 +46,7 @@ class CodexDriver implements HarnessDriver {
     return binary;
   }
 
-  invoke(spec: HarnessSpec, call: CodexCall): string {
+  async invoke(spec: HarnessSpec, call: CodexCall): Promise<string> {
     const binary = this.ensureAvailable(spec);
     const workdir = path.resolve(call.cwd ?? process.cwd());
     const outputPath = path.join(
@@ -83,15 +82,12 @@ class CodexDriver implements HarnessDriver {
 
     let text = "";
     try {
-      const result = spawnSync(binary, argv, {
+      const result = await runSubprocess(binary, argv, {
         input: formatPrompt(call.prompt, call.system),
-        encoding: "utf-8",
-        timeout: call.timeoutSeconds * 1000,
+        timeoutMs: call.timeoutSeconds * 1000,
         cwd: workdir,
         env,
-        maxBuffer: 64 * 1024 * 1024,
       });
-      if (result.error) throw result.error;
       try {
         text = fs.readFileSync(outputPath, "utf-8").trim();
       } catch {

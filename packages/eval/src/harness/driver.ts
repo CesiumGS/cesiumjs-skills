@@ -1,7 +1,8 @@
 /**
- * Harness driver contract. A driver knows how to shell out to one agent CLI;
- * which harnesses exist, their binaries, models, and vision capabilities all
- * live in the registry (config/harness-registry.json) — data, not code.
+ * Harness driver contract. A driver knows how to shell out to one agent CLI.
+ * Harness metadata (binaries, models, vision capabilities) lives in the
+ * registry (config/harness-registry.json); note that a registry entry is only
+ * usable when a driver with the same id is implemented and registered here.
  */
 import type { HarnessSpec } from "../config/types.js";
 
@@ -27,8 +28,9 @@ export interface HarnessDriver {
   ensureAvailable(spec: HarnessSpec): string;
   /** Optionally discover the live default model (e.g. `opencode models ...`). */
   discoverDefaultModel?(spec: HarnessSpec): string | null;
-  /** Run one non-interactive call and return the assistant text. */
-  invoke(spec: HarnessSpec, call: AgentCall): string;
+  /** Run one non-interactive call and return the assistant text (async; the
+   * event loop stays free for signals and concurrent panel calls). */
+  invoke(spec: HarnessSpec, call: AgentCall): Promise<string>;
 }
 
 const DRIVERS = new Map<string, HarnessDriver>();

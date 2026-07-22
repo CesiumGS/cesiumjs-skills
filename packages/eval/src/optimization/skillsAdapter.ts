@@ -7,7 +7,7 @@ import * as path from "node:path";
 import { writeJsonSorted } from "../lib/json.js";
 import { sha256Text } from "../lib/proc.js";
 import { fromRepoRoot } from "../lib/paths.js";
-import { describeAgent, invokeAgent } from "../harness/invoke.js";
+import { invokeAgent } from "../harness/invoke.js";
 import type { EvalContext } from "../config/types.js";
 
 const WRAP_FENCE_RE = /^```(?:javascript|js|ts|typescript)?\s*\n([\s\S]*?)\n```\s*$/;
@@ -64,23 +64,23 @@ export interface CodegenOptions {
 }
 
 /** Generate code for one scenario and write `<eval-id>.js` + `.meta.json`. */
-export function generateScenarioCode(ctx: EvalContext, options: CodegenOptions): CodegenResult {
+export async function generateScenarioCode(ctx: EvalContext, options: CodegenOptions): Promise<CodegenResult> {
   const { scenario } = options;
   if (!scenario.id || !scenario.prompt) throw new Error("scenario must have 'id' and 'prompt' fields");
   if (!fs.existsSync(options.skillPath)) throw new Error(`Skill file not found: ${options.skillPath}`);
 
   const skillContent = fs.readFileSync(options.skillPath, "utf-8");
   const skillContentHash = sha256Text(skillContent);
-  const described = describeAgent(ctx, "codegen", options.overrides);
   const timestamp = new Date().toISOString();
 
-  const responseText = invokeAgent(ctx, "codegen", {
+  const invocation = await invokeAgent(ctx, "codegen", {
     prompt: scenario.prompt,
     system: codegenSystemPrompt(skillContent),
     disableTools: true, // pure code generation; no file access needed
     title: `${options.skill} ${scenario.id} codegen`,
     overrides: options.overrides,
   });
+  const responseText = invocation.text;
   if (!responseText) throw new Error("codegen agent returned an empty response");
 
   const generatedCode = stripCodeFences(responseText);
@@ -95,9 +95,9 @@ export function generateScenarioCode(ctx: EvalContext, options: CodegenOptions):
   fs.writeFileSync(jsPath, generatedCode);
 
   const metadata = {
-    harness: described.harness,
-    model_id: described.model,
-    model_variant: described.variant,
+    harness: invocation.agent.harness,
+    model_id: invocation.agent.model,
+    model_variant: invocation.agent.variant,
     temperature: options.temperature ?? 1.0,
     skill_content_hash: skillContentHash,
     timestamp_utc: timestamp,

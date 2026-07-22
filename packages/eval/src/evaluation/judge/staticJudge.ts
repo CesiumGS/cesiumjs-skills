@@ -14,8 +14,13 @@ import { readJsonOrNull } from "../../lib/json.js";
 import { round } from "../../lib/format.js";
 import { repoRelative } from "../../lib/paths.js";
 
-/** One LLM call: fully-rendered prompt + image files + readable dirs -> raw text. */
-export type JudgeCall = (prompt: string, files: string[], addDirs: string[]) => string;
+/** One LLM call: fully-rendered prompt + image files + readable dirs -> raw
+ * text plus the agent that actually made the call (truthful provenance). */
+export interface JudgeCallResult {
+  text: string;
+  agent?: { harness: string; model: string; variant: string | null };
+}
+export type JudgeCall = (prompt: string, files: string[], addDirs: string[]) => Promise<JudgeCallResult>;
 
 export interface JudgePanelOptions {
   call: JudgeCall;
@@ -261,11 +266,11 @@ function listScreenshots(bundleDir: string): string[] {
 }
 
 /** Run the judge panel over one bundle and emit a `visual_review_item`. */
-export function judgeRender(
+export async function judgeRender(
   caseMeta: Record<string, any>,
   bundleDir: string,
   options: JudgePanelOptions,
-): Record<string, any> {
+): Promise<Record<string, any>> {
   const reviewer = options.reviewer ?? "screenshot-visual-judge";
   const skill = caseMeta.skill ?? "";
   const rawCaseId = String(caseMeta.id ?? caseMeta.case_id ?? "");
@@ -331,46 +336,49 @@ export function judgeRender(
 
   const addDir = path.resolve(bundleDir);
   const screenshotFiles = screenshots.map((p) => path.resolve(p));
-  const perJudge: Array<Record<string, any>> = [];
-  const parsedResults: Array<Record<string, any> | null> = [];
 
-  for (let idx = 0; idx < options.nJudges; idx++) {
-    const lens = LENSES[idx % LENSES.length];
-    const seed = seeds[idx];
-    const systemPrompt = systemTemplate.split("{lens}").join(lens);
-    const fullPrompt = `${systemPrompt}\n\n[Deterministic judge seed: ${seed}]\n\n${userPrompt}`;
-    const record: Record<string, any> = { judge_index: idx, seed, lens };
-    let parsed: Record<string, any> | null = null;
-    let raw = "";
-    try {
-      raw = options.call(fullPrompt, screenshotFiles, [addDir]);
-      parsed = parseJudgeJson(raw);
-    } catch (exc: any) {
-      record.error = `${exc?.constructor?.name ?? "Error"}: ${exc?.message ?? exc}`;
-    }
+  const judged = await Promise.all(
+    Array.from({ length: options.nJudges }, async (_, idx) => {
+      const lens = LENSES[idx % LENSES.length];
+      const seed = seeds[idx];
+      const systemPrompt = systemTemplate.split("{lens}").join(lens);
+      const fullPrompt = `${systemPrompt}\n\n[Deterministic judge seed: ${seed}]\n\n${userPrompt}`;
+      const record: Record<string, any> = { judge_index: idx, seed, lens };
+      let parsed: Record<string, any> | null = null;
+      let raw = "";
+      try {
+        const response = await options.call(fullPrompt, screenshotFiles, [addDir]);
+        raw = response.text;
+        if (response.agent) record.agent = response.agent;
+        parsed = parseJudgeJson(raw);
+      } catch (exc: any) {
+        record.error = `${exc?.constructor?.name ?? "Error"}: ${exc?.message ?? exc}`;
+      }
 
-    if (parsed === null) {
-      record.parsed = false;
-      record.error ??= "unparseable judge response";
-      record.raw_excerpt = raw.slice(0, 500);
-    } else {
-      record.parsed = true;
-      record.observed = parsed.observed ?? null;
-      record.dimensions = Object.fromEntries(
-        Object.keys(DIMENSION_WEIGHTS).map((dim) => {
-          const entry = parsed!.dimensions?.[dim] ?? {};
-          return [dim, { score: clampScore(entry.score), justification: entry.justification ?? null, failure_modes: entry.failure_modes ?? [] }];
-        }),
-      );
-      record.failure_modes_detected = parsed.failure_modes_detected ?? [];
-      record.overall = parsed.overall ?? null;
-      record.band = parsed.band ?? null;
-      record.confidence = parsed.confidence ?? null;
-      record.rationale = parsed.rationale ?? null;
-    }
-    perJudge.push(record);
-    parsedResults.push(parsed);
-  }
+      if (parsed === null) {
+        record.parsed = false;
+        record.error ??= "unparseable judge response";
+        record.raw_excerpt = raw.slice(0, 500);
+      } else {
+        record.parsed = true;
+        record.observed = parsed.observed ?? null;
+        record.dimensions = Object.fromEntries(
+          Object.keys(DIMENSION_WEIGHTS).map((dim) => {
+            const entry = parsed!.dimensions?.[dim] ?? {};
+            return [dim, { score: clampScore(entry.score), justification: entry.justification ?? null, failure_modes: entry.failure_modes ?? [] }];
+          }),
+        );
+        record.failure_modes_detected = parsed.failure_modes_detected ?? [];
+        record.overall = parsed.overall ?? null;
+        record.band = parsed.band ?? null;
+        record.confidence = parsed.confidence ?? null;
+        record.rationale = parsed.rationale ?? null;
+      }
+      return { record, parsed };
+    }),
+  );
+  const perJudge: Array<Record<string, any>> = judged.map((entry) => entry.record);
+  const parsedResults: Array<Record<string, any> | null> = judged.map((entry) => entry.parsed);
 
   const agg = aggregate(parsedResults);
   if (agg.nParsed === 0) {
@@ -552,5 +560,5 @@ export function fakeJudgeCall(): JudgeCall {
     confidence: "high",
     rationale: "Live scene with correct, well-framed subject matching the prompt.",
   });
-  return () => canned;
+  return () => Promise.resolve({ text: canned });
 }

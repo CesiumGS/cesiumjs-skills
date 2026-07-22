@@ -604,6 +604,21 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
         sceneState = { available: false, error: "Failed to extract scene state" };
       }
 
+      let webglRenderer: string | null = null;
+      try {
+        webglRenderer = (await page.evaluate(`
+          (() => {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+            if (!gl) return null;
+            const ext = gl.getExtension('WEBGL_debug_renderer_info');
+            return String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+          })()
+        `)) as string | null;
+      } catch {
+        webglRenderer = null;
+      }
+
       await page.close();
 
       const consoleJsonPath = path.join(run.runDir, "console.json");
@@ -660,6 +675,7 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
         browser_viewport: browserConfig.viewport,
         playwright_version: playwrightVersion,
         chromium_version: chromiumVersion,
+        webgl_renderer: webglRenderer,
         timestamp_utc: timestampUtc,
         artifact_hashes: artifactHashes,
       };

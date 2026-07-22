@@ -11,6 +11,9 @@ Rule Fired: {last_rule}
 Rationale: {last_rationale}
 Counts: Wins={wins}, Losses={losses}, Ties={ties}
 
+### Environment Notes
+{environment_notes}
+
 ### Recent Evaluation History (Last {history_count} Iterations)
 
 {evaluation_history}

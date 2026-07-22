@@ -1,3 +1,14 @@
+/** FNV-1a hash of the given parts, for deriving per-trial PRNG seeds. */
+export function hashSeed(...parts: Array<string | number>): number {
+  const text = parts.map(String).join("\u0000");
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
 /** Small deterministic PRNG (mulberry32) for seeded, reproducible choices. */
 export function mulberry32(seed: number): () => number {
   let state = seed >>> 0;

@@ -1,6 +1,7 @@
 /** Shared subprocess plumbing for harness drivers. */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { spawn } from "node:child_process";
 
 /**
  * Secrets that must never reach an agent-CLI subprocess (API-key billing must
@@ -46,6 +47,65 @@ export function which(command: string): string | null {
     }
   }
   return null;
+}
+
+export interface SubprocessOptions {
+  input?: string;
+  timeoutMs: number;
+  cwd?: string;
+  env?: Record<string, string>;
+  maxBuffer?: number;
+}
+
+export interface SubprocessResult {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+/**
+ * Run one subprocess asynchronously (the event loop stays free, so SIGINT
+ * handling and concurrent panel calls work). Rejects on spawn failure,
+ * timeout, or output overflow; a non-zero exit is returned, not thrown.
+ */
+export function runSubprocess(binary: string, argv: string[], options: SubprocessOptions): Promise<SubprocessResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(binary, argv, { cwd: options.cwd, env: options.env, stdio: ["pipe", "pipe", "pipe"] });
+    const limit = options.maxBuffer ?? 64 * 1024 * 1024;
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const fail = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.kill("SIGKILL");
+      reject(error);
+    };
+    const timer = setTimeout(
+      () => fail(new Error(`subprocess timed out after ${Math.round(options.timeoutMs / 1000)}s: ${binary}`)),
+      options.timeoutMs,
+    );
+    child.stdout.setEncoding("utf-8");
+    child.stderr.setEncoding("utf-8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+      if (stdout.length > limit) fail(new Error(`subprocess stdout exceeded ${limit} bytes: ${binary}`));
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+      if (stderr.length > limit) fail(new Error(`subprocess stderr exceeded ${limit} bytes: ${binary}`));
+    });
+    child.on("error", fail);
+    child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ status: code, stdout, stderr });
+    });
+    if (options.input !== undefined) child.stdin.write(options.input);
+    child.stdin.end();
+  });
 }
 
 export class HarnessNotFoundError extends Error {}
