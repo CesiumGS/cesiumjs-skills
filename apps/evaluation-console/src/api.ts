@@ -49,10 +49,12 @@ export interface LaunchRequest {
   kind: "audit";
   skills?: string[]; // omitted or empty = all skills
   judge: boolean;
-  /** Judge adapter: any registry harness id, or "fake" for CI-style smoke runs. */
+  /** Judge adapter (audit --adapter): any registry harness id, or "fake" for CI-style smoke runs. */
   adapter: string;
   n_judges: number;
   judge_model?: string | null;
+  /** Codegen provenance stamp (audit --harness): the harness that produced the audited baselines. */
+  harness?: string | null;
   threshold?: number | null;
   bundle_root?: string | null;
 }
@@ -65,6 +67,8 @@ export interface LaunchRecord {
   judge: boolean;
   adapter: string;
   n_judges: number;
+  judge_model?: string | null;
+  harness?: string | null;
   journal: string;
   log: string;
   output_dir: string;

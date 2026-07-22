@@ -509,8 +509,10 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
 
   const known = availableSkills();
   const requested = payload.skills;
+  const allRequested =
+    requested === null || requested === undefined || (Array.isArray(requested) && !requested.length) || requested === "all" || requested === "ALL";
   let skills: string[];
-  if (requested === null || requested === undefined || (Array.isArray(requested) && !requested.length) || requested === "all" || requested === "ALL") {
+  if (allRequested) {
     skills = known;
   } else {
     if (!Array.isArray(requested)) throw new Error("skills must be a list of skill ids or omitted for all");
@@ -529,6 +531,17 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   const nJudges = Number(payload.n_judges ?? ctx.config.judgePanel.size);
   if (!Number.isInteger(nJudges)) throw new Error("n_judges must be an integer");
   if (nJudges < 1 || nJudges > 5) throw new Error("n_judges must be between 1 and 5");
+
+  // Optional codegen provenance stamp (mirrors audit --harness). Must be a real
+  // registry harness: "fake" is a judge-lane smoke adapter, not a codegen origin.
+  let codegenHarness: string | null = null;
+  if (payload.harness !== undefined && payload.harness !== null && payload.harness !== "") {
+    codegenHarness = String(payload.harness);
+    const validHarnesses = new Set(ctx.registry.harnesses.map((harness) => harness.id));
+    if (!validHarnesses.has(codegenHarness)) {
+      throw new Error(`unknown harness: '${codegenHarness}' (supported: ${[...validHarnesses].sort().join(", ")})`);
+    }
+  }
 
   // Optional advanced flags (mirror the audit CLI surface).
   let judgeModel: string | null = null;
@@ -556,13 +569,14 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   const journalPath = path.join(outDir, AUDIT_JOURNAL_NAME);
   const logPath = path.join(outDir, "launch.log");
 
-  // Re-invoke this same CLI entry point as a detached audit run.
+  // Re-invoke this same CLI entry point as a detached audit run. "--skills all"
+  // stays literal so the recorded argv reads the way a human would type it.
   const cliEntry = path.resolve(fileURLToPath(import.meta.url), "..", "..", "cli", "main.js");
   const argv = [
     cliEntry,
     "audit",
     "--skills",
-    skills.join(","),
+    allRequested ? "all" : skills.join(","),
     "--journal",
     journalPath,
     "--output-dir",
@@ -574,6 +588,7 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   ];
   if (!judge) argv.push("--no-judge");
   if (judgeModel) argv.push("--judge-model", judgeModel);
+  if (codegenHarness) argv.push("--harness", codegenHarness);
   if (threshold !== null) argv.push("--threshold", String(threshold));
   if (bundleRoot) argv.push("--bundle-root", bundleRoot);
 
@@ -595,6 +610,7 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     adapter,
     n_judges: nJudges,
     judge_model: judgeModel,
+    harness: codegenHarness,
     threshold,
     bundle_root: bundleRoot,
     argv: [process.execPath, ...argv],
