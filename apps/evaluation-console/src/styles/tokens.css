@@ -93,8 +93,12 @@
   --reject: #e5534b;
   --tie: #93a1ba; /* AA-verified: min 5.28:1 across used backgrounds */
 
-  --live: #7c5cff; /* the ONE reserved accent — "running now" */
-  --live-bg: #1c1838;
+  /* the ONE reserved accent — "running now". Cesium logomark blue, so the
+     live pulse speaks the same brand language as the rail chrome. AA-verified:
+     ≥ 4.5:1 against canvas, surface, surface-2, surface-3, and live-bg. */
+  --live: #6dabe4;
+  --live-bg: #12233c;
+  --live-contrast: #0a101c; /* text on a solid --live fill (7.79:1) */
 
   /* harness — one reserved CATEGORICAL hue for the tested-harness dimension. */
   --harness: #8aa0ff;
@@ -150,8 +154,10 @@
   --reject: #c13b33;
   --tie: #5d6879; /* AA-verified: min 4.61:1 across used backgrounds */
 
-  --live: #5b3df5;
-  --live-bg: #eee9ff;
+  /* Cesium blue, deepened for AA (≥ 4.5:1) on the light surfaces. */
+  --live: #2b689f;
+  --live-bg: #e3eef9;
+  --live-contrast: #ffffff; /* text on a solid --live fill (5.86:1) */
 
   --brand-blue: #3e87c9;
   --brand-green: #5c8639;

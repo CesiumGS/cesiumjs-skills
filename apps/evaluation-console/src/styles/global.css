@@ -3615,7 +3615,7 @@ button.verb-btn:disabled {
   position: relative;
   height: 100%;
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--live), var(--brand-blue));
+  background: linear-gradient(90deg, var(--brand-blue), var(--brand-green));
   transition: width 700ms var(--ease);
   overflow: hidden;
 }
@@ -4526,7 +4526,7 @@ button.chart-pt:focus-visible {
   gap: 8px;
   font-size: var(--fs-100);
   font-weight: 600;
-  color: #fff;
+  color: var(--live-contrast);
   background: var(--live);
   border: none;
   border-radius: var(--r-2);

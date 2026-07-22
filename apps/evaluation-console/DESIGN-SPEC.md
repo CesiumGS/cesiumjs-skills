@@ -293,7 +293,7 @@ gg / G          top (worst) / bottom                     Esc     up one altitude
 | `--ink-human` (magenta) | `#E26FB0` | `#B23A7E` | human override hairline |
 | `--pass` / `--fail` / `--crit` | `#3FB37F` / `#E5534B` / `#FF6B5E`+ring | `#1E8A5A` / `#C13B33` / +ring | check states |
 | `--unknown` (slate, dashed) | `#5A6473` | `#8A93A1` | not_reviewed / needs_review |
-| `--live` (accent pulse) | `#7C5CFF` | `#5B3DF5` | "running now" — the ONE reserved accent |
+| `--live` (accent pulse) | `#6DABE4` | `#2B689F` | "running now" — the ONE reserved accent, drawn from the Cesium logomark blue |
 
 Color is **never the sole signal**: steel/amber/magenta each carry a unit (`%`, `/10`), a glyph (▣ machine, ◈ eye, ⚑ human), or a shape (bar/pip/ring). Status carries a glyph (✓/✗/◌/!) so grayscale and colorblind users stay legible (WCAG 1.4.1).
 
