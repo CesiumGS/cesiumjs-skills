@@ -4318,6 +4318,7 @@ button.chart-pt:focus-visible {
 .launch-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
   gap: var(--sp-4) var(--sp-5);
   margin-top: var(--sp-3);
 }
@@ -4359,8 +4360,14 @@ button.chart-pt:focus-visible {
   border: 1px solid var(--hairline);
   border-radius: var(--r-2);
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+  transition: border-color var(--t-fast);
 }
+.launch-role:focus-within { border-color: var(--hairline-strong); }
 .launch-role legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--fs-50);
   font-weight: var(--fw-semibold);
   letter-spacing: 0.06em;
@@ -4368,6 +4375,7 @@ button.chart-pt:focus-visible {
   color: var(--text-2);
   padding: 0 var(--sp-2);
 }
+.launch-role legend svg { color: var(--live); }
 .launch-hint {
   margin-top: var(--sp-2);
   font-size: var(--fs-50);
@@ -4427,6 +4435,40 @@ button.chart-pt:focus-visible {
   background: color-mix(in srgb, var(--live) 10%, transparent);
 }
 .lk-chip:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Harness chips carry product names, not identifiers: sans face, roomier pill. */
+.lk-chip.lk-harness {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-medium);
+  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lk-chip-note {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.lk-chip.on .lk-chip-note { color: color-mix(in srgb, var(--live) 70%, var(--text-3)); }
+.launch-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-50);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  padding: 2px 9px;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.launch-copy:hover { border-color: var(--brand); color: var(--text); }
+.launch-copy.copied { color: var(--pass); border-color: var(--pass); }
 .judge-toggle {
   display: inline-flex;
   align-items: center;

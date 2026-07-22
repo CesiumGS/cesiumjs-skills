@@ -1,6 +1,6 @@
 import { useStore } from "../store";
 import type { IterationSummary, JournalEvent, ScenarioDetail } from "../types";
-import { modelShort, relativeTime } from "../lib/format";
+import { harnessLabel, modelShort, relativeTime } from "../lib/format";
 import { LoopBadge, Pct, ProvGlyph, ScenarioChip } from "./primitives";
 
 /** The loaded iteration's recorded codegen provenance — or an honest "unrecorded". */
@@ -23,7 +23,7 @@ function IterationProvenanceChips() {
       {p.harness ? (
         <span className="harness-pill" data-harness={p.harness}>
           <span className="harness-dot" data-harness={p.harness} aria-hidden />
-          {p.harness}
+          {harnessLabel(p.harness)}
         </span>
       ) : (
         <span className="harness-pill unrecorded">Harness ?</span>

@@ -41,6 +41,22 @@ export function skillLabel(skill: string): string {
   return overrides[raw] ?? titleCase(raw);
 }
 
+/** Official product capitalization for harness ids. Display sites use these
+ *  Title Case names; only real identifiers (CLI flags, provenance commands,
+ *  meta sidecars) keep the raw lowercase id. */
+const HARNESS_LABELS: Record<string, string> = {
+  codex: "Codex",
+  opencode: "OpenCode",
+  copilot: "GitHub Copilot",
+  "github-copilot": "GitHub Copilot",
+  fake: "Fake (CI Smoke)"
+};
+
+export function harnessLabel(id: string | null | undefined): string {
+  if (!id) return "Unknown";
+  return HARNESS_LABELS[id] ?? titleCase(id);
+}
+
 // Maps a visual status / decision into the four color channels used in CSS.
 export function decisionTone(d: Decision): "accept" | "flag" | "defer" {
   return d;

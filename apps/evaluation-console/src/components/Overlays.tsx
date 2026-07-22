@@ -4,6 +4,7 @@ import { useStore } from "../store";
 import { artifactUrl } from "../api";
 import type { CaseView, IterationSummary, RunSummary, SkillOverview, Station } from "../types";
 import { LoopBadge, Pct } from "./primitives";
+import { harnessLabel } from "../lib/format";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
 /* ============================================================================
@@ -416,7 +417,7 @@ function HarnessOverlay() {
             data-harness={h === "all" ? undefined : h}
             onClick={() => setActiveHarness(h === "all" ? null : h)}
           >
-            {h === "all" ? "All" : h}
+            {h === "all" ? "All" : h === "unknown" ? "Unknown" : harnessLabel(h)}
             {h !== "all" && (
               <span className="hc-count">{aggs.find((a) => a.harness === h)?.runCount ?? 0}</span>
             )}
@@ -424,7 +425,7 @@ function HarnessOverlay() {
         ))}
         {judge && (
           <span className="harness-judge-note" title="Qualitative judge harness (separate from the tested codegen harness)">
-            Judge: <span className="mono">{judge}</span>
+            Judge: {harnessLabel(judge)}
           </span>
         )}
       </div>
@@ -468,7 +469,7 @@ function HarnessOverlay() {
               >
                 <th scope="row" className="hc-name">
                   <span className={`harness-dot${unknown ? " unknown" : ""}`} data-harness={unknown ? undefined : a.harness} aria-hidden />
-                  {a.harness}
+                  {unknown ? "Unknown" : harnessLabel(a.harness)}
                 </th>
                 <td className="mono hc-num">{a.runCount}</td>
                 <td className="hc-rate">
@@ -512,13 +513,13 @@ function HarnessOverlay() {
       </table>
       {aggs.length < 2 && (
         <div className="empty-note" style={{ marginTop: "var(--sp-2)" }}>
-          Only one harness discovered{activeHarness ? ` (${activeHarness})` : ""}. Run another harness to compare.
+          Only one harness discovered{activeHarness ? ` (${harnessLabel(activeHarness)})` : ""}. Run another harness to compare.
         </div>
       )}
 
       {/* SWITCH target — the scoped run list; Enter (or click) loads a run. */}
       <div style={{ fontSize: "var(--fs-50)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-3)", margin: "var(--sp-4) 0 var(--sp-2)" }}>
-        Runs{activeHarness ? ` · ${activeHarness}` : " · All harnesses"} <span className="kbd">↑</span><span className="kbd">↓</span> <span className="kbd">↵</span> Load · <span className="kbd">b</span> Baseline
+        Runs{activeHarness ? ` · ${harnessLabel(activeHarness)}` : " · All harnesses"} <span className="kbd">↑</span><span className="kbd">↓</span> <span className="kbd">↵</span> Load · <span className="kbd">b</span> Baseline
       </div>
       <div className="harness-runlist">
         {list.length === 0 ? (

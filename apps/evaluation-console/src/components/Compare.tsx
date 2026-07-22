@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Eye, EyeOff, Star } from "lucide-react";
 import { useStore } from "../store";
 import {
   fmtDuration,
+  harnessLabel,
   modelShort,
   pluralize,
   priceBandIndex,
@@ -46,7 +47,7 @@ export function HarnessChip({ harness }: { harness: string }) {
       ? "Synthetic"
       : harness === "mixed"
         ? "Real + Synthetic"
-        : harness;
+        : harnessLabel(harness);
   return (
     <span
       className={`harness-pill${unknown ? " unrecorded" : ""}${synthetic ? " synthetic" : ""}`}

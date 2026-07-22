@@ -5,6 +5,8 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  Copy,
+  Cpu,
   Eye,
   EyeOff,
   Rocket,
@@ -14,7 +16,7 @@ import {
 import { useStore } from "../store";
 import { loadLaunchSkills } from "../api";
 import type { LivePhase, LiveRun, LiveTrial } from "../types";
-import { fmtDuration, pluralize, relativeTime, skillLabel } from "../lib/format";
+import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel } from "../lib/format";
 
 /* ============================================================================
    LIVE — the in-progress monitor for eval runs executing on this machine NOW.
@@ -306,15 +308,20 @@ function LaunchPanel() {
   const [bundleRoot, setBundleRoot] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // The registry is the single source of truth for harnesses and their model
-  // catalogs; "fake" is the CI smoke harness the server also accepts.
-  const judgeHarnesses = [...(registry?.harnesses.map((h) => h.id) ?? ["opencode", "codex"]), "fake"];
-  const codegenHarnesses = registry?.harnesses.filter((h) => h.roles.includes("codegen")).map((h) => h.id) ?? [
-    "opencode",
-    "codex"
-  ];
-  const judgeHarnessModels = registry?.harnesses.find((h) => h.id === judgeHarness)?.models ?? [];
+  // catalogs. The server also accepts a hidden "fake" smoke judge, but that
+  // lane exists for CI, not console launches, so it is not offered here.
+  const fallbackHarnesses = ["codex", "opencode", "copilot"];
+  const judgeHarnesses =
+    registry?.harnesses.filter((h) => h.roles.some((r) => r.startsWith("judge"))).map((h) => h.id) ??
+    fallbackHarnesses;
+  const codegenHarnesses =
+    registry?.harnesses.filter((h) => h.roles.includes("codegen")).map((h) => h.id) ?? fallbackHarnesses;
+  const harnessSpec = (id: string) => registry?.harnesses.find((h) => h.id === id);
+  const judgeHarnessSpec = harnessSpec(judgeHarness);
+  const judgeHarnessModels = judgeHarnessSpec?.models ?? [];
 
   useEffect(() => {
     let disposed = false;
@@ -428,7 +435,9 @@ function LaunchPanel() {
         </div>
 
         <fieldset className="launch-role">
-          <legend>Code Generation</legend>
+          <legend>
+            <Cpu size={11} aria-hidden /> Code Generation
+          </legend>
           <div className="launch-field">
             <div className="launch-label">
               Codegen Harness <code className="launch-flag">--codegen-harness</code>
@@ -441,18 +450,18 @@ function LaunchPanel() {
                 onClick={() => setCodegenHarness("")}
                 title="Stamp the config default codegen harness"
               >
-                auto
+                Auto
               </button>
               {codegenHarnesses.map((h) => (
                 <button
                   key={h}
-                  className={`lk-chip${codegenHarness === h ? " on" : ""}`}
+                  className={`lk-chip lk-harness${codegenHarness === h ? " on" : ""}`}
                   role="radio"
                   aria-checked={codegenHarness === h}
                   onClick={() => setCodegenHarness(h)}
-                  title={`Stamp ${h} as the harness that produced the audited baselines`}
+                  title={`Stamp ${harnessSpec(h)?.name ?? harnessLabel(h)} as the harness that produced the audited baselines`}
                 >
-                  {h}
+                  {harnessLabel(h)}
                 </button>
               ))}
             </div>
@@ -464,7 +473,9 @@ function LaunchPanel() {
         </fieldset>
 
         <fieldset className="launch-role">
-          <legend>Visual Judging</legend>
+          <legend>
+            <Eye size={11} aria-hidden /> Visual Judging
+          </legend>
           <div className="launch-field">
             <div className="launch-label">
               Judge Panel <code className="launch-flag">--no-judge</code>
@@ -506,23 +517,34 @@ function LaunchPanel() {
               Judge Harness <code className="launch-flag">--judge-harness</code>
             </div>
             <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judge-harness-label">
-              {judgeHarnesses.map((a) => (
-                <button
-                  key={a}
-                  className={`lk-chip${judgeHarness === a ? " on" : ""}`}
-                  role="radio"
-                  aria-checked={judgeHarness === a}
-                  disabled={!judge}
-                  onClick={() => {
-                    setJudgeHarness(a);
-                    setJudgeModel("");
-                  }}
-                  title={a === "fake" ? "Canned CI smoke responses, no real LLM calls" : `Judge via the ${a} harness`}
-                >
-                  {a}
-                </button>
-              ))}
+              {judgeHarnesses.map((a) => {
+                const spec = harnessSpec(a);
+                const textOnly = spec ? !spec.multimodal : false;
+                return (
+                  <button
+                    key={a}
+                    className={`lk-chip lk-harness${judgeHarness === a ? " on" : ""}`}
+                    role="radio"
+                    aria-checked={judgeHarness === a}
+                    disabled={!judge}
+                    onClick={() => {
+                      setJudgeHarness(a);
+                      setJudgeModel("");
+                    }}
+                    title={spec?.vision_note ?? `Judge via the ${harnessLabel(a)} harness`}
+                  >
+                    {harnessLabel(a)}
+                    {textOnly && <span className="lk-chip-note">text-only</span>}
+                  </button>
+                );
+              })}
             </div>
+            {judge && judgeHarnessSpec && !judgeHarnessSpec.multimodal && (
+              <div className="launch-hint">
+                {harnessLabel(judgeHarness)} models are text-only here, so screenshot judging reroutes each image call
+                to {harnessLabel(judgeHarnessSpec.vision_fallback_to ?? "codex")} automatically.
+              </div>
+            )}
           </div>
 
           <div className="launch-field">
@@ -532,7 +554,7 @@ function LaunchPanel() {
               </span>
               <select
                 value={judgeModel}
-                disabled={!judge || judgeHarness === "fake"}
+                disabled={!judge}
                 onChange={(e) => setJudgeModel(e.target.value)}
               >
                 <option value="">auto (discovered)</option>
@@ -601,6 +623,23 @@ function LaunchPanel() {
         <div className="launch-field launch-span">
           <div className="launch-label">
             <Terminal size={11} aria-hidden /> Command
+            <span className="spacer" />
+            <button
+              className={`launch-copy${copied ? " copied" : ""}`}
+              onClick={() => {
+                navigator.clipboard
+                  .writeText(cliPreview)
+                  .then(() => {
+                    setCopied(true);
+                    window.setTimeout(() => setCopied(false), 1600);
+                  })
+                  .catch(() => {});
+              }}
+              title="Copy the exact CLI invocation this launch runs"
+            >
+              {copied ? <CheckCircle2 size={11} aria-hidden /> : <Copy size={11} aria-hidden />}
+              {copied ? "Copied" : "Copy"}
+            </button>
           </div>
           <pre className="launch-cmd mono">{cliPreview}</pre>
         </div>
@@ -625,12 +664,12 @@ function LaunchPanel() {
                 </span>
                 <span>
                   {judge
-                    ? `Judging on · ${nJudges}-judge panel · harness ${judgeHarness} · model ${judgeModel || "auto"}${
-                        judgeHarness === "fake" ? " (no real LLM calls)" : " (real LLM calls per case)"
-                      }`
+                    ? `Judging on · ${nJudges}-judge panel · ${harnessLabel(judgeHarness)} harness · model ${
+                        judgeModel || "auto"
+                      } (real LLM calls per case)`
                     : "Checks only · no judge calls"}
                 </span>
-                {codegenHarness && <span>Codegen stamp: {codegenHarness}</span>}
+                {codegenHarness && <span>Codegen stamp: {harnessLabel(codegenHarness)}</span>}
                 {threshold && <span>Pass threshold {threshold}</span>}
                 <span className="launch-preflight-note">
                   Runs as a detached process. Cancel it any time from its run card.

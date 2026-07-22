@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, Cpu, Bot, LayoutDashboard, Rocket, ChevronDown, Eye, EyeOff, TrendingUp, RotateCcw } from "lucide-react";
 import { useStore } from "../store";
 import type { Station } from "../types";
-import { pluralize, relativeTime } from "../lib/format";
+import { harnessLabel, pluralize, relativeTime } from "../lib/format";
 import { ProvGlyph } from "./primitives";
 import { liveRunTitle } from "./Live";
 
@@ -72,7 +72,7 @@ function sourceLabel(source: string | undefined, harness: string | undefined): {
       hint: "This run scores a mix of real agent output and hand-authored test fixtures in a single sweep."
     };
   if (harness && harness !== "unknown")
-    return { label: harness, cls: "agent", hint: `Real agent output, generated with the ${harness} harness.` };
+    return { label: harnessLabel(harness), cls: "agent", hint: `Real agent output, generated with the ${harnessLabel(harness)} harness.` };
   return {
     label: "Origin Unknown",
     cls: "unknown",

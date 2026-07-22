@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Copy } from "lucide-react";
 import { useStore } from "../store";
-import { modelShort, relativeTime } from "../lib/format";
+import { harnessLabel, modelShort, relativeTime } from "../lib/format";
 import { LoopBadge, MetaTag, Pill, UnknownChip } from "./primitives";
 import type { BaselineDiff, IterationSummary, SkillOverview } from "../types";
 
@@ -158,7 +158,7 @@ function ChangedVsBaseline({ diff }: { diff: BaselineDiff | null }) {
             <option value="">None</option>
             {otherRuns.map((r) => (
               <option key={r.run_id} value={r.run_id}>
-                {r.run_id.slice(0, 34)} · {(r.harness ?? "unknown")} · {r.timestamp_utc.slice(0, 16).replace("T", " ")}
+                {r.run_id.slice(0, 34)} · {harnessLabel(r.harness ?? "unknown")} · {r.timestamp_utc.slice(0, 16).replace("T", " ")}
               </option>
             ))}
           </select>
