@@ -6,7 +6,7 @@
  *
  * The LLM call is injected (`JudgeCall`), so the panel logic is pure and unit
  * testable; production wires it to the configured judge agent, tests and the
- * `fake` adapter inject canned responses.
+ * `fake` judge harness inject canned responses.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -540,7 +540,7 @@ function fallbackItem(
   };
 }
 
-/** Canned "live, correct render" response for smoke runs and CI (`--adapter fake`). */
+/** Canned "live, correct render" response for smoke runs and CI (`--judge-harness fake`). */
 export function fakeJudgeCall(): JudgeCall {
   const canned = JSON.stringify({
     observed: "A loaded 3D globe with the intended subject centered in frame.",

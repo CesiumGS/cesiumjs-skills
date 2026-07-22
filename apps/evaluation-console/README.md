@@ -23,7 +23,7 @@ so the lifecycle is one continuous journey instead of a tab switch:
 | **5 Promote** | The guarded hand-off of a KEEP candidate to the live `SKILL.md`. |
 | **6 Models** | Its own **Insights** rail station beside the lifecycle. KPI tiles (models available and exercised, pipeline default, best qualified win rate, iterations), the observed model-performance table (keep rate, win rate ± σ stability, average wall clock, recency, drill into Optimize), the per-skill optimization trend, and the declared model catalog per harness: grouped by vendor and sorted newest-release-first, with effort-aware cost meters, per-harness vision truth (a single banner carries the provider kill-switch), release dates and context windows, an exercised/never-run filter, and an Observed column that joins each row back to the optimization evidence on disk. |
 | **8 Harnesses** | The second **Insights** station. KPI tiles (harness count, runs, pass rate, average score, multimodal coverage), registry capability cards, and the runs-by-harness leaderboard. |
-| **7 Live** | Real-time progress of eval runs **while they are still running** — and the place to **launch** one. The server tails each run's progress journal (`journal.jsonl` for optimization loops, `progress.jsonl` for baseline audits) and counts artifacts on disk, so the animated progress bar, phase pipeline, and per-case board reflect only what has verifiably happened — agent phases earn credit at completion, never by guess. The **Launch an Eval Run** panel mirrors the real `cesium-eval audit` flag surface, grouped by role: skills (`--skills`), a Code Generation group (`--harness` provenance stamp; the codegen model is recovered from each baseline's meta sidecar, since audit has no model flag), and a Visual Judging group (`--no-judge` toggle, `--adapter`, `--judge-model`, `--n-judges`), with visual judging **on by default** (deterministic-only is an explicit downgrade with a warning) and a live command preview of the exact CLI invocation. It then POSTs to the server which spawns `cesium-eval audit --journal` detached. The UI polls every 2.5 s while a run is active; the Dashboard grows a "happening now" banner, the top strip shows a live pill, and the rail badge pulses. When a run finishes, a toast fires and the console refreshes so it lands in Recent Runs automatically. Runs quiet for 30 min are demoted to "stalled". |
+| **7 Live** | Real-time progress of eval runs **while they are still running** — and the place to **launch** one. The server tails each run's progress journal (`journal.jsonl` for optimization loops, `progress.jsonl` for baseline audits) and counts artifacts on disk, so the animated progress bar, phase pipeline, and per-case board reflect only what has verifiably happened — agent phases earn credit at completion, never by guess. The **Launch an Eval Run** panel mirrors the real `cesium-eval audit` flag surface, grouped by role: skills (`--skills`), a Code Generation group (`--codegen-harness` provenance stamp; the codegen model is recovered from each baseline's meta sidecar, since audit has no model flag), and a Visual Judging group (`--no-judge` toggle, `--judge-harness`, `--judge-model`, `--n-judges`), with visual judging **on by default** (deterministic-only is an explicit downgrade with a warning) and a live command preview of the exact CLI invocation. It then POSTs to the server which spawns `cesium-eval audit --journal` detached. The UI polls every 2.5 s while a run is active; the Dashboard grows a "happening now" banner, the top strip shows a live pill, and the rail badge pulses. When a run finishes, a toast fires and the console refreshes so it lands in Recent Runs automatically. Runs quiet for 30 min are demoted to "stalled". |
 
 ## The harness/model registry
 
@@ -98,7 +98,7 @@ Dev with hot reload: `npm run dev` (Vite at 127.0.0.1:5174, proxying `/api` to 8
 ## Launching runs & progress journals
 
 The Live station can start a baseline audit from the browser. `POST /api/live/launch`
-(`{"kind": "audit", "skills": [...], "judge": true, "n_judges": 3, "adapter": "opencode"}`)
+(`{"kind": "audit", "skills": [...], "judge": true, "n_judges": 3, "judge_harness": "opencode"}`)
 validates against the skills on disk (`GET /api/live/skills`), then spawns
 
 ```bash
@@ -108,7 +108,7 @@ node packages/eval/bin/cesium-eval.js audit --skills all \
 ```
 
 detached (`launch.json` + `launch.log` beside the artifacts record provenance and
-capture output). Only whitelisted skills/adapters and a fixed argv are accepted — no
+capture output). Only whitelisted skills/harnesses and a fixed argv are accepted — no
 shell, no free-form arguments.
 
 `--journal` makes the audit stream an append-only JSONL journal to

@@ -188,10 +188,10 @@ function resolveSkills(spec: string): string[] {
   return requested;
 }
 
-/** Judge adapter names accepted by --adapter: any registry harness id or "fake". */
-function makeJudgeCall(ctx: EvalContext, adapter: string, model: string | undefined): { call: JudgeCall; model: string | null } {
-  if (adapter === "fake") return { call: fakeJudgeCall(), model: model ?? "fake" };
-  const overrides = { harness: adapter, model };
+/** Judge harness names accepted by --judge-harness: any registry harness id or "fake". */
+function makeJudgeCall(ctx: EvalContext, judgeHarness: string, model: string | undefined): { call: JudgeCall; model: string | null } {
+  if (judgeHarness === "fake") return { call: fakeJudgeCall(), model: model ?? "fake" };
+  const overrides = { harness: judgeHarness, model };
   const described = describeAgent(ctx, "judge", overrides);
   const call: JudgeCall = async (prompt, files, addDirs) => {
     const invocation = await invokeAgent(ctx, "judge", { prompt, files, addDirs, allowedTools: [], overrides });
@@ -208,8 +208,8 @@ export interface AuditOptions {
   visualReview?: string;
   emitCases?: string;
   emitVisualReview?: string;
-  adapter?: string;
-  harness?: string;
+  judgeHarness?: string;
+  codegenHarness?: string;
   bundleRoot?: string;
   threshold?: number;
   outputDir?: string;
@@ -222,8 +222,8 @@ export async function auditCommand(ctx: EvalContext, options: AuditOptions): Pro
   const auditCases = collectCases(skills, bundleRoot);
   const caseKeys = new Set(auditCases.map((c) => `${c.skill}/${c.caseId}`));
 
-  const adapterName = options.adapter ?? ctx.resolveRole("judge").harness.id;
-  const codegenHarness = options.harness ?? ctx.resolveRole("codegen").harness.id;
+  const judgeHarness = options.judgeHarness ?? ctx.resolveRole("judge").harness.id;
+  const codegenHarness = options.codegenHarness ?? ctx.resolveRole("codegen").harness.id;
   const nJudges = options.nJudges ?? ctx.config.judgePanel.size;
 
   if (options.emitCases) {
@@ -253,13 +253,13 @@ export async function auditCommand(ctx: EvalContext, options: AuditOptions): Pro
     case_count: auditCases.length,
     cases: auditCases.map((c) => ({ skill: c.skill, case_id: c.caseId })),
     judge: Boolean(options.visualReview) || !options.noJudge,
-    adapter: adapterName,
+    judge_harness: judgeHarness,
     n_judges: nJudges,
-    harness: codegenHarness,
+    codegen_harness: codegenHarness,
   });
 
   try {
-    return await runAudit(ctx, options, { auditCases, caseKeys, timestampUtc, commit, runId, journal, adapterName, codegenHarness, nJudges });
+    return await runAudit(ctx, options, { auditCases, caseKeys, timestampUtc, commit, runId, journal, judgeHarness, codegenHarness, nJudges });
   } catch (exc: any) {
     journal.emit("audit_failed", { error: `${exc?.constructor?.name ?? "Error"}: ${exc?.message ?? exc}` });
     throw exc;
@@ -273,13 +273,13 @@ interface AuditRun {
   commit: string;
   runId: string;
   journal: ProgressJournal;
-  adapterName: string;
+  judgeHarness: string;
   codegenHarness: string;
   nJudges: number;
 }
 
 async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun): Promise<number> {
-  const { auditCases, caseKeys, timestampUtc, commit, runId, journal, adapterName, codegenHarness, nJudges } = run;
+  const { auditCases, caseKeys, timestampUtc, commit, runId, journal, judgeHarness, codegenHarness, nJudges } = run;
 
   // --- Lane 2: qualitative ------------------------------------------------
   let visualReview: Record<string, any> | null = null;
@@ -294,9 +294,9 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
       (item: any) => item?.status !== undefined && item?.status !== null && item?.status !== "not_reviewed",
     ).length;
   } else if (!options.noJudge) {
-    const { call, model } = makeJudgeCall(ctx, adapterName, options.judgeModel);
+    const { call, model } = makeJudgeCall(ctx, judgeHarness, options.judgeModel);
     const items: Array<Record<string, any>> = [];
-    journal.emit("judge_started", { total: auditCases.length, adapter: adapterName, n_judges: nJudges });
+    journal.emit("judge_started", { total: auditCases.length, judge_harness: judgeHarness, n_judges: nJudges });
     for (const [index, auditCase] of auditCases.entries()) {
       const item = await judgeRender(caseMetaFor(auditCase), auditCase.bundleDir ?? "", {
         call,
@@ -371,7 +371,7 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
     visualReview,
     requireVisualReview: visualReview !== null,
     harness: codegenHarness,
-    harnessJudge: adapterName,
+    harnessJudge: judgeHarness,
   });
 
   // Stamp codegen provenance recovered from the evaluated code's meta sidecars.
@@ -417,10 +417,10 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
 /** `cesium-eval judge` — run the static judge panel over one bundle. */
 export async function judgeCommand(
   ctx: EvalContext,
-  options: { bundle: string; case: string; model?: string; nJudges?: number; adapter?: string; emitItem?: string },
+  options: { bundle: string; case: string; model?: string; nJudges?: number; harness?: string; emitItem?: string },
 ): Promise<number> {
-  const adapterName = options.adapter ?? ctx.resolveRole("judge").harness.id;
-  const { call, model } = makeJudgeCall(ctx, adapterName, options.model);
+  const judgeHarness = options.harness ?? ctx.resolveRole("judge").harness.id;
+  const { call, model } = makeJudgeCall(ctx, judgeHarness, options.model);
   const item = await judgeRender(readJson(options.case), options.bundle, {
     call,
     model,
