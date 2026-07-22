@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows, LayoutDashboard, Rocket, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, GitCompareArrows, LayoutDashboard, Rocket, ChevronDown, Eye, EyeOff, TrendingUp, RotateCcw } from "lucide-react";
 import { useStore } from "../store";
 import type { Station } from "../types";
 import { pluralize, relativeTime } from "../lib/format";
@@ -43,7 +43,7 @@ const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string; desc: 
     num: "5",
     name: "Promote",
     desc: "Ship winners live",
-    hint: "The deliberate final step: overwrite a live SKILL.md with its KEEP candidate. The current version is archived first."
+    hint: "The deliberate final step and the human gate: KEEP candidates arrive here staged, and nothing touches a live SKILL.md until you promote it (the current version is archived first)."
   }
 ];
 
@@ -207,6 +207,7 @@ export function Rail() {
     setStation,
     needsYouCount,
     confirmedFlagKeys,
+    suggestedFlagCount,
     skills,
     scorecard,
     config,
@@ -217,7 +218,8 @@ export function Rail() {
   } = useStore();
   const loopRunning = liveRunning || skills.some((s) => s.running);
   const stalledCount = (live?.active ?? []).filter((r) => r.status !== "running").length;
-  const promotable = skills.filter((s) => s.latest?.decision === "KEEP").length;
+  const decidable = skills.filter((s) => s.latest?.decision === "KEEP").length;
+  const stagedCount = skills.filter((s) => s.latest?.decision === "KEEP" && s.latest?.promotion === "staged").length;
   const flagged = confirmedFlagKeys.length;
 
   /* Badges carry information, never decoration: each one answers "how many
@@ -235,15 +237,16 @@ export function Rail() {
           ●
         </span>
       ) : null;
-    if (id === "decide" || id === "promote")
-      return promotable ? (
-        <span
-          className="st-badge"
-          title={`${pluralize(promotable, "skill")} with a KEEP candidate ${
-            id === "decide" ? "awaiting your verification" : "ready to promote"
-          }`}
-        >
-          {promotable}
+    if (id === "decide")
+      return decidable ? (
+        <span className="st-badge" title={`${pluralize(decidable, "skill")} with a KEEP candidate awaiting your verification`}>
+          {decidable}
+        </span>
+      ) : null;
+    if (id === "promote")
+      return stagedCount ? (
+        <span className="st-badge hot" title={`${pluralize(stagedCount, "staged candidate")} awaiting your promotion approval`}>
+          {stagedCount}
         </span>
       ) : null;
     return null;
@@ -253,7 +256,7 @@ export function Rail() {
     <button
       className={`station station--rich${station === id ? " active" : ""}`}
       onClick={() => setStation(id)}
-      aria-current={station === id}
+      aria-current={station === id ? "page" : undefined}
       title={hint}
     >
       <span className="st-lead">{lead}</span>
@@ -329,12 +332,18 @@ export function Rail() {
               disabled={!flagged}
               title={
                 flagged
-                  ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set — the optimizer only chases flagged cases.`
-                  : "Flag failing cases in Review first; the optimizer only chases what you flag."
+                  ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set — the optimizer only chases human-confirmed flags.`
+                  : suggestedFlagCount
+                    ? `${pluralize(suggestedFlagCount, "machine-suggested flag")} await your confirmation — confirm each in Review (e) before handing off.`
+                    : "Flag failing cases in Review first; the optimizer only chases what you confirm."
               }
             >
               <Send size={12} aria-hidden />
-              {flagged ? `Send ${pluralize(flagged, "flag")} → Optimize` : "No flags yet"}
+              {flagged
+                ? `Send ${pluralize(flagged, "confirmed flag")} → Optimize`
+                : suggestedFlagCount
+                  ? `${suggestedFlagCount} suggested · 0 confirmed`
+                  : "No flags yet"}
             </button>
           )}
         </div>
@@ -358,6 +367,9 @@ export function Rail() {
         <button className="rail-sub" onClick={() => openOverlay("matrix")}>
           <Grid3x3 size={13} /> Skill × Category Matrix <span className="kbd" style={{ marginLeft: "auto" }}>m</span>
         </button>
+        <button className="rail-sub" onClick={() => openOverlay("trends")}>
+          <TrendingUp size={13} /> Win-Rate Trends <span className="kbd" style={{ marginLeft: "auto" }}>t</span>
+        </button>
         <button className="rail-sub" onClick={() => openOverlay("harness")}>
           <Layers size={13} /> Run Browser <span className="kbd" style={{ marginLeft: "auto" }}>h</span>
         </button>
@@ -367,7 +379,20 @@ export function Rail() {
 }
 
 export function ActionBar() {
-  const { station, selectedView, iterationDetail } = useStore();
+  const {
+    station,
+    selectedView,
+    iterationDetail,
+    setDecision,
+    confirmAndAdvance,
+    toggleDetails,
+    moveSelection,
+    selectedScenarioIndex,
+    selectScenario,
+    setDiffMode,
+    saveStatus,
+    retrySave
+  } = useStore();
 
   let machineSays = "";
   if ((station === "review" || station === "evaluate") && selectedView) {
@@ -380,36 +405,57 @@ export function ActionBar() {
     machineSays = iterationDetail.decision ? `Machine decided ${iterationDetail.decision}` : "Iteration not yet decided";
   }
 
+  /* Real controls, not keyboard hints: every verb is a button (pointer, touch,
+     and switch access) with its shortcut shown as a secondary accelerator. */
+  const verb = (label: string, kbd: string, onClick: () => void, disabled = false) => (
+    <button className="verb verb-btn" onClick={onClick} disabled={disabled}>
+      <span className="kbd" aria-hidden>{kbd}</span> {label}
+    </button>
+  );
+
+  const saveChip =
+    saveStatus === "idle" ? null : (
+      <span className={`save-chip ${saveStatus}`} role="status">
+        {saveStatus === "saving" && "Saving…"}
+        {saveStatus === "saved" && "Saved"}
+        {saveStatus === "error" && (
+          <>
+            Save failed
+            <button className="save-retry" onClick={retrySave}>
+              <RotateCcw size={10} aria-hidden /> Retry
+            </button>
+          </>
+        )}
+      </span>
+    );
+
   return (
     <footer className="actionbar" role="contentinfo">
       <span className="machine-says">{machineSays}</span>
+      {saveChip}
       <div className="verbs">
-        {(station === "review" || station === "evaluate") && (
+        {station === "review" && (
           <>
-            <span className="verb">
-              <span className="kbd">a</span> Accept
-            </span>
-            <span className="verb">
-              <span className="kbd">f</span> Flag → Focus
-            </span>
-            <span className="verb">
-              <span className="kbd">d</span> Defer
-            </span>
-            <span className="verb">
-              <span className="kbd">space</span> Details
-            </span>
-            <span className="verb">
-              <span className="kbd">j</span>/<span className="kbd">k</span> Next
-            </span>
+            {verb("Accept", "a", () => selectedView && setDecision(selectedView.key, "accept"), !selectedView)}
+            {verb("Flag → Focus", "f", () => selectedView && setDecision(selectedView.key, "flag"), !selectedView)}
+            {verb("Defer", "d", () => selectedView && setDecision(selectedView.key, "defer"), !selectedView)}
+            {verb("Confirm + next", "e", () => confirmAndAdvance(), !selectedView)}
+            {verb("Details", "space", () => toggleDetails())}
+            {verb("Next", "j", () => moveSelection(1))}
+            {verb("Prev", "k", () => moveSelection(-1))}
           </>
+        )}
+        {station === "evaluate" && (
+          <span className="verb" title="Evaluate is a read-only summary. Grade cases in Review (2).">
+            Read-only · grade in Review (2)
+          </span>
         )}
         {station === "optimize" && (
           <>
+            {verb("Prev scenario", "[", () => selectScenario(Math.max(0, selectedScenarioIndex - 1)))}
+            {verb("Next scenario", "]", () => selectScenario(selectedScenarioIndex + 1))}
             <span className="verb">
               <span className="kbd">j</span>/<span className="kbd">k</span> Skill
-            </span>
-            <span className="verb">
-              <span className="kbd">[</span>/<span className="kbd">]</span> Scenario
             </span>
             <span className="verb">
               <span className="kbd">enter</span> → Decide
@@ -418,15 +464,10 @@ export function ActionBar() {
         )}
         {station === "decide" && (
           <>
-            <span className="verb">
-              <span className="kbd">x</span> Swipe
-            </span>
-            <span className="verb">
-              <span className="kbd">X</span> Blink
-            </span>
-            <span className="verb">
-              <span className="kbd">[</span>/<span className="kbd">]</span> Scenario
-            </span>
+            {verb("Swipe", "x", () => setDiffMode("swipe"))}
+            {verb("Blink", "X", () => setDiffMode("blink"))}
+            {verb("Prev scenario", "[", () => selectScenario(Math.max(0, selectedScenarioIndex - 1)))}
+            {verb("Next scenario", "]", () => selectScenario(selectedScenarioIndex + 1))}
           </>
         )}
       </div>

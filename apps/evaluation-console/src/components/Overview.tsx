@@ -177,7 +177,15 @@ function ChangedVsBaseline({ diff }: { diff: BaselineDiff | null }) {
             <DiffCard label="Fixed" keys={diff.fixed} tone="good" hint="Failed in the baseline, passes now." onDrill={() => drill(`Fixed vs ${diff.baselineRunId.slice(0, 24)}`, diff.fixed)} />
             <DiffCard label="Still Failing" keys={diff.stillFailing} tone="warn" hint="Failed in both runs." onDrill={() => drill("Still failing", diff.stillFailing)} />
             <DiffCard label="New Cases" keys={diff.added} tone="neutral" hint="Cases only the current run has." onDrill={() => drill("New cases", diff.added)} />
-            <DiffCard label="Removed" keys={diff.removed} tone="neutral" hint="Cases only the baseline had. Not drillable here, since they have no current evidence." onDrill={() => {}} />
+            {/* Removed cases have no current evidence to open — render a plain
+                summary, not a control that promises a drill-down it can't do. */}
+            <div
+              className="diff-card neutral diff-card-static"
+              title="Cases only the baseline had. They have no evidence in the current run, so there is nothing to open here."
+            >
+              <span className="dc-count mono">{diff.removed.length}</span>
+              <span className="dc-label">Removed · baseline-only</span>
+            </div>
             <DiffCard label="Incomplete" keys={incompleteKeys} tone="warn" hint="Visual verdict still missing (not reviewed or needs review). Absence of evidence, not a failure." onDrill={() => drill("Incomplete visual review", incompleteKeys)} />
           </div>
           {baselineRun && (
@@ -429,56 +437,138 @@ export function EvaluateOverview() {
 }
 
 export function PromotePanel() {
-  const { skills } = useStore();
+  const { skills, promoteSkillCandidate, pushToast } = useStore();
+  const [busy, setBusy] = useState<string | null>(null);
 
-  const promotable = skills.filter((s) => s.latest?.decision === "KEEP");
+  const withKeep = skills.filter((s) => s.latest?.decision === "KEEP");
+  const staged = withKeep.filter((s) => s.latest?.promotion === "staged");
+  const promoted = withKeep.filter((s) => s.latest?.promotion === "promoted");
+  const unknown = withKeep.filter((s) => !s.latest?.promotion || s.latest?.promotion === "unknown");
+
+  const copyCmd = async (cmd: string) => {
+    try {
+      await navigator.clipboard.writeText(cmd);
+      pushToast("Command copied to clipboard", "good");
+    } catch {
+      pushToast(`Copy failed — command: ${cmd}`, "bad");
+    }
+  };
+
+  const promote = async (skill: string, iteration: string) => {
+    setBusy(`${skill}/${iteration}`);
+    try {
+      await promoteSkillCandidate(skill, iteration);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const card = (s: (typeof skills)[number], body: React.ReactNode) => {
+    const it = s.latest!;
+    const c = it.counts;
+    return (
+      <div key={s.skill} className="skill-tile" style={{ cursor: "default" }}>
+        <div className="st-top">
+          <span className="st-name">{shortSkill(s.skill)}</span>
+          <LoopBadge decision="KEEP" rule={it.rule_fired} />
+        </div>
+        {body}
+        <div className="stage-sub" style={{ marginTop: "var(--sp-2)" }}>
+          <MetaTag k="iter" v={it.iteration} />
+          <span className="mono" style={{ color: "var(--keep)" }}>{c.wins}W</span>
+          <span className="mono" style={{ color: "var(--reject)" }}>· {c.losses}L</span>
+          <span className="mono" style={{ color: "var(--text-3)" }}>· {c.ties}T</span>
+          {s.skill_md.exists && s.skill_md.lines != null && <span>· SKILL.md {s.skill_md.lines} lines</span>}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="overview">
       <div className="section-title" style={{ marginTop: 0 }}>
         Promote
         <span className="section-sub">
-          The final lifecycle step: confirm the candidates applied by the optimization loop. On KEEP, the loop archives the
-          previous SKILL.md and promotes the winning candidate automatically.
+          The human gate: a KEEP candidate is only <em>staged</em> by the loop — nothing touches a live SKILL.md until you
+          promote it here (or run the CLI command). The current version is archived first.
         </span>
       </div>
 
-      {promotable.length === 0 ? (
-        <div className="empty-note">
-          No promoted KEEP candidates yet. They appear here after the optimization loop accepts a candidate.
-        </div>
+      <div className="section-title">Pending promotion</div>
+      {staged.length === 0 ? (
+        <div className="empty-note">Nothing staged. KEEP candidates appear here awaiting your approval.</div>
       ) : (
         <div className="skill-grid">
-          {promotable.map((s) => {
+          {staged.map((s) => {
             const it = s.latest!;
-            const c = it.counts;
-            return (
-              <div key={s.skill} className="skill-tile" style={{ cursor: "default" }}>
-                <div className="st-top">
-                  <span className="st-name">{shortSkill(s.skill)}</span>
-                  <LoopBadge decision="KEEP" rule={it.rule_fired} />
+            const cmd = `node packages/eval/bin/cesium-eval.js optimize promote ${s.skill} ${it.iteration}`;
+            const key = `${s.skill}/${it.iteration}`;
+            return card(
+              s,
+              <div style={{ marginTop: "var(--sp-2)" }}>
+                <div style={{ fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
+                  Staged candidate <span className="mono">{it.iteration}</span> awaits your approval
+                  {it.finished_utc ? ` (won ${relativeTime(it.finished_utc)})` : ""}. The live{" "}
+                  <span className="mono">skills/{s.skill}/SKILL.md</span> is untouched.
                 </div>
-                <div style={{ marginTop: "var(--sp-2)", fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
-                  Updated <span className="mono">skills/{s.skill}/SKILL.md</span> from the{" "}
-                  <span className="mono">{it.iteration}</span> candidate
-                  {it.finished_utc ? ` (won ${relativeTime(it.finished_utc)})` : ""}.
+                <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-3)", flexWrap: "wrap" }}>
+                  <button className="promote-btn" disabled={busy === key} onClick={() => void promote(s.skill, it.iteration)}>
+                    {busy === key ? "Promoting…" : `Promote ${it.iteration} → live`}
+                  </button>
+                  <button className="pill" onClick={() => void copyCmd(cmd)} title={cmd}>
+                    Copy CLI command
+                  </button>
                 </div>
-                <div className="stage-sub" style={{ marginTop: "var(--sp-2)" }}>
-                  <MetaTag k="iter" v={it.iteration} />
-                  <span className="mono" style={{ color: "var(--keep)" }}>{c.wins}W</span>
-                  <span className="mono" style={{ color: "var(--reject)" }}>· {c.losses}L</span>
-                  <span className="mono" style={{ color: "var(--text-3)" }}>· {c.ties}T</span>
-                  {s.skill_md.exists && s.skill_md.lines != null && (
-                    <span>· SKILL.md {s.skill_md.lines} lines</span>
-                  )}
-                </div>
-                <div style={{ marginTop: "var(--sp-3)" }}>
-                  <Pill tone="machine">promoted by loop</Pill>
+                <div style={{ marginTop: "var(--sp-2)" }}>
+                  <Pill tone="human">awaiting your approval</Pill>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      <div className="section-title">Promoted</div>
+      {promoted.length === 0 ? (
+        <div className="empty-note">No promoted candidates yet. Approved promotions land here with their archive record.</div>
+      ) : (
+        <div className="skill-grid">
+          {promoted.map((s) => {
+            const it = s.latest!;
+            return card(
+              s,
+              <div style={{ marginTop: "var(--sp-2)", fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
+                Updated <span className="mono">skills/{s.skill}/SKILL.md</span> from the{" "}
+                <span className="mono">{it.iteration}</span> candidate
+                {it.finished_utc ? ` (won ${relativeTime(it.finished_utc)})` : ""}. Previous version archived as{" "}
+                <span className="mono">current-best-before.md</span>.
+                <div style={{ marginTop: "var(--sp-3)" }}>
+                  <Pill tone="machine">promoted</Pill>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {unknown.length > 0 && (
+        <>
+          <div className="section-title">Unverified state</div>
+          <div className="dash-sub" style={{ marginBottom: "var(--sp-3)" }}>
+            These KEEPs carry neither a staging marker nor a promotion archive — the console will not guess. Inspect{" "}
+            <span className="mono">optimization/history/&lt;skill&gt;/</span> to confirm what shipped.
+          </div>
+          <div className="skill-grid">
+            {unknown.map((s) =>
+              card(
+                s,
+                <div style={{ marginTop: "var(--sp-2)" }}>
+                  <Pill tone="neutral">promotion state unknown</Pill>
+                </div>
+              )
+            )}
+          </div>
+        </>
       )}
     </div>
   );

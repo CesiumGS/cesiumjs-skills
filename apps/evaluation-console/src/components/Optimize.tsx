@@ -327,11 +327,44 @@ function ScenarioBoard() {
 }
 
 export function OptimizeStage() {
-  const { selectedSkill, selectedSkillData, confirmedFlagKeys } = useStore();
+  const { selectedSkill, selectedSkillData, confirmedFlagKeys, lastHandoff, dismissHandoff, pushToast } = useStore();
+
+  /* The server generates the exact seeded CLI command on every handoff — the
+     bridge from Review flags to a running loop is this panel, not recall. */
+  const handoffPanel = lastHandoff ? (
+    <div className="handoff-panel" role="region" aria-label="Optimizer handoff">
+      <div className="handoff-head">
+        <span>
+          ⚑ {lastHandoff.count} confirmed {lastHandoff.count === 1 ? "flag" : "flags"} handed off →{" "}
+          <span className="mono">{lastHandoff.focus_path.split("/").slice(-2).join("/")}</span>
+        </span>
+        <span className="spacer" />
+        <button className="pill" onClick={dismissHandoff} aria-label="Dismiss handoff panel">
+          ×
+        </button>
+      </div>
+      <div className="handoff-body">
+        <span>Run the seeded loop from a terminal:</span>
+        <pre className="mono handoff-cmd">{lastHandoff.command}</pre>
+        <button
+          className="pill"
+          onClick={() => {
+            navigator.clipboard
+              .writeText(lastHandoff.command)
+              .then(() => pushToast("Command copied to clipboard", "good"))
+              .catch(() => pushToast(`Copy failed — command: ${lastHandoff.command}`, "bad"));
+          }}
+        >
+          Copy command
+        </button>
+      </div>
+    </div>
+  ) : null;
 
   if (!selectedSkillData) {
     return (
       <main className="stage col" role="main">
+        {handoffPanel}
         <div className="empty-note">Pick a skill on the rail to watch its optimization loop.</div>
       </main>
     );
@@ -344,6 +377,7 @@ export function OptimizeStage() {
 
   return (
     <main className="stage col" role="main">
+      {handoffPanel}
       <div className="stage-head">
         <div>
           <div className="stage-title">{selectedSkillData.skill.replace("cesiumjs-", "")}</div>

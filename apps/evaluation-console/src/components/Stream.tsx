@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import { useStore } from "../store";
 import type { CaseView, FilterKind, ScenarioDetail, SkillOverview } from "../types";
 import { Score01, Score10, ScenarioChip, UnknownChip } from "./primitives";
@@ -10,6 +10,38 @@ function useFollowSelection(selected: boolean) {
     if (selected) ref.current?.scrollIntoView({ block: "nearest" });
   }, [selected]);
   return ref;
+}
+
+/** Stable DOM id for an option (aria-activedescendant target). */
+function optionId(prefix: string, key: string): string {
+  return `${prefix}-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+}
+
+/**
+ * ARIA listbox keyboard contract (WCAG 4.1.2): the container is the focus
+ * target; arrows/Home/End move the active option locally. stopPropagation
+ * keeps the global j/k handler from double-moving the cursor.
+ */
+function listboxKeys(move: (delta: number) => void, jump: (edge: "start" | "end") => void) {
+  return (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      e.stopPropagation();
+      move(1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      e.stopPropagation();
+      move(-1);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      e.stopPropagation();
+      jump("start");
+    } else if (e.key === "End") {
+      e.preventDefault();
+      e.stopPropagation();
+      jump("end");
+    }
+  };
 }
 
 const FILTERS: Array<{ id: FilterKind; label: string }> = [
@@ -87,6 +119,7 @@ function CaseRow({ v, selected, onClick }: { v: CaseView; selected: boolean; onC
   return (
     <div
       ref={ref}
+      id={optionId("case", v.key)}
       className={`row${selected ? " sel cursor-cur" : ""}`}
       onClick={onClick}
       role="option"
@@ -120,6 +153,7 @@ function SkillRow({ s, selected, onClick }: { s: SkillOverview; selected: boolea
   return (
     <div
       ref={ref}
+      id={optionId("skill", s.skill)}
       className={`row${selected ? " sel cursor-cur" : ""}`}
       onClick={onClick}
       role="option"
@@ -168,6 +202,7 @@ function ScenarioRow({
   return (
     <div
       ref={ref}
+      id={optionId("scn", s.dir)}
       className={`row${selected ? " sel cursor-cur" : ""}`}
       onClick={onClick}
       role="option"
@@ -206,7 +241,17 @@ export function Stream() {
           <span>worst-first · {store.orderedCases.length} cases</span>
           <span>det ▣ · eye ◈</span>
         </div>
-        <div className="col-scroll" role="listbox" aria-label="Cases, worst first">
+        <div
+          className="col-scroll"
+          role="listbox"
+          aria-label="Cases, worst first"
+          tabIndex={0}
+          aria-activedescendant={store.selectedView ? optionId("case", store.selectedView.key) : undefined}
+          onKeyDown={listboxKeys(
+            (d) => store.moveSelection(d),
+            (edge) => (edge === "start" ? store.jumpToTop() : store.jumpToEnd())
+          )}
+        >
           {store.orderedCases.map((v) => (
             <CaseRow key={v.key} v={v} selected={v.key === store.selectedView?.key} onClick={() => store.selectKey(v.key)} />
           ))}
@@ -217,6 +262,11 @@ export function Stream() {
   }
 
   if (station === "optimize") {
+    const skillIdx = store.skills.findIndex((s) => s.skill === store.selectedSkill);
+    const moveSkill = (delta: number) => {
+      const next = store.skills[Math.max(0, Math.min(store.skills.length - 1, (skillIdx < 0 ? 0 : skillIdx) + delta))];
+      if (next) store.selectSkill(next.skill);
+    };
     return (
       <section className="stream col" aria-label="Skills">
         <div className="stream-head">
@@ -225,7 +275,14 @@ export function Stream() {
           </span>
           <span>keep · reject</span>
         </div>
-        <div className="col-scroll" role="listbox" aria-label="Skills">
+        <div
+          className="col-scroll"
+          role="listbox"
+          aria-label="Skills"
+          tabIndex={0}
+          aria-activedescendant={store.selectedSkill ? optionId("skill", store.selectedSkill) : undefined}
+          onKeyDown={listboxKeys(moveSkill, (edge) => moveSkill(edge === "start" ? -store.skills.length : store.skills.length))}
+        >
           {store.skills.map((s) => (
             <SkillRow
               key={s.skill}
@@ -241,6 +298,7 @@ export function Stream() {
 
   // decide: scenarios of the selected iteration
   const scenarios = store.iterationDetail?.scenarios ?? [];
+  const selectedScn = scenarios[store.selectedScenarioIndex];
   return (
     <section className="stream col" aria-label="Scenarios">
       <div className="stream-head">
@@ -249,7 +307,17 @@ export function Stream() {
         </span>
         <span>win · loss · tie</span>
       </div>
-      <div className="col-scroll" role="listbox" aria-label="Scenarios">
+      <div
+        className="col-scroll"
+        role="listbox"
+        aria-label="Scenarios"
+        tabIndex={0}
+        aria-activedescendant={selectedScn ? optionId("scn", selectedScn.dir) : undefined}
+        onKeyDown={listboxKeys(
+          (d) => store.selectScenario(Math.max(0, Math.min(scenarios.length - 1, store.selectedScenarioIndex + d))),
+          (edge) => store.selectScenario(edge === "start" ? 0 : Math.max(0, scenarios.length - 1))
+        )}
+      >
         {scenarios.map((s, i) => (
           <ScenarioRow
             key={s.dir}

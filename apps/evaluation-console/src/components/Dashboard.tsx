@@ -160,13 +160,24 @@ export function DashboardStation() {
           (phases, trials, journal) lives in the Live station this links to. */}
       <LiveNowBanner />
 
-      {/* 1 — STATUS LINE: the focused run's verdict + the primary action. */}
+      {/* 1 — STATUS LINE: the focused run's verdict + the primary action.
+          A det-only run must not read as a full PASS: the visual gate never ran. */}
       <div className="hero-card dashboard-hero">
         <div>
           <div className="hero-eyebrow">Focused run</div>
-          <div className="ov-big" style={{ color: pass ? "var(--pass)" : "var(--fail)" }}>
-            {scorecard ? (pass ? "PASS" : "FAIL") : "—"}
-          </div>
+          {scorecard && pass && !scorecard.visualReviewSupplied ? (
+            <>
+              <div className="ov-big" style={{ color: "var(--defer)" }}>INCOMPLETE</div>
+              <div className="stage-sub" style={{ marginTop: "var(--sp-1)" }}>
+                <span style={{ color: "var(--pass)" }}>checks PASS</span>
+                <span style={{ color: "var(--unknown)" }}>· visual unreviewed — nobody looked at the renders</span>
+              </div>
+            </>
+          ) : (
+            <div className="ov-big" style={{ color: pass ? "var(--pass)" : "var(--fail)" }}>
+              {scorecard ? (pass ? "PASS" : "FAIL") : "—"}
+            </div>
+          )}
           <div className="stage-sub" style={{ marginTop: "var(--sp-2)" }}>
             <span className="mono">{scorecard?.runId ?? "no run loaded"}</span>
             {scorecard && <span style={{ color: "var(--text-3)" }}>{relativeTime(scorecard.timestampUtc)}</span>}

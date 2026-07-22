@@ -14,12 +14,17 @@ import { useFocusTrap } from "../hooks/useFocusTrap";
    ============================================================================ */
 
 export function Toasts() {
-  const { toasts } = useStore();
+  const { toasts, dismissToast } = useStore();
   return (
     <div className="toasts" aria-live="polite">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast ${t.tone ?? "info"}`}>
+        <div key={t.id} className={`toast ${t.tone ?? "info"}`} role={t.tone === "bad" ? "alert" : undefined}>
           {t.message}
+          {t.sticky && (
+            <button className="toast-dismiss" onClick={() => dismissToast(t.id)} aria-label="Dismiss notification">
+              <X size={12} aria-hidden />
+            </button>
+          )}
         </div>
       ))}
     </div>
@@ -772,6 +777,17 @@ function Help() {
           <span>{r.desc}</span>
         </div>
       ))}
+      {/* Chrome legend: the guidance that used to live only in hover tooltips
+          (fact chips, history ticks, phase chips) — readable without a mouse. */}
+      <div className="help-legend">
+        <div className="help-legend-title">Reading the chrome</div>
+        <div className="help-legend-row"><b>Checks + visual review / No visual review</b> — whether a judge panel actually looked at the rendered screenshots, or only automated checks ran.</div>
+        <div className="help-legend-row"><b>Source chip</b> — who produced the scored output: a real agent harness, synthetic test fixtures, or unknown (pre-provenance runs).</div>
+        <div className="help-legend-row"><b>vs baseline chip</b> — the comparison run every delta is measured against; set or clear it from the Run Browser (h).</div>
+        <div className="help-legend-row"><b>History ticks</b> (Optimize rail rows) — one tick per iteration: green KEEP, red REJECT, gray baseline/failed, newest on the right.</div>
+        <div className="help-legend-row"><b>Phase chips</b> (Run Studies) — the run's pipeline phases; a count like 3/14 is real artifacts on disk, a pulse means running with nothing countable.</div>
+        <div className="help-legend-row"><b>Promotion states</b> — <b>staged</b>: a KEEP candidate awaits your approval (SKILL.md untouched); <b>promoted</b>: applied with the previous version archived.</div>
+      </div>
     </div>
   );
 }

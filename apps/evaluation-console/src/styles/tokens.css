@@ -83,13 +83,15 @@
   --crit: #ff6b5e;
   --defer: #d9a13a;
   --defer-bg: #2c2312;
-  --unknown: #5f6b82; /* not_reviewed / needs_review — dashed slate */
+  /* not_reviewed / needs_review — dashed slate. AA-verified: ≥ 4.5:1 against
+     canvas, surface, surface-2, surface-3, and unknown-bg (min 4.79:1). */
+  --unknown: #8b99b3;
   --unknown-bg: #141d2e;
 
   /* decisions (optimize) */
   --keep: #46b986;
   --reject: #e5534b;
-  --tie: #74809a;
+  --tie: #93a1ba; /* AA-verified: min 5.28:1 across used backgrounds */
 
   --live: #7c5cff; /* the ONE reserved accent — "running now" */
   --live-bg: #1c1838;
@@ -137,7 +139,8 @@
   --crit: #d23a2e;
   --defer: #9c6b12;
   --defer-bg: #f6ecd6;
-  --unknown: #8a95a8;
+  /* AA-verified: ≥ 4.5:1 against every used light background (min 4.81:1). */
+  --unknown: #556582;
   --unknown-bg: #eef2f8;
 
   --harness: #4a5fd0;
@@ -145,7 +148,7 @@
 
   --keep: #1e8a5a;
   --reject: #c13b33;
-  --tie: #7b8698;
+  --tie: #5d6879; /* AA-verified: min 4.61:1 across used backgrounds */
 
   --live: #5b3df5;
   --live-bg: #eee9ff;

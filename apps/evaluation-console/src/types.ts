@@ -346,6 +346,8 @@ export interface IterationSummary {
   decision: LoopDecision;
   rule_fired: string | null;
   rationale: string | null;
+  /** Post-promotion-gate state of a KEEP: staged (awaits human), promoted, or unknown. */
+  promotion?: "promoted" | "staged" | "unknown" | null;
   counts: IterationCounts;
   scores: IterationScores;
   started_utc: string | null;
@@ -378,6 +380,8 @@ export interface ScenarioDetail {
 export interface IterationDetail extends IterationSummary {
   scenarios: ScenarioDetail[];
   journal: JournalEvent[];
+  /** Proposer seed provenance: explicit = seeded by a handed-in decision record. */
+  proposer_seed?: { explicit: boolean | null; decision_path: string | null } | null;
 }
 
 export interface SkillMdMeta {
@@ -429,6 +433,8 @@ export interface LiveRun {
   label?: string | null;
   iteration: string;
   kind: "iteration" | "baseline" | "audit";
+  /** Console-launched audits carry their launch id (enables cancellation). */
+  launch_id?: string | null;
   // Audit runs: whether the visual-judge lane is part of this run.
   judge?: boolean;
   status: LiveRunStatus;

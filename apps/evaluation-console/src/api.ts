@@ -49,8 +49,12 @@ export interface LaunchRequest {
   kind: "audit";
   skills?: string[]; // omitted or empty = all skills
   judge: boolean;
-  adapter: "opencode" | "codex";
+  /** Judge adapter: any registry harness id, or "fake" for CI-style smoke runs. */
+  adapter: string;
   n_judges: number;
+  judge_model?: string | null;
+  threshold?: number | null;
+  bundle_root?: string | null;
 }
 
 export interface LaunchRecord {
@@ -69,6 +73,19 @@ export interface LaunchRecord {
 
 export const launchRun = (payload: LaunchRequest) =>
   req<LaunchRecord>("/api/live/launch", { method: "POST", body: JSON.stringify(payload) });
+
+export const cancelRun = (launchId: string) =>
+  req<{ launch_id: string; killed: boolean }>("/api/live/cancel", {
+    method: "POST",
+    body: JSON.stringify({ launch_id: launchId })
+  });
+
+/** The human promotion gate: apply a staged KEEP candidate to skills/<skill>/SKILL.md. */
+export const promoteCandidate = (skill: string, iteration: string) =>
+  req<{ ok: boolean; skill: string; iteration: string }>("/api/optimization/promote", {
+    method: "POST",
+    body: JSON.stringify({ skill, iteration })
+  });
 
 export const saveReviewDecisions = (doc: ReviewDecisionDoc) =>
   req<ReviewDecisionDoc>("/api/review-decisions", { method: "PUT", body: JSON.stringify(doc) });

@@ -17,7 +17,9 @@ function isTyping(el: EventTarget | null): boolean {
   const node = el as HTMLElement | null;
   if (!node) return false;
   const tag = node.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || node.isContentEditable;
+  // SELECT included: arrow keys must change the select's value, not hijack
+  // the hidden stream cursor; letter verbs must not mutate grades (WCAG 2.1.1).
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || node.isContentEditable;
 }
 
 /** The j/k spine: same keys, station-aware target (cases / skills / scenarios). */
@@ -113,13 +115,17 @@ export function useKeybindings(store: Store): void {
       }
 
       // ---- station verbs ----
-      if (s.station === "review" || s.station === "evaluate") {
+      // Grades mutate only in Review: Evaluate is a read surface, and a
+      // summary-screen keystroke must never silently edit a hidden case.
+      if (s.station === "review") {
         if (k === "a" && s.selectedView) return s.setDecision(s.selectedView.key, "accept");
         if (k === "f" && s.selectedView) return s.setDecision(s.selectedView.key, "flag");
         if (k === "d" && s.selectedView) return s.setDecision(s.selectedView.key, "defer");
         if (k === "e" || k === "Enter") return s.confirmAndAdvance();
         if (k === "u") return s.undo();
         if (k === "n") return s.nextFlag();
+      }
+      if (s.station === "review" || s.station === "evaluate") {
         if (k === " ") {
           e.preventDefault();
           return s.toggleDetails();

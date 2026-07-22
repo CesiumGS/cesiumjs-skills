@@ -9,6 +9,7 @@ import {
   type ReactNode
 } from "react";
 import {
+  cancelRun,
   exportHandoff,
   launchRun,
   loadConfig,
@@ -21,10 +22,11 @@ import {
   loadRuns,
   loadScorecard,
   loadSkills,
+  promoteCandidate,
   saveReviewDecisions,
   selectRun
 } from "./api";
-import type { LaunchRecord, LaunchRequest } from "./api";
+import type { HandoffResult, LaunchRecord, LaunchRequest } from "./api";
 import { adaptScorecard } from "./lib/adapt";
 import { autoGrade, matchesFilter, worstFirstSort } from "./lib/grade";
 import type {
@@ -58,6 +60,8 @@ interface Toast {
   id: number;
   message: string;
   tone?: "info" | "good" | "bad";
+  /** Sticky toasts (errors) persist until explicitly dismissed. */
+  sticky?: boolean;
 }
 
 interface Counts {
@@ -105,8 +109,14 @@ export interface Store {
   selectedView: CaseView | null;
   counts: Counts;
   needsYouCount: number;
+  /** Human-confirmed flags only (decision === "flag" && source === "human"). */
   confirmedFlagKeys: string[];
   confirmedFlagSkills: string[];
+  /** Machine-suggested flags awaiting human confirmation (source === "auto"). */
+  suggestedFlagCount: number;
+  /** Last successful handoff to the optimizer (command + paths), until dismissed. */
+  lastHandoff: (HandoffResult & { at: string; count: number }) | null;
+  dismissHandoff: () => void;
 
   // optimize / decide
   skills: SkillOverview[];
@@ -158,8 +168,12 @@ export interface Store {
   setShotIndex: (updater: (n: number) => number) => void;
   toggleTheme: () => void;
   pushToast: (message: string, tone?: Toast["tone"]) => void;
+  dismissToast: (id: number) => void;
+  retrySave: () => void;
   doExport: () => Promise<void>;
   launchEvalRun: (payload: LaunchRequest) => Promise<LaunchRecord | null>;
+  cancelLiveRun: (launchId: string) => Promise<void>;
+  promoteSkillCandidate: (skill: string, iteration: string) => Promise<boolean>;
   switchRun: (runId: string) => Promise<void>;
   setActiveHarness: (h: Harness | null) => void;
   setBaselineRun: (runId: string | null) => void;
@@ -427,12 +441,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [caseViews]);
 
   const needsYouCount = useMemo(() => caseViews.filter(needsYou).length, [caseViews]);
+  // "Confirmed" means a human said so — machine auto-grades are suggestions,
+  // and only confirmed flags may seed the optimizer (finding: error prevention).
   const confirmedFlagKeys = useMemo(
-    () => caseViews.filter((v) => v.decision === "flag").map((v) => v.key),
+    () => caseViews.filter((v) => v.decision === "flag" && v.source === "human").map((v) => v.key),
+    [caseViews]
+  );
+  const suggestedFlagCount = useMemo(
+    () => caseViews.filter((v) => v.decision === "flag" && v.source !== "human").length,
     [caseViews]
   );
   const confirmedFlagSkills = useMemo(
-    () => [...new Set(caseViews.filter((v) => v.decision === "flag").map((v) => v.skill))].sort(),
+    () => [...new Set(caseViews.filter((v) => v.decision === "flag" && v.source === "human").map((v) => v.skill))].sort(),
     [caseViews]
   );
 
@@ -481,16 +501,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       saveReviewDecisions(doc)
         .then(() => setSaveStatus("saved"))
-        .catch(() => setSaveStatus("error"));
+        .catch(() => {
+          setSaveStatus("error");
+          pushToastRef.current?.("Saving review decisions failed — your grades are not persisted. Retry from the action bar.", "bad");
+        });
     }, 400);
+  }, []);
+
+  // Toast from inside scheduleSave without a circular dependency.
+  const pushToastRef = useRef<Store["pushToast"] | null>(null);
+
+  /** Re-attempt persisting the current decisions after a failed save. */
+  const retrySave = useCallback(() => {
+    scheduleSave(decisionsRef.current);
+  }, [scheduleSave]);
+
+  // Warn before leaving while decisions are unsaved or failed to save (N9).
+  const saveStatusRef = useRef<Store["saveStatus"]>("idle");
+  saveStatusRef.current = saveStatus;
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatusRef.current === "saving" || saveStatusRef.current === "error") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
 
   // ---------- toasts ----------
   const pushToast = useCallback((message: string, tone: Toast["tone"] = "info") => {
     const id = ++toastId.current;
-    setToasts((cur) => [...cur, { id, message, tone }]);
-    window.setTimeout(() => setToasts((cur) => cur.filter((t) => t.id !== id)), 4200);
+    const sticky = tone === "bad"; // errors persist until dismissed (N9)
+    setToasts((cur) => [...cur, { id, message, tone, sticky }]);
+    if (!sticky) window.setTimeout(() => setToasts((cur) => cur.filter((t) => t.id !== id)), 4200);
   }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((cur) => cur.filter((t) => t.id !== id));
+  }, []);
+  pushToastRef.current = pushToast;
 
   // ---------- live eval-run progress ----------
   // Poll /api/live while the tab is visible: fast while a run is active, slow
@@ -745,17 +796,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const toggleTheme = useCallback(() => setTheme((t) => (t === "dark" ? "light" : "dark")), []);
 
   // ---------- export / runs ----------
+  const [lastHandoff, setLastHandoff] = useState<Store["lastHandoff"]>(null);
+  const dismissHandoff = useCallback(() => setLastHandoff(null), []);
+
   const doExport = useCallback(async () => {
-    const flags = caseViews.filter((v) => v.decision === "flag");
+    // Only human-confirmed flags seed the optimizer; machine suggestions must
+    // be confirmed in Review first (press e / the Confirm button).
+    const flags = caseViews.filter((v) => v.decision === "flag" && v.source === "human");
     if (!flags.length) {
-      pushToast("No confirmed flags to hand off", "bad");
+      pushToast("No confirmed flags to hand off — confirm suggested flags in Review first", "bad");
       return;
     }
     try {
       const keys = flags.map((v) => v.key);
       const sk = [...new Set(flags.map((v) => v.skill))].sort();
       const res = await exportHandoff(keys, sk, "confirmed_flags");
-      pushToast(`Handed off ${keys.length} cases → ${res.focus_path.split("/").slice(-2).join("/")}`, "good");
+      setLastHandoff({ ...res, at: nowIso(), count: keys.length });
+      pushToast(`Handed off ${keys.length} cases → ${res.focus_path.split("/").slice(-2).join("/")}. Run command shown in Optimize.`, "good");
       setLiveMessage(`${keys.length} confirmed flags handed off to the optimizer across ${sk.length} skills.`);
     } catch (err) {
       pushToast(`Hand-off failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
@@ -785,6 +842,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         pushToast(`Launch failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
         return null;
+      }
+    },
+    [pushToast]
+  );
+
+  const cancelLiveRun = useCallback(
+    async (launchId: string) => {
+      try {
+        await cancelRun(launchId);
+        pushToast(`Cancellation signalled for ${launchId}`, "good");
+        try {
+          setLive(await loadLive());
+        } catch {
+          /* the regular poll catches up */
+        }
+      } catch (err) {
+        pushToast(`Cancel failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
+      }
+    },
+    [pushToast]
+  );
+
+  // The human promotion gate: apply a staged KEEP candidate, then refresh the
+  // skills tree so "staged" flips to "promoted" from disk truth, not optimism.
+  const promoteSkillCandidate = useCallback(
+    async (skill: string, iteration: string): Promise<boolean> => {
+      try {
+        await promoteCandidate(skill, iteration);
+        pushToast(`Promoted ${skill} ${iteration} → skills/${skill}/SKILL.md (previous version archived)`, "good");
+        setLiveMessage(`Candidate ${iteration} promoted to the live ${skill} skill.`);
+        try {
+          setSkills(await loadSkills());
+        } catch {
+          /* next boot refresh catches up */
+        }
+        return true;
+      } catch (err) {
+        pushToast(`Promotion failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
+        return false;
       }
     },
     [pushToast]
@@ -829,6 +925,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     needsYouCount,
     confirmedFlagKeys,
     confirmedFlagSkills,
+    suggestedFlagCount,
+    lastHandoff,
+    dismissHandoff,
     skills,
     selectedSkill,
     selectedSkillData,
@@ -871,12 +970,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setShotIndex,
     toggleTheme,
     pushToast,
+    dismissToast,
+    retrySave,
     doExport,
     switchRun,
     setActiveHarness,
     setBaselineRun,
     setCaseScope,
     launchEvalRun,
+    cancelLiveRun,
+    promoteSkillCandidate,
     reload: boot
   };
 

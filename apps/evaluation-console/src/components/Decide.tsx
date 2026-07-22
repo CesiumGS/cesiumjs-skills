@@ -302,10 +302,24 @@ export function DecideInspector() {
         <div className="band-body">{scn ? <Judges scn={scn} /> : <div className="empty-note">No scenario selected.</div>}</div>
       </div>
 
-      <div className="authorized">
-        <span className="prov-glyph pg-human" aria-hidden>⚑</span>
-        authorized by your review flag
-      </div>
+      {/* Seed provenance: only claim human authorization when the proposer was
+          actually seeded by a handed-in decision record — never by default. */}
+      {iterationDetail.proposer_seed?.explicit === true ? (
+        <div className="authorized" title={iterationDetail.proposer_seed.decision_path ?? undefined}>
+          <span className="prov-glyph pg-human" aria-hidden>⚑</span>
+          seeded by your review flags
+        </div>
+      ) : iterationDetail.proposer_seed?.explicit === false ? (
+        <div className="authorized machine">
+          <span className="prov-glyph pg-machine" aria-hidden>▣</span>
+          machine-initiated run
+        </div>
+      ) : (
+        <div className="authorized machine">
+          <span className="prov-glyph" aria-hidden>◌</span>
+          seed provenance unrecorded (older run)
+        </div>
+      )}
     </aside>
   );
 }

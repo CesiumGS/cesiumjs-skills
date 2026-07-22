@@ -16,6 +16,20 @@ const resultsRoot = () => fromRepoRoot("optimization", "results");
 const runsRoot = () => fromRepoRoot("optimization", "runs");
 const scenariosRoot = () => fromRepoRoot("optimization", "scenarios");
 const skillsRoot = () => fromRepoRoot("skills");
+const candidatesRoot = () => fromRepoRoot("optimization", "candidates");
+const historyRoot = () => fromRepoRoot("optimization", "history");
+
+/**
+ * Post-promotion-gate state of a KEEP candidate:
+ *  - "staged":   PROMOTED-PENDING.md awaits human approval (skills/ untouched)
+ *  - "promoted": updateCurrentBest ran (backup exists), SKILL.md was updated
+ *  - "unknown":  KEEP with neither marker (should not happen; stay honest)
+ */
+export function promotionState(skill: string, iteration: string): string {
+  if (fs.existsSync(path.join(candidatesRoot(), skill, iteration, "PROMOTED-PENDING.md"))) return "staged";
+  if (fs.existsSync(path.join(historyRoot(), skill, `iteration-${iteration}`, "current-best-before.md"))) return "promoted";
+  return "unknown";
+}
 
 /** A non-terminal journal older than this is stalled, not running. */
 export function isFresh(tsValue: unknown, maxAgeSeconds: number): boolean {
@@ -106,6 +120,7 @@ export function iterationSummary(skill: string, iteration: string, runningMaxAge
     decision: decision.decision ?? null,
     rule_fired: decision.rule_fired ?? null,
     rationale: decision.rationale ?? null,
+    promotion: decision.decision === "KEEP" ? promotionState(skill, iteration) : null,
     counts: {
       wins: counts.wins ?? 0,
       losses: counts.losses ?? 0,
@@ -172,6 +187,12 @@ export function iterationDetail(skill: string, iteration: string, runningMaxAgeS
   }
   summary.scenarios = scenarios;
   summary.journal = journalFor(skill, iteration);
+  // Proposer seed provenance: was this candidate seeded by a human-confirmed
+  // scorecard focus (explicit decision path), or machine-initiated?
+  const proposerMeta = readJsonOrNull(path.join(candidatesRoot(), skill, iteration, "proposer-metadata.json"));
+  summary.proposer_seed = proposerMeta
+    ? { explicit: proposerMeta.explicit_seed ?? null, decision_path: proposerMeta.decision_path ?? null }
+    : null;
   return summary;
 }
 

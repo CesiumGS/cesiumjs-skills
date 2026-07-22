@@ -591,6 +591,25 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           return sendJson(res, state.config());
         }
         if (route === "/api/live/launch") return sendJson(res, liveData.launchRun(ctx, payload));
+        if (route === "/api/live/cancel") return sendJson(res, liveData.cancelRun(payload));
+        if (route === "/api/optimization/promote") {
+          // The human promotion gate: only a candidate the loop explicitly
+          // staged (PROMOTED-PENDING.md) can be applied, and the approval is
+          // persisted (promotion.json) alongside the SKILL.md backup.
+          const skill = String(payload.skill ?? "");
+          const iteration = String(payload.iteration ?? "");
+          if (!/^[a-z0-9-]+$/.test(skill) || !/^\d{3}$/.test(iteration)) {
+            throw new Error("promote requires a skill id and a NNN iteration id");
+          }
+          const pending = fromRepoRoot("optimization", "candidates", skill, iteration, "PROMOTED-PENDING.md");
+          if (!fs.existsSync(pending)) {
+            throw new NotFoundError(`no staged candidate for ${skill}/${iteration} — nothing awaits promotion`);
+          }
+          const { promoteCommand } = await import("./optimize.js");
+          const code = await promoteCommand({ skill, iteration, via: "console" });
+          if (code !== 0) throw new Error(`promotion failed for ${skill}/${iteration}`);
+          return sendJson(res, { ok: true, skill, iteration, promotion: "promoted" });
+        }
         res.writeHead(404);
         return res.end();
       }

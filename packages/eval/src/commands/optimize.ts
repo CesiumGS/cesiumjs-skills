@@ -31,7 +31,7 @@ const resultsRoot = () => fromRepoRoot("optimization", "results");
 // ---------------------------------------------------------------------------
 // optimize promote — the human promotion gate
 // ---------------------------------------------------------------------------
-export async function promoteCommand(options: { skill: string; iteration: string }): Promise<number> {
+export async function promoteCommand(options: { skill: string; iteration: string; via?: string }): Promise<number> {
   const candidateDir = fromRepoRoot("optimization", "candidates", options.skill, options.iteration);
   const candidatePath = path.join(candidateDir, "SKILL.md");
   if (!fs.existsSync(candidatePath)) {
@@ -45,6 +45,13 @@ export async function promoteCommand(options: { skill: string; iteration: string
   }
   updateCurrentBest(options.skill, options.iteration);
   fs.rmSync(path.join(candidateDir, "PROMOTED-PENDING.md"), { force: true });
+  // Persist the explicit human approval alongside the backup.
+  writeJsonPlain(fromRepoRoot("optimization", "history", options.skill, `iteration-${options.iteration}`, "promotion.json"), {
+    skill: options.skill,
+    iteration: options.iteration,
+    promoted_utc: new Date().toISOString(),
+    via: options.via ?? "cli",
+  });
   console.log(`[promote] applied ${repoRelative(candidatePath)} -> ${repoRelative(currentBestPath)}`);
   return 0;
 }

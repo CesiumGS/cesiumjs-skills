@@ -170,7 +170,7 @@ function JournalTail({ run }: { run: LiveRun }) {
 }
 
 function LiveRunCard({ run }: { run: LiveRun }) {
-  const { selectSkill, setStation } = useStore();
+  const { selectSkill, setStation, cancelLiveRun } = useStore();
   const running = run.status === "running";
   const pct = Math.round(run.progress * 100);
   const isAudit = run.kind === "audit";
@@ -214,6 +214,15 @@ function LiveRunCard({ run }: { run: LiveRun }) {
         <span className="lrc-meta" title="Wall clock since the run's first journal event.">
           <Clock size={11} aria-hidden /> {fmtDuration(run.elapsed_s)}
         </span>
+        {isAudit && run.launch_id && running && (
+          <button
+            className="pill cancel-pill"
+            onClick={() => void cancelLiveRun(run.launch_id!)}
+            title="Send SIGTERM to this run's process group. Artifacts written so far stay on disk."
+          >
+            <XCircle size={11} aria-hidden /> Cancel run
+          </button>
+        )}
         {isAudit ? (
           <button
             className="pill link-pill"
@@ -282,13 +291,25 @@ function LiveRunCard({ run }: { run: LiveRun }) {
    (Mode B) scorecard, and the panel says so before you launch one.
    --------------------------------------------------------------------------- */
 function LaunchPanel() {
-  const { launchEvalRun, liveRunning } = useStore();
+  const { launchEvalRun, liveRunning, registry } = useStore();
   const [available, setAvailable] = useState<string[]>([]);
-  const [picked, setPicked] = useState<Set<string>>(new Set()); // empty = all
+  // Tri-state selection (error prevention): "all" is an explicit choice, and
+  // an emptied custom set stays empty — it never silently re-arms all skills.
+  const [mode, setMode] = useState<"all" | "custom">("all");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   const [judge, setJudge] = useState(true);
-  const [adapter, setAdapter] = useState<"opencode" | "codex">("opencode");
+  const [adapter, setAdapter] = useState<string>("opencode");
   const [nJudges, setNJudges] = useState(3);
+  const [judgeModel, setJudgeModel] = useState("");
+  const [threshold, setThreshold] = useState("");
+  const [bundleRoot, setBundleRoot] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // The registry is the single source of truth for judge adapters and their
+  // model catalogs; "fake" is the CI smoke adapter the server also accepts.
+  const adapters = [...(registry?.harnesses.map((h) => h.id) ?? ["opencode", "codex"]), "fake"];
+  const adapterModels = registry?.harnesses.find((h) => h.id === adapter)?.models ?? [];
 
   useEffect(() => {
     let disposed = false;
@@ -303,6 +324,7 @@ function LaunchPanel() {
   }, []);
 
   const toggleSkill = (s: string) => {
+    setMode("custom");
     setPicked((prev) => {
       const next = new Set(prev);
       if (next.has(s)) next.delete(s);
@@ -311,8 +333,9 @@ function LaunchPanel() {
     });
   };
 
-  const allSelected = picked.size === 0;
+  const allSelected = mode === "all";
   const selectedCount = allSelected ? available.length : picked.size;
+  const selectedSkills = allSelected ? available : [...picked];
 
   const launch = async () => {
     setBusy(true);
@@ -322,8 +345,12 @@ function LaunchPanel() {
         skills: allSelected ? undefined : [...picked],
         judge,
         adapter,
-        n_judges: nJudges
+        n_judges: nJudges,
+        judge_model: judge && judgeModel ? judgeModel : undefined,
+        threshold: threshold ? Number(threshold) : undefined,
+        bundle_root: bundleRoot || undefined
       });
+      setConfirming(false);
     } finally {
       setBusy(false);
     }
@@ -340,12 +367,16 @@ function LaunchPanel() {
       </div>
 
       <div className="launch-grid">
-        <div className="launch-field">
+        <div className="launch-field" role="group" aria-label="Skills to audit">
           <div className="launch-label">Skills</div>
           <div className="launch-skills">
             <button
               className={`lk-chip${allSelected ? " on" : ""}`}
-              onClick={() => setPicked(new Set())}
+              aria-pressed={allSelected}
+              onClick={() => {
+                setMode("all");
+                setPicked(new Set());
+              }}
               title="Audit every skill with archived baselines"
             >
               All ({available.length})
@@ -354,6 +385,7 @@ function LaunchPanel() {
               <button
                 key={s}
                 className={`lk-chip${!allSelected && picked.has(s) ? " on" : ""}`}
+                aria-pressed={!allSelected && picked.has(s)}
                 onClick={() => toggleSkill(s)}
                 title={skillLabel(s)}
               >
@@ -361,6 +393,11 @@ function LaunchPanel() {
               </button>
             ))}
           </div>
+          {!allSelected && picked.size === 0 && (
+            <div className="launch-warn">
+              <AlertTriangle size={11} aria-hidden /> No skills selected — pick at least one, or choose All.
+            </div>
+          )}
         </div>
 
         <div className="launch-field">
@@ -398,12 +435,14 @@ function LaunchPanel() {
         </div>
 
         <div className="launch-field">
-          <div className="launch-label">Judges</div>
-          <div className="launch-steppers">
-            {[1, 3, 5].map((n) => (
+          <div className="launch-label" id="launch-judges-label">Judges</div>
+          <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judges-label">
+            {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
                 className={`lk-chip${nJudges === n ? " on" : ""}`}
+                role="radio"
+                aria-checked={nJudges === n}
                 disabled={!judge}
                 onClick={() => setNJudges(n)}
                 title={`${n}-judge panel`}
@@ -415,14 +454,20 @@ function LaunchPanel() {
         </div>
 
         <div className="launch-field">
-          <div className="launch-label">Judge adapter</div>
-          <div className="launch-steppers">
-            {(["opencode", "codex"] as const).map((a) => (
+          <div className="launch-label" id="launch-adapter-label">Judge adapter</div>
+          <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-adapter-label">
+            {adapters.map((a) => (
               <button
                 key={a}
                 className={`lk-chip${adapter === a ? " on" : ""}`}
+                role="radio"
+                aria-checked={adapter === a}
                 disabled={!judge}
-                onClick={() => setAdapter(a)}
+                onClick={() => {
+                  setAdapter(a);
+                  setJudgeModel("");
+                }}
+                title={a === "fake" ? "Canned CI smoke responses — no real LLM calls" : `Judge via the ${a} harness`}
               >
                 {a}
               </button>
@@ -430,11 +475,82 @@ function LaunchPanel() {
           </div>
         </div>
 
+        <details className="launch-advanced">
+          <summary>Advanced audit flags</summary>
+          <div className="launch-advanced-grid">
+            <label className="launch-adv-field">
+              <span className="launch-label">Judge model</span>
+              <select value={judgeModel} disabled={!judge || adapter === "fake"} onChange={(e) => setJudgeModel(e.target.value)}>
+                <option value="">auto (discovered)</option>
+                {adapterModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="launch-adv-field">
+              <span className="launch-label">Pass threshold</span>
+              <input
+                type="number"
+                min="0.05"
+                max="1"
+                step="0.05"
+                placeholder="config default"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+              />
+            </label>
+            <label className="launch-adv-field">
+              <span className="launch-label">Bundle root (repo-relative)</span>
+              <input
+                type="text"
+                placeholder="default: archived baselines"
+                value={bundleRoot}
+                onChange={(e) => setBundleRoot(e.target.value)}
+              />
+            </label>
+          </div>
+        </details>
+
         <div className="launch-field launch-go">
-          <button className="launch-btn" onClick={() => void launch()} disabled={busy || selectedCount === 0}>
-            <Rocket size={13} aria-hidden />
-            {busy ? "Launching…" : `Launch audit · ${selectedCount} ${selectedCount === 1 ? "skill" : "skills"}`}
-          </button>
+          {!confirming ? (
+            <button
+              className="launch-btn"
+              onClick={() => setConfirming(true)}
+              disabled={busy || selectedCount === 0}
+            >
+              <Rocket size={13} aria-hidden />
+              {`Review & launch · ${selectedCount} ${selectedCount === 1 ? "skill" : "skills"}`}
+            </button>
+          ) : (
+            <div className="launch-preflight" role="group" aria-label="Launch preflight">
+              <div className="launch-preflight-body">
+                <strong>Preflight</strong>
+                <span>
+                  {selectedCount} {selectedCount === 1 ? "skill" : "skills"}
+                  {allSelected ? " (all)" : `: ${selectedSkills.map((s) => s.replace(/^cesiumjs-/, "")).join(", ")}`}
+                </span>
+                <span>
+                  {judge
+                    ? `visual judging on · ${nJudges}-judge panel · adapter ${adapter}${judgeModel ? ` · model ${judgeModel}` : " · model auto"}${
+                        adapter === "fake" ? " (no real LLM calls)" : " — real LLM calls per case"
+                      }`
+                    : "checks only — no judge calls"}
+                </span>
+                {threshold && <span>threshold {threshold}</span>}
+                <span className="launch-preflight-note">Runs as a detached process; cancel it any time from its run card.</span>
+              </div>
+              <div className="launch-preflight-actions">
+                <button className="launch-btn" onClick={() => void launch()} disabled={busy}>
+                  <Rocket size={13} aria-hidden /> {busy ? "Launching…" : "Confirm launch"}
+                </button>
+                <button className="pill" onClick={() => setConfirming(false)} disabled={busy}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
           {liveRunning && <div className="launch-note">A run is already in progress — parallel runs are fine.</div>}
         </div>
       </div>

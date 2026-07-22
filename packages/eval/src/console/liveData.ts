@@ -45,7 +45,7 @@ const BASELINE_TERMINAL = new Set([
   "baseline_browser_eval_completed",
   "baseline_browser_eval_failed",
 ]);
-const AUDIT_TERMINAL = new Set(["audit_completed", "audit_failed"]);
+const AUDIT_TERMINAL = new Set(["audit_completed", "audit_failed", "audit_cancelled"]);
 
 export const AUDIT_JOURNAL_NAME = "progress.jsonl";
 export const LAUNCH_META_NAME = "launch.json";
@@ -430,6 +430,7 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
     label: skills.length > 1 ? `${label} (${skills.length} skills)` : label,
     iteration: path.basename(auditDir),
     kind: "audit",
+    launch_id: launchMeta.launch_id ?? null,
     judge,
     status,
     started_utc: startedTs?.toISOString() ?? null,
@@ -529,6 +530,26 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (!Number.isInteger(nJudges)) throw new Error("n_judges must be an integer");
   if (nJudges < 1 || nJudges > 5) throw new Error("n_judges must be between 1 and 5");
 
+  // Optional advanced flags (mirror the audit CLI surface).
+  let judgeModel: string | null = null;
+  if (payload.judge_model !== undefined && payload.judge_model !== null && payload.judge_model !== "") {
+    judgeModel = String(payload.judge_model);
+    if (judgeModel.length > 200 || !/^[\w./:-]+$/.test(judgeModel)) throw new Error("invalid judge_model");
+  }
+  let threshold: number | null = null;
+  if (payload.threshold !== undefined && payload.threshold !== null && payload.threshold !== "") {
+    threshold = Number(payload.threshold);
+    if (!Number.isFinite(threshold) || threshold <= 0 || threshold > 1) throw new Error("threshold must be in (0, 1]");
+  }
+  let bundleRoot: string | null = null;
+  if (payload.bundle_root !== undefined && payload.bundle_root !== null && payload.bundle_root !== "") {
+    bundleRoot = String(payload.bundle_root);
+    if (path.isAbsolute(bundleRoot) || bundleRoot.split(/[\\/]/).includes("..")) {
+      throw new Error("bundle_root must be a repo-relative path");
+    }
+    if (!fs.existsSync(path.join(ctx.repoRoot, bundleRoot))) throw new Error(`bundle_root does not exist: ${bundleRoot}`);
+  }
+
   const launchId = "live-" + new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const outDir = path.join(auditsRoot(), launchId);
   fs.mkdirSync(outDir, { recursive: true });
@@ -552,6 +573,9 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     String(nJudges),
   ];
   if (!judge) argv.push("--no-judge");
+  if (judgeModel) argv.push("--judge-model", judgeModel);
+  if (threshold !== null) argv.push("--threshold", String(threshold));
+  if (bundleRoot) argv.push("--bundle-root", bundleRoot);
 
   const logFd = fs.openSync(logPath, "w");
   const child = spawn(process.execPath, argv, {
@@ -570,6 +594,9 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     judge,
     adapter,
     n_judges: nJudges,
+    judge_model: judgeModel,
+    threshold,
+    bundle_root: bundleRoot,
     argv: [process.execPath, ...argv],
     journal: journalPath,
     log: logPath,
@@ -578,4 +605,37 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   };
   writeJsonPlain(path.join(outDir, LAUNCH_META_NAME), record);
   return record;
+}
+
+/**
+ * Cancel a console-launched audit run: SIGTERM its detached process group and
+ * append a terminal `audit_cancelled` journal event so the live poll settles.
+ */
+export function cancelRun(payload: Record<string, any>): Record<string, any> {
+  const launchId = String(payload.launch_id ?? "");
+  if (!/^live-[0-9TZ]+$/.test(launchId)) throw new Error(`invalid launch_id: '${launchId}'`);
+  const outDir = path.join(auditsRoot(), launchId);
+  const meta = readJsonOrNull(path.join(outDir, LAUNCH_META_NAME));
+  if (!meta) throw new Error(`no launch record for ${launchId}`);
+  const pid = Number(meta.pid ?? -1);
+  let killed = false;
+  if (Number.isInteger(pid) && pid > 1) {
+    try {
+      process.kill(-pid, "SIGTERM"); // detached => own process group
+      killed = true;
+    } catch {
+      try {
+        process.kill(pid, "SIGTERM");
+        killed = true;
+      } catch {
+        killed = false; // already gone
+      }
+    }
+  }
+  const journalPath = path.join(outDir, AUDIT_JOURNAL_NAME);
+  fs.appendFileSync(
+    journalPath,
+    JSON.stringify({ timestamp_utc: new Date().toISOString(), event: "audit_cancelled", via: "console", pid, killed }) + "\n",
+  );
+  return { launch_id: launchId, pid, killed, cancelled_utc: new Date().toISOString() };
 }

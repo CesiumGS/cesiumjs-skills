@@ -305,6 +305,10 @@ export async function proposeCommand(ctx: EvalContext, options: ProposeOptions):
     harness: invocation.agent.harness,
     model_id: invocation.agent.model,
     model_variant: invocation.agent.variant,
+    // Seed provenance: explicit_seed = a decision record was handed in (e.g.
+    // a human-confirmed scorecard focus), vs the loop's own default chain.
+    explicit_seed: Boolean(options.decisionPath),
+    decision_path: fs.existsSync(decisionPath) ? repoRelative(decisionPath) : null,
     temperature: options.temperature ?? 1.0,
     prompt_version: promptVersion,
     timestamp_utc: new Date().toISOString(),

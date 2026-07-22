@@ -1500,6 +1500,11 @@ button {
   padding: var(--sp-4);
   outline: none;
 }
+/* Visible focus for the palette's only field (WCAG 2.4.7). */
+.palette input:focus-visible {
+  box-shadow: inset 0 -2px 0 var(--brand-blue);
+  border-radius: 0;
+}
 .palette-item {
   display: flex;
   align-items: center;
@@ -1799,6 +1804,208 @@ button {
   align-items: center;
   gap: 5px;
 }
+/* Verbs are real buttons (pointer/touch/switch access); kbd stays a hint. */
+button.verb-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-1);
+  color: var(--text-2);
+  font-size: var(--fs-100);
+  padding: 3px 9px;
+  cursor: pointer;
+}
+button.verb-btn:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+button.verb-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Persistence state for review grades (N1/N9). */
+.save-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: var(--sp-4);
+  font-size: var(--fs-50);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.save-chip.saved {
+  color: var(--pass);
+}
+.save-chip.error {
+  color: var(--fail);
+}
+.save-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--fail-bg);
+  border: 1px solid var(--fail);
+  border-radius: var(--r-1);
+  color: var(--fail);
+  font-size: var(--fs-50);
+  padding: 1px 7px;
+  cursor: pointer;
+}
+
+/* Promote gate controls */
+.promote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--pass-bg);
+  border: 1px solid var(--pass);
+  border-radius: var(--r-1);
+  color: var(--pass);
+  font-size: var(--fs-100);
+  font-weight: var(--fw-semibold);
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.promote-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+.promote-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cancel-pill {
+  border-color: var(--fail) !important;
+  color: var(--fail) !important;
+}
+
+/* Handoff panel: the seeded loop command, kept until dismissed (N6). */
+.handoff-panel {
+  border: 1px solid var(--ink-human);
+  background: var(--ink-human-bg);
+  border-radius: var(--r-2);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-100);
+}
+.handoff-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text);
+}
+.handoff-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+  color: var(--text-2);
+}
+.handoff-cmd {
+  flex: 1 1 320px;
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-1);
+  font-size: var(--fs-50);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+}
+
+/* Launch panel: advanced disclosure + preflight confirmation (N5). */
+.launch-advanced {
+  grid-column: 1 / -1;
+  border-top: 1px dashed var(--hairline);
+  padding-top: var(--sp-2);
+}
+.launch-advanced summary {
+  cursor: pointer;
+  font-size: var(--fs-50);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.launch-advanced-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-3);
+}
+.launch-adv-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 180px;
+}
+.launch-adv-field select,
+.launch-adv-field input {
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-1);
+  color: var(--text);
+  font-size: var(--fs-100);
+  padding: 5px 8px;
+}
+.launch-preflight {
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  border-radius: var(--r-2);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.launch-preflight-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: var(--fs-100);
+  color: var(--text-2);
+}
+.launch-preflight-note {
+  color: var(--text-3);
+  font-size: var(--fs-50);
+}
+.launch-preflight-actions {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+/* Removed-baseline summary: informative, deliberately not a control (N4). */
+.diff-card-static {
+  cursor: default;
+  opacity: 0.85;
+}
+
+/* Help overlay chrome legend (hover-only guidance, made readable). */
+.help-legend {
+  grid-column: 1 / -1;
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-100);
+  color: var(--text-2);
+}
+.help-legend-title {
+  font-size: var(--fs-50);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Machine-provenance variant of the Decide footer badge. */
+.authorized.machine {
+  color: var(--text-3);
+  border-color: var(--hairline-strong);
+}
 
 /* ===================== TOASTS ===================== */
 .toasts {
@@ -1825,6 +2032,23 @@ button {
 }
 .toast.bad {
   border-left-color: var(--fail);
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.toast-dismiss {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 2px;
+}
+.toast-dismiss:hover {
+  color: var(--text);
 }
 
 /* ===================== STATES ===================== */
@@ -2708,6 +2932,34 @@ button {
   }
   .hx-grid {
     grid-template-columns: 1fr;
+  }
+}
+/* WCAG 1.4.10 reflow: below ~1300px the 4-pane review grid starves the stage,
+   so the inspector stacks under the stage and the stream narrows. The stage
+   keeps ≥ ~520px at 1024px instead of collapsing to ~160px. */
+@media (max-width: 1300px) {
+  .body:not(.body--wide) {
+    grid-template-columns: var(--rail-w) minmax(230px, 290px) 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(180px, 34vh);
+  }
+  .body:not(.body--wide) > .rail {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .body:not(.body--wide) > .stream {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  .body:not(.body--wide) > .stage {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .body:not(.body--wide) > .inspector {
+    grid-column: 3;
+    grid-row: 2;
+    border-left: none;
+    border-top: 1px solid var(--hairline);
+    overflow-y: auto;
   }
 }
 @media (max-width: 940px) {
