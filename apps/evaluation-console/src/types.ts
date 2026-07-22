@@ -295,7 +295,7 @@ export interface CaseView extends AdaptedCase {
 }
 
 // ============================================================================
-// Skill Evaluation Console — optimization-lifecycle shapes (mirror apps/evaluation-console/optimization_data.py)
+// Skill Evaluation Console — optimization-lifecycle shapes (mirror packages/eval/src/console/optimizationData.ts)
 // ============================================================================
 export type LoopDecision = "KEEP" | "REJECT" | null;
 export type IterationStatus = "baseline" | "completed" | "failed" | "running" | "stalled" | "empty";
@@ -398,7 +398,7 @@ export interface SkillOverview {
 }
 
 // ============================================================================
-// Live eval-run progress (mirrors apps/evaluation-console/live_data.py, served
+// Live eval-run progress (mirrors packages/eval/src/console/liveData.ts, served
 // by /api/live and polled by the store while the console is visible)
 // ============================================================================
 export type LivePhaseState = "pending" | "active" | "done" | "failed";

@@ -79,24 +79,24 @@ The repository now separates pure evaluation from self-optimization:
 Run the lightweight public checks with:
 
 ```bash
-pytest -q optimization/tests
-pytest -q evaluation/tests
-python3 evaluation/scripts/validate-evaluation.py
-python3 optimization/scripts/validate-evals.py
-python3 optimization/scripts/check-canonical-eval-surface.py
-python3 optimization/scripts/check-public-artifacts.py
+npm ci
+npm run build --workspace @cesiumjs-skills/eval
+npm test --workspace @cesiumjs-skills/eval
+node packages/eval/bin/cesium-eval.js validate --suite all
+node packages/eval/bin/cesium-eval.js check canonical-surface
+node packages/eval/bin/cesium-eval.js check public-artifacts
 ```
 
 For local browser-backed optimization scenario reproduction, place generated JavaScript snippets under `optimization/generated/<skill>/<iteration>/`, set `CESIUM_ION_TOKEN`, and run:
 
 ```bash
-python3 optimization/scripts/run-public-eval.py cesiumjs-camera --iteration candidate --only eval-001
+node packages/eval/bin/cesium-eval.js optimize render cesiumjs-camera --iteration candidate --only eval-001
 ```
 
-For the full autonomous optimization loop across every skill scenario group, use `python3 optimization/scripts/run-all-evals.py --skills all --max-iterations 1` after configuring an agent CLI harness and setting `CESIUM_ION_TOKEN`. The default is GPT-5.6 Sol (`github-copilot/gpt-5.6-sol` on OpenCode, `gpt-5.6-sol` on Codex) pinned to `low` reasoning effort for proposal, code generation, and judging, to keep batch calls cheap and fast. To test the same phases through Codex CLI agents, pass `--proposer-harness codex --eval-harness codex --judge-harness codex`.
+For the full autonomous optimization loop across every skill scenario group, use `cesium-eval optimize all --skills all --max-iterations 1` after configuring an agent CLI harness and setting `CESIUM_ION_TOKEN`. Role defaults (harness, model, reasoning effort) live in [`eval.config.json`](eval.config.json) and the harness/model catalog in [`config/harness-registry.json`](config/harness-registry.json); command-line flags and environment variables override them. To run the same phases through Codex CLI agents, pass `--proposer-harness codex --codegen-harness codex --judge-harness codex`.
 Raw generated code, HTML, screenshots, and run traces under `optimization/generated/` and `optimization/runs/` are local-only and gitignored by default.
-Optimization-specific tests live under `optimization/tests/`; pure evaluation tests live under `evaluation/tests/`.
-Scenario validation is read-only; update changed scenario hashes explicitly with `python3 optimization/scripts/rebaseline-scenario.py <skill> <eval-id>`.
+The evaluation platform's unit tests live under `packages/eval/tests/`.
+Scenario validation is read-only; update changed scenario hashes explicitly with `cesium-eval optimize rebaseline <skill> <eval-id>`.
 Scenarios marked `runner_mode: "review-only"` are included in the public catalog but skipped by the browser runner until a compatible adapter exists.
 
 The previous local tuning harness has been removed from the active repo surface. New self-optimization scenarios and results belong under `optimization/`; new deterministic, candidate-agnostic evaluation cases belong under `evaluation/`. See [`optimization/docs/source-of-truth.md`](optimization/docs/source-of-truth.md) and [`evaluation/README.md`](evaluation/README.md).

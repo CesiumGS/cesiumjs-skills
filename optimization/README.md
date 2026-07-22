@@ -28,7 +28,7 @@ tests belong here and pure evaluation tests belong under `../evaluation/tests/`,
 so the product-facing root stays centered on `skills/`.
 
 Scenarios default to `runner_mode: "global-js"`, meaning they can run through
-`optimization/scripts/run-public-eval.py` with generated JavaScript snippets that use the
+`cesium-eval optimize render` with generated JavaScript snippets that use the
 global `Cesium` object. Scenarios marked `runner_mode: "review-only"` are
 public catalog and coverage scenarios until a compatible execution adapter is
 added.
@@ -48,17 +48,16 @@ outputs. Keep those artifacts local or in temporary CI storage.
 Run the public v1 checks before publishing optimization changes:
 
 ```bash
-pytest -q optimization/tests
-pytest -q evaluation/tests
-python3 optimization/scripts/validate-evals.py
-python3 optimization/scripts/check-canonical-eval-surface.py
-python3 optimization/scripts/check-public-artifacts.py
+npm test --workspace @cesiumjs-skills/eval
+node packages/eval/bin/cesium-eval.js validate --suite optimization
+node packages/eval/bin/cesium-eval.js check canonical-surface
+node packages/eval/bin/cesium-eval.js check public-artifacts
 ./optimization/scripts/check-secrets.sh
 ```
 
 The validation scripts use only the Python standard library.
 `validate-evals.py` is read-only: if a scenario changes, update the matching
-hash deliberately with `python3 optimization/scripts/rebaseline-scenario.py <skill> <eval-id>`.
+hash deliberately with `node packages/eval/bin/cesium-eval.js optimize rebaseline <skill> <eval-id>`.
 
 The previous local tuning harness has been removed from the active repository
 surface. New self-optimization scenarios, results, and public optimization
@@ -68,9 +67,9 @@ tree. New deterministic evaluation cases should be added under `evaluation/`.
 To use the deterministic scorecard as local optimization input, run:
 
 ```bash
-python3 evaluation/scripts/run-scorecard.py --fixture-expectation fail --output-dir /tmp/cesium-scorecard
-python3 optimization/scripts/scorecard-focus.py /tmp/cesium-scorecard/scorecard.json --format markdown
-python3 optimization/scripts/run-all-evals.py --from-scorecard /tmp/cesium-scorecard/scorecard.json --max-iterations 1 --stop-on regression --dry-run
+node packages/eval/bin/cesium-eval.js score --fixture-expectation fail --output-dir /tmp/cesium-scorecard
+node packages/eval/bin/cesium-eval.js optimize focus /tmp/cesium-scorecard/scorecard.json --format markdown
+node packages/eval/bin/cesium-eval.js optimize all --from-scorecard /tmp/cesium-scorecard/scorecard.json --max-iterations 1 --stop-on regression --dry-run
 ```
 
 This is intentionally one-way: optimization consumes scorecard JSON, but

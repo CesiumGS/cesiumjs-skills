@@ -181,10 +181,10 @@ Public v1 repository artifacts include:
 - `optimization/scenarios/<skill>/*.json` public-safe scenario manifests.
 - `optimization/results/public-status.json` sanitized current-best and decision summaries.
 - `optimization/schemas/scenario.schema.json` human-readable scenario schema.
-- `optimization/scripts/validate-evals.py` deterministic scenario and summary validation.
-- `optimization/scripts/check-canonical-eval-surface.py` canonical eval-surface enforcement.
-- `optimization/scripts/check-public-artifacts.py` public-facing artifact safety scan.
-- `optimization/scripts/run-public-eval.py` local browser-backed reproduction runner.
+- `cesium-eval validate --suite optimization` deterministic scenario and summary validation.
+- `cesium-eval check canonical-surface` canonical eval-surface enforcement.
+- `cesium-eval check public-artifacts` public-facing artifact safety scan.
+- `cesium-eval optimize render` local browser-backed reproduction runner.
 - `.github/workflows/evals.yml` lightweight public eval validation in CI.
 
 Earlier local tuning history and raw traces were experimental predecessors to this public surface. They are not the public source of truth, are not part of the active repository pipeline, and must not be required to understand the wiki or ACD.
@@ -370,7 +370,7 @@ The framework should support three operational tiers.
 | Tier | Purpose | Current or target behavior |
 |------|---------|----------------------------|
 | Tier 1: Archival evaluation record | Preserve methodology, scenarios, selected scores, judge verdicts, decisions, and curated screenshots. | Public v1 content under `optimization/scenarios/` and `optimization/results/`. |
-| Tier 2: Reproducible local and CI harness | Run deterministic checks and selected visual scenarios from a clean checkout with documented commands. | `optimization/scripts/validate-evals.py`, `optimization/scripts/check-canonical-eval-surface.py`, `optimization/scripts/check-public-artifacts.py`, `optimization/scripts/run-public-eval.py`, and `.github/workflows/evals.yml`. |
+| Tier 2: Reproducible local and CI harness | Run deterministic checks and selected visual scenarios from a clean checkout with documented commands. | `cesium-eval validate`, `cesium-eval check`, `cesium-eval optimize render`, and `.github/workflows/evals.yml`. |
 | Tier 3: MCP/tool-call evaluation | Evaluate structured tool selection, schema validation, multi-tool orchestration, error recovery, and final scene state. | Future target once relevant MCP/tool runtimes are mature enough. |
 
 Operational policies:

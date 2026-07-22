@@ -85,7 +85,7 @@
     "runner_mode": {
       "type": "string",
       "enum": [ "global-js", "review-only" ],
-      "description": "global-js scenarios can run in optimization/scripts/run-public-eval.py. review-only scenarios are catalog/coverage scenarios until a compatible execution adapter exists."
+      "description": "global-js scenarios can run with cesium-eval optimize render. review-only scenarios are catalog/coverage scenarios until a compatible execution adapter exists."
     },
     "target_skill_sections": {
       "type": "array",

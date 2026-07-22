@@ -22,7 +22,7 @@ Each scenario must include:
 - `programmatic_checks` - Deterministic checks such as `no_console_errors`, `code_runs`, `pattern_present`, or `pattern_absent`.
 - `screenshots` - Capture timing and description.
 - `regression_critical` - Whether losing this scenario blocks a candidate.
-- `runner_mode` - Optional. Use `global-js` for scenarios runnable by `optimization/scripts/run-public-eval.py`; use `review-only` for public catalog scenarios that need a future adapter.
+- `runner_mode` - Optional. Use `global-js` for scenarios runnable by `cesium-eval optimize render`; use `review-only` for public catalog scenarios that need a future adapter.
 
 The human-readable schema is in `optimization/schemas/scenario.schema.json`.
 
@@ -41,9 +41,9 @@ A good scenario should:
 Run:
 
 ```bash
-python3 optimization/scripts/validate-evals.py
-python3 optimization/scripts/check-canonical-eval-surface.py
-python3 optimization/scripts/check-public-artifacts.py
+node packages/eval/bin/cesium-eval.js validate --suite optimization
+node packages/eval/bin/cesium-eval.js check canonical-surface
+node packages/eval/bin/cesium-eval.js check public-artifacts
 ```
 
-If the scenario affects visual quality, also run a local browser reproduction with `optimization/scripts/run-public-eval.py` before requesting review.
+If the scenario affects visual quality, also run a local browser reproduction with `cesium-eval optimize render <skill> --only <eval-id>` before requesting review.

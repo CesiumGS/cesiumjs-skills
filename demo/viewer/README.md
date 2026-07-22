@@ -97,7 +97,7 @@ This destroys the prior viewer, clears captured errors and warnings, and gets th
 
 Materialising a fresh HTML file per eval scenario is useful for reproducible batch runs, but it is slower for interactive iteration and writes run-time artifacts to disk. A single persistent page driven by `evaluate` keeps the dev loop tight: navigate once, iterate many times.
 
-The two supported patterns now live in separate places: `optimization/scripts/run-public-eval.py` owns optimization batch-run reproduction under `optimization/`, while this page is for interactive iteration during skill development.
+The two supported patterns now live in separate places: `cesium-eval optimize render` owns optimization batch-run reproduction under `optimization/`, while this page is for interactive iteration during skill development.
 
 ## Token handling
 

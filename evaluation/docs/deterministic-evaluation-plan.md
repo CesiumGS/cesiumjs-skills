@@ -90,7 +90,7 @@ the deterministic checks instead of silently relying on ad hoc evidence shape.
 1. Contract hardening:
    - Add evidence and result schemas.
    - Add tracked synthetic evidence fixtures for the six-meter translation case.
-   - Validate cases and fixtures in `evaluation/scripts/validate-evaluation.py`.
+  - Validate cases and fixtures with `cesium-eval validate --suite evaluation`.
    - Test runner output against the result schema.
 2. Check catalog:
    - Keep `entity_translation_delta` as the first numeric scene-state matcher.
@@ -171,15 +171,15 @@ Revision:
 
 ## Hardened Acceptance Criteria
 
-- `python3 evaluation/scripts/validate-evaluation.py` validates all cases and
+- `node packages/eval/bin/cesium-eval.js validate --suite evaluation` validates all cases and
   tracked fixtures.
-- `pytest -q evaluation/tests` passes and includes both positive and negative
+- `npm test --workspace @cesiumjs-skills/eval` passes and includes both positive and negative
   synthetic evidence tests.
-- `python3 -m evaluation.runner <case> --evidence <fixture>` produces a result
+- `node packages/eval/bin/cesium-eval.js case <case> --evidence <fixture>` produces a result
   matching `evaluation/schemas/result.schema.json`.
-- `python3 evaluation/scripts/run-scorecard.py --visual-review <review.json>`
+- `node packages/eval/bin/cesium-eval.js score --visual-review <review.json>`
   emits first-class `visual_summary` and per-case `visual_review` data.
-- `python3 optimization/scripts/check-canonical-eval-surface.py` fails if
+- `node packages/eval/bin/cesium-eval.js check canonical-surface` fails if
   active eval scripts reappear under top-level `scripts/`.
 - No tracked evaluation file contains local paths, localhost URLs, tokens, or
   private tracebacks.

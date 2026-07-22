@@ -16,7 +16,7 @@ The evaluation framework is public-facing. Artifacts committed to the repository
 - Generated JavaScript snippets under `optimization/generated/`.
 - Raw browser runs under `optimization/runs/`.
 - Generated candidate skill snapshots under `optimization/candidates/`.
-- Generated HTML pages, including the dashboard at `optimization/dashboard/index.html` (rebuild locally with `optimization/scripts/build-dashboard.py`).
+- Generated HTML pages. Review results in the evaluation console instead (`cesium-eval serve <scorecard.json>`).
 - Per-skill iteration output under `optimization/results/<skill>/<iteration>/`.
 - The `optimization/history/` archive.
 - Console logs from local browser runs.
@@ -28,8 +28,8 @@ The evaluation framework is public-facing. Artifacts committed to the repository
 Before publishing eval or wiki changes, run:
 
 ```bash
-python3 optimization/scripts/check-canonical-eval-surface.py
-python3 optimization/scripts/check-public-artifacts.py
+node packages/eval/bin/cesium-eval.js check canonical-surface
+node packages/eval/bin/cesium-eval.js check public-artifacts
 ./optimization/scripts/check-secrets.sh
 ```
 

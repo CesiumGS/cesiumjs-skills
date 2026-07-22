@@ -10,14 +10,12 @@ The public v1 evaluation workflow has multiple layers:
 
 ### Install Dependencies
 
-Create a virtual environment and install all dependencies:
+Install the workspace dependencies and build the `cesium-eval` CLI:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-playwright install chromium
-playwright install-deps chromium
+npm ci
+npm run build --workspace @cesiumjs-skills/eval
+npx playwright install chromium
 ```
 
 ### Set Environment Variables
@@ -42,9 +40,9 @@ export AGENT_HARNESS="opencode"  # or "codex"
 Run these checks before proposing changes to eval scenarios, architecture docs, wiki pages, or public summaries:
 
 ```bash
-python3 optimization/scripts/validate-evals.py
-python3 optimization/scripts/check-canonical-eval-surface.py
-python3 optimization/scripts/check-public-artifacts.py
+node packages/eval/bin/cesium-eval.js validate --suite optimization
+node packages/eval/bin/cesium-eval.js check canonical-surface
+node packages/eval/bin/cesium-eval.js check public-artifacts
 bash optimization/scripts/check-secrets.sh
 ```
 
@@ -73,7 +71,7 @@ The generated file should contain only the JavaScript body. The runner provides 
 Run the public runner for a single scenario:
 
 ```bash
-python3 optimization/scripts/run-public-eval.py cesiumjs-camera --iteration 001 --only eval-001
+node packages/eval/bin/cesium-eval.js optimize render cesiumjs-camera --iteration 001 --only eval-001
 ```
 
 Scenarios marked `runner_mode: "review-only"` are skipped by the local runner. They remain part of the public scenario catalog, but need a compatible execution adapter before browser automation can run them directly.
@@ -110,7 +108,7 @@ The autonomous loop orchestrates the complete evaluation pipeline from proposal 
 Run a complete multi-iteration evaluation loop for a skill:
 
 ```bash
-python3 optimization/scripts/run-loop.py cesiumjs-camera --max-iterations 5 --stop-on plateau
+node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera --max-iterations 5 --stop-on plateau
 ```
 
 This executes the 7-step pipeline for each iteration:
@@ -127,16 +125,16 @@ This executes the 7-step pipeline for each iteration:
 
 ```bash
 # Run up to 10 iterations
-python3 optimization/scripts/run-loop.py cesiumjs-camera --max-iterations 10
+node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera --max-iterations 10
 
 # Stop after 3 consecutive ties (plateau)
-python3 optimization/scripts/run-loop.py cesiumjs-camera --max-iterations 10 --stop-on plateau --plateau-n 3
+node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera --max-iterations 10 --stop-on plateau --plateau-n 3
 
 # Stop immediately on first regression (REJECT)
-python3 optimization/scripts/run-loop.py cesiumjs-camera --max-iterations 10 --stop-on regression
+node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera --max-iterations 10 --stop-on regression
 
 # Configure harnesses, model, reasoning variants, and temperature.
-python3 optimization/scripts/run-loop.py cesiumjs-camera \
+node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera \
   --proposer-harness opencode \
   --proposer-model auto \
   --proposer-variant high \
@@ -150,7 +148,7 @@ python3 optimization/scripts/run-loop.py cesiumjs-camera \
   --judge-variant medium
 
 # Run the same proposal, codegen, and judge phases through Codex CLI agents.
-python3 optimization/scripts/run-loop.py cesiumjs-camera \
+node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera \
   --max-iterations 1 \
   --proposer-harness codex \
   --eval-harness codex \
@@ -192,7 +190,7 @@ state.
 Analyze which skill sections and APIs lack scenario coverage:
 
 ```bash
-python3 optimization/scripts/analyze-coverage.py
+node packages/eval/bin/cesium-eval.js optimize coverage
 ```
 
 Output is written to `optimization/results/coverage.json` with per-skill section and API coverage mappings.
@@ -209,7 +207,7 @@ To reproduce a decision from a visual workflow artifact:
 4. Re-run the decision engine with the artifact's check, judge, and scenario metadata files:
 
 ```bash
-python3 optimization/scripts/make-decision.py \
+node packages/eval/bin/cesium-eval.js optimize decide \
   cesiumjs-camera \
   001 \
   --check-results path/to/artifact/check-results.json \
@@ -226,10 +224,10 @@ When a scenario manifest is modified, its content hash changes. The framework re
 
 ```bash
 # Preview the current scenario hash without writing baselines.json
-python3 optimization/scripts/rebaseline-scenario.py cesiumjs-camera eval-001 --dry-run
+node packages/eval/bin/cesium-eval.js optimize rebaseline cesiumjs-camera eval-001 --dry-run
 
 # Re-baseline a single scenario after review
-python3 optimization/scripts/rebaseline-scenario.py cesiumjs-camera eval-001
+node packages/eval/bin/cesium-eval.js optimize rebaseline cesiumjs-camera eval-001
 
 # Re-baseline updates optimization/results/baselines.json with the new hash
 ```
@@ -241,8 +239,8 @@ Until re-baselined, changed scenarios are excluded from win/loss counts and tagg
 Before committing aggregate result updates, ensure they pass public safety checks:
 
 ```bash
-python3 optimization/scripts/check-canonical-eval-surface.py
-python3 optimization/scripts/check-public-artifacts.py
+node packages/eval/bin/cesium-eval.js check canonical-surface
+node packages/eval/bin/cesium-eval.js check public-artifacts
 bash optimization/scripts/check-secrets.sh
 ```
 

@@ -22,20 +22,21 @@ so the lifecycle is one continuous journey instead of a tab switch:
 | **4 Decide** | Candidate-vs-baseline **visual diff** (swipe `x` / blink `X`), the lit 5-rule decision cascade, and the three de-aliased judges. |
 | **5 Promote** | The guarded hand-off of a KEEP candidate to the live `SKILL.md`. |
 | **6 Models & Harnesses** | Its own **Insights** rail group beside the lifecycle, split into two analysis dashboards behind a segmented control. **Harnesses**: KPI tiles (harness count, runs, pass rate, average score, multimodal coverage), registry capability cards, the runs-by-harness leaderboard, and the run-score trend. **Models**: KPI tiles (models available and exercised, pipeline default, best qualified win rate, iterations), the observed model-performance leaderboard (keep rate, win rate ± σ stability, average wall clock, recency, drill into Optimize), the per-skill optimization trend, and the full model catalogs with effort-aware cost meters. |
-| **7 Live** | Real-time progress of eval runs **while they are still running** — and the place to **launch** one. The server tails each run's progress journal (`journal.jsonl` for optimization loops, `progress.jsonl` for baseline audits) and counts artifacts on disk, so the animated progress bar, phase pipeline, and per-case board reflect only what has verifiably happened — agent phases earn credit at completion, never by guess. The **Launch an Eval Run** panel picks skills, judge count, and adapter, with visual judging **on by default** (deterministic-only is an explicit downgrade with a warning), then POSTs to the server which spawns `run-baseline-audit.py --journal` detached. The UI polls every 2.5 s while a run is active; the Dashboard grows a "happening now" banner, the top strip shows a live pill, and the rail badge pulses. When a run finishes, a toast fires and the console refreshes so it lands in Recent Runs automatically. Runs quiet for 30 min are demoted to "stalled". |
+| **7 Live** | Real-time progress of eval runs **while they are still running** — and the place to **launch** one. The server tails each run's progress journal (`journal.jsonl` for optimization loops, `progress.jsonl` for baseline audits) and counts artifacts on disk, so the animated progress bar, phase pipeline, and per-case board reflect only what has verifiably happened — agent phases earn credit at completion, never by guess. The **Launch an Eval Run** panel picks skills, judge count, and adapter, with visual judging **on by default** (deterministic-only is an explicit downgrade with a warning), then POSTs to the server which spawns `cesium-eval audit --journal` detached. The UI polls every 2.5 s while a run is active; the Dashboard grows a "happening now" banner, the top strip shows a live pill, and the rail badge pulses. When a run finishes, a toast fires and the console refreshes so it lands in Recent Runs automatically. Runs quiet for 30 min are demoted to "stalled". |
 
 ## The harness/model registry
 
-`harness-registry.json` is the bona fide, data-only description of the agent-CLI
+[`config/harness-registry.json`](../../config/harness-registry.json) is the bona
+fide, data-only description of the agent-CLI
 harnesses: Codex CLI (OpenAI · ChatGPT subscription, fully multimodal) and
 OpenCode CLI (GitHub Copilot subscription, **text only**: the provider disables
 vision account-wide, so image-bearing calls re-route to Codex). Each entry
 carries its model catalog with tier, a relative cost meter (Very low → Premium,
 effort-aware since reasoning bills as output tokens), native vision, effort
 levels, and context. **Adding a harness or model is adding an entry here**, with
-no code changes. `/api/registry` overlays the live pipeline
-defaults from `harness/models.py` at read time, so the cards always show what a
-run started today would actually use.
+no code changes. `/api/registry` overlays the role defaults from
+[`eval.config.json`](../../eval.config.json) at read time, so the cards always
+show what a run started today would actually use.
 
 Declared capability and observed performance are kept visually separate, and
 "unrecorded" provenance (legacy artifacts that predate stamping) renders as a
@@ -58,7 +59,7 @@ This runs in three places, so nothing slips through:
 - **Forward** — `run-baseline-audit.py` stamps the recovered model at write time.
 - **At read time** — the server fills any missing harness/model from the metas
   when it lists runs (a zero-cost lookup once a file is stamped).
-- **Backfill** — `python3 evaluation/scripts/backfill-scorecard-provenance.py`
+- **Backfill** — `node packages/eval/bin/cesium-eval.js backfill`
   stamps `harness`, `artifacts.model`, `artifacts.model_variant`, and
   `artifacts.evidence_source` onto historical scorecards in place. It is
   idempotent (`--dry-run` previews, `--check` is a CI gate) and never overwrites
@@ -80,11 +81,8 @@ cd apps/evaluation-console
 npm install
 npm run build
 
-# From the repo root: opens the newest scorecard on port 8933
-python3 evaluation/scripts/open-evaluation-viewer.py --open
-
-# or a specific scorecard
-python3 apps/evaluation-console/server.py \
+# From the repo root: serve a scorecard in the console
+node packages/eval/bin/cesium-eval.js serve \
   evaluation/artifacts/audits/full-merged-20260605T2000Z/scorecard.json \
   --state-dir /tmp/eval-console-state --port 8933 --open
 ```
@@ -101,7 +99,7 @@ The Live station can start a baseline audit from the browser. `POST /api/live/la
 validates against the skills on disk (`GET /api/live/skills`), then spawns
 
 ```bash
-python3 evaluation/scripts/run-baseline-audit.py --all-skills \
+node packages/eval/bin/cesium-eval.js audit --all-skills \
   --workspace <repo>/workspaces/cesium-workspace \
   --output-dir evaluation/artifacts/audits/live-<UTC> --journal
 ```
@@ -119,7 +117,7 @@ flushed as it happens, so anything can follow along — the console's Live tab, 
 `tail -f`, or a CI step:
 
 ```bash
-python3 evaluation/scripts/run-baseline-audit.py ... --journal &
+node packages/eval/bin/cesium-eval.js audit ... --journal &
 tail -f <output-dir>/progress.jsonl | jq -r '[.timestamp_utc, .event] | @tsv'
 ```
 
@@ -133,7 +131,7 @@ off, and the server writes `focus.json` via the real `build_focus`, restricted t
 human-confirmed flags, so review genuinely steers the loop:
 
 ```bash
-python3 optimization/scripts/run-all-evals.py --from-focus <focus.json> --skills <auto>
+node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --skills <auto>
 ```
 
 ## Keyboard

@@ -65,22 +65,22 @@ judge unavailable → needs_review.
 `overall_result = pass` iff `deterministic_result == pass` (score ≥ 0.95, no critical failures)
 **AND** `visual_result ∈ {pass, not_required}`. The 0–10 qualitative score can **downgrade** a
 deterministically-passing run (blocking flag → fail / needs_review) but can **never upgrade** a
-deterministic failure. Deterministic lane stays Python-owned and binding.
+deterministic failure. The deterministic lane stays binding and is implemented
+in `packages/eval/src/evaluation/`.
 
 ## 4. Single source of truth + pipeline
 
-- `evaluation/framework/judge/` — `static_judge.py` (`judge_render`, panel, scoring/gating, `__main__`),
-  `cli_adapter.py` (self-contained OpenCode/Codex CLI adapters; must NOT import `optimization/`),
-  `prompts/static-visual-v1.txt`.
-- `evaluation/scripts/run-baseline-audit.py` — runs BOTH lanes over all 14 baselines
+- `packages/eval/src/evaluation/judge/staticJudge.ts` owns static visual judging,
+  panel scoring, and gates; `packages/eval/src/harness/` owns OpenCode/Codex adapters.
+- `cesium-eval audit` runs BOTH lanes over all 14 baselines
   (`optimization/runs/<skill>/baseline`, bridged via the tracked `*-baseline-observed.evidence.json`
   fixtures' `run_artifact_path`) → one combined scorecard. Flags: `--skills`, `--no-judge`,
   `--visual-review <json>` (inject pre-judged items), `--emit-cases`, `--judge-model`, `--n-judges`,
   `--output-dir`. Exit = combined gate.
 - **CI/CD** (`.github/workflows/baseline-audit.yml`): job 1 deterministic (`--no-judge`, blocking, no secrets);
   job 2 qualitative (agent CLI harness, advisory on PR / blocking nightly).
-- **Local fan-out**: Score (`--no-judge --emit-cases`) →
-  parallel Judge (each shells the SAME `static_judge` module) → Assemble (`--visual-review` re-score) → UI.
-- **UI** (`build-audit-ui.py`): Lighthouse-style gauges, Datadog KPI strip, coverage-style skill×category
+- **Local fan-out**: Audit (`--no-judge --emit-cases`) →
+  parallel Judge (`cesium-eval judge`) → Assemble (`--visual-review` re-score) → UI.
+- **UI** (`cesium-eval serve`): Lighthouse-style gauges, Datadog KPI strip, coverage-style skill×category
   matrix, test-report drill-down (full check table + 0-10 criteria breakdown + baseline screenshot),
   worst-first **Audit Board** with Accept / Flag-rebaseline / Needs-review toggles (localStorage, exportable).

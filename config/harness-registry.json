@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "comment": "Bona fide registry of the agent-CLI harnesses and their model catalogs. This file is DATA, not code: adding a harness or model is adding an entry here. The server (/api/registry) overlays live pipeline defaults from harness/models.py at read time, so the default_model / default_effort fields below are only offline fallbacks. Unknown metadata is null; the console renders null as unknown, never as zero.",
+  "comment": "Bona fide registry of the agent-CLI harnesses and their model catalogs. This file is DATA, not code: adding a harness or model is adding an entry here. The eval runtime and server load role defaults from eval.config.json and use default_model / default_effort as harness fallbacks. Unknown metadata is null; the console renders null as unknown, never as zero.",
   "price_bands": [
     "very-low",
     "low",

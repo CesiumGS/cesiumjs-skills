@@ -41,7 +41,7 @@ body:
     attributes:
       label: Area
       description: Which skill, file, or branch this affects. Paths welcome.
-      placeholder: e.g. "skills/cesiumjs-entities/SKILL.md" or "optimization/scripts/run-all-evals.py"
+      placeholder: e.g. "skills/cesiumjs-entities/SKILL.md" or "packages/eval/src/optimization/loop.ts"
     validations:
       required: false
 

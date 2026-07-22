@@ -8,7 +8,7 @@ The previous four-case scorecard UI was built from deliberately failing
 synthetic fixtures selected with:
 
 ```bash
-python3 evaluation/scripts/run-scorecard.py --fixture-expectation fail
+node packages/eval/bin/cesium-eval.js score --fixture-expectation fail
 ```
 
 Those failures were useful for testing that the scorecard explains
@@ -62,7 +62,7 @@ For hand-built deterministic unit-style cases:
 Running the baseline-observed suite with:
 
 ```bash
-python3 evaluation/scripts/run-scorecard.py \
+node packages/eval/bin/cesium-eval.js score \
   --fixture-expectation pass \
   --visual-review evaluation/artifacts/review-ui/sample-scorecard/visual-review.json \
   --output-dir evaluation/artifacts/review-ui/sample-scorecard

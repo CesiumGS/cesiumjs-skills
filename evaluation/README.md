@@ -15,7 +15,7 @@ The evaluation layer must not propose candidate skills, mutate `skills/`, write
 current-best metadata, or make promotion decisions. Those actions belong under
 `optimization/`.
 
-`python3 evaluation/scripts/validate-evaluation.py` enforces the code boundary:
+`node packages/eval/bin/cesium-eval.js validate --suite evaluation` enforces the code boundary:
 Python under `evaluation/` may not import `optimization/` or directly invoke
 optimizer scripts. Evaluation fixtures may still preserve historical
 optimization artifact paths as provenance.
@@ -195,17 +195,16 @@ fan-out both call the same module via one runner:
 
 ```bash
 # Deterministic lane only (fast, no LLM) — the CI PR gate:
-python3 evaluation/scripts/run-baseline-audit.py --skills all --no-judge
+node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
 
 # Both lanes (qualitative screenshot judge, 3-judge median panel):
-python3 evaluation/scripts/run-baseline-audit.py --skills all --adapter opencode --judge-model auto --n-judges 3
+node packages/eval/bin/cesium-eval.js audit --skills all --adapter opencode --judge-model auto --n-judges 3
 
 # Same qualitative lane through Codex CLI:
-python3 evaluation/scripts/run-baseline-audit.py --skills all --adapter codex --judge-model auto --n-judges 3
+node packages/eval/bin/cesium-eval.js audit --skills all --adapter codex --judge-model auto --n-judges 3
 
-# Build the audit dashboard from a combined scorecard, then serve from repo root:
-python3 evaluation/scripts/build-audit-ui.py evaluation/artifacts/audits/<run_id>/scorecard.json \
-  --output evaluation/artifacts/review-ui/audit.html
+# Review results in the evaluation console:
+node packages/eval/bin/cesium-eval.js serve evaluation/artifacts/audits/<run_id>/scorecard.json --open
 ```
 
 The qualitative lane needs rendered baselines under `optimization/runs/<skill>/baseline`
@@ -217,17 +216,17 @@ PR gate and the qualitative lane nightly (rendering baselines first).
 ## Local Validation
 
 ```bash
-python3 evaluation/scripts/validate-evaluation.py
-python3 evaluation/scripts/run-scorecard.py
-python3 evaluation/scripts/run-baseline-audit.py --skills all --no-judge
-pytest -q evaluation/tests
+node packages/eval/bin/cesium-eval.js validate --suite evaluation
+node packages/eval/bin/cesium-eval.js score
+node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
+npm test --workspace @cesiumjs-skills/eval
 ```
 
 The current runner core accepts a case and a captured before/after evidence
 bundle:
 
 ```bash
-python3 -m evaluation.runner evaluation/cases/cesiumjs-entities/eval-001-translate-marker-east-6m.json --evidence evaluation/fixtures/cesiumjs-entities/eval-001-pass.evidence.json
+node packages/eval/bin/cesium-eval.js case evaluation/cases/cesiumjs-entities/eval-001-translate-marker-east-6m.json --evidence evaluation/fixtures/cesiumjs-entities/eval-001-pass.evidence.json
 ```
 
 The browser capture layer is deliberately separate from the pure runner. It
@@ -237,7 +236,7 @@ when `--run-checks` is supplied.
 The first browser-capture CLI is:
 
 ```bash
-python3 evaluation/scripts/capture-scene-state.py evaluation/cases/cesiumjs-entities/eval-001-translate-marker-east-6m.json --candidate-js path/to/candidate.js --run-checks
+node packages/eval/bin/cesium-eval.js capture evaluation/cases/cesiumjs-entities/eval-001-translate-marker-east-6m.json --candidate-js path/to/candidate.js --run-checks
 ```
 
 It writes local evidence under `evaluation/artifacts/` by default. That
@@ -253,7 +252,7 @@ Qualitative visual review can be attached to the same scorecard without giving
 the evaluator any optimizer side effects:
 
 ```bash
-python3 evaluation/scripts/run-scorecard.py \
+node packages/eval/bin/cesium-eval.js score \
   --visual-review evaluation/artifacts/review-ui/sample-scorecard/visual-review.json \
   --require-visual-review
 ```
@@ -280,12 +279,12 @@ status plus a short note. These dimensions are intentionally separate from
 deterministic correctness so a case can pass exact state checks while still
 requiring human visual review for framing, readability, or prompt fit.
 
-For local review, generate the static scorecard UI from any scorecard JSON:
+For local review, serve any scorecard in the evaluation console:
 
 ```bash
-python3 evaluation/scripts/run-scorecard.py --fixture-expectation fail --visual-review evaluation/artifacts/review-ui/sample-scorecard/visual-review.json --output-dir evaluation/artifacts/review-ui/sample-scorecard
-python3 optimization/scripts/scorecard-focus.py evaluation/artifacts/review-ui/sample-scorecard/scorecard.json --output evaluation/artifacts/review-ui/sample-scorecard/focus.json
-python3 evaluation/scripts/build-review-ui.py evaluation/artifacts/review-ui/sample-scorecard/scorecard.json --focus evaluation/artifacts/review-ui/sample-scorecard/focus.json --output evaluation/artifacts/review-ui/index.html
+node packages/eval/bin/cesium-eval.js score --fixture-expectation fail --visual-review evaluation/artifacts/review-ui/sample-scorecard/visual-review.json --output-dir evaluation/artifacts/review-ui/sample-scorecard
+node packages/eval/bin/cesium-eval.js optimize focus evaluation/artifacts/review-ui/sample-scorecard/scorecard.json --output evaluation/artifacts/review-ui/sample-scorecard/focus.json
+node packages/eval/bin/cesium-eval.js serve evaluation/artifacts/review-ui/sample-scorecard/scorecard.json --open
 ```
 
 The generated UI is local-only and ignored with the rest of
@@ -294,5 +293,5 @@ The generated UI is local-only and ignored with the rest of
 From the same scorecard, the local optimization launcher can be dry-run with:
 
 ```bash
-python3 optimization/scripts/run-all-evals.py --from-scorecard evaluation/artifacts/review-ui/sample-scorecard/scorecard.json --max-iterations 1 --stop-on regression --dry-run
+node packages/eval/bin/cesium-eval.js optimize all --from-scorecard evaluation/artifacts/review-ui/sample-scorecard/scorecard.json --max-iterations 1 --stop-on regression --dry-run
 ```
