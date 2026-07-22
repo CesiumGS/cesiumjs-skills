@@ -59,6 +59,8 @@ export interface EvalConfig {
 export interface ModelSpec {
   id: string;
   family?: string;
+  /** Model creator (OpenAI, Anthropic, Google, Microsoft…). */
+  vendor?: string | null;
   name?: string;
   tier?: string;
   price_band?: string | null;

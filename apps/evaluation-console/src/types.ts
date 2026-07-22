@@ -470,6 +470,8 @@ export type PriceBand = "very-low" | "low" | "medium" | "high" | "very-high";
 export interface ModelSpec {
   id: string;
   family: string;
+  /** Model creator (OpenAI, Anthropic, Google, Microsoft…) — the catalog groups by this. */
+  vendor: string | null;
   name: string;
   tier: string | null;
   price_band: PriceBand | null;
