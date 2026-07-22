@@ -121,6 +121,20 @@ This executes the 7-step pipeline for each iteration:
 6. **Decision Engine** - Autonomous KEEP/REJECT decision
 7. **Report Generator** - Creates summary and updates public status
 
+### Promotion Gate (human-in-the-loop)
+
+A `KEEP` decision does **not** modify `skills/<skill>/SKILL.md` by default. The
+candidate is staged as `optimization/candidates/<skill>/<iteration>/PROMOTED-PENDING.md`,
+the loop stops, and the CLI prints the apply command:
+
+```bash
+# Review the staged candidate, then apply it (backs up the previous version):
+node packages/eval/bin/cesium-eval.js optimize promote cesiumjs-camera 001
+
+# Or opt in to automatic promotion for unattended runs:
+node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera --max-iterations 5 --promote
+```
+
 ### Loop Options
 
 ```bash
