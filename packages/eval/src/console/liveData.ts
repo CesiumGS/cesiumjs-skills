@@ -550,6 +550,21 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     judgeModel = String(payload.judge_model);
     if (judgeModel.length > 200 || !/^[\w./:-]+$/.test(judgeModel)) throw new Error("invalid judge_model");
   }
+  // Reasoning effort / variant ids ("low", "high", "xhigh", "max"…) for the
+  // judge lane, plus codegen model/effort provenance stamps for the scorecard.
+  const effortField = (value: unknown, field: string): string | null => {
+    if (value === undefined || value === null || value === "") return null;
+    const effort = String(value);
+    if (effort.length > 32 || !/^[\w-]+$/.test(effort)) throw new Error(`invalid ${field}`);
+    return effort;
+  };
+  const judgeVariant = effortField(payload.judge_variant, "judge_variant");
+  const codegenVariant = effortField(payload.codegen_variant, "codegen_variant");
+  let codegenModel: string | null = null;
+  if (payload.codegen_model !== undefined && payload.codegen_model !== null && payload.codegen_model !== "") {
+    codegenModel = String(payload.codegen_model);
+    if (codegenModel.length > 200 || !/^[\w./:-]+$/.test(codegenModel)) throw new Error("invalid codegen_model");
+  }
   let threshold: number | null = null;
   if (payload.threshold !== undefined && payload.threshold !== null && payload.threshold !== "") {
     threshold = Number(payload.threshold);
@@ -589,7 +604,10 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   ];
   if (!judge) argv.push("--no-judge");
   if (judgeModel) argv.push("--judge-model", judgeModel);
+  if (judgeVariant) argv.push("--judge-variant", judgeVariant);
   if (codegenHarness) argv.push("--codegen-harness", codegenHarness);
+  if (codegenModel) argv.push("--codegen-model", codegenModel);
+  if (codegenVariant) argv.push("--codegen-variant", codegenVariant);
   if (threshold !== null) argv.push("--threshold", String(threshold));
   if (bundleRoot) argv.push("--bundle-root", bundleRoot);
 
@@ -611,7 +629,10 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     judge_harness: judgeHarness,
     n_judges: nJudges,
     judge_model: judgeModel,
+    judge_variant: judgeVariant,
     codegen_harness: codegenHarness,
+    codegen_model: codegenModel,
+    codegen_variant: codegenVariant,
     threshold,
     bundle_root: bundleRoot,
     argv: [process.execPath, ...argv],

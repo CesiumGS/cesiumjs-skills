@@ -189,9 +189,14 @@ function resolveSkills(spec: string): string[] {
 }
 
 /** Judge harness names accepted by --judge-harness: any registry harness id or "fake". */
-function makeJudgeCall(ctx: EvalContext, judgeHarness: string, model: string | undefined): { call: JudgeCall; model: string | null } {
+function makeJudgeCall(
+  ctx: EvalContext,
+  judgeHarness: string,
+  model: string | undefined,
+  variant: string | undefined,
+): { call: JudgeCall; model: string | null } {
   if (judgeHarness === "fake") return { call: fakeJudgeCall(), model: model ?? "fake" };
-  const overrides = { harness: judgeHarness, model };
+  const overrides = { harness: judgeHarness, model, variant };
   const described = describeAgent(ctx, "judge", overrides);
   const call: JudgeCall = async (prompt, files, addDirs) => {
     const invocation = await invokeAgent(ctx, "judge", { prompt, files, addDirs, allowedTools: [], overrides });
@@ -203,6 +208,7 @@ function makeJudgeCall(ctx: EvalContext, judgeHarness: string, model: string | u
 export interface AuditOptions {
   skills?: string;
   judgeModel?: string;
+  judgeVariant?: string;
   nJudges?: number;
   noJudge?: boolean;
   visualReview?: string;
@@ -210,6 +216,8 @@ export interface AuditOptions {
   emitVisualReview?: string;
   judgeHarness?: string;
   codegenHarness?: string;
+  codegenModel?: string;
+  codegenVariant?: string;
   bundleRoot?: string;
   threshold?: number;
   outputDir?: string;
@@ -294,7 +302,7 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
       (item: any) => item?.status !== undefined && item?.status !== null && item?.status !== "not_reviewed",
     ).length;
   } else if (!options.noJudge) {
-    const { call, model } = makeJudgeCall(ctx, judgeHarness, options.judgeModel);
+    const { call, model } = makeJudgeCall(ctx, judgeHarness, options.judgeModel, options.judgeVariant);
     const items: Array<Record<string, any>> = [];
     journal.emit("judge_started", { total: auditCases.length, judge_harness: judgeHarness, n_judges: nJudges });
     for (const [index, auditCase] of auditCases.entries()) {
@@ -374,9 +382,12 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
     harnessJudge: judgeHarness,
   });
 
-  // Stamp codegen provenance recovered from the evaluated code's meta sidecars.
-  const provenance = resolveCodegenProvenance(scorecard, ctx.repoRoot);
+  // Stamp codegen provenance: explicit --codegen-model/--codegen-variant flags
+  // win; anything still unset is recovered from the evaluated code's meta sidecars.
   const artifacts = (scorecard.artifacts ??= {});
+  if (options.codegenModel) artifacts.model = options.codegenModel;
+  if (options.codegenVariant) artifacts.model_variant = options.codegenVariant;
+  const provenance = resolveCodegenProvenance(scorecard, ctx.repoRoot);
   if (provenance.model && artifacts.model === undefined) artifacts.model = provenance.model;
   if (provenance.model_variant && artifacts.model_variant === undefined) artifacts.model_variant = provenance.model_variant;
   if (provenance.harness && !scorecard.harness) scorecard.harness = provenance.harness;
@@ -417,10 +428,10 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
 /** `cesium-eval judge` — run the static judge panel over one bundle. */
 export async function judgeCommand(
   ctx: EvalContext,
-  options: { bundle: string; case: string; model?: string; nJudges?: number; harness?: string; emitItem?: string },
+  options: { bundle: string; case: string; model?: string; variant?: string; nJudges?: number; harness?: string; emitItem?: string },
 ): Promise<number> {
   const judgeHarness = options.harness ?? ctx.resolveRole("judge").harness.id;
-  const { call, model } = makeJudgeCall(ctx, judgeHarness, options.model);
+  const { call, model } = makeJudgeCall(ctx, judgeHarness, options.model, options.variant);
   const item = await judgeRender(readJson(options.case), options.bundle, {
     call,
     model,
