@@ -425,6 +425,12 @@ export interface LiveTrial {
   codegen_done: boolean;
   render_done: boolean;
   judged: boolean;
+  // Audit rows only: per-skill grouping plus live judge-lane telemetry
+  // (journal-truth: judge_case_started opened, judge_case_completed closed).
+  group?: string;
+  case_id?: string;
+  inflight?: boolean;
+  verdict?: string | null;
 }
 
 export interface LiveRun {

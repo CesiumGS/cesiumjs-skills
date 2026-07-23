@@ -52,6 +52,8 @@ export interface LaunchRequest {
   /** Judge harness (audit --judge-harness): any registry harness id, or "fake" for CI-style smoke runs. */
   judge_harness: string;
   n_judges: number;
+  /** Cases judged in parallel (audit --concurrency), 1-8. Omitted = sequential. */
+  concurrency?: number | null;
   judge_model?: string | null;
   /** Judge reasoning effort (audit --judge-variant): "low" | "medium" | "high" | "xhigh" | "max" | … */
   judge_variant?: string | null;
@@ -73,6 +75,7 @@ export interface LaunchRecord {
   judge: boolean;
   judge_harness: string;
   n_judges: number;
+  concurrency?: number | null;
   judge_model?: string | null;
   judge_variant?: string | null;
   codegen_harness?: string | null;

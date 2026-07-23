@@ -271,13 +271,13 @@ function liveRun(
 function auditPhaseSpec(judge: boolean): Array<[string, string, number]> {
   if (judge) {
     return [
-      ["judge", "Visual judge", 0.82],
-      ["score", "Deterministic score", 0.13],
+      ["judge", "Visual Judge", 0.82],
+      ["score", "Deterministic Score", 0.13],
       ["write", "Scorecard", 0.05],
     ];
   }
   return [
-    ["score", "Deterministic score", 0.85],
+    ["score", "Deterministic Score", 0.85],
     ["write", "Scorecard", 0.15],
   ];
 }
@@ -362,11 +362,18 @@ function auditTrials(journal: Array<Record<string, any>>): Array<Record<string, 
   }
   const judged = new Set<string>();
   const scored = new Set<string>();
+  // Journal-truth parallelism: cases the judge lane has opened but not closed.
+  const inflight = new Set<string>();
+  const verdicts = new Map<string, string>();
   for (const event of journal) {
     const name = String(event.event ?? "");
     const key = `${event.skill ?? ""}\u0000${event.case_id ?? ""}`;
-    if (name === "judge_case_completed") judged.add(key);
-    else if (name === "scoring_case_completed") scored.add(key);
+    if (name === "judge_case_started") inflight.add(key);
+    else if (name === "judge_case_completed") {
+      inflight.delete(key);
+      judged.add(key);
+      if (typeof event.status === "string" && event.status) verdicts.set(key, event.status);
+    } else if (name === "scoring_case_completed") scored.add(key);
   }
   if (!roster.length) {
     roster = [...new Set([...judged, ...scored])].sort().map((key) => key.split("\u0000") as [string, string]);
@@ -378,10 +385,14 @@ function auditTrials(journal: Array<Record<string, any>>): Array<Record<string, 
     return {
       scenario_id: multiSkill ? `${short}\u00b7${caseId}` : caseId,
       label: multiSkill ? "" : short,
+      group: short,
+      case_id: caseId,
       runnable: true,
       codegen_done: false,
       render_done: scored.has(key),
       judged: judged.has(key),
+      inflight: inflight.has(key),
+      verdict: verdicts.get(key) ?? null,
     };
   });
 }
@@ -423,11 +434,11 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
   const status = lastActivity !== null && isFresh(lastActivity.toISOString(), maxAgeSeconds) ? "running" : "stalled";
   const active = phases.find((p) => p.state === "active" || p.state === "failed") ?? null;
   const doneCount = phases.filter((p) => p.state === "done").length;
-  const label = skills.length === 1 ? `Audit \u00b7 ${skills[0]}` : "Combined audit";
+  const label = skills.length === 1 ? `Audit \u00b7 ${skills[0]}` : "Combined Audit";
 
   return {
     skill: skills.length === 1 ? skills[0] : "baseline-audit",
-    label: skills.length > 1 ? `${label} (${skills.length} skills)` : label,
+    label: skills.length > 1 ? `${label} (${skills.length} Skills)` : label,
     iteration: path.basename(auditDir),
     kind: "audit",
     launch_id: launchMeta.launch_id ?? null,
@@ -532,6 +543,14 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (!Number.isInteger(nJudges)) throw new Error("n_judges must be an integer");
   if (nJudges < 1 || nJudges > 5) throw new Error("n_judges must be between 1 and 5");
 
+  let concurrency: number | null = null;
+  if (payload.concurrency !== undefined && payload.concurrency !== null && payload.concurrency !== "") {
+    concurrency = Number(payload.concurrency);
+    if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) {
+      throw new Error("concurrency must be an integer between 1 and 8");
+    }
+  }
+
   // Optional codegen provenance stamp (mirrors audit --codegen-harness). Must be
   // a real registry harness: "fake" is a judge-lane smoke harness, not a codegen
   // origin.
@@ -603,6 +622,7 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     String(nJudges),
   ];
   if (!judge) argv.push("--no-judge");
+  if (judge && concurrency !== null && concurrency > 1) argv.push("--concurrency", String(concurrency));
   if (judgeModel) argv.push("--judge-model", judgeModel);
   if (judgeVariant) argv.push("--judge-variant", judgeVariant);
   if (codegenHarness) argv.push("--codegen-harness", codegenHarness);
@@ -628,6 +648,7 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     judge,
     judge_harness: judgeHarness,
     n_judges: nJudges,
+    concurrency,
     judge_model: judgeModel,
     judge_variant: judgeVariant,
     codegen_harness: codegenHarness,

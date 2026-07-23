@@ -16,7 +16,7 @@ import {
 import { useStore } from "../store";
 import { loadLaunchSkills } from "../api";
 import type { HarnessSpec, LivePhase, LiveRun, LiveTrial } from "../types";
-import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel } from "../lib/format";
+import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
 
 /* ============================================================================
    LIVE — the in-progress monitor for eval runs executing on this machine NOW.
@@ -46,26 +46,29 @@ function trialStage(t: LiveTrial): TrialStage {
 }
 
 const STAGE_WORD: Record<TrialStage, string> = {
-  queued: "queued",
-  inflight: "in flight",
-  coded: "code ready",
-  rendered: "rendered",
-  judged: "judged",
-  skipped: "review-only"
+  queued: "Queued",
+  inflight: "In Flight",
+  coded: "Code Ready",
+  rendered: "Rendered",
+  judged: "Judged",
+  skipped: "Review-Only"
 };
 
 // Audit cases skip codegen (evidence is pre-rendered): queued -> scored -> judged.
 const AUDIT_STAGE_WORD: Record<TrialStage, string> = {
-  queued: "queued",
-  inflight: "in flight",
-  coded: "queued",
-  rendered: "scored",
-  judged: "judged",
+  queued: "Queued",
+  inflight: "In Flight",
+  coded: "Queued",
+  rendered: "Scored",
+  judged: "Judged",
   skipped: "—"
 };
 
 /** Human title for any live row: audits carry a label, loop rows derive from skill. */
 export function liveRunTitle(run: LiveRun): string {
+  if (run.kind === "audit" && run.skill && run.skill !== "baseline-audit") {
+    return `Audit \u00b7 ${skillLabel(run.skill)}`;
+  }
   return run.label || skillLabel(run.skill);
 }
 
@@ -120,7 +123,10 @@ export function LiveProgressBar({ run, slim }: { run: LiveRun; slim?: boolean })
 }
 
 function TrialBoard({ run }: { run: LiveRun }) {
-  const inflight = run.status === "running" ? inflightScenario(run) : null;
+  // Journal-truth parallelism first (audit judge lane emits per-case start
+  // events); fall back to the head-of-queue heuristic for loop runs.
+  const journalInflight = run.trials.some((t) => t.inflight);
+  const fallback = run.status === "running" && !journalInflight ? inflightScenario(run) : null;
   const words = run.kind === "audit" ? AUDIT_STAGE_WORD : STAGE_WORD;
   if (run.trials.length === 0) {
     return (
@@ -131,10 +137,14 @@ function TrialBoard({ run }: { run: LiveRun }) {
       </div>
     );
   }
+  // Multi-skill audits get the grouped lane board — one row per skill, one
+  // cell per case — instead of a wall of repetitive chips.
+  const groups = new Set(run.trials.map((t) => t.group ?? ""));
+  if (run.kind === "audit" && groups.size > 1) return <LaneBoard run={run} fallback={fallback} />;
   return (
     <div className="lt-grid">
       {run.trials.map((t) => {
-        const stage = t.scenario_id === inflight ? "inflight" : trialStage(t);
+        const stage = t.inflight || t.scenario_id === fallback ? "inflight" : trialStage(t);
         return (
           <div key={t.scenario_id} className={`lt-chip ${stage}`} title={`${t.scenario_id} · ${t.label} · ${words[stage]}`}>
             <span className="lt-dot" aria-hidden />
@@ -148,17 +158,176 @@ function TrialBoard({ run }: { run: LiveRun }) {
   );
 }
 
+// Verdict → color channel. Fail and Needs Review also carry a glyph (shape,
+// not just hue), keeping the "color is never the sole signal" law at 13px.
+const VERDICT_TONE: Record<string, string> = { pass: "v-pass", fail: "v-fail", needs_review: "v-review" };
+
+/** One lane per skill: name, judged count, and a cell strip — every case is a
+ *  13px cell that flips color as the journal lands its events. Parallel work
+ *  reads as several pulsing cells at once. */
+function LaneBoard({ run, fallback }: { run: LiveRun; fallback: string | null }) {
+  const words = AUDIT_STAGE_WORD;
+  const lanes = useMemo(() => {
+    const byGroup = new Map<string, LiveTrial[]>();
+    for (const t of run.trials) {
+      const g = t.group ?? "cases";
+      const rows = byGroup.get(g);
+      if (rows) rows.push(t);
+      else byGroup.set(g, [t]);
+    }
+    return [...byGroup.entries()];
+  }, [run.trials]);
+  const inflightIds = run.trials.filter((t) => t.inflight).map((t) => t.scenario_id);
+  const judgeRun = run.judge !== false;
+  return (
+    <div className="lane-board">
+      {lanes.map(([group, rows]) => {
+        const done = rows.filter((t) => (judgeRun ? t.judged : t.render_done)).length;
+        return (
+          <div key={group} className="lane">
+            <span className="lane-name">{skillLabel(group)}</span>
+            <span className="lane-count mono">
+              {done}/{rows.length}
+            </span>
+            <div className="lane-track">
+              {rows.map((t) => {
+                const stage = t.inflight || t.scenario_id === fallback ? "inflight" : trialStage(t);
+                const tone = stage === "judged" && t.verdict ? (VERDICT_TONE[t.verdict] ?? "") : "";
+                const verdictWord = stage === "judged" && t.verdict ? ` — ${titleCase(t.verdict)}` : "";
+                return (
+                  <span
+                    key={t.scenario_id}
+                    className={`lane-cell ${stage}${tone ? ` ${tone}` : ""}`}
+                    title={`${t.scenario_id} · ${words[stage]}${verdictWord}`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {inflightIds.length > 0 && (
+        <div className="lane-inflight">
+          <span className="lrc-dot on" aria-hidden />
+          Now Judging
+          <span className="mono">{inflightIds.join("  ·  ")}</span>
+        </div>
+      )}
+      <div className="lane-legend" aria-hidden>
+        <span>
+          <i className="lane-cell queued" /> Queued
+        </span>
+        <span>
+          <i className="lane-cell inflight" /> In Flight
+        </span>
+        {judgeRun ? (
+          <>
+            <span>
+              <i className="lane-cell judged v-pass" /> Pass
+            </span>
+            <span>
+              <i className="lane-cell judged v-fail" /> Fail
+            </span>
+            <span>
+              <i className="lane-cell judged v-review" /> Needs Review
+            </span>
+          </>
+        ) : (
+          <span>
+            <i className="lane-cell rendered" /> Scored
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** "cesiumjs-camera" + "eval-108" → "camera·eval-108" for journal prose. */
+function journalCaseRef(e: Record<string, unknown>): string {
+  const skill = String(e.skill ?? "").replace(/^cesiumjs-/, "");
+  const caseId = String(e.case_id ?? "");
+  if (skill && caseId) return `${skill}\u00b7${caseId}`;
+  return caseId || skill;
+}
+
+type JournalTone = "plain" | "eye" | "machine" | "pass" | "fail";
+
+/** Translate a raw journal event into a human sentence + provenance tone.
+ *  The raw event name stays on the row's title attribute — honesty preserved,
+ *  prose displayed. */
+function describeJournalEvent(e: Record<string, unknown>): { text: string; tone: JournalTone } {
+  const name = String(e.event ?? "");
+  switch (name) {
+    case "launch_accepted":
+      return { text: "Launch accepted — waiting for the audit process", tone: "plain" };
+    case "audit_started": {
+      const skills = Array.isArray(e.skills) ? e.skills.length : null;
+      return {
+        text: `Audit started — ${skills !== null ? pluralize(skills, "skill") : "skills TBD"}, ${pluralize(Number(e.case_count ?? 0), "case")}`,
+        tone: "plain"
+      };
+    }
+    case "judge_started": {
+      const par = Number(e.concurrency ?? 1);
+      return {
+        text: `Visual Judge opened — ${pluralize(Number(e.total ?? 0), "case")}, ${e.n_judges}-judge panel${par > 1 ? `, ${par} in parallel` : ""}`,
+        tone: "eye"
+      };
+    }
+    case "judge_case_started":
+      return { text: `Judging ${journalCaseRef(e)}…`, tone: "eye" };
+    case "judge_case_completed": {
+      const status = typeof e.status === "string" && e.status ? titleCase(e.status) : "Done";
+      return {
+        text: `${journalCaseRef(e)} judged — ${status} (${e.index}/${e.total})`,
+        tone: e.status === "fail" ? "fail" : "eye"
+      };
+    }
+    case "judge_completed":
+      return { text: `Visual Judge complete — ${e.judged_count}/${e.total} judged`, tone: "eye" };
+    case "scoring_started":
+      return { text: `Deterministic Score opened — ${pluralize(Number(e.total ?? 0), "case")}`, tone: "machine" };
+    case "scoring_case_completed":
+      return {
+        text: `${journalCaseRef(e)} scored — ${titleCase(String(e.result ?? ""))} (${e.index}/${e.total})`,
+        tone: e.result === "fail" ? "fail" : "machine"
+      };
+    case "scoring_completed":
+      return { text: "Deterministic Score complete", tone: "machine" };
+    case "scorecard_written":
+      return {
+        text: `Scorecard written — ${titleCase(String(e.overall_result ?? "done"))}`,
+        tone: e.overall_result === "pass" ? "pass" : "plain"
+      };
+    case "audit_completed":
+      return {
+        text: `Audit complete — ${titleCase(String(e.overall_result ?? "done"))}`,
+        tone: e.overall_result === "pass" ? "pass" : "fail"
+      };
+    case "audit_failed":
+      return { text: `Audit failed — ${String(e.error ?? "unknown error")}`, tone: "fail" };
+    default: {
+      // Loop-run events ("step_started" + step field) and anything new.
+      const step = typeof e.step === "string" && e.step ? ` — ${titleCase(e.step)}` : "";
+      return {
+        text: `${titleCase(name.replace(/_/g, " "))}${step}`,
+        tone: name.includes("failed") ? "fail" : "plain"
+      };
+    }
+  }
+}
+
 function JournalTail({ run }: { run: LiveRun }) {
-  const tail = run.journal_tail.slice(-8);
+  const tail = run.journal_tail.slice(-9);
   return (
     <div className="lp-journal">
       {tail.map((e, i) => {
-        const failed = String(e.event ?? "").includes("failed");
+        const described = describeJournalEvent(e);
         return (
-          <div key={i} className={`journal-line${failed ? " fail" : ""}`}>
+          <div key={i} className={`journal-line jt-${described.tone}`} title={String(e.event ?? "")}>
             <span>{String(e.timestamp_utc ?? "").slice(11, 19)}</span>
-            <span className="jl-ev">{String(e.event ?? "")}</span>
-            {typeof e.step === "string" && e.step && <span>{e.step}</span>}
+            <span className="jl-dot" aria-hidden />
+            <span className="jl-ev">{described.text}</span>
           </div>
         );
       })}
@@ -271,7 +440,13 @@ function LiveRunCard({ run }: { run: LiveRun }) {
 
       <div className="lrc-columns">
         <div>
-          <div className="lrc-col-head">{pluralize(run.trials.length, isAudit ? "Case" : "Trial")}</div>
+          <div className="lrc-col-head">
+            {pluralize(run.trials.length, isAudit ? "Case" : "Trial")}
+            {(() => {
+              const groupCount = new Set(run.trials.map((t) => t.group ?? "")).size;
+              return isAudit && groupCount > 1 ? ` · ${groupCount} Skills` : "";
+            })()}
+          </div>
           <TrialBoard run={run} />
         </div>
         <div>
@@ -295,16 +470,17 @@ function LiveRunCard({ run }: { run: LiveRun }) {
 
 // Reasoning-effort ("thinking") levels in canonical low→high order, as declared
 // per model in the harness registry. Unknown ids sort last, verbatim.
-const EFFORT_ORDER = ["none", "low", "medium", "high", "xhigh", "max"];
+const EFFORT_ORDER = ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
 const EFFORT_LABEL: Record<string, string> = {
   none: "None",
+  minimal: "Minimal",
   low: "Low",
   medium: "Medium",
   high: "High",
   xhigh: "X-High",
   max: "Max"
 };
-const effortLabel = (level: string) => EFFORT_LABEL[level] ?? level;
+const effortLabel = (level: string) => EFFORT_LABEL[level] ?? titleCase(level);
 const effortRank = (level: string) => {
   const i = EFFORT_ORDER.indexOf(level);
   return i === -1 ? EFFORT_ORDER.length : i;
@@ -331,6 +507,7 @@ function LaunchPanel() {
   const [judge, setJudge] = useState(true);
   const [judgeHarness, setJudgeHarness] = useState<string>("opencode");
   const [nJudges, setNJudges] = useState(3);
+  const [concurrency, setConcurrency] = useState(4);
   const [judgeModel, setJudgeModel] = useState("");
   const [judgeVariant, setJudgeVariant] = useState("");
   const [codegenHarness, setCodegenHarness] = useState("");
@@ -396,6 +573,7 @@ function LaunchPanel() {
       `--n-judges ${nJudges}`
     ];
     if (!judge) parts.push("--no-judge");
+    if (judge && concurrency > 1) parts.push(`--concurrency ${concurrency}`);
     if (judge && judgeModel) parts.push(`--judge-model ${judgeModel}`);
     if (judge && judgeVariant) parts.push(`--judge-variant ${judgeVariant}`);
     if (codegenHarness) parts.push(`--codegen-harness ${codegenHarness}`);
@@ -413,6 +591,7 @@ function LaunchPanel() {
     judge,
     judgeModel,
     judgeVariant,
+    concurrency,
     codegenHarness,
     codegenModel,
     codegenVariant,
@@ -429,6 +608,7 @@ function LaunchPanel() {
         judge,
         judge_harness: judgeHarness,
         n_judges: nJudges,
+        concurrency: judge ? concurrency : undefined,
         judge_model: judge && judgeModel ? judgeModel : undefined,
         judge_variant: judge && judgeVariant ? judgeVariant : undefined,
         codegen_harness: codegenHarness || undefined,
@@ -751,6 +931,31 @@ function LaunchPanel() {
               ))}
             </div>
           </div>
+
+          <div className="launch-field">
+            <div className="launch-label" id="launch-concurrency-label">
+              Concurrency <code className="launch-flag">--concurrency</code>
+            </div>
+            <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-concurrency-label">
+              {[1, 2, 4, 6, 8].map((n) => (
+                <button
+                  key={n}
+                  className={`lk-chip${concurrency === n ? " on" : ""}`}
+                  role="radio"
+                  aria-checked={concurrency === n}
+                  disabled={!judge}
+                  onClick={() => setConcurrency(n)}
+                  title={n === 1 ? "One case at a time" : `${n} cases judged in parallel`}
+                >
+                  {n === 1 ? "1 · Serial" : `${n}×`}
+                </button>
+              ))}
+            </div>
+            <div className="launch-hint">
+              How many cases the Visual Judge works at once. Each case still gets its own {nJudges}-judge panel; the
+              trial board shows every in-flight case live.
+            </div>
+          </div>
         </fieldset>
 
         <details className="launch-advanced">
@@ -828,7 +1033,9 @@ function LaunchPanel() {
                 </span>
                 <span>
                   {judge
-                    ? `Judging on · ${nJudges}-judge panel · ${harnessLabel(judgeHarness)} harness · model ${
+                    ? `Judging on · ${nJudges}-judge panel · ${
+                        concurrency > 1 ? `${concurrency} cases in parallel` : "one case at a time"
+                      } · ${harnessLabel(judgeHarness)} harness · model ${
                         judgeModel || "auto"
                       } · effort ${judgeVariant ? effortLabel(judgeVariant) : "auto"} (real LLM calls per case)`
                     : "Checks only · no judge calls"}

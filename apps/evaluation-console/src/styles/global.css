@@ -1090,6 +1090,30 @@ button {
 .journal-line.fail .jl-ev {
   color: var(--fail);
 }
+/* Live journal provenance tones: a small ink dot says which lane spoke. */
+.journal-line .jl-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-3);
+  flex-shrink: 0;
+  align-self: center;
+}
+.journal-line.jt-eye .jl-dot {
+  background: var(--ink-eye);
+}
+.journal-line.jt-machine .jl-dot {
+  background: var(--ink-machine);
+}
+.journal-line.jt-pass .jl-dot {
+  background: var(--pass);
+}
+.journal-line.jt-fail .jl-dot {
+  background: var(--fail);
+}
+.journal-line.jt-fail .jl-ev {
+  color: var(--fail);
+}
 
 /* ===================== DECIDE (diff) ===================== */
 .diff {
@@ -3860,6 +3884,119 @@ button.verb-btn:disabled {
 .lt-chip.skipped .lt-dot {
   background: transparent;
   border: 1px dashed var(--unknown);
+}
+
+/* ---- grouped case lanes (audits spanning many skills) ----
+   One row per skill, one 13px cell per case. Stage/verdict is color PLUS
+   shape (fail = ×, needs review = ?), and the tooltip carries the words. */
+.lane-board {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.lane {
+  display: grid;
+  grid-template-columns: 128px 42px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-2);
+}
+.lane-name {
+  font-size: var(--fs-50);
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lane-count {
+  font-size: var(--fs-50);
+  color: var(--text-3);
+  text-align: right;
+}
+.lane-track {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.lane-cell {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  border: 1px solid var(--hairline);
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.lane-cell.inflight {
+  background: var(--live-bg);
+  border-color: var(--live);
+  animation: pulse var(--pulse) infinite;
+}
+.lane-cell.rendered {
+  background: var(--ink-machine);
+  border-color: transparent;
+}
+.lane-cell.judged {
+  background: var(--ink-eye);
+  border-color: transparent;
+}
+.lane-cell.judged.v-pass {
+  background: var(--pass);
+}
+.lane-cell.judged.v-fail {
+  background: var(--fail);
+}
+.lane-cell.judged.v-review {
+  background: var(--defer);
+}
+.lane-cell.judged.v-fail::after,
+.lane-cell.judged.v-review::after {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--canvas);
+}
+.lane-cell.judged.v-fail::after {
+  content: "×";
+}
+.lane-cell.judged.v-review::after {
+  content: "?";
+}
+.lane-inflight {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: var(--fs-50);
+  color: var(--live);
+}
+.lane-inflight .mono {
+  color: var(--text-2);
+}
+.lane-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: 2px;
+  font-size: var(--fs-50);
+  color: var(--text-3);
+}
+.lane-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lane-legend i.lane-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.lane-legend i.lane-cell.inflight {
+  animation: none;
 }
 
 /* ---- journal tail ---- */
