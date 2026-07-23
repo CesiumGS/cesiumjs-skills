@@ -53,8 +53,14 @@ export interface LaunchRequest {
   judge_harness: string;
   n_judges: number;
   judge_model?: string | null;
+  /** Judge reasoning effort (audit --judge-variant): "low" | "medium" | "high" | "xhigh" | "max" | … */
+  judge_variant?: string | null;
   /** Codegen provenance stamp (audit --codegen-harness): the harness that produced the audited baselines. */
   codegen_harness?: string | null;
+  /** Codegen model provenance stamp (audit --codegen-model). */
+  codegen_model?: string | null;
+  /** Codegen reasoning-effort provenance stamp (audit --codegen-variant). */
+  codegen_variant?: string | null;
   threshold?: number | null;
   bundle_root?: string | null;
 }
@@ -68,7 +74,10 @@ export interface LaunchRecord {
   judge_harness: string;
   n_judges: number;
   judge_model?: string | null;
+  judge_variant?: string | null;
   codegen_harness?: string | null;
+  codegen_model?: string | null;
+  codegen_variant?: string | null;
   journal: string;
   log: string;
   output_dir: string;

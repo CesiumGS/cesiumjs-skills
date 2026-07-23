@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useStore } from "../store";
 import { loadLaunchSkills } from "../api";
-import type { LivePhase, LiveRun, LiveTrial } from "../types";
+import type { HarnessSpec, LivePhase, LiveRun, LiveTrial } from "../types";
 import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel } from "../lib/format";
 
 /* ============================================================================
@@ -292,6 +292,35 @@ function LiveRunCard({ run }: { run: LiveRun }) {
    judging defaults ON: a run without it produces a deterministic-only
    (Mode B) scorecard, and the panel says so before you launch one.
    --------------------------------------------------------------------------- */
+
+// Reasoning-effort ("thinking") levels in canonical low→high order, as declared
+// per model in the harness registry. Unknown ids sort last, verbatim.
+const EFFORT_ORDER = ["none", "low", "medium", "high", "xhigh", "max"];
+const EFFORT_LABEL: Record<string, string> = {
+  none: "None",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "X-High",
+  max: "Max"
+};
+const effortLabel = (level: string) => EFFORT_LABEL[level] ?? level;
+const effortRank = (level: string) => {
+  const i = EFFORT_ORDER.indexOf(level);
+  return i === -1 ? EFFORT_ORDER.length : i;
+};
+
+/** Effort levels offered for a harness: the picked model's registry list, or
+ *  the union across the harness's catalog when the model is still auto. */
+function effortLevelsFor(spec: HarnessSpec | undefined, modelId: string): string[] {
+  const model = modelId ? spec?.models.find((m) => m.id === modelId) : undefined;
+  const raw = model?.effort_levels?.length
+    ? model.effort_levels
+    : [...new Set((spec?.models ?? []).flatMap((m) => m.effort_levels ?? []))];
+  const levels = raw.length ? raw : ["low", "medium", "high", "xhigh", "max"];
+  return [...levels].sort((a, b) => effortRank(a) - effortRank(b));
+}
+
 function LaunchPanel() {
   const { launchEvalRun, liveRunning, registry } = useStore();
   const [available, setAvailable] = useState<string[]>([]);
@@ -303,7 +332,10 @@ function LaunchPanel() {
   const [judgeHarness, setJudgeHarness] = useState<string>("opencode");
   const [nJudges, setNJudges] = useState(3);
   const [judgeModel, setJudgeModel] = useState("");
+  const [judgeVariant, setJudgeVariant] = useState("");
   const [codegenHarness, setCodegenHarness] = useState("");
+  const [codegenModel, setCodegenModel] = useState("");
+  const [codegenVariant, setCodegenVariant] = useState("");
   const [threshold, setThreshold] = useState("");
   const [bundleRoot, setBundleRoot] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -322,6 +354,10 @@ function LaunchPanel() {
   const harnessSpec = (id: string) => registry?.harnesses.find((h) => h.id === id);
   const judgeHarnessSpec = harnessSpec(judgeHarness);
   const judgeHarnessModels = judgeHarnessSpec?.models ?? [];
+  const judgeEffortLevels = effortLevelsFor(judgeHarnessSpec, judgeModel);
+  const codegenHarnessSpec = harnessSpec(codegenHarness);
+  const codegenHarnessModels = codegenHarnessSpec?.models ?? [];
+  const codegenEffortLevels = effortLevelsFor(codegenHarnessSpec, codegenModel);
 
   useEffect(() => {
     let disposed = false;
@@ -361,12 +397,28 @@ function LaunchPanel() {
     ];
     if (!judge) parts.push("--no-judge");
     if (judge && judgeModel) parts.push(`--judge-model ${judgeModel}`);
+    if (judge && judgeVariant) parts.push(`--judge-variant ${judgeVariant}`);
     if (codegenHarness) parts.push(`--codegen-harness ${codegenHarness}`);
+    if (codegenModel) parts.push(`--codegen-model ${codegenModel}`);
+    if (codegenVariant) parts.push(`--codegen-variant ${codegenVariant}`);
     if (threshold) parts.push(`--threshold ${threshold}`);
     if (bundleRoot) parts.push(`--bundle-root ${bundleRoot}`);
     parts.push("--journal <run-dir>/progress.jsonl", "--output-dir <run-dir>");
     return parts.join(" \\\n  ");
-  }, [allSelected, selectedSkills, judgeHarness, nJudges, judge, judgeModel, codegenHarness, threshold, bundleRoot]);
+  }, [
+    allSelected,
+    selectedSkills,
+    judgeHarness,
+    nJudges,
+    judge,
+    judgeModel,
+    judgeVariant,
+    codegenHarness,
+    codegenModel,
+    codegenVariant,
+    threshold,
+    bundleRoot
+  ]);
 
   const launch = async () => {
     setBusy(true);
@@ -378,7 +430,10 @@ function LaunchPanel() {
         judge_harness: judgeHarness,
         n_judges: nJudges,
         judge_model: judge && judgeModel ? judgeModel : undefined,
+        judge_variant: judge && judgeVariant ? judgeVariant : undefined,
         codegen_harness: codegenHarness || undefined,
+        codegen_model: codegenModel || undefined,
+        codegen_variant: codegenVariant || undefined,
         threshold: threshold ? Number(threshold) : undefined,
         bundle_root: bundleRoot || undefined
       });
@@ -447,7 +502,11 @@ function LaunchPanel() {
                 className={`lk-chip${codegenHarness === "" ? " on" : ""}`}
                 role="radio"
                 aria-checked={codegenHarness === ""}
-                onClick={() => setCodegenHarness("")}
+                onClick={() => {
+                  setCodegenHarness("");
+                  setCodegenModel("");
+                  setCodegenVariant("");
+                }}
                 title="Stamp the config default codegen harness"
               >
                 Auto
@@ -458,7 +517,11 @@ function LaunchPanel() {
                   className={`lk-chip lk-harness${codegenHarness === h ? " on" : ""}`}
                   role="radio"
                   aria-checked={codegenHarness === h}
-                  onClick={() => setCodegenHarness(h)}
+                  onClick={() => {
+                    setCodegenHarness(h);
+                    setCodegenModel("");
+                    setCodegenVariant("");
+                  }}
                   title={`Stamp ${harnessSpec(h)?.name ?? harnessLabel(h)} as the harness that produced the audited baselines`}
                 >
                   {harnessLabel(h)}
@@ -466,8 +529,65 @@ function LaunchPanel() {
               ))}
             </div>
             <div className="launch-hint">
-              Provenance stamp for the scorecard: the audit scores baselines already on disk, and the codegen model
-              and effort are recovered from each baseline's meta sidecar.
+              Provenance stamp for the scorecard: the audit scores baselines already on disk. Model and thinking
+              effort default to each baseline's meta sidecar; set them below to stamp explicit values instead.
+            </div>
+          </div>
+
+          <div className="launch-field">
+            <label className="launch-model">
+              <span className="launch-label">
+                Codegen Model <code className="launch-flag">--codegen-model</code>
+              </span>
+              <select
+                value={codegenModel}
+                disabled={!codegenHarness}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setCodegenModel(next);
+                  setCodegenVariant((v) =>
+                    v && !effortLevelsFor(codegenHarnessSpec, next).includes(v) ? "" : v
+                  );
+                }}
+              >
+                <option value="">auto (from baseline meta)</option>
+                {codegenHarnessModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="launch-field">
+            <div className="launch-label" id="launch-codegen-effort-label">
+              Thinking Effort <code className="launch-flag">--codegen-variant</code>
+            </div>
+            <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-codegen-effort-label">
+              <button
+                className={`lk-chip${codegenVariant === "" ? " on" : ""}`}
+                role="radio"
+                aria-checked={codegenVariant === ""}
+                disabled={!codegenHarness}
+                onClick={() => setCodegenVariant("")}
+                title="Recover the effort from each baseline's meta sidecar"
+              >
+                Auto
+              </button>
+              {codegenEffortLevels.map((lv) => (
+                <button
+                  key={lv}
+                  className={`lk-chip${codegenVariant === lv ? " on" : ""}`}
+                  role="radio"
+                  aria-checked={codegenVariant === lv}
+                  disabled={!codegenHarness}
+                  onClick={() => setCodegenVariant(lv)}
+                  title={`Stamp ${effortLabel(lv)} as the codegen reasoning effort`}
+                >
+                  {effortLabel(lv)}
+                </button>
+              ))}
             </div>
           </div>
         </fieldset>
@@ -530,6 +650,9 @@ function LaunchPanel() {
                     onClick={() => {
                       setJudgeHarness(a);
                       setJudgeModel("");
+                      setJudgeVariant((v) =>
+                        v && !effortLevelsFor(harnessSpec(a), "").includes(v) ? "" : v
+                      );
                     }}
                     title={spec?.vision_note ?? `Judge via the ${harnessLabel(a)} harness`}
                   >
@@ -555,7 +678,13 @@ function LaunchPanel() {
               <select
                 value={judgeModel}
                 disabled={!judge}
-                onChange={(e) => setJudgeModel(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setJudgeModel(next);
+                  setJudgeVariant((v) =>
+                    v && !effortLevelsFor(judgeHarnessSpec, next).includes(v) ? "" : v
+                  );
+                }}
               >
                 <option value="">auto (discovered)</option>
                 {judgeHarnessModels.map((m) => (
@@ -565,6 +694,41 @@ function LaunchPanel() {
                 ))}
               </select>
             </label>
+          </div>
+
+          <div className="launch-field">
+            <div className="launch-label" id="launch-judge-effort-label">
+              Thinking Effort <code className="launch-flag">--judge-variant</code>
+            </div>
+            <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judge-effort-label">
+              <button
+                className={`lk-chip${judgeVariant === "" ? " on" : ""}`}
+                role="radio"
+                aria-checked={judgeVariant === ""}
+                disabled={!judge}
+                onClick={() => setJudgeVariant("")}
+                title="Harness default reasoning effort"
+              >
+                Auto
+              </button>
+              {judgeEffortLevels.map((lv) => (
+                <button
+                  key={lv}
+                  className={`lk-chip${judgeVariant === lv ? " on" : ""}`}
+                  role="radio"
+                  aria-checked={judgeVariant === lv}
+                  disabled={!judge}
+                  onClick={() => setJudgeVariant(lv)}
+                  title={`Judge reasoning effort: ${effortLabel(lv)}`}
+                >
+                  {effortLabel(lv)}
+                </button>
+              ))}
+            </div>
+            <div className="launch-hint">
+              How much reasoning each judge call spends. Auto uses the harness default
+              {judgeHarnessSpec ? ` (${effortLabel(judgeHarnessSpec.default_effort)})` : ""}.
+            </div>
           </div>
 
           <div className="launch-field">
@@ -666,10 +830,16 @@ function LaunchPanel() {
                   {judge
                     ? `Judging on · ${nJudges}-judge panel · ${harnessLabel(judgeHarness)} harness · model ${
                         judgeModel || "auto"
-                      } (real LLM calls per case)`
+                      } · effort ${judgeVariant ? effortLabel(judgeVariant) : "auto"} (real LLM calls per case)`
                     : "Checks only · no judge calls"}
                 </span>
-                {codegenHarness && <span>Codegen stamp: {harnessLabel(codegenHarness)}</span>}
+                {codegenHarness && (
+                  <span>
+                    Codegen stamp: {harnessLabel(codegenHarness)}
+                    {codegenModel ? ` · ${codegenModel}` : ""}
+                    {codegenVariant ? ` · effort ${effortLabel(codegenVariant)}` : ""}
+                  </span>
+                )}
                 {threshold && <span>Pass threshold {threshold}</span>}
                 <span className="launch-preflight-note">
                   Runs as a detached process. Cancel it any time from its run card.
