@@ -1,0 +1,160 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 7,
+        "total": 7
+      },
+      "source_scenario_id": "eval-004"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-104",
+  "case_name": "empire-state-building-from-east",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-camera/baseline/eval-004-empire-state-building-from-east/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Target the mid-height of the Empire State Building (~200 m) so the\n// building is centered vertically in the frame rather than aiming at its base.\nconst target = Cesium.Cartesian3.fromDegrees(-73.9857, 40.7484, 200.0);\n\n// Heading 270\u00b0 = camera faces west \u2192 camera sits to the east of the target.\n// Pitch -25\u00b0 = slight downward angle.\n// Range 800 m.\nviewer.camera.lookAt(\n  target,\n  new Cesium.HeadingPitchRange(\n    Cesium.Math.toRadians(270.0),\n    Cesium.Math.toRadians(-25.0),\n    800.0\n  )\n);",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "0d98e13994d9cb0347c2b8fe7f021350f1f3bbb251e149c25901874bac2ddffb",
+      "programmatic_checks": "f7cb71ee17c3c9b1acfe54279ff836af5420741d5923322a92ae0a2343276648",
+      "scene_state": "123037e3f60b339168d681f7a9e51b10e1fcfb1a45ce6233e253f289122c27a6",
+      "screenshot_quality": "4378b514a922dc7449f2f4c24394daf43bfc8ad228498e1b1ebd0ca586f7b137",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "dfff544f0d4a895c01dba2a13f9c7d9778945eba3ff9fd41da7299d38faa470d"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "dce1b6248156fc4acbd7dff9059c67f0c0043c8c987cba836905a96a81c92ea1",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "ea91a74cf4136e576fd54e809ef7aa577162634dcba5a9279075f4b5464297cf",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T20:53:34.930086+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses lookAt",
+        "detail": "Pattern matched: 'lookAt'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses HeadingPitchRange",
+        "detail": "Pattern matched: 'HeadingPitchRange'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "NYC longitude negative",
+        "detail": "Pattern matched: '-73.98'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Heading ~270 degrees (east perspective)",
+        "detail": "Pattern matched: '270'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-004",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 7,
+      "total": 7
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-camera/baseline/eval-004-empire-state-building-from-east",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 4.712486855614399,
+      "pitch": -0.43644581364865687,
+      "position": {
+        "x": 725.046229623491,
+        "y": 4.6566128730773926e-09,
+        "z": 338.0946093965322
+      },
+      "roll": 6.283185112547106
+    },
+    "entity_count": 1,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-004",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 4704,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 1289246,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 255.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-camera/eval-004-screenshot.png"
+  ],
+  "skill": "cesiumjs-camera",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-camera/baseline/eval-004.js"
+}

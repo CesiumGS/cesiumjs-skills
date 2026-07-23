@@ -1,0 +1,195 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 9,
+        "total": 9
+      },
+      "source_scenario_id": "eval-011"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-111",
+  "case_name": "chained-flyto-tour-nyc",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-camera/baseline/eval-011-chained-flyto-tour-nyc/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18,\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Add visible markers for both landmarks\nviewer.entities.add({\n  name: 'Statue of Liberty',\n  position: Cesium.Cartesian3.fromDegrees(-74.0445, 40.6892, 0.0),\n  billboard: {\n    image: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',\n    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n    scale: 1.2,\n  },\n  label: {\n    text: 'Statue of Liberty',\n    font: '14px sans-serif',\n    fillColor: Cesium.Color.WHITE,\n    outlineColor: Cesium.Color.BLACK,\n    outlineWidth: 2,\n    style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n    pixelOffset: new Cesium.Cartesian2(0, -40),\n    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n  },\n});\n\nviewer.entities.add({\n  name: 'Empire State Building',\n  position: Cesium.Cartesian3.fromDegrees(-73.9857, 40.7484, 0.0),\n  billboard: {\n    image: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',\n    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n    scale: 1.2,\n  },\n  label: {\n    text: 'Empire State Building',\n    font: '14px sans-serif',\n    fillColor: Cesium.Color.WHITE,\n    outlineColor: Cesium.Color.BLACK,\n    outlineWidth: 2,\n    style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n    pixelOffset: new Cesium.Cartesian2(0, -40),\n    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n  },\n});\n\n// Start from a NYC overview so the tour has a clear departure point\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-74.006, 40.71, 18000.0),\n  orientation: {\n    heading: Cesium.Math.toRadians(0.0),\n    pitch: Cesium.Math.toRadians(-60.0),\n    roll: 0.0,\n  },\n});\n\n// Stop 1: Fly to Statue of Liberty \u2014 800 m, -35 deg pitch, 3 s\nviewer.camera.flyTo({\n  destination: Cesium.Cartesian3.fromDegrees(-74.0445, 40.6892, 800.0),\n  orientation: {\n    heading: Cesium.Math.toRadians(0.0),\n    pitch: Cesium.Math.toRadians(-35.0),\n    roll: 0.0,\n  },\n  duration: 3,\n  complete: function () {\n    // Stop 2: Fly to Empire State Building \u2014 600 m, -30 deg pitch, 2 s, linear easing\n    viewer.camera.flyTo({\n      destination: Cesium.Cartesian3.fromDegrees(-73.9857, 40.7484, 600.0),\n      orientation: {\n        heading: Cesium.Math.toRadians(0.0),\n        pitch: Cesium.Math.toRadians(-30.0),\n        roll: 0.0,\n      },\n      duration: 2,\n      easingFunction: Cesium.EasingFunction.LINEAR_NONE,\n    });\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "9678881d5879b6c843f7cf087ef91f8629e4055ea2f455f8e6c3e1ff5b41e858",
+      "programmatic_checks": "11c3ddc84fc65a1e69a73ec8fe264a93e13cdfd198e93cc57026231660856b9a",
+      "scene_state": "945c686e1753fc12e7603c01f9214f38f8e4cc1e199791d26b970cd584d50223",
+      "screenshot_quality": "0c763639402290f534f5717077ab356a2de8bf2821ba98658ef599d38597d919",
+      "screenshots": [
+        {
+          "filename": "screenshot-0.png",
+          "hash": "2c7bdd0fe4923abb5f71a46b0c9fd738f21325d0cec3c0eded27352e157f03d7"
+        },
+        {
+          "filename": "screenshot-1.png",
+          "hash": "514cdea2f3e923c0ced9d8deccc2a26ac97e79761a3087569bdab40e01201689"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "dce1b6248156fc4acbd7dff9059c67f0c0043c8c987cba836905a96a81c92ea1",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "0b27e4606899327989f9b13a02a17c949c4740373d46c12639e5878bb1c6edc9",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T20:53:34.930086+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses flyTo",
+        "detail": "Pattern matched: 'flyTo'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses complete callback for chaining",
+        "detail": "Pattern matched: 'complete'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Statue of Liberty longitude",
+        "detail": "Pattern matched: '-74.04'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Empire State longitude",
+        "detail": "Pattern matched: '-73.98'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Uses easing function",
+        "detail": "Pattern matched: 'easingFunction'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot-0.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot-1.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-011",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 9,
+      "total": 9
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-camera/baseline/eval-011-chained-flyto-tour-nyc",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -0.5235987755982987,
+      "position": {
+        "x": 1335061.0662450201,
+        "y": -4651529.365116086,
+        "z": 4141687.6627130006
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-011",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 6848,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 552199,
+        "filename": "screenshot-0.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 207.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      },
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 4162,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 1353719,
+        "filename": "screenshot-1.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 221.27,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-camera/eval-011-screenshot-0.png",
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-camera/eval-011-screenshot-1.png"
+  ],
+  "skill": "cesiumjs-camera",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-camera/baseline/eval-011.js"
+}

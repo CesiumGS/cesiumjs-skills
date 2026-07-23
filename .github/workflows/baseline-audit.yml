@@ -1,0 +1,187 @@
+name: Baseline Audit (deterministic + qualitative)
+
+# Two-lane baseline audit. The deterministic lane is the binding PR gate and
+# runs over tracked evidence fixtures (no secrets, fast). The qualitative lane
+# (static 0-10 visual judge) needs rendered baselines, which live under the
+# gitignored optimization/runs/ — so it renders them first and runs nightly /
+# on demand, posting an advisory result. Both lanes share ONE entrypoint:
+# `cesium-eval audit`.
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+      - 'evaluation/**'
+      - 'optimization/scenarios/**'
+      - 'packages/eval/**'
+      - '.github/workflows/baseline-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'evaluation/**'
+      - 'packages/eval/**'
+  workflow_dispatch:
+    inputs:
+      skills:
+        description: "Skills to audit ('all' or comma-separated)"
+        required: false
+        default: 'all'
+      judge_model:
+        description: 'Judge model id/alias (blank uses harness default)'
+        required: false
+        default: ''
+      agent_harness:
+        description: 'Agent CLI harness for qualitative audit'
+        required: false
+        default: 'opencode'
+        type: choice
+        options:
+          - opencode
+          - codex
+      n_judges:
+        description: 'Panel size'
+        required: false
+        default: '3'
+  schedule:
+    - cron: '0 3 * * *'   # nightly qualitative audit
+
+jobs:
+  # ----- Lane 1: deterministic (blocking PR gate, no secrets) -----
+  deterministic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build --workspace @cesiumjs-skills/eval
+      - name: Validate evaluation cases and fixtures
+        run: node packages/eval/bin/cesium-eval.js validate --suite evaluation
+      - name: Unit tests (checks, scorecard, judges; CI-safe)
+        run: npm test --workspace @cesiumjs-skills/eval
+      - name: Deterministic baseline audit over tracked evidence (binding gate)
+        run: |
+          node packages/eval/bin/cesium-eval.js audit \
+            --skills "${{ github.event.inputs.skills || 'all' }}" \
+            --no-judge \
+            --output-dir evaluation/artifacts/audits/ci-deterministic
+      - name: Upload deterministic scorecard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-audit-deterministic-${{ github.run_number }}
+          path: |
+            evaluation/artifacts/audits/ci-deterministic/scorecard.*
+            evaluation/artifacts/audits/ci-deterministic/**/scorecard.*
+
+  # ----- Lane 2: qualitative (nightly / dispatch, advisory) -----
+  qualitative:
+    needs: deterministic
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: |
+          npm ci
+          npm run build --workspace @cesiumjs-skills/eval
+          npx playwright install --with-deps chromium
+      - name: Install agent CLI
+        env:
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+        run: |
+          if [ "$AGENT_HARNESS" = "codex" ]; then
+            npm install -g @openai/codex
+            codex --version
+          else
+            npm install -g opencode-ai@latest
+            opencode --version
+          fi
+      - name: Install gitleaks
+        run: |
+          GITLEAKS_VERSION=8.18.2
+          wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+      - name: Validate secrets
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+        run: |
+          test -n "$CESIUM_ION_TOKEN" || { echo "CESIUM_ION_TOKEN missing"; exit 1; }
+          if [ "$AGENT_HARNESS" = "opencode" ] && [ -z "$OPENCODE_AUTH_CONTENT" ]; then
+            echo "OPENCODE_AUTH_CONTENT OpenAI auth secret missing"
+            exit 1
+          fi
+      - name: Render current-best baselines (gitignored; needed for the visual lane)
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_MODEL: ${{ github.event.inputs.judge_model || vars.OPENCODE_MODEL || secrets.OPENCODE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_PROPOSER_MODEL: ${{ vars.OPENCODE_PROPOSER_MODEL || secrets.OPENCODE_PROPOSER_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_EVAL_MODEL: ${{ vars.OPENCODE_EVAL_MODEL || secrets.OPENCODE_EVAL_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || secrets.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_PROPOSER_VARIANT: ${{ vars.OPENCODE_PROPOSER_VARIANT || secrets.OPENCODE_PROPOSER_VARIANT || 'high' }}
+          OPENCODE_EVAL_VARIANT: ${{ vars.OPENCODE_EVAL_VARIANT || secrets.OPENCODE_EVAL_VARIANT || 'medium' }}
+          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
+        run: |
+          # The optimization loop's baseline guard renders skills/<skill>/SKILL.md
+          # into optimization/runs/<skill>/baseline (1 iteration is enough to
+          # establish the baseline bundle the audit judges).
+          SKILLS="${{ github.event.inputs.skills || 'all' }}"
+          node packages/eval/bin/cesium-eval.js optimize all \
+            --skills "$SKILLS" \
+            --proposer-harness "$AGENT_HARNESS" \
+            --codegen-harness "$AGENT_HARNESS" \
+            --judge-harness "$AGENT_HARNESS" \
+            --max-iterations 1 \
+            --stop-on max || true
+      - name: Qualitative + deterministic baseline audit (advisory)
+        id: audit
+        continue-on-error: true
+        shell: bash
+        env:
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_MODEL: ${{ github.event.inputs.judge_model || vars.OPENCODE_MODEL || secrets.OPENCODE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || secrets.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
+        run: |
+          CMD=(node packages/eval/bin/cesium-eval.js audit \
+            --skills "${{ github.event.inputs.skills || 'all' }}" \
+            --judge-harness "$AGENT_HARNESS" \
+            --n-judges "${{ github.event.inputs.n_judges || '3' }}" \
+            --output-dir evaluation/artifacts/audits/ci)
+          if [ "$AGENT_HARNESS" = "opencode" ] && [ -n "$OPENCODE_MODEL" ]; then
+            CMD+=(--judge-model "$OPENCODE_MODEL")
+          fi
+          "${CMD[@]}"
+      - name: Sanitize before upload
+        if: always()
+        run: |
+          node packages/eval/bin/cesium-eval.js check public-artifacts
+          bash optimization/scripts/check-secrets.sh
+          find optimization/runs/ evaluation/artifacts/ -name '*.html' -delete || true
+      - name: Upload audit scorecard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-audit-qualitative-${{ github.run_number }}
+          path: |
+            evaluation/artifacts/audits/ci/scorecard.*
+            evaluation/artifacts/audits/ci/**/scorecard.*

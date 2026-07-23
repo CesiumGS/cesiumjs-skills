@@ -1,0 +1,113 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses URL-backed 3D Tiles factory",
+      "id": "pattern_present_02",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public CesiumGS sample tileset",
+      "id": "pattern_present_03",
+      "pattern": "TilesetWithDiscreteLOD",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Constructs CustomShader",
+      "id": "pattern_present_04",
+      "pattern": "new (?:Cesium\\.)?CustomShader",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Defines fragmentMain",
+      "id": "pattern_present_05",
+      "pattern": "fragmentMain",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Writes material.diffuse",
+      "id": "pattern_present_06",
+      "pattern": "material\\.diffuse",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Assigns customShader on the tileset",
+      "id": "pattern_present_07",
+      "pattern": "\\.customShader\\s*=",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Does NOT combine with style or entitlement-backed OSM Buildings",
+      "id": "pattern_absent_08",
+      "pattern": "Cesium3DTileStyle|createOsmBuildingsAsync|fromIonAssetId",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Apply a CustomShader to a public URL-backed 3D Tiles sample and assign material.diffuse in fragmentMain. Tests the CustomShader to Cesium3DTileset path and tileset.customShader hot-swap without depending on ion OSM Buildings feature IDs.",
+  "id": "eval-104",
+  "name": "archive-public-tileset-custom-shader-color",
+  "notes": "Imported from optimization/scenarios/cesiumjs-custom-shader/eval-004. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Calls Cesium3DTileset.fromUrl with a public CesiumGS sample URL",
+      "Adds the tileset to viewer.scene.primitives",
+      "Constructs a new CustomShader with fragmentShaderText only (no vertex shader needed)",
+      "Fragment shader writes a visible color into material.diffuse",
+      "Assigns the shader via tileset.customShader = shader (NOT tileset.style)",
+      "Frames the public sample tileset close enough to inspect the shader output"
+    ],
+    "landmark": "Cesium 3D Tiles sample dragon",
+    "perspective": "public sample tileset with fragment shader colouring",
+    "source": "optimization/scenarios",
+    "source_name": "public-tileset-custom-shader-color",
+    "source_scenario_id": "eval-004",
+    "visual_expectations": "The public sample 3D Tiles geometry should render with a clear cyan custom-shader tint, centered and large enough to inspect. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion defaults. Load the public Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` via `Cesium.Cesium3DTileset.fromUrl`, add it to `viewer.scene.primitives`, and construct a `new Cesium.CustomShader({ fragmentShaderText: `void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) { material.diffuse = vec3(0.2, 0.8, 1.0); }` })`. Assign the shader via `tileset.customShader = shader` (NOT a Cesium3DTileStyle). Frame the sample tileset close enough that the cyan custom-shader color is visible. Do not call createOsmBuildingsAsync(), createGooglePhotorealistic3DTileset(), or ion asset helpers.",
+  "schema_version": 1,
+  "skill": "cesiumjs-custom-shader",
+  "timeout_ms": 5000
+}

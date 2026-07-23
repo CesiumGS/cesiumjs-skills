@@ -1,0 +1,82 @@
+{
+  "id": "eval-002",
+  "name": "sunset-atmosphere-san-francisco-bay",
+  "landmark": "San Francisco Bay at sunset",
+  "perspective": "regional sunset over the bay",
+  "difficulty": "medium",
+  "description": "Configure scene lighting with a specific JulianDate that simulates sunset and view the San Francisco Bay area with SkyAtmosphere visible and showGroundAtmosphere true. The screenshot should show warm sunset-coloured atmosphere without requiring ion terrain entitlement.",
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer and no ion terrain/defaults. Enable `viewer.scene.globe.enableLighting = true`. Set viewer.clock.currentTime = Cesium.JulianDate.fromIso8601('2026-05-20T03:30:00Z') (sunset Pacific). Set viewer.shouldAnimate = false. Configure scene.skyAtmosphere.brightnessShift = -0.2 and scene.globe.showGroundAtmosphere = true. Frame from above the East Bay looking west across the Bay at the sunset: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-122.42, 37.75, 22000), orientation: { heading: Cesium.Math.toRadians(270), pitch: Cesium.Math.toRadians(-12), roll: 0 } }). The bay, Golden Gate, and warm horizon should all be in frame. Do not use CesiumTerrainProvider.fromIonAssetId or Terrain.fromWorldTerrain.",
+  "expected_behaviors": [
+    "Enables viewer.scene.globe.enableLighting",
+    "Sets viewer.clock.currentTime to a sunset JulianDate (around 03:30 UTC = 20:30 PDT-ish)",
+    "Sets viewer.shouldAnimate = false to freeze the clock",
+    "Enables viewer.scene.skyAtmosphere.show",
+    "Enables viewer.scene.globe.showGroundAtmosphere",
+    "Positions camera over San Francisco Bay (around 37.77 N, -122.42 W) at 15-60 km altitude",
+    "Camera heading is around 270 (west) and pitch is moderately downward (-15 to -30)"
+  ],
+  "visual_expectations": "A regional San Francisco Bay view with the horizon visible and the sky showing warm sunset colours (orange/red near the horizon, blue above). Terrain lighting should reflect the low sun angle with long shadows. The bay's distinctive coastline (Golden Gate, peninsula) should be visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "enableLighting",
+      "description": "Enables globe lighting"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "JulianDate\\.fromIso8601",
+      "description": "Sets a specific clock time"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "skyAtmosphere",
+      "description": "Configures skyAtmosphere"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "showGroundAtmosphere",
+      "description": "Enables ground atmosphere"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "shouldAnimate\\s*=\\s*false",
+      "description": "Freezes the clock"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "37\\.7",
+      "description": "Targets SF latitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-122\\.4",
+      "description": "Targets SF longitude"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "fromIonAssetId|fromWorldTerrain",
+      "description": "Avoids ion terrain helpers"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_lighting",
+      "delay_ms": 6000,
+      "description": "San Francisco Bay at sunset with warm atmosphere"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "Lighting",
+    "SkyAtmosphere"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

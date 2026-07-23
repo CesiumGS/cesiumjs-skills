@@ -1,0 +1,95 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses cutout rectangle property",
+      "id": "pattern_present_02",
+      "pattern": "cutoutRectangle",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Creates rectangle from degrees",
+      "id": "pattern_present_03",
+      "pattern": "Rectangle\\.fromDegrees",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public GIBS night imagery",
+      "id": "pattern_present_04",
+      "pattern": "VIIRS_CityLights_2012|gibs\\.earthdata",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Florida region",
+      "id": "pattern_present_05",
+      "pattern": "-8[03]\\.|-79\\.|24\\.|31\\.",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids ion imagery helpers",
+      "id": "pattern_absent_06",
+      "pattern": "IonImageryProvider|fromWorldImagery",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Use a cutout rectangle to reveal the base imagery through an overlay over Florida.",
+  "id": "eval-107",
+  "name": "archive-cutout-rectangle-florida",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-007. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Creates a public GIBS overlay imagery layer",
+      "Uses Rectangle.fromDegrees to define a cutout",
+      "Assigns cutoutRectangle to the overlay layer",
+      "Frames Florida"
+    ],
+    "landmark": "Florida, USA",
+    "perspective": "regional cutout reveal",
+    "source": "optimization/scenarios",
+    "source_name": "cutout-rectangle-florida",
+    "source_scenario_id": "eval-007",
+    "visual_expectations": "The region around Florida should appear darker due to the overlay, but the peninsula itself should be visibly cut out, revealing the base imagery beneath. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create a CesiumJS viewer centered on Florida and the northern Caribbean using OpenStreetMap as the explicit base layer, with no default ion imagery. Add a dark NASA GIBS VIIRS CityLights overlay from `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{TileMatrix}/{TileRow}/{TileCol}.jpeg` above the base imagery, then cut a rectangular hole over the Florida peninsula so the normal base imagery shows through in that area while the surrounding region still shows the darker overlay. Do not use IonImageryProvider or ImageryLayer.fromWorldImagery.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

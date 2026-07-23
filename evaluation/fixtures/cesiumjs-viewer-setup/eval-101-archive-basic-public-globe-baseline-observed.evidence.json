@@ -1,0 +1,160 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 7,
+        "total": 7
+      },
+      "source_scenario_id": "eval-001"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-101",
+  "case_name": "basic-public-globe",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-viewer-setup/baseline/eval-001-basic-public-globe/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18,\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n  terrainProvider: new Cesium.EllipsoidTerrainProvider(),\n}));\n\nviewer.scene.globe.enableLighting = false;",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "637a93a82fdf6b5ccb9153084cca5d8ef636a0ab6c26626cb14dbd7dba60a157",
+      "programmatic_checks": "80a8bde16441043f69082054a7a525326afef557a1191c2e5e750b7dd0fb9168",
+      "scene_state": "ca4c50139e42defc1f46c3092651233224db8396908b5236322c2797a7e940cb",
+      "screenshot_quality": "012283e5d9300a8c33d8f41f7fe01c297aa1165847576267d22ae9bf5178f65b",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "124ce291c452e49211bca95d0102a8aff46a74f664635dedf9e5b658e17e9f88"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "1a1739a1d20b80517ea349676b5f7923de5bb717a34fd816310fdab4a8e74ccc",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "90dbbd20e2e6de10f5daf06377ec829489c6e26b470297a44f508810cf9be072",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:13:40.191440+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JavaScript errors in the browser console",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "Code executes without throwing exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_absent_2",
+        "description": "Generated code does not hardcode or reset the Ion token",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Viewer constructor is called",
+        "detail": "Pattern matched: 'new Cesium.Viewer'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Public OSM base layer is configured",
+        "detail": "Pattern matched: 'OpenStreetMapImageryProvider'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_5",
+        "description": "Ion-backed default terrain/imagery helpers are not used",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-001",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 7,
+      "total": 7
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-viewer-setup/baseline/eval-001-basic-public-globe",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5686525624962453,
+      "position": {
+        "x": 3158361.6875674585,
+        "y": -23990138.777814083,
+        "z": 17020972.95487842
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-001",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 481,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 700971,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 255.0,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-viewer-setup/eval-001-screenshot.png"
+  ],
+  "skill": "cesiumjs-viewer-setup",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-viewer-setup/baseline/eval-001.js"
+}

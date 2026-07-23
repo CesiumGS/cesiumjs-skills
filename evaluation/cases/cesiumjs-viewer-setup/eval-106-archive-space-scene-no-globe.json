@@ -1,0 +1,81 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JavaScript errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "Code executes without throwing",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Globe is disabled",
+      "id": "pattern_present_02",
+      "pattern": "globe:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Atmosphere is disabled",
+      "id": "pattern_present_03",
+      "pattern": "skyAtmosphere:\\s*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "No terrain configured (impossible without globe)",
+      "id": "pattern_absent_04",
+      "pattern": "Terrain|terrainProvider|fromWorldTerrain",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Create a space scene with no globe or atmosphere. Tests whether the skill correctly communicates the globe:false pattern and its interaction with skyAtmosphere and baseLayerPicker. A subtle scenario because disabling the globe has cascading implications.",
+  "id": "eval-106",
+  "name": "archive-space-scene-no-globe",
+  "notes": "Imported from optimization/scenarios/cesiumjs-viewer-setup/eval-006. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Sets globe to false (disables the Earth surface entirely)",
+      "Sets skyAtmosphere to false (disables the atmospheric limb glow)",
+      "Disables baseLayerPicker (no imagery layers without a globe)",
+      "May optionally keep or disable skyBox (stars) \u2014 keeping stars is appropriate for space",
+      "Does NOT try to add terrain (no globe means no terrain)",
+      "Does NOT disable the skyBox unless asked (stars in space are expected)"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "space-scene-no-globe",
+    "source_scenario_id": "eval-006",
+    "visual_expectations": "A dark space scene with a star field visible. No Earth surface, no blue atmospheric glow around the limb. The view should be pure space \u2014 the camera can look in any direction and see stars. The Cesium default star skybox should be visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "In the eval page, configure a CesiumJS viewer for a space visualization \u2014 no globe surface, no atmosphere glow, just the black void of space with stars. I'll add the satellite entities later, just set up the viewer properly. The Cesium global object and cesiumContainer element are already configured by the runner.",
+  "schema_version": 1,
+  "skill": "cesiumjs-viewer-setup",
+  "timeout_ms": 5000
+}

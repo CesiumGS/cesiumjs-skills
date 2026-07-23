@@ -1,0 +1,88 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Loads a public URL-backed 3D tileset",
+      "id": "pattern_present_02",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public CesiumGS sample tileset",
+      "id": "pattern_present_03",
+      "pattern": "TilesetWithDiscreteLOD",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Drapes imagery on the tileset",
+      "id": "pattern_present_04",
+      "pattern": "tileset\\.imageryLayers\\.add",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids entitlement-backed assets",
+      "id": "pattern_absent_05",
+      "pattern": "createOsmBuildingsAsync|IonImageryProvider|fromIonAssetId",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Load a public URL-backed 3D tileset and drape an imagery layer on the tileset rather than the globe. Uses a public CesiumGS sample so the eval does not depend on OSM Buildings entitlement.",
+  "id": "eval-111",
+  "name": "archive-public-tileset-draped-imagery",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-011. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Loads a public URL-backed 3D tileset",
+      "Adds the tileset to scene.primitives",
+      "Creates a second imagery layer",
+      "Uses tileset.imageryLayers.add instead of viewer.imageryLayers.add",
+      "Frames the public sample tileset"
+    ],
+    "landmark": "Cesium 3D Tiles sample dragon",
+    "perspective": "public 3D Tiles sample with draped imagery",
+    "source": "optimization/scenarios",
+    "source_name": "public-tileset-draped-imagery",
+    "source_scenario_id": "eval-011",
+    "visual_expectations": "The public sample 3D Tiles geometry should be visible with imagery draped onto the tileset rather than only on the globe. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public CesiumJS viewer with OpenStreetMap as the explicit base layer. Load the public Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` using `Cesium.Cesium3DTileset.fromUrl`, add it to scene.primitives, then create a second imagery layer using a public URL-backed provider such as OpenStreetMap or TileCoordinatesImageryProvider and drape it onto the 3D tileset using `tileset.imageryLayers.add(...)` rather than `viewer.imageryLayers.add(...)`. Frame the sample tileset close enough that the draped imagery effect is visible. Do not use createOsmBuildingsAsync, IonImageryProvider, or ion defaults.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

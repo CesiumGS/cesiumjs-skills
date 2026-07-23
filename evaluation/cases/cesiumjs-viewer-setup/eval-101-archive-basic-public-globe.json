@@ -1,0 +1,88 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JavaScript errors in the browser console",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "Code executes without throwing exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Generated code does not hardcode or reset the Ion token",
+      "id": "pattern_absent_02",
+      "pattern": "Ion\\.defaultAccessToken",
+      "type": "pattern_absent"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Viewer constructor is called",
+      "id": "pattern_present_03",
+      "pattern": "new\\s+(Cesium\\.)?Viewer",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Public OSM base layer is configured",
+      "id": "pattern_present_04",
+      "pattern": "OpenStreetMapImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Ion-backed default terrain/imagery helpers are not used",
+      "id": "pattern_absent_05",
+      "pattern": "Terrain\\.fromWorldTerrain|fromIonAssetId|ImageryLayer\\.fromWorldImagery",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": true,
+  "description": "The most fundamental CesiumJS task: create a viewer with an explicit public base layer. Tests whether the skill produces correct bootstrapping code that actually renders a globe without hidden ion defaults.",
+  "id": "eval-101",
+  "name": "archive-basic-public-globe",
+  "notes": "Imported from optimization/scenarios/cesiumjs-viewer-setup/eval-001. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "easy",
+    "expected_behaviors": [
+      "Does not hardcode or reset Ion.defaultAccessToken",
+      "Creates a new Cesium.Viewer with the existing cesiumContainer element",
+      "Uses an explicit public base layer instead of ion defaults",
+      "Assigns the viewer to window.viewer for scene-state capture",
+      "Uses the global Cesium namespace rather than ES module imports"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "basic-public-globe",
+    "source_scenario_id": "eval-001",
+    "visual_expectations": "A full-window 3D globe should be visible with public OpenStreetMap imagery. Standard Cesium widgets may be visible around the edges of the viewer. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "In the eval page, create a CesiumJS viewer that shows a 3D globe with OpenStreetMap as the explicit base layer (`maximumLevel: 18`) and no ion default imagery or ion terrain. The Cesium global object and cesiumContainer element are already configured by the runner. The viewer should fill the entire browser window and assign `window.viewer` for scene-state capture.",
+  "schema_version": 1,
+  "skill": "cesiumjs-viewer-setup",
+  "timeout_ms": 5000
+}

@@ -1,0 +1,59 @@
+{
+  "id": "eval-011",
+  "name": "public-tileset-draped-imagery",
+  "landmark": "Cesium 3D Tiles sample dragon",
+  "perspective": "public 3D Tiles sample with draped imagery",
+  "section_coverage": [
+    "Draping Imagery on 3D Tiles"
+  ],
+  "difficulty": "hard",
+  "description": "Load a public URL-backed 3D tileset and drape an imagery layer on the tileset rather than the globe. Uses a public CesiumGS sample so the eval does not depend on OSM Buildings entitlement.",
+  "prompt": "Create an eval-stable public CesiumJS viewer with OpenStreetMap as the explicit base layer. Load the public Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` using `Cesium.Cesium3DTileset.fromUrl`, add it to scene.primitives, then create a second imagery layer using a public URL-backed provider such as OpenStreetMap or TileCoordinatesImageryProvider and drape it onto the 3D tileset using `tileset.imageryLayers.add(...)` rather than `viewer.imageryLayers.add(...)`. Frame the sample tileset close enough that the draped imagery effect is visible. Do not use createOsmBuildingsAsync, IonImageryProvider, or ion defaults.",
+  "expected_behaviors": [
+    "Loads a public URL-backed 3D tileset",
+    "Adds the tileset to scene.primitives",
+    "Creates a second imagery layer",
+    "Uses tileset.imageryLayers.add instead of viewer.imageryLayers.add",
+    "Frames the public sample tileset"
+  ],
+  "visual_expectations": "The public sample 3D Tiles geometry should be visible with imagery draped onto the tileset rather than only on the globe. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Loads a public URL-backed 3D tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public CesiumGS sample tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "tileset\\.imageryLayers\\.add",
+      "description": "Drapes imagery on the tileset"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createOsmBuildingsAsync|IonImageryProvider|fromIonAssetId",
+      "description": "Avoids entitlement-backed assets"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 10000,
+      "description": "Public 3D Tiles sample with draped imagery"
+    }
+  ],
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
+}

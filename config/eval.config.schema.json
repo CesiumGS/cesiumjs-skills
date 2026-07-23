@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "eval.config.schema.json",
+  "title": "cesium-eval configuration",
+  "description": "Repo-level configuration for the cesium-eval CLI. Every field is optional; built-in defaults apply, then this file, then environment variables, then command-line flags.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "registry": {
+      "type": "string",
+      "description": "Repo-relative path to the harness/model registry JSON."
+    },
+    "threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Deterministic scorecard pass threshold."
+    },
+    "roles": {
+      "type": "object",
+      "description": "Per-role agent selection. 'auto' defers to discovery/registry defaults.",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(proposer|codegen|judge)$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "harness": { "type": "string" },
+            "model": { "type": "string" },
+            "variant": { "type": "string" },
+            "timeoutSeconds": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "judgePanel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "size": { "type": "integer", "minimum": 1, "maximum": 9 },
+        "seeds": { "type": "array", "items": { "type": "integer" }, "minItems": 1 },
+        "pairwiseProtocol": { "type": "string" },
+        "staticProtocol": { "type": "string" }
+      }
+    },
+    "visionFallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "model": {
+          "type": ["string", "null"],
+          "description": "Override model for vision-fallback calls; null derives it from the failing model id."
+        }
+      }
+    },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cesiumVersion": { "type": "string" },
+        "viewport": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "navigationTimeoutMs": { "type": "integer", "minimum": 1 },
+        "screenshotTimeoutMs": { "type": "integer", "minimum": 1 },
+        "ionPreflightAssetId": { "type": "integer", "minimum": 1 },
+        "tileSettleTimeoutMs": { "type": "integer", "minimum": 1 },
+        "tileSettlePollMs": { "type": "integer", "minimum": 1 },
+        "tileSettleQuietPolls": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "pollMs": { "type": "integer", "minimum": 100 }
+      }
+    },
+    "liveness": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runningMaxAgeSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "A non-terminal journal older than this is stalled, not running."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "id": "eval-001",
+  "name": "public-discrete-lod-dragon",
+  "landmark": "Cesium 3D Tiles sample dragon",
+  "perspective": "public URL-backed tileset close-up",
+  "difficulty": "medium",
+  "description": "Load a public Cesium 3D Tiles sample from a URL and frame the tileset so the subject is clearly visible. Tests Cesium3DTileset.fromUrl, viewer.scene.primitives.add, and camera framing without private ion or Google entitlements.",
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no token-backed ion defaults. Load the public Cesium 3D Tiles Discrete LOD dragon tileset with `await Cesium.Cesium3DTileset.fromUrl('https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json', { maximumScreenSpaceError: 8 })`, add it to `viewer.scene.primitives`, wait for readiness if needed, then frame it with `viewer.flyTo(tileset, { duration: 0, offset: new Cesium.HeadingPitchRange(Cesium.Math.toRadians(30), Cesium.Math.toRadians(-20), tileset.boundingSphere.radius * 1.8) })` or an equivalent camera. Do not use a fixed tiny range such as 30 meters because it can place the camera inside the dragon. Do not call createGooglePhotorealistic3DTileset, createOsmBuildingsAsync, Terrain.fromWorldTerrain, or any ion asset helper.",
+  "expected_behaviors": [
+    "Calls Cesium3DTileset.fromUrl with the public CesiumGS 3D Tiles sample URL",
+    "Adds the returned tileset to viewer.scene.primitives",
+    "Uses an eval-stable public viewer base layer rather than ion defaults",
+    "Frames the dragon tileset close enough that it fills a meaningful part of the screenshot",
+    "Does not load private ion terrain, OSM Buildings, or Google Photorealistic 3D Tiles"
+  ],
+  "visual_expectations": "A close, nonblank 3D Tiles render of the sample dragon on the globe. The dragon or its tiled geometry should be centered and large enough to inspect, not a tiny speck or a black failed-load frame. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Uses URL-backed 3D Tiles factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public CesiumGS sample tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "scene\\.primitives\\.add",
+      "description": "Adds tileset to scene primitives"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "zoomTo|flyTo|HeadingPitchRange|setView",
+      "description": "Frames the tileset"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createGooglePhotorealistic3DTileset|createOsmBuildingsAsync|fromIonAssetId",
+      "description": "Avoids private entitlement-backed assets"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_tiles_load",
+      "delay_ms": 10000,
+      "description": "Public 3D Tiles sample dragon framed clearly"
+    }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": [
+    "Loading a Tileset"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

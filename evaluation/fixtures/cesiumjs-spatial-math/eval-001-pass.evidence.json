@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "cartesian-translation-contract",
+  "skill": "cesiumjs-spatial-math",
+  "source": "synthetic-fixture",
+  "expected_result": "pass",
+  "before": {
+    "entities": {},
+    "values": {
+      "input_points": [
+        [1, 2, 3],
+        [-4, 5, 6]
+      ]
+    }
+  },
+  "after": {
+    "entities": {},
+    "values": {
+      "translated_points": [
+        [11, 2, 3],
+        [6, 5, 6]
+      ],
+      "input_points_after_call": [
+        [1, 2, 3],
+        [-4, 5, 6]
+      ]
+    }
+  }
+}

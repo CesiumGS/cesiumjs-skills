@@ -1,0 +1,88 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JavaScript errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "Code executes without throwing",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Generated code does not hardcode or reset the Ion token",
+      "id": "pattern_absent_02",
+      "pattern": "Ion\\.defaultAccessToken",
+      "type": "pattern_absent"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses URL-backed 3D Tiles factory",
+      "id": "pattern_present_03",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public dragon tileset",
+      "id": "pattern_present_04",
+      "pattern": "TilesetWithDiscreteLOD",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Google/Ion entitlement-backed helpers are not used",
+      "id": "pattern_absent_05",
+      "pattern": "createGooglePhotorealistic3DTileset|IonGeocodeProviderType\\.GOOGLE|fromIonAssetId",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Set up a viewer with a public URL-backed 3D Tiles source. This verifies the viewer setup skill can bootstrap a 3D Tiles scene in the public eval runtime without Google/Ion entitlements.",
+  "id": "eval-104",
+  "name": "archive-public-3d-tiles-viewer",
+  "notes": "Imported from optimization/scenarios/cesiumjs-viewer-setup/eval-004. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Does not hardcode or reset Ion.defaultAccessToken",
+      "Creates the Cesium.Viewer with an explicit public base layer",
+      "Calls Cesium.Cesium3DTileset.fromUrl()",
+      "Adds the tileset to scene.primitives",
+      "Frames the public 3D Tiles sample clearly without cropping it into an extreme close-up"
+    ],
+    "landmark": null,
+    "perspective": null,
+    "source": "optimization/scenarios",
+    "source_name": "public-3d-tiles-viewer",
+    "source_scenario_id": "eval-004",
+    "visual_expectations": "A visible public 3D Tiles sample inside a correctly initialized viewer. The screenshot should show the whole dragon or most of it with surrounding map context, proving URL-backed 3D Tiles can load and be framed without Google/Ion entitlements. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "In the eval page, create a CesiumJS viewer with OpenStreetMap as the explicit base layer and no ion defaults. Load the public Cesium Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` using `Cesium.Cesium3DTileset.fromUrl`, add it to scene.primitives, and frame it clearly with `viewer.flyTo` and an oblique `HeadingPitchRange` far enough back to show the whole dragon and surrounding map context. The dragon should be bright and inspectable, not an extreme close-up of one surface. The Cesium global object and cesiumContainer element are already configured by the runner. Do not call createGooglePhotorealistic3DTileset, createOsmBuildingsAsync, IonGeocodeProviderType.GOOGLE, or ion asset helpers.",
+  "schema_version": 1,
+  "skill": "cesiumjs-viewer-setup",
+  "timeout_ms": 5000
+}

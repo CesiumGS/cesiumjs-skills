@@ -1,0 +1,188 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 11,
+        "total": 11
+      },
+      "source_scenario_id": "eval-005"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-105",
+  "case_name": "silhouette-postprocess-three-boxes",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-interaction/baseline/eval-005-silhouette-postprocess-three-boxes/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst entityA = viewer.entities.add({\n  position: Cesium.Cartesian3.fromDegrees(-157.85, 21.30),\n  box: {\n    dimensions: new Cesium.Cartesian3(20000, 20000, 20000),\n    material: Cesium.Color.YELLOW\n  }\n});\n\nconst entityB = viewer.entities.add({\n  position: Cesium.Cartesian3.fromDegrees(-156.30, 20.80),\n  box: {\n    dimensions: new Cesium.Cartesian3(20000, 20000, 20000),\n    material: Cesium.Color.CYAN\n  }\n});\n\nconst entityC = viewer.entities.add({\n  position: Cesium.Cartesian3.fromDegrees(-155.50, 19.60),\n  box: {\n    dimensions: new Cesium.Cartesian3(20000, 20000, 20000),\n    material: Cesium.Color.MAGENTA\n  }\n});\n\nconst silhouetteEdge = Cesium.PostProcessStageLibrary.createEdgeDetectionStage();\nsilhouetteEdge.uniforms.color = Cesium.Color.fromCssColorString('#ff8800');\nsilhouetteEdge.uniforms.length = 0.5;\nsilhouetteEdge.selected = [entityA, entityB, entityC];\n\nviewer.scene.postProcessStages.add(\n  Cesium.PostProcessStageLibrary.createSilhouetteStage([silhouetteEdge])\n);\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-156.5, 20.5, 1200000)\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "ac42320f09d0188e356cbf4e5bbfd4b8be87ce26742e084ff5f2ea366e77c066",
+      "programmatic_checks": "731d4b400be764aa14c98e7ff5d06d09d125fedadd7dcf3f73eff7d47ee9246d",
+      "scene_state": "de3c06df69319d8ecb9b4f7557ccdf346565ce30845c098efc6c2df565288040",
+      "screenshot_quality": "1e42adc94e25743671984a80274a76f431679039d9150911de01037300ed5e87",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "71803148b5d9e4e80fb163de394f125dfdf09bb005bbeefafb306f23c2cb5d89"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "2cea6744a906c6b9f9bef6adf6652539c2ac975128743b0803fcb6dadbf5d7a5",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "f2060b7e0db64e31f6ed21f643f2155c16304a9c9de4b4f8a3b00fa38040c8e0",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:06:46.468088+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses edge-detection stage factory",
+        "detail": "Pattern matched: 'createEdgeDetectionStage'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses silhouette composite factory",
+        "detail": "Pattern matched: 'createSilhouetteStage'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Assigns to a .selected array",
+        "detail": "Pattern matched: '.selected ='",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Uses YELLOW",
+        "detail": "Pattern matched: 'Color.YELLOW'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Uses CYAN",
+        "detail": "Pattern matched: 'Color.CYAN'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Uses MAGENTA",
+        "detail": "Pattern matched: 'Color.MAGENTA'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "Uses box graphics",
+        "detail": "Pattern matched: 'Box'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_9",
+        "description": "Targets Hawaii longitude",
+        "detail": "Pattern matched: '-156.'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-005",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 11,
+      "total": 11
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-interaction/baseline/eval-005-silhouette-postprocess-three-boxes",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": -6511753.984945936,
+        "y": -2831391.2153556654,
+        "z": 2639877.8555948087
+      },
+      "roll": 0
+    },
+    "entity_count": 3,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-005",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 198,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 68716,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 200.32,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-interaction/eval-005-screenshot.png"
+  ],
+  "skill": "cesiumjs-interaction",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-interaction/baseline/eval-005.js"
+}

@@ -1,0 +1,167 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 8,
+        "total": 8
+      },
+      "source_scenario_id": "eval-008"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-108",
+  "case_name": "color-to-alpha-japan",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-imagery/baseline/eval-008-color-to-alpha-japan/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n      credit: 'OpenStreetMap contributors',\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// NASA GIBS VIIRS CityLights 2012 \u2014 RESTful WMTS endpoint\nconst cityLightsProvider = new Cesium.WebMapTileServiceImageryProvider({\n  url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{TileMatrix}/{TileRow}/{TileCol}.jpeg',\n  layer: 'VIIRS_CityLights_2012',\n  style: 'default',\n  tileMatrixSetID: 'GoogleMapsCompatible_Level8',\n  maximumLevel: 8,\n  credit: new Cesium.Credit('NASA GIBS / VIIRS City Lights 2012'),\n});\n\nconst cityLightsLayer = new Cesium.ImageryLayer(cityLightsProvider);\n\n// Remove the near-black space/ocean background while preserving bright city glow\ncityLightsLayer.colorToAlpha = new Cesium.Color(0.0, 0.0, 0.0);\ncityLightsLayer.colorToAlphaThreshold = 0.12;\n\nviewer.imageryLayers.add(cityLightsLayer);\n\n// Frame central Honshu \u2014 Tokyo visible on the right, Nagoya/Osaka corridor centered\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(139.6917, 35.6895, 1400000),\n  orientation: {\n    heading: Cesium.Math.toRadians(0.0),\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0,\n  },\n});\n",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "42aa1e55cd6f96041416e45fce9e4210d89192b2178012660d9f652c0376023a",
+      "programmatic_checks": "550f1f68a06e41f1a39aa8c1ec7c50a4c35033ddf70fb7e3e8a25d56c54ba9cd",
+      "scene_state": "17f3b73f493a3e4d3a966760b92fc91a9790710d7c9fa4f53597aec466cf89b5",
+      "screenshot_quality": "4a4258be36475c5ad202a5c78d1e92d2340e2dd91cb2ded4964cd95ff6cdc0e6",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "cc97b33f7f3f5eccde284bc3c6db6aa5eea49c02d312954f1300e4783a9a3c3d"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "8842ef0c98540713f1e9e72185baaf59d58e01470c00fea45cb75fe21337e13e",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "84313fc096da3c46b8cc452110083780ec73f873f95c76e8e8e1a6c0958f8b5d",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:18:14.209014+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses color-to-alpha",
+        "detail": "Pattern matched: 'colorToAlpha'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Sets threshold",
+        "detail": "Pattern matched: 'colorToAlphaThreshold'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses public GIBS night imagery",
+        "detail": "Pattern matched: 'gibs.earthdata'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Targets Japan region",
+        "detail": "Pattern matched: '139.'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_6",
+        "description": "Avoids ion imagery helpers",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-008",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 8,
+      "total": 8
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-imagery/baseline/eval-008-color-to-alpha-japan",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": -4821942.452235851,
+        "y": 4090505.627807467,
+        "z": 4517014.11929593
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 2,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-008",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2133,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 567858,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 252.76,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-imagery/eval-008-screenshot.png"
+  ],
+  "skill": "cesiumjs-imagery",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-imagery/baseline/eval-008.js"
+}

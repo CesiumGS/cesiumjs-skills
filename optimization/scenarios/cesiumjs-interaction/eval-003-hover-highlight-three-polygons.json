@@ -1,0 +1,83 @@
+{
+  "id": "eval-003",
+  "name": "hover-highlight-three-polygons",
+  "landmark": "Florida \u2014 three coloured polygons",
+  "perspective": "state-level overview with three rectangular polygons",
+  "difficulty": "medium",
+  "description": "Add three coloured polygon entities over different Florida regions (Panhandle, central, Keys) and register a MOUSE_MOVE handler that swaps each picked polygon's material to YELLOW and restores the previous one. The base state \u2014 three distinct coloured polygons \u2014 is what the screenshot captures.",
+  "prompt": "Add three rectangular polygon entities over Florida regions: Panhandle (rectangle from -87.0, 30.0 to -85.0, 31.0) with material Color.DODGERBLUE.withAlpha(0.6), central (-82.0, 27.5 to -80.5, 29.0) with Color.LIMEGREEN.withAlpha(0.6), Keys (-82.0, 24.5 to -80.0, 25.5) with Color.CRIMSON.withAlpha(0.6). Then construct a ScreenSpaceEventHandler and register a MOUSE_MOVE input action that picks the scene and, when it hits a polygon, stores the picked entity in a let variable, swaps its polygon.material to Color.YELLOW, and restores the previous one. Frame the camera over Florida at around 27.5 N, -83 W from 1,500,000 m altitude.",
+  "expected_behaviors": [
+    "Adds 3 viewer.entities with polygon graphics using PolygonHierarchy or Rectangle->positions",
+    "Each polygon has a distinct semi-transparent color (DODGERBLUE, LIMEGREEN, CRIMSON)",
+    "Constructs a new ScreenSpaceEventHandler",
+    "Registers a MOUSE_MOVE input action via setInputAction",
+    "Callback uses viewer.scene.pick(movement.endPosition)",
+    "Tracks a 'previously highlighted' entity and restores its material on next hover",
+    "Sets the picked polygon's material to Color.YELLOW",
+    "Frames the camera over Florida (around 27.5 N, -83 W) at ~1-2 million m altitude"
+  ],
+  "visual_expectations": "A state-level Florida view with three distinct semi-transparent coloured polygons visible: blue in the panhandle (north), green in central Florida, red over the Keys (south). The polygons should be rectangular and clearly distinguishable. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?ScreenSpaceEventHandler",
+      "description": "Constructs handler"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ScreenSpaceEventType\\.MOUSE_MOVE",
+      "description": "Uses MOUSE_MOVE"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "scene\\.pick",
+      "description": "Uses scene.pick in handler"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.YELLOW",
+      "description": "Highlights with Color.YELLOW"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.DODGERBLUE",
+      "description": "Uses DODGERBLUE for first polygon"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.LIMEGREEN",
+      "description": "Uses LIMEGREEN for second polygon"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.CRIMSON",
+      "description": "Uses CRIMSON for third polygon"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "polygon",
+      "description": "Uses polygon graphics"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Florida view with three coloured polygons"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "Recipes \u2014 Hover Highlighting with MOUSE_MOVE",
+    "Scene Picking Methods"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

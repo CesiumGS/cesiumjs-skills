@@ -1,0 +1,30 @@
+{
+  "name": "@cesiumjs-skills/eval",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "cesium-eval — unified CLI for the CesiumJS skill evaluation and self-optimization lifecycle.",
+  "bin": {
+    "cesium-eval": "./bin/cesium-eval.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "commander": "^13.0.0",
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

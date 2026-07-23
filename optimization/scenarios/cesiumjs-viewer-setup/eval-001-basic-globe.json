@@ -1,0 +1,56 @@
+{
+  "id": "eval-001",
+  "name": "basic-public-globe",
+  "difficulty": "easy",
+  "description": "The most fundamental CesiumJS task: create a viewer with an explicit public base layer. Tests whether the skill produces correct bootstrapping code that actually renders a globe without hidden ion defaults.",
+  "prompt": "In the eval page, create a CesiumJS viewer that shows a 3D globe with OpenStreetMap as the explicit base layer (`maximumLevel: 18`) and no ion default imagery or ion terrain. The Cesium global object and cesiumContainer element are already configured by the runner. The viewer should fill the entire browser window and assign `window.viewer` for scene-state capture.",
+  "expected_behaviors": [
+    "Does not hardcode or reset Ion.defaultAccessToken",
+    "Creates a new Cesium.Viewer with the existing cesiumContainer element",
+    "Uses an explicit public base layer instead of ion defaults",
+    "Assigns the viewer to window.viewer for scene-state capture",
+    "Uses the global Cesium namespace rather than ES module imports"
+  ],
+  "visual_expectations": "A full-window 3D globe should be visible with public OpenStreetMap imagery. Standard Cesium widgets may be visible around the edges of the viewer. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JavaScript errors in the browser console"
+    },
+    {
+      "type": "code_runs",
+      "description": "Code executes without throwing exceptions"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "Ion\\.defaultAccessToken",
+      "description": "Generated code does not hardcode or reset the Ion token"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new\\s+(Cesium\\.)?Viewer",
+      "description": "Viewer constructor is called"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "OpenStreetMapImageryProvider",
+      "description": "Public OSM base layer is configured"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "Terrain\\.fromWorldTerrain|fromIonAssetId|ImageryLayer\\.fromWorldImagery",
+      "description": "Ion-backed default terrain/imagery helpers are not used"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 3000,
+      "description": "After initial globe load and tile fetching"
+    }
+  ],
+  "regression_critical": true,
+  "notes": "This is the baseline sanity check. If the skill can't produce a working globe, nothing else matters.",
+  "runner_mode": "global-js",
+  "screenshot_mode": "cardinal_panorama"
+}

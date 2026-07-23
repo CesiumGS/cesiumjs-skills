@@ -1,0 +1,71 @@
+{
+  "id": "eval-001",
+  "name": "color-grid-landmarks",
+  "landmark": "Six world capitals",
+  "perspective": "global overview with coloured markers",
+  "difficulty": "easy",
+  "description": "Place six point entities at well-known capitals (Washington DC, London, Tokyo, Sydney, Cairo, Bras\u00edlia) each coloured by a different Color factory method: Color.RED, Color.fromCssColorString('#3498db'), Color.fromBytes(255,127,80,255), Color.fromHsl(0.3, 0.8, 0.5), Color.YELLOW, Color.fromCssColorString('rgba(128,0,255,0.9)'). Exercises the Color creation surface and proves each method produced a visibly distinct colour.",
+  "prompt": "Create six large point entities at these capitals, each using a different Color factory: Washington DC (38.9072, -77.0369) with Color.RED, London (51.5074, -0.1278) with Color.fromCssColorString('#3498db'), Tokyo (35.6762, 139.6503) with Color.fromBytes(255, 127, 80, 255), Sydney (-33.8688, 151.2093) with Color.fromHsl(0.3, 0.8, 0.5), Cairo (30.0444, 31.2357) with Color.YELLOW, and Bras\u00edlia (-15.7942, -47.8825) with Color.fromCssColorString('rgba(128, 0, 255, 0.9)'). Use a point pixelSize of at least 48 and an outlineColor with outlineWidth >= 3 so markers are clearly visible at the chosen camera altitude. Disable scaleByDistance so markers stay the configured pixel size. Frame the camera to a continental view of the eastern hemisphere centered around (30 N, 30 E) at 18,000,000 m altitude so the markers in Europe, Africa, the Middle East, and Tokyo are clearly visible.",
+  "expected_behaviors": [
+    "Adds 6 viewer.entities with point graphics",
+    "Each entity uses one of the six listed Color factory methods (RED, fromCssColorString hex, fromBytes, fromHsl, YELLOW, fromCssColorString rgba)",
+    "Each point has pixelSize >= 40 AND an outlineColor with outlineWidth >= 2",
+    "scaleByDistance is not configured (so markers stay big) OR uses a NearFarScalar that keeps them visible at altitude",
+    "Camera framing centers around 30 N, 30 E at 15-25 million m altitude (continental view, not full-globe)",
+    "Coordinates match the listed capitals (approximately)"
+  ],
+  "visual_expectations": "A global view of Earth with six distinctly coloured large points visible at the listed capitals. Each colour should be perceptually distinct (the colours span the full spectrum: red, blue, coral, green, yellow, purple). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.RED",
+      "description": "Uses Color.RED constant"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.fromCssColorString",
+      "description": "Uses Color.fromCssColorString"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.fromBytes",
+      "description": "Uses Color.fromBytes"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.fromHsl",
+      "description": "Uses Color.fromHsl"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.YELLOW",
+      "description": "Uses Color.YELLOW constant"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "pixelSize",
+      "description": "Sets pixelSize on point graphics"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Global view with six coloured markers"
+    }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": [
+    "Color",
+    "Creating Colors"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

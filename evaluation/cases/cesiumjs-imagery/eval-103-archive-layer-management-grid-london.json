@@ -1,0 +1,97 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses layer collection API",
+      "id": "pattern_present_02",
+      "pattern": "viewer\\.imageryLayers|imageryLayers",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses grid provider",
+      "id": "pattern_present_03",
+      "pattern": "GridImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses tile coordinates provider",
+      "id": "pattern_present_04",
+      "pattern": "TileCoordinatesImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Removes a layer",
+      "id": "pattern_present_05",
+      "pattern": "(?:imageryLayers|layers)\\.remove",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets London coordinates",
+      "id": "pattern_present_06",
+      "pattern": "-0\\.12|51\\.50",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": true,
+  "description": "Exercise imagery layer add/remove/order operations while leaving a visible debug grid overlay over London.",
+  "id": "eval-103",
+  "name": "archive-layer-management-grid-london",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-003. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Accesses viewer.imageryLayers",
+      "Adds multiple imagery layers",
+      "Uses GridImageryProvider",
+      "Uses TileCoordinatesImageryProvider",
+      "Removes one overlay so only the grid remains visible",
+      "Centers camera on London"
+    ],
+    "landmark": "London, UK",
+    "perspective": "debug overlay over city",
+    "source": "optimization/scenarios",
+    "source_name": "layer-management-grid-london",
+    "source_scenario_id": "eval-003",
+    "visual_expectations": "A recognizable London map with an obvious debug grid overlay on top. The tile coordinate labels should not remain visible in the final scene. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create a CesiumJS viewer centered on London with `baseLayer: false` or an explicit OpenStreetMap base layer so no default ion imagery is loaded. Add OpenStreetMap tiles from `https://tile.openstreetmap.org/` with `maximumLevel: 18` as the base layer, then add both a TileCoordinatesImageryProvider overlay and a GridImageryProvider overlay. Remove the tile-coordinates overlay so the final result shows only the yellow or wireframe grid over the OSM map. Use the imageryLayers collection API rather than relying on constructor shortcuts, and do not use ImageryLayer.fromWorldImagery or ion defaults.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

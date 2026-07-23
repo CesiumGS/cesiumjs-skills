@@ -1,0 +1,65 @@
+{
+  "id": "eval-004",
+  "name": "water-material-polygon-mediterranean",
+  "landmark": "Animated water material over Italy and the western Mediterranean",
+  "perspective": "regional view with shimmering water-textured polygon",
+  "difficulty": "medium",
+  "description": "Apply Cesium's Fabric 'Water' material to a primitive polygon covering the western Mediterranean (Italy/Sardinia area) so the surface renders as animated water with visible waves and normals. Tests fabric material assignment and water-specific parameters.",
+  "prompt": "Add a single primitive polygon covering the western Mediterranean as a rectangle from (4.0, 36.0) to (16.0, 43.0). Use PolygonGeometry with a PolygonHierarchy built from Cartesian3.fromDegreesArray, wrap it in a GeometryInstance, and render it with MaterialAppearance whose material is Cesium.Material.fromType('Water', { baseWaterColor: Cesium.Color.fromBytes(30, 70, 130, 220), blendColor: Cesium.Color.fromBytes(0, 100, 150, 255), frequency: 1000, animationSpeed: 0.05, amplitude: 7.0 }). Do not use a basic Color material. Frame the camera over Italy: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(11.0, 40.0, 1800000) }) looking straight down at ~1,800,000 m altitude so the polygon covers a meaningful portion of the screen.",
+  "expected_behaviors": [
+    "Adds 1 primitive polygon over western Mediterranean",
+    "Uses Cesium.Material.fromType('Water') or equivalent Fabric Water material",
+    "Configures baseWaterColor (or equivalent) to a blue tone",
+    "Configures animationSpeed > 0 and amplitude > 0 so the water visibly animates",
+    "Frames the camera over Italy/Mediterranean (around 11 E, 40 N) at 1-3 million m altitude",
+    "Camera pitch is straight down or near-vertical"
+  ],
+  "visual_expectations": "A top-down camera view of Italy and the western Mediterranean with the sea region rendered as visibly textured blue water \u2014 wave normals and varying color across the surface should be apparent vs a flat blue colour. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Material\\.fromType\\(\\s*['\"]Water['\"]|type:\\s*['\"]Water['\"]",
+      "description": "Uses Fabric Water material"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:baseWaterColor|blendColor)",
+      "description": "Configures water colour parameters"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "animationSpeed",
+      "description": "Sets animation speed"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "amplitude",
+      "description": "Sets wave amplitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "PolygonGeometry|PolygonHierarchy",
+      "description": "Uses polygon primitive geometry"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Western Mediterranean with water-material polygon"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "Material System (Fabric JSON)"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

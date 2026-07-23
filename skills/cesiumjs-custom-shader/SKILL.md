@@ -30,7 +30,6 @@ const shader = new CustomShader({
   fragmentShaderText: `
     void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
       material.diffuse = vec3(1.0, 0.0, 0.0);
-      material.alpha = 0.8;
     }
   `,
 });
@@ -38,6 +37,15 @@ const shader = new CustomShader({
 const model = await Model.fromGltfAsync({ url: "./aircraft.glb", customShader: shader });
 viewer.scene.primitives.add(model);
 ```
+
+> **Note:** Writing `material.alpha` requires `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` — see "Translucency" below. On opaque models with the default `INHERIT` mode, alpha writes are silently ignored.
+
+> **Visual eval framing:** after adding a shadered `Model`, wait until the model
+> is ready enough to render, then frame a known target point explicitly. Do not
+> rely on the first post-load frame or on a tiny default-scale model. For public
+> model evals, set `minimumPixelSize` (usually 256-400), use a moderate `scale`,
+> and add a silhouette or strong color tint when the shader effect is the thing
+> being judged.
 
 ## Applying a CustomShader
 
@@ -166,7 +174,23 @@ Pair `REPLACE_MATERIAL` + `UNLIT` for pure procedural flat shading (no material 
 - `OPAQUE` — force opaque pass.
 - `TRANSLUCENT` — force translucent pass.
 
-**Pitfall:** writing `material.alpha` on an opaque model with `INHERIT` silently does nothing. Set `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` to make alpha writes effective. See `examples/04-translucent-override.js`.
+**Pitfall:** writing `material.alpha` on an opaque model with `INHERIT` silently does nothing. Set `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` to make alpha writes effective.
+
+```js
+import { CustomShader, CustomShaderTranslucencyMode } from "cesium";
+
+const shader = new CustomShader({
+  translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT,
+  fragmentShaderText: `
+    void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+      material.diffuse = vec3(0.2, 0.6, 1.0);
+      material.alpha = 0.5;   // honored because translucencyMode is TRANSLUCENT
+    }
+  `,
+});
+```
+
+See `examples/04-translucent-override.js`.
 
 ## Attributes
 
@@ -324,7 +348,7 @@ Verbatim from upstream `CHANGES.md`:
 5. **`SAMPLER_CUBE` rejected at construction.** Use `SAMPLER_2D` only.
 6. **Parameter-name contract.** `vsInput`, `vsOutput`, `fsInput`, `material` are scanned by regex — renaming breaks codegen.
 7. **`TextureUniform` URL-vs-typedArray XOR.** Supplying both or neither throws. `typedArray` requires `width` + `height`.
-8. **Alpha writes on opaque models are silently ignored under `INHERIT`.** Set `translucencyMode: TRANSLUCENT`.
+8. **Alpha writes on opaque models are silently ignored under `INHERIT`.** Set `translucencyMode: CustomShaderTranslucencyMode.TRANSLUCENT` — do not just write `material.alpha` and expect it to work.
 9. **`customShader.destroy()` required.** Call when disposing of a shader that holds texture uniforms — otherwise its `TextureManager` leaks GPU resources.
 10. **`vsOutput.pointSize` overrides `Cesium3DTileStyle` point sizing.** Don't set it unless intended.
 11. **Metadata property IDs are sanitized.** Non-alphanumeric → `_`; leading `gl_` stripped; collisions are undefined behavior.

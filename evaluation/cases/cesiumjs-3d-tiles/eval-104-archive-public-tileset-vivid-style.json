@@ -1,0 +1,96 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses URL-backed 3D Tiles factory",
+      "id": "pattern_present_02",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public CesiumGS sample tileset",
+      "id": "pattern_present_03",
+      "pattern": "TilesetWithDiscreteLOD",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses Cesium3DTileStyle",
+      "id": "pattern_present_04",
+      "pattern": "Cesium3DTileStyle",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Style produces explicit colors",
+      "id": "pattern_present_05",
+      "pattern": "(?:hsl|rgb|vec4|color\\()",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids entitlement-backed OSM Buildings",
+      "id": "pattern_absent_06",
+      "pattern": "createOsmBuildingsAsync|fromIonAssetId",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Load a public 3D Tiles sample and apply a vivid Cesium3DTileStyle expression. Tests style assignment and visible color changes without ion-backed OSM Buildings.",
+  "id": "eval-104",
+  "name": "archive-public-tileset-vivid-style",
+  "notes": "Imported from optimization/scenarios/cesiumjs-3d-tiles/eval-004. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "easy",
+    "expected_behaviors": [
+      "Calls Cesium3DTileset.fromUrl with a public CesiumGS sample URL",
+      "Adds the tileset to viewer.scene.primitives",
+      "Assigns a Cesium3DTileStyle to tileset.style",
+      "Style uses an expression that produces multiple distinct colours (color('hsl(...)') or color('rgb(...)') or color expressions per condition)",
+      "Frames the public sample tileset so the style is visible"
+    ],
+    "landmark": "Cesium 3D Tiles sample dragon",
+    "perspective": "public sample tileset with vivid styling",
+    "source": "optimization/scenarios",
+    "source_name": "public-tileset-vivid-style",
+    "source_scenario_id": "eval-004",
+    "visual_expectations": "The public sample 3D Tiles geometry should be rendered in a vivid non-default colour or set of colours, centered and large enough to inspect. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion defaults. Load `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` with `Cesium.Cesium3DTileset.fromUrl`, add it to `viewer.scene.primitives`, then assign a vivid `Cesium.Cesium3DTileStyle` to `tileset.style`. Use a constant explicit color expression such as `color('cyan', 1.0)` or a conditions array with only a safe `true` fallback; do not compare undefined sample metadata properties because Cesium's style engine will stop rendering. Frame the sample tileset close enough that the vivid style is visible. Do not use createOsmBuildingsAsync(), Google Photorealistic 3D Tiles, or ion asset helpers.",
+  "schema_version": 1,
+  "skill": "cesiumjs-3d-tiles",
+  "timeout_ms": 5000
+}

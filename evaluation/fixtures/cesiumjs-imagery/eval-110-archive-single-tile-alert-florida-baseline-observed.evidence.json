@@ -1,0 +1,153 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6
+      },
+      "source_scenario_id": "eval-010"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-110",
+  "case_name": "single-tile-alert-florida",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-imagery/baseline/eval-010-single-tile-alert-florida/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18,\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// --- Build alert overlay on an HTML canvas ---\nconst SIZE = 512;\nconst canvas = document.createElement('canvas');\ncanvas.width = SIZE;\ncanvas.height = SIZE;\nconst ctx = canvas.getContext('2d');\n\n// Base: semi-transparent orange-red fill\nctx.fillStyle = 'rgba(220, 40, 0, 0.55)';\nctx.fillRect(0, 0, SIZE, SIZE);\n\n// Diagonal hazard stripes in amber\nctx.save();\nctx.globalAlpha = 0.35;\nctx.strokeStyle = 'rgba(255, 180, 0, 1.0)';\nctx.lineWidth = 28;\nfor (let i = -SIZE; i < SIZE * 2; i += 72) {\n  ctx.beginPath();\n  ctx.moveTo(i, 0);\n  ctx.lineTo(i + SIZE, SIZE);\n  ctx.stroke();\n}\nctx.restore();\n\n// Radial vignette to concentrate the red toward the centre\nconst radial = ctx.createRadialGradient(SIZE / 2, SIZE / 2, 60, SIZE / 2, SIZE / 2, SIZE * 0.75);\nradial.addColorStop(0, 'rgba(255, 60, 0, 0.0)');\nradial.addColorStop(1, 'rgba(180, 0, 0, 0.45)');\nctx.fillStyle = radial;\nctx.fillRect(0, 0, SIZE, SIZE);\n\n// White border rectangle\nctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';\nctx.lineWidth = 14;\nctx.strokeRect(20, 20, SIZE - 40, SIZE - 40);\n\n// Alert text\nctx.textAlign = 'center';\nctx.textBaseline = 'middle';\nctx.shadowColor = 'rgba(0,0,0,0.7)';\nctx.shadowBlur = 8;\n\nctx.font = 'bold 78px Arial';\nctx.fillStyle = 'rgba(255, 255, 255, 0.97)';\nctx.fillText('! ALERT !', SIZE / 2, SIZE / 2 - 48);\n\nctx.font = 'bold 52px Arial';\nctx.fillStyle = 'rgba(255, 230, 0, 0.97)';\nctx.fillText('FLORIDA', SIZE / 2, SIZE / 2 + 36);\n\nctx.font = 'bold 30px Arial';\nctx.fillStyle = 'rgba(255, 255, 255, 0.88)';\nctx.fillText('SEVERE WEATHER WARNING', SIZE / 2, SIZE / 2 + 100);\n\nconst dataUrl = canvas.toDataURL('image/png');\n\n// --- Drape the canvas image over Florida ---\nconst floridaRect = Cesium.Rectangle.fromDegrees(-87.6, 24.4, -79.9, 31.1);\n\nconst alertLayer = Cesium.ImageryLayer.fromProviderAsync(\n  Cesium.SingleTileImageryProvider.fromUrl(dataUrl, {\n    rectangle: floridaRect,\n  }),\n);\nalertLayer.alpha = 0.82;\nviewer.imageryLayers.add(alertLayer);\n\n// --- Frame camera over Florida peninsula (top-down) ---\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-83.5, 27.8, 1600000),\n  orientation: {\n    heading: 0.0,\n    pitch: Cesium.Math.toRadians(-88),\n    roll: 0.0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "f4f26c5fcd51b9a85f3e58b28a1bb69fa2aec52e5e758e240199cf54e4cc7818",
+      "programmatic_checks": "3bfa3d9fb369dcd43ecb364b16c002c80a694f8807b02a3e44a7afbf775cef12",
+      "scene_state": "8e5d250cf643759c67c190bd7b58950c249e4e34a9387c34ec9254e509144f7b",
+      "screenshot_quality": "d792bf2945631e291599846279b4c8755ac37fd82701161493c9f1dc2dbd109e",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "fb5c20166a5311dbbcc42e39c70feab819473e6fc690e312f661fe249edee41e"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "8842ef0c98540713f1e9e72185baaf59d58e01470c00fea45cb75fe21337e13e",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "b8cbe9d1315200be8c1081d89c679ece95cee163d31a34d06426c5683688d4cf",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:04:47.240843+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses single-tile provider",
+        "detail": "Pattern matched: 'SingleTileImageryProvider'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Sets overlay rectangle",
+        "detail": "Pattern matched: 'Rectangle.fromDegrees'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Generates or uses in-memory image data",
+        "detail": "Pattern matched: 'toDataURL'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-010",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 6,
+      "total": 6
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-imagery/baseline/eval-010-single-tile-alert-florida",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5358897417550108,
+      "position": {
+        "x": 799375.4886401633,
+        "y": -7016028.619637586,
+        "z": 3703136.512144465
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 2,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-010",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2507,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 536309,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 177.68,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-imagery/eval-010-screenshot.png"
+  ],
+  "skill": "cesiumjs-imagery",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-imagery/baseline/eval-010.js"
+}

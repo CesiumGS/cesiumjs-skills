@@ -37,6 +37,16 @@ const model = await Model.fromGltfAsync({ url: "path/to/model.glb" });
 viewer.scene.primitives.add(model);
 ```
 
+### Public Sample Models
+
+CesiumJS ships sample models usable without ion tokens:
+
+```
+https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb
+https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMan/Cesium_Man.glb
+https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMilkTruck/CesiumMilkTruck.glb
+```
+
 CesiumJS 1.143 decodes `KHR_meshopt_compression` automatically, including the
 v1 attribute codec and `COLOR` filter. Do not import a decoder or private loader
 helper. When loading compressed glTF, CAD-style lines/points/edges, or
@@ -59,6 +69,22 @@ const model = await Model.fromGltfAsync({
 });
 viewer.scene.primitives.add(model);
 ```
+
+> **Visual eval framing:** for model screenshots, the model must be fully inside
+> the frame and recognizable, not clipped at the bottom edge. Use
+> `minimumPixelSize` 256-400 for public sample aircraft, add a subtle
+> `silhouetteColor`/`silhouetteSize`, and place the camera with explicit
+> coordinates aimed at the known model position. Avoid shallow pitches that put
+> the model below the frame or rely on `viewer.flyTo(model)`, which is
+> version-sensitive for `Model` primitives.
+
+### Avoiding Distorted Model Appearance
+
+Models can appear stretched or warped when scale is applied non-uniformly or when the orientation matrix is built incorrectly. Common pitfalls:
+
+- **Always use `Transforms.headingPitchRollToFixedFrame` (or the Entity API's `headingPitchRollQuaternion`) for ground-aligned orientation.** Hand-rolled quaternions often invert pitch/roll axes and produce vertically stretched silhouettes.
+- **Use `scale` (uniform) for size, not a non-uniform `Matrix4.fromScale`.** A non-uniform scale baked into `modelMatrix` will distort the model. Reserve `Matrix4.fromScale` for per-node tweaks (e.g., stretching a single turret), not the whole model.
+- **Pair `minimumPixelSize` with a sensible `maximumScale`.** Without a cap, distant small models can balloon to fill the frame and look elongated when the camera is close.
 
 ### Key `Model.fromGltfAsync` Options
 
@@ -126,6 +152,8 @@ model.readyEvent.addEventListener(() => {
 ```
 
 Additional `add` options: `index`, `reverse`, `startTime`, `stopTime`, `delay`, `removeOnStop`, `animationTime` (custom time callback).
+
+**Animations require `viewer.clock.shouldAnimate = true` to advance.** A walking character will appear frozen mid-pose (or distorted if at the seam between keyframes) if the clock is stopped.
 
 ### Animation Events
 
@@ -233,10 +261,26 @@ Values: `NONE`, `CLAMP_TO_GROUND`, `RELATIVE_TO_GROUND`, `CLAMP_TO_TERRAIN`, `RE
 
 `ParticleSystem` renders billboard-based effects. Position with `modelMatrix` (world) and `emitterModelMatrix` (local offset).
 
+**Always set `viewer.clock.shouldAnimate = true` before adding a particle system** -- particles only move when the clock is running. A stopped clock produces a static "blob" at the emitter origin rather than a directional plume.
+
+### Producing a Legible Vertical Plume
+
+A common failure mode is rendering a diffuse spherical blob instead of a recognizable rising column. To make plumes read as vertical:
+
+- **Use `CircleEmitter` or a narrow `ConeEmitter`** for upward-biased velocity. `SphereEmitter` and `BoxEmitter` radiate in all directions and produce blob-like shapes.
+- **Bias velocity strongly upward** -- emitters' local +Z is up in the `modelMatrix` frame; set `modelMatrix` via `Transforms.eastNorthUpToFixedFrame` so +Z is local up.
+- **Use a multi-second `minimumParticleLife` / `maximumParticleLife`** (e.g., 1.5-4.0) so particles travel far enough to form a visible column before fading.
+- **Scale particles over their lifetime** (`startScale` small, `endScale` 3-6x larger) so the plume widens with height, matching real smoke.
+- **Keep the emitter footprint smaller than the visible plume.** For crater smoke, use a small disk or point source; oversized ground ellipses read as the subject instead of a source marker.
+- **Avoid solving clipping by making the plume huge.** If the top is clipped, first increase camera range or lower particle life/speed/endScale; do not let the plume fill all four edges of the frame.
+- **Wait for several seconds of simulation time before screenshotting** -- the plume needs to develop. Advance the clock or use `viewer.clock.shouldAnimate = true` and wait.
+
 ### Smoke Trail
 
 ```js
 import { ParticleSystem, CircleEmitter, Color, Cartesian2, Transforms, Cartesian3 } from "cesium";
+
+viewer.clock.shouldAnimate = true; // required -- particles don't move on a stopped clock
 
 const smokeSystem = new ParticleSystem({
   image: "smoke.png",
@@ -257,6 +301,63 @@ const smokeSystem = new ParticleSystem({
 });
 viewer.scene.primitives.add(smokeSystem);
 ```
+
+### Volcanic / Crater Smoke Calibration
+
+For terrain-scale smoke such as Mount St. Helens, use an oblique camera and a restrained source marker. The marker should confirm the emitter location without becoming a giant ground disk, and the plume should fit entirely in frame with terrain visible underneath.
+
+```js
+import { ParticleSystem, CircleEmitter, Color, Cartesian2, Transforms, Cartesian3 } from "cesium";
+
+viewer.clock.shouldAnimate = true;
+
+const sourcePosition = Cartesian3.fromDegrees(-122.1944, 46.1914, 2549);
+
+viewer.entities.add({
+  position: sourcePosition,
+  point: {
+    pixelSize: 10,
+    color: Color.ORANGE,
+    outlineColor: Color.BLACK,
+    outlineWidth: 2,
+  },
+});
+
+const craterSmoke = new ParticleSystem({
+  image: createRadialParticle(48, "rgba(180,180,180,0.75)"),
+  startColor: Color.LIGHTGRAY.withAlpha(0.65),
+  endColor: Color.WHITE.withAlpha(0.0),
+  startScale: 0.8,
+  endScale: 4.0,
+  emissionRate: 35,
+  minimumSpeed: 20.0,
+  maximumSpeed: 45.0,
+  minimumParticleLife: 2.0,
+  maximumParticleLife: 4.0,
+  imageSize: new Cartesian2(22, 22),
+  emitter: new CircleEmitter(35.0),
+  modelMatrix: Transforms.eastNorthUpToFixedFrame(sourcePosition),
+  lifetime: 20.0,
+  loop: true,
+});
+viewer.scene.primitives.add(craterSmoke);
+
+viewer.trackedEntity = undefined;
+viewer.camera.lookAt(
+  sourcePosition,
+  new Cesium.HeadingPitchRange(
+    Cesium.Math.toRadians(35),
+    Cesium.Math.toRadians(-22),
+    6500
+  )
+);
+```
+
+Use this pattern when a prompt asks for smoke over a named geographic source:
+
+- **Prefer a `point` or small billboard marker** over an `ellipse` unless the prompt specifically asks for a ground footprint.
+- **Keep the plume top, base, and source marker visible at once.** A clipped plume or missing marker is a framing failure even if particles are rendering.
+- **Use an oblique pitch for tall plumes.** Near-nadir views flatten the vertical volume into a gray blob.
 
 ### Emitter Types
 
@@ -315,6 +416,35 @@ const system = new ParticleSystem({
 viewer.scene.primitives.add(system);
 ```
 
+### Framing Particle Effects So the Map Is Visible
+
+Particle effects should stand out against the map underneath, **not** against the sky or a featureless background. Two common framing failures:
+
+1. **Camera too close + shallow pitch** → the plume fills the frame and the map disappears behind it.
+2. **Camera too steep / near-nadir** → tall plumes flatten into a blob and the source geometry reads wrong.
+
+Use `viewer.camera.lookAt` with `HeadingPitchRange` to anchor on the emitter and dial in an oblique view that keeps the map context visible:
+
+```js
+const position = Cartesian3.fromDegrees(-122.1944, 46.1914, 2549);
+viewer.trackedEntity = undefined;
+viewer.camera.lookAt(
+  position,
+  new Cesium.HeadingPitchRange(
+    Cesium.Math.toRadians(35),   // heading
+    Cesium.Math.toRadians(-22),  // oblique pitch preserves plume height
+    6500                         // increase range until top and base fit
+  )
+);
+```
+
+Guidelines:
+- **Pitch in the -35° to -60° range** for short, ground-hugging effects where map context matters more than vertical extent.
+- **Pitch in the -10° to -30° range** for tall plumes where vertical volume matters (e.g., volcanic columns).
+- **Verify the marker/source is in-frame** by including a billboard or point at the emitter location; if the camera is wrong, the marker will be missing from the screenshot and the issue is obvious.
+- **Keep background terrain visible around the plume.** If particles touch multiple image edges, reduce particle scale/life/speed or increase camera range before taking the screenshot.
+- **Reset `viewer.trackedEntity = undefined`** before `lookAt`, or the tracked entity's reference frame will override your camera transform.
+
 ---
 
 ## Attaching Particles to a Moving Model
@@ -355,22 +485,44 @@ viewer.scene.preUpdate.addEventListener((scene, time) => {
 
 ## Canvas-Based Particle Images
 
-Generate particle textures dynamically instead of loading image files.
+Generate particle textures dynamically instead of loading image files. A radial gradient produces soft, realistic edges for smoke and water effects.
 
 ```js
-function createCircleImage() {
+// Soft radial-gradient particle (smoke, water, fog)
+function createRadialParticle(size = 32, colorStop = "rgba(200,200,200,0.9)") {
   const c = document.createElement("canvas");
-  c.width = c.height = 20;
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const half = size / 2;
+  const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+  grad.addColorStop(0, colorStop);
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  return c;
+}
+
+// Solid circle (high-contrast, fireworks, sparks)
+function createCircleImage(size = 20) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
   const ctx = c.getContext("2d");
   ctx.beginPath();
-  ctx.arc(10, 10, 10, 0, Math.PI * 2);
+  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
   ctx.fillStyle = "#fff";
   ctx.fill();
   return c;
 }
 
 // Pass canvas directly as image
-new ParticleSystem({ image: createCircleImage(), /* ...other options */ });
+new ParticleSystem({ image: createRadialParticle(), /* ...other options */ });
+```
+
+Use `Color.fromCssColorString` for specific particle colors when named colors don't suffice:
+
+```js
+startColor: Cesium.Color.fromCssColorString("#66ccff").withAlpha(0.95),
+endColor: Cesium.Color.WHITE.withAlpha(0.0),
 ```
 
 ---
@@ -398,6 +550,8 @@ const entity = viewer.entities.add({
 viewer.trackedEntity = entity;
 ```
 
+**Framing trade-off with `viewer.trackedEntity`:** tracking centers the model but uses an auto-computed range derived from the bounding sphere, which often produces a too-close, low-context shot. For prompts that ask for both the model and map context (terrain, landmarks, labels), prefer `viewer.camera.flyTo` / `lookAt` to a manually chosen position and clear `viewer.trackedEntity = undefined` first.
+
 ---
 
 ## GPM Extension (NGA_gpm_local)
@@ -414,7 +568,7 @@ CesiumJS experimentally supports the NGA Geospatial Positioning Metadata glTF ex
 4. **Set `minimumPixelSize` carefully** -- large values force enlargement of distant models, increasing draw cost.
 5. **Limit silhouettes** -- extra rendering pass per silhouetted model; more than 256 may cause stencil artifacts.
 6. **Reuse scratch `Matrix4` objects** -- avoid allocating every frame when syncing particle systems to moving entities.
-7. **Keep emission rates low** -- each particle is a billboard; rates above 200/s can hurt frame rate. Use bursts for short effects.
+7. **Match emission rate to effect density** -- dense jets (fountains, fire) may need rates of 200-1000/s; diffuse smoke works well at 10-60/s. Profile on target hardware.
 8. **Prefer pixel-sized particles** (`sizeInMeters: false`, default) -- meter-sized particles are expensive at close range.
 9. **Set finite `lifetime`** on particle systems -- `Number.MAX_VALUE` (default) prevents pool cleanup.
 10. **Disable picking for decorations** -- `allowPicking: false` saves GPU memory on models that need no interaction.

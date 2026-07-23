@@ -1,0 +1,80 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses lookAt",
+      "id": "pattern_present_02",
+      "pattern": "lookAt",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses HeadingPitchRange",
+      "id": "pattern_present_03",
+      "pattern": "HeadingPitchRange",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Heading ~180 degrees (south-facing)",
+      "id": "pattern_present_04",
+      "pattern": "180|Math\\.PI(?!\\s*/)",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "View the Empire State Building from the north, looking south down Manhattan. Tests heading=180 (facing south = camera is north of target).",
+  "id": "eval-108",
+  "name": "archive-empire-state-building-from-north",
+  "notes": "Imported from optimization/scenarios/cesiumjs-camera/eval-008. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Uses lookAt with HeadingPitchRange",
+      "Heading ~180 degrees (facing south = camera is north of target)",
+      "Pitch ~-30 degrees",
+      "Range ~1500m",
+      "Adds a visible public-eval Empire State Building tower surrogate"
+    ],
+    "landmark": "Empire State Building, NYC",
+    "perspective": "mid-altitude from north looking south",
+    "source": "optimization/scenarios",
+    "source_name": "empire-state-building-from-north",
+    "source_scenario_id": "eval-008",
+    "visual_expectations": "The Empire State Building area viewed from the north. Looking south, a centered tower surrogate marks the Empire State Building in the foreground with Midtown and Downtown Manhattan stretching south behind it. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Use lookAt to view the Empire State Building (40.7484 N, 73.9857 W) from the north side, looking south down Manhattan. Position the camera at 1500 meters distance with a 30-degree downward angle. I want to see the Midtown and Downtown Manhattan stretching south behind the building. Because public OSM tiles do not provide inspectable skyscraper geometry, add a visible Empire State Building surrogate at the coordinates, such as a 380 m gold or white tower/box/cylinder with a clear label, and frame it as the foreground subject.",
+  "schema_version": 1,
+  "skill": "cesiumjs-camera",
+  "timeout_ms": 5000
+}

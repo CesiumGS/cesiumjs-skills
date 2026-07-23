@@ -1,0 +1,22 @@
+# Gitleaks configuration for cesiumjs-skills
+# This file configures allowlisted paths and patterns for the secret scanner
+
+[allowlist]
+description = "Allowlist for known false positives"
+
+# Test fixtures with dummy API keys for unit testing
+paths = [
+  '''tests/test_skills_adapter\.py''',
+  '''tests/.*\.py''',
+]
+
+# Coverage.json contains API references that match generic-api-key patterns
+# These are CesiumJS API names, not actual secrets
+regexes = [
+  '''Cesium\.(Ion|Viewer|Camera|Scene|Entity)''',
+  '''viewer\.(camera|scene|entities|dataSources|imageryLayers)''',
+]
+
+# Commits before the evaluation framework was added (legacy history)
+commits = [
+]

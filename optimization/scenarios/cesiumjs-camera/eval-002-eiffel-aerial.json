@@ -1,0 +1,56 @@
+{
+  "id": "eval-002",
+  "name": "eiffel-tower-aerial",
+  "landmark": "Eiffel Tower, Paris",
+  "perspective": "aerial bird's eye",
+  "difficulty": "easy",
+  "description": "View the Eiffel Tower from high above. Tests whether the skill produces a clear aerial/bird's eye camera position.",
+  "prompt": "Show me the Eiffel Tower in Paris from a bird's eye view, looking straight down from about 3000 meters. I want to see the tower's cross-shaped footprint/shadow and the surrounding Champ de Mars gardens. Eiffel Tower coordinates: 48.8584 N, 2.2945 E. Because this public eval cannot rely on 3D buildings or high-resolution landmark geometry, add an explicit top-down Eiffel Tower surrogate at the coordinates: for example two thick gold crossing polylines/corridors or rectangles forming a visible cross footprint, plus a clear label. The surrogate must be large enough to inspect from 3000 m and centered in the frame.",
+  "expected_behaviors": [
+    "Uses setView or flyTo (not lookAt \u2014 aerial top-down doesn't need orbital lock)",
+    "Altitude around 2000-4000m",
+    "Pitch should be steep: -70 to -90 degrees (near straight down)",
+    "Heading doesn't matter much for top-down",
+    "Adds a visible cross-shaped public-eval surrogate at the Eiffel Tower coordinates"
+  ],
+  "visual_expectations": "A top-down or near-top-down view of central Paris showing the Eiffel Tower area, Champ de Mars gardens, and the Seine River. The urban grid of Paris should be clearly visible, with a centered gold cross-shaped Eiffel Tower surrogate/footprint that is large enough to inspect. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "setView|flyTo",
+      "description": "Uses setView or flyTo"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "48\\.8",
+      "description": "Paris latitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "-[7-9]0|Math\\.PI\\s*/\\s*2|toRadians\\(\\s*-?8[0-9]|toRadians\\(\\s*-?90",
+      "description": "Steep downward pitch (70-90 degrees or equivalent radians)"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "entities\\.add|polyline|corridor|rectangle|PolygonHierarchy",
+      "description": "Adds a visible public-eval Eiffel Tower footprint/surrogate"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Aerial view of Eiffel Tower and surroundings"
+    }
+  ],
+  "regression_critical": true,
+  "screenshot_mode": "cardinal_panorama"
+}

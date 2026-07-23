@@ -1,0 +1,1204 @@
+{
+  "schema_version": "1.0",
+  "comment": "Bona fide registry of the agent-CLI harnesses and their model catalogs. This file is DATA, not code: adding a harness or model is adding an entry here. Model metadata (vendor, release, context, per-token price, effort levels, vision) is enriched from the models.dev catalog snapshot that OpenCode caches (~/.cache/opencode/models.json); price_band derives from the output $/Mtok. The eval runtime and server load role defaults from eval.config.json and use default_model / default_effort as harness fallbacks. Unknown metadata is null; the console renders null as unknown, never as zero.",
+  "price_bands": [
+    "very-low",
+    "low",
+    "medium",
+    "high",
+    "very-high"
+  ],
+  "harnesses": [
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "binary": "codex",
+      "provider": "openai-chatgpt",
+      "provider_label": "OpenAI · ChatGPT subscription",
+      "auth": "ChatGPT OAuth (codex login)",
+      "multimodal": true,
+      "vision_note": "Fully multimodal. Image-bearing calls (screenshot judging) run natively.",
+      "vision_fallback_for": [
+        "copilot",
+        "opencode"
+      ],
+      "roles": [
+        "proposer",
+        "codegen",
+        "judge",
+        "vision-fallback"
+      ],
+      "default_model": "gpt-5.6-sol",
+      "default_effort": "low",
+      "effort_mechanism": "-c model_reasoning_effort=<level>",
+      "discovery": null,
+      "catalog_source": "Curated; Codex CLI has no model-list command, so entries mirror the ChatGPT-subscription models the pipeline can name via --model",
+      "catalog_as_of": "2026-07-22",
+      "models": [
+        {
+          "id": "gpt-5.6-sol",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Sol",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 30
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": "Pipeline default. Hardest work: complex coding, long sessions, agents."
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Terra",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2.5,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": "GPT-5.5-competitive at half the price of Sol."
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Luna",
+          "tier": "fast",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 1,
+            "output": 6
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": "High-volume lane; weak on long-context recall: poor fit for skill-doc evals."
+        },
+        {
+          "id": "gpt-5.5",
+          "family": "gpt-5.5",
+          "vendor": "OpenAI",
+          "name": "GPT-5.5",
+          "tier": "previous-flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 30
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 1050,
+          "release": "2026-04-23",
+          "notes": "The pipeline default before 2026-07-18."
+        },
+        {
+          "id": "gpt-5.4",
+          "family": "gpt-5.4",
+          "vendor": "OpenAI",
+          "name": "GPT-5.4",
+          "tier": "legacy",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2.5,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 1050,
+          "release": "2026-03-05",
+          "notes": null
+        },
+        {
+          "id": "gpt-5.3-codex",
+          "family": "gpt-5.3",
+          "vendor": "OpenAI",
+          "name": "GPT-5.3 Codex",
+          "tier": "legacy-code",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 1.75,
+            "output": 14
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 400,
+          "release": "2026-02-05",
+          "notes": "Code-tuned lane of the 5.3 generation."
+        }
+      ]
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode CLI",
+      "binary": "opencode",
+      "provider": "github-copilot",
+      "provider_label": "GitHub Copilot subscription",
+      "auth": "GitHub device-flow OAuth (opencode auth login)",
+      "multimodal": false,
+      "vision_note": "Copilot disables the multimodal endpoint account-wide: every github-copilot/* model is text-only here even when the model is natively vision-capable. Image-bearing calls re-route to Codex (AGENT_VISION_FALLBACK).",
+      "vision_fallback_to": "codex",
+      "roles": [
+        "proposer",
+        "codegen",
+        "judge (text-only)"
+      ],
+      "default_model": "github-copilot/gpt-5.6-sol",
+      "default_effort": "low",
+      "effort_mechanism": "--variant <level>",
+      "discovery": {
+        "args": [
+          "models",
+          "github-copilot"
+        ],
+        "prefer_family": "gpt-5.6",
+        "prefer_suffix": "-sol"
+      },
+      "catalog_source": "Live snapshot of `opencode models github-copilot`",
+      "catalog_as_of": "2026-07-22",
+      "models": [
+        {
+          "id": "github-copilot/gpt-5.6-sol",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Sol",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 30
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": "Pipeline default (text lanes)."
+        },
+        {
+          "id": "github-copilot/gpt-5.6-terra",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Terra",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2.5,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/gpt-5.6-luna",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Luna",
+          "tier": "fast",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 1,
+            "output": 6
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": "Weak on long-context recall."
+        },
+        {
+          "id": "github-copilot/gpt-5.5",
+          "family": "gpt-5.5",
+          "vendor": "OpenAI",
+          "name": "GPT-5.5",
+          "tier": "previous-flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 30
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 1050,
+          "release": "2026-04-23",
+          "notes": "The pipeline default before 2026-07-18."
+        },
+        {
+          "id": "github-copilot/gpt-5.4",
+          "family": "gpt-5.4",
+          "vendor": "OpenAI",
+          "name": "GPT-5.4",
+          "tier": "legacy",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2.5,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 1050,
+          "release": "2026-03-05",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/gpt-5.4-mini",
+          "family": "gpt-5.4",
+          "vendor": "OpenAI",
+          "name": "GPT-5.4 Mini",
+          "tier": "small",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 0.75,
+            "output": 4.5
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 400,
+          "release": "2026-03-17",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/gpt-5-mini",
+          "family": "gpt-5",
+          "vendor": "OpenAI",
+          "name": "GPT-5 Mini",
+          "tier": "small",
+          "price_band": "very-low",
+          "price_usd_per_mtok": {
+            "input": 0.25,
+            "output": 2
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 264,
+          "release": "2025-08-07",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/gpt-5.3-codex",
+          "family": "gpt-5.3",
+          "vendor": "OpenAI",
+          "name": "GPT-5.3 Codex",
+          "tier": "legacy-code",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 1.75,
+            "output": 14
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 400,
+          "release": "2026-02-05",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/claude-opus-4.8",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.8",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-05-28",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/claude-opus-4.8-fast",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.8 Fast",
+          "tier": "flagship-fast",
+          "price_band": "high",
+          "price_usd_per_mtok": null,
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-05-28",
+          "notes": "Faster output lane of Opus 4.8. Fast output lane; capability metadata inherited from claude-opus-4.8."
+        },
+        {
+          "id": "github-copilot/claude-opus-4.7",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.7",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-04-16",
+          "notes": "Closest current lane to the legacy claude-opus-4-7 codegen runs on disk."
+        },
+        {
+          "id": "github-copilot/claude-opus-4.7-fast",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.7 Fast",
+          "tier": "flagship-fast",
+          "price_band": "high",
+          "price_usd_per_mtok": null,
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-04-16",
+          "notes": "Fast output lane; capability metadata inherited from claude-opus-4.7."
+        },
+        {
+          "id": "github-copilot/claude-opus-4.6",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.6",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-02-05",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/claude-opus-4.6-fast",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.6 Fast",
+          "tier": "flagship-fast",
+          "price_band": "high",
+          "price_usd_per_mtok": null,
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-02-05",
+          "notes": "Fast output lane; capability metadata inherited from claude-opus-4.6."
+        },
+        {
+          "id": "github-copilot/claude-opus-4.5",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.5",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 200,
+          "release": "2025-11-24",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/claude-sonnet-5",
+          "family": "claude-sonnet",
+          "vendor": "Anthropic",
+          "name": "Claude Sonnet 5",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2,
+            "output": 10
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1000,
+          "release": "2026-06-30",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/claude-sonnet-4.6",
+          "family": "claude-sonnet",
+          "vendor": "Anthropic",
+          "name": "Claude Sonnet 4.6",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 3,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-02-17",
+          "notes": "Closest current lane to the legacy claude-sonnet-4-6 codegen runs on disk."
+        },
+        {
+          "id": "github-copilot/claude-sonnet-4.5",
+          "family": "claude-sonnet",
+          "vendor": "Anthropic",
+          "name": "Claude Sonnet 4.5",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 3,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 200,
+          "release": "2025-09-29",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/claude-haiku-4.5",
+          "family": "claude-haiku",
+          "vendor": "Anthropic",
+          "name": "Claude Haiku 4.5",
+          "tier": "small",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 1,
+            "output": 5
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 200,
+          "release": "2025-10-15",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/claude-fable-5",
+          "family": "claude-fable",
+          "vendor": "Anthropic",
+          "name": "Claude Fable 5",
+          "tier": "specialist",
+          "price_band": "very-high",
+          "price_usd_per_mtok": {
+            "input": 10,
+            "output": 50
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1000,
+          "release": "2026-06-09",
+          "notes": "Creative-writing / analysis specialist lane; controlled agent workflows."
+        },
+        {
+          "id": "github-copilot/gemini-3.1-pro-preview",
+          "family": "gemini-pro",
+          "vendor": "Google",
+          "name": "Gemini 3.1 Pro (preview)",
+          "tier": "flagship",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2,
+            "output": 12
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 1000,
+          "release": "2026-02-19",
+          "notes": "Preview lane."
+        },
+        {
+          "id": "github-copilot/gemini-3.5-flash",
+          "family": "gemini-flash",
+          "vendor": "Google",
+          "name": "Gemini 3.5 Flash",
+          "tier": "fast",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 1.5,
+            "output": 9
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 200,
+          "release": "2026-05-19",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/gemini-3-flash-preview",
+          "family": "gemini-flash",
+          "vendor": "Google",
+          "name": "Gemini 3 Flash (preview)",
+          "tier": "fast",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 0.5,
+            "output": 3
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 128,
+          "release": "2025-12-17",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/gemini-2.5-pro",
+          "family": "gemini-pro",
+          "vendor": "Google",
+          "name": "Gemini 2.5 Pro",
+          "tier": "legacy",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 1.25,
+            "output": 10
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 128,
+          "release": "2025-06-17",
+          "notes": null
+        },
+        {
+          "id": "github-copilot/mai-code-1-flash-picker",
+          "family": "mai-code",
+          "vendor": "Microsoft",
+          "name": "MAI Code 1 Flash Picker",
+          "tier": "fast",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 0.75,
+            "output": 4.5
+          },
+          "native_vision": false,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 256,
+          "release": "2026-06-02",
+          "notes": "Microsoft coding model for fast, efficient everyday developer assistance. Natively text-only."
+        }
+      ]
+    },
+    {
+      "id": "copilot",
+      "name": "GitHub Copilot CLI",
+      "binary": "copilot",
+      "provider": "github-copilot",
+      "provider_label": "GitHub Copilot subscription",
+      "auth": "GitHub OAuth (copilot login)",
+      "multimodal": true,
+      "vision_note": "Fully multimodal through the first-party CLI: --attachment sends images natively, so image-bearing calls (screenshot judging) run on the Copilot subscription without rerouting. Text-only models (mai-code) still re-route via AGENT_VISION_FALLBACK.",
+      "vision_fallback_to": "codex",
+      "roles": [
+        "proposer",
+        "codegen",
+        "judge"
+      ],
+      "default_model": "gpt-5.6-sol",
+      "default_effort": "low",
+      "effort_mechanism": "--effort <level>",
+      "discovery": null,
+      "catalog_source": "Curated; the Copilot CLI has no model-list command, so entries are the `copilot --model` ids verified live (unknown ids fail fast with 'not available'). Metadata mirrors the shared github-copilot catalog.",
+      "catalog_as_of": "2026-07-22",
+      "models": [
+        {
+          "id": "gpt-5.6-sol",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Sol",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 30
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": "Pipeline default."
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Terra",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2.5,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": null
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "family": "gpt-5.6",
+          "vendor": "OpenAI",
+          "name": "GPT-5.6 Luna",
+          "tier": "fast",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 1,
+            "output": 6
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1050,
+          "release": "2026-07-09",
+          "notes": "Weak on long-context recall."
+        },
+        {
+          "id": "gpt-5.5",
+          "family": "gpt-5.5",
+          "vendor": "OpenAI",
+          "name": "GPT-5.5",
+          "tier": "previous-flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 30
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 1050,
+          "release": "2026-04-23",
+          "notes": "The pipeline default before 2026-07-18."
+        },
+        {
+          "id": "gpt-5.4",
+          "family": "gpt-5.4",
+          "vendor": "OpenAI",
+          "name": "GPT-5.4",
+          "tier": "legacy",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2.5,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 1050,
+          "release": "2026-03-05",
+          "notes": null
+        },
+        {
+          "id": "gpt-5.4-mini",
+          "family": "gpt-5.4",
+          "vendor": "OpenAI",
+          "name": "GPT-5.4 Mini",
+          "tier": "small",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 0.75,
+            "output": 4.5
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 400,
+          "release": "2026-03-17",
+          "notes": null
+        },
+        {
+          "id": "gpt-5-mini",
+          "family": "gpt-5",
+          "vendor": "OpenAI",
+          "name": "GPT-5 Mini",
+          "tier": "small",
+          "price_band": "very-low",
+          "price_usd_per_mtok": {
+            "input": 0.25,
+            "output": 2
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 264,
+          "release": "2025-08-07",
+          "notes": null
+        },
+        {
+          "id": "gpt-5.3-codex",
+          "family": "gpt-5.3",
+          "vendor": "OpenAI",
+          "name": "GPT-5.3 Codex",
+          "tier": "legacy-code",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 1.75,
+            "output": 14
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 400,
+          "release": "2026-02-05",
+          "notes": null
+        },
+        {
+          "id": "claude-opus-4.8",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.8",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-05-28",
+          "notes": null
+        },
+        {
+          "id": "claude-opus-4.7",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.7",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-04-16",
+          "notes": "Closest current lane to the legacy claude-opus-4-7 codegen runs on disk."
+        },
+        {
+          "id": "claude-opus-4.6",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.6",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-02-05",
+          "notes": null
+        },
+        {
+          "id": "claude-opus-4.5",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.5",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 200,
+          "release": "2025-11-24",
+          "notes": null
+        },
+        {
+          "id": "claude-sonnet-5",
+          "family": "claude-sonnet",
+          "vendor": "Anthropic",
+          "name": "Claude Sonnet 5",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2,
+            "output": 10
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1000,
+          "release": "2026-06-30",
+          "notes": null
+        },
+        {
+          "id": "claude-sonnet-4.6",
+          "family": "claude-sonnet",
+          "vendor": "Anthropic",
+          "name": "Claude Sonnet 4.6",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 3,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "context_k": 200,
+          "release": "2026-02-17",
+          "notes": "Closest current lane to the legacy claude-sonnet-4-6 codegen runs on disk."
+        },
+        {
+          "id": "claude-sonnet-4.5",
+          "family": "claude-sonnet",
+          "vendor": "Anthropic",
+          "name": "Claude Sonnet 4.5",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 3,
+            "output": 15
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 200,
+          "release": "2025-09-29",
+          "notes": null
+        },
+        {
+          "id": "claude-haiku-4.5",
+          "family": "claude-haiku",
+          "vendor": "Anthropic",
+          "name": "Claude Haiku 4.5",
+          "tier": "small",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 1,
+            "output": 5
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 200,
+          "release": "2025-10-15",
+          "notes": null
+        },
+        {
+          "id": "claude-fable-5",
+          "family": "claude-fable",
+          "vendor": "Anthropic",
+          "name": "Claude Fable 5",
+          "tier": "specialist",
+          "price_band": "very-high",
+          "price_usd_per_mtok": {
+            "input": 10,
+            "output": 50
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "context_k": 1000,
+          "release": "2026-06-09",
+          "notes": "Creative-writing / analysis specialist lane; controlled agent workflows."
+        },
+        {
+          "id": "gemini-3.1-pro-preview",
+          "family": "gemini-pro",
+          "vendor": "Google",
+          "name": "Gemini 3.1 Pro (preview)",
+          "tier": "flagship",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2,
+            "output": 12
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 1000,
+          "release": "2026-02-19",
+          "notes": "Preview lane."
+        },
+        {
+          "id": "gemini-3.5-flash",
+          "family": "gemini-flash",
+          "vendor": "Google",
+          "name": "Gemini 3.5 Flash",
+          "tier": "fast",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 1.5,
+            "output": 9
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 200,
+          "release": "2026-05-19",
+          "notes": null
+        },
+        {
+          "id": "mai-code-1-flash-picker",
+          "family": "mai-code",
+          "vendor": "Microsoft",
+          "name": "MAI Code 1 Flash Picker",
+          "tier": "fast",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 0.75,
+            "output": 4.5
+          },
+          "native_vision": false,
+          "effort_levels": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "context_k": 256,
+          "release": "2026-06-02",
+          "notes": "Microsoft coding model for fast, efficient everyday developer assistance. Natively text-only."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 11,
+        "total": 11
+      },
+      "source_scenario_id": "eval-003"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-103",
+  "case_name": "fog-denali-ridge",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-terrain-environment/baseline/eval-003-fog-denali-ridge/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n  terrainProvider: new Cesium.CustomHeightmapTerrainProvider({\n    width: 32,\n    height: 32,\n    callback: function (x, y, level) {\n      const buf = new Float32Array(32 * 32);\n      const scale = Math.max(1, level);\n      for (let row = 0; row < 32; row++) {\n        for (let col = 0; col < 32; col++) {\n          const fx = x + col / 32;\n          const fy = y + row / 32;\n          const ridge =\n            Math.sin(fx * 3.14159) * 2200 +\n            Math.cos(fy * 2.71828) * 1800 +\n            Math.sin((fx + fy) * 5.1) * 1400 +\n            Math.cos((fx * 1.7 - fy * 2.3) * 4.2) * 900 +\n            Math.sin(fx * 11.3 + fy * 7.9) * 400 * (1 / scale);\n          buf[row * 32 + col] = Math.max(0, ridge + 1500);\n        }\n      }\n      return buf;\n    },\n  }),\n}));\n\nviewer.scene.globe.depthTestAgainstTerrain = true;\nviewer.scene.globe.enableLighting = true;\nviewer.scene.globe.showGroundAtmosphere = true;\n\nviewer.scene.fog.enabled = true;\nviewer.scene.fog.density = 0.0008;\nviewer.scene.fog.minimumBrightness = 0.1;\nviewer.scene.fog.visualDensityScalar = 0.25;\nviewer.scene.fog.heightFalloff = 0.59;\n\nconst sky = viewer.scene.skyAtmosphere;\nsky.show = true;\nsky.brightnessShift = 0.05;\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-150.95, 63.05, 7000),\n  orientation: {\n    heading: Cesium.Math.toRadians(315),\n    pitch: Cesium.Math.toRadians(-8),\n    roll: 0,\n  },\n});\n",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "83744c469a55a6fa990e0cef87cca8477d043f3e6c4dc3b93674d521b4fe0c14",
+      "programmatic_checks": "4e6ed3e48548d9675fe0151b1e462c352283c3f384e42fa778e08747b8a50f59",
+      "scene_state": "74e9ec5c6340defa4a171091d2581371846f7e0f2c1eeeb1983465b74289add4",
+      "screenshot_quality": "bc0d451b6c93144b2a7493255391edda0222d96453ae13c0563c3635739e81b6",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "df12398d9f6d88e8ad4375573356c26bb5c87592cb8f8a76c66ddc0843ff1011"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "3342be717537b46acf22586ca87686bf0c97bb30bbcf86a10c51aba13ec7227c",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "81dd00a8ef23b05960d42ffc83ae7c8ed71dd71eee80374037b8838a72d9e68a",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:18:54.944677+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses no-token procedural terrain provider",
+        "detail": "Pattern matched: 'CustomHeightmapTerrainProvider'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Enables fog",
+        "detail": "Pattern matched: 'scene.fog.enabled'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Sets fog density",
+        "detail": "Pattern matched: 'fog.density'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Enables lighting",
+        "detail": "Pattern matched: 'enableLighting'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Enables depth test against terrain",
+        "detail": "Pattern matched: 'depthTestAgainstTerrain'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Targets Denali longitude",
+        "detail": "Pattern matched: '-150.9'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "Targets Denali latitude",
+        "detail": "Pattern matched: '63.0'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_absent_9",
+        "description": "Avoids ion terrain helpers",
+        "detail": "Pattern not found (as expected)",
+        "result": "pass",
+        "type": "pattern_absent"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-003",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 11,
+      "total": 11
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-terrain-environment/baseline/eval-003-fog-denali-ridge",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 5.497787143782138,
+      "pitch": -0.13962634015954634,
+      "position": {
+        "x": -2536519.606451945,
+        "y": -1408910.8353757053,
+        "z": 5668745.909540606
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-003",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 1845,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 266550,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 170.38,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-terrain-environment/eval-003-screenshot.png"
+  ],
+  "skill": "cesiumjs-terrain-environment",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-terrain-environment/baseline/eval-003.js"
+}

@@ -1,0 +1,114 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses Model.fromGltfAsync",
+      "id": "pattern_present_02",
+      "pattern": "Model\\.fromGltfAsync",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets the CesiumMan sample model",
+      "id": "pattern_present_03",
+      "pattern": "Cesium_Man",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Activates all animations",
+      "id": "pattern_present_04",
+      "pattern": "activeAnimations\\.addAll",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses ModelAnimationLoop enum",
+      "id": "pattern_present_05",
+      "pattern": "ModelAnimationLoop",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses ENU frame",
+      "id": "pattern_present_06",
+      "pattern": "Transforms\\.eastNorthUpToFixedFrame",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Paris latitude",
+      "id": "pattern_present_07",
+      "pattern": "48\\.85",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Waits for model readiness before animating",
+      "id": "pattern_present_08",
+      "pattern": "(?:readyEvent|readyPromise|addEventListener)",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Load the public Cesium Man glb sample model near the Eiffel Tower in Paris, scale and silhouette it large enough to be visible in a public OSM-only browser run, and start playing its first animation via model.activeAnimations.addAll. Tests animation activation and ModelAnimationLoop.",
+  "id": "eval-103",
+  "name": "archive-animated-character-paris",
+  "notes": "Imported from optimization/scenarios/cesiumjs-models-particles/eval-003. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Calls Model.fromGltfAsync with the public CesiumMan glb URL",
+      "Sets scale or minimumPixelSize large enough to make the figure visible at city distances",
+      "Positions the model near the Eiffel Tower (around 2.295 E, 48.858 N) via Transforms.eastNorthUpToFixedFrame",
+      "Adds the model to viewer.scene.primitives",
+      "Listens for readiness (readyEvent / readyPromise / activeAnimations available)",
+      "Calls model.activeAnimations.addAll with ModelAnimationLoop.REPEAT",
+      "Frames the camera close enough that the figure is recognizable"
+    ],
+    "landmark": "Cesium Man sample model over Paris",
+    "perspective": "framed animated character",
+    "source": "optimization/scenarios",
+    "source_name": "animated-character-paris",
+    "source_scenario_id": "eval-003",
+    "visual_expectations": "The Cesium Man character figure clearly visible near the Eiffel Tower location on the Paris OSM map. The figure should be upright, recognizable, and silhouette-highlighted; a single still frame is acceptable as long as the model is visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer (`maximumLevel: 18`) and no ion defaults. Load the public Cesium Man glb sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMan/Cesium_Man.glb using Model.fromGltfAsync with scale around 60, minimumPixelSize at least 420, and a visible silhouetteColor/silhouetteSize. Position the model at 2.2980 longitude, 48.8584 latitude, 50 m altitude (about 200 m east of the Eiffel Tower) via Transforms.eastNorthUpToFixedFrame. Add to viewer.scene.primitives. After awaiting model.readyEvent, call model.activeAnimations.addAll({ loop: Cesium.ModelAnimationLoop.REPEAT }) to start the walking animation. Frame with viewer.camera.lookAt(modelPosition, new Cesium.HeadingPitchRange(...)) from an oblique angle close enough that the figure is recognizable against the Paris OSM map context. Do not accept a horizon/map-only screenshot.",
+  "schema_version": 1,
+  "skill": "cesiumjs-models-particles",
+  "timeout_ms": 5000
+}

@@ -1,0 +1,87 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses OSM provider",
+      "id": "pattern_present_02",
+      "pattern": "OpenStreetMapImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids or replaces the default base layer",
+      "id": "pattern_present_03",
+      "pattern": "baseLayer:\\s*false|imageryLayers\\.remove|OpenStreetMapImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Adds or configures OSM as the base layer",
+      "id": "pattern_present_04",
+      "pattern": "imageryLayers\\.add\\([^\\n]*,\\s*0\\)|imageryLayers\\.addImageryProvider|baseLayer:\\s*new\\s+Cesium\\.ImageryLayer|baseLayer:\\s*new\\s+ImageryLayer",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Paris coordinates",
+      "id": "pattern_present_05",
+      "pattern": "2\\.29|48\\.85",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": true,
+  "description": "Create a viewer with OpenStreetMap as the explicit base layer and center the camera on Paris. Tests public base-layer configuration without first loading Cesium ion defaults.",
+  "id": "eval-102",
+  "name": "archive-osm-base-layer-paris",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-002. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "easy",
+    "expected_behaviors": [
+      "Avoids the default ion base layer by using baseLayer false or an explicit OpenStreetMap base layer",
+      "Creates an OpenStreetMapImageryProvider",
+      "Adds the replacement imagery layer at base-layer index 0",
+      "Positions the camera over Paris"
+    ],
+    "landmark": "Paris, France",
+    "perspective": "top-down city map",
+    "source": "optimization/scenarios",
+    "source_name": "osm-base-layer-paris",
+    "source_scenario_id": "eval-002",
+    "visual_expectations": "A top-down cartographic map of Paris with recognizable OpenStreetMap styling, road labels, and the Seine river visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create a CesiumJS viewer with `baseLayer: false` (or an explicit OpenStreetMap base layer) so the code does not first load default ion imagery. Add OpenStreetMap tiles from `https://tile.openstreetmap.org/` with `maximumLevel: 18` as the base imagery layer, and set the camera to a top-down map view over central Paris. The result should clearly show OpenStreetMap cartography around the Seine and the Eiffel Tower area. Do not use ImageryLayer.fromWorldImagery or ion defaults.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

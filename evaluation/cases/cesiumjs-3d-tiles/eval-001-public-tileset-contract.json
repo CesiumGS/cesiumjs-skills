@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "id": "eval-001",
+  "name": "public-tileset-contract",
+  "skill": "cesiumjs-3d-tiles",
+  "description": "Deterministic 3D Tiles contract. The implementation must add one public URL-backed tileset primitive and frame it without relying only on source regex.",
+  "category": "asset_and_provider_safety",
+  "critical": true,
+  "prompt": "Load exactly one public Cesium3DTileset from a URL-backed tileset JSON, add it to scene.primitives, mark it ready, and frame the camera within 500 meters of the tileset center. Do not use ion asset ids or private terrain.",
+  "preflight": {
+    "viewer_setup": "default-globe",
+    "settle_ms": 100
+  },
+  "probe": {
+    "capture": [
+      "tilesets[*].source",
+      "tilesets[*].ready",
+      "tilesets[*].requiresIonToken",
+      "tilesets[*].distanceToCameraMeters",
+      "primitives[*].type",
+      "execution.success",
+      "errors"
+    ],
+    "snapshot_after": true
+  },
+  "checks": [
+    {
+      "id": "code_completed",
+      "type": "code_runs",
+      "category": "execution_health",
+      "critical": true
+    },
+    {
+      "id": "no_runtime_errors",
+      "type": "no_runtime_errors",
+      "category": "execution_health",
+      "critical": true
+    },
+    {
+      "id": "one_tileset",
+      "type": "collection_count",
+      "path": "/after/tilesets",
+      "operator": "==",
+      "count": 1,
+      "category": "asset_and_provider_safety",
+      "critical": true
+    },
+    {
+      "id": "tileset_ready",
+      "type": "json_value_equals",
+      "path": "/after/tilesets/0/ready",
+      "expected": true,
+      "category": "semantic_scene_state",
+      "critical": true
+    },
+    {
+      "id": "tileset_public_url",
+      "type": "json_value_equals",
+      "path": "/after/tilesets/0/source",
+      "expected": "public-url",
+      "category": "public_reproducibility",
+      "critical": true
+    },
+    {
+      "id": "tileset_no_ion_token",
+      "type": "json_value_equals",
+      "path": "/after/tilesets/0/requiresIonToken",
+      "expected": false,
+      "category": "public_reproducibility",
+      "critical": true
+    },
+    {
+      "id": "tileset_framed",
+      "type": "json_value_compare",
+      "path": "/after/tilesets/0/distanceToCameraMeters",
+      "operator": "<=",
+      "expected": 500,
+      "category": "camera_framing",
+      "critical": true,
+      "description": "Camera is close enough to inspect the tileset"
+    },
+    {
+      "id": "primitive_is_tileset",
+      "type": "json_value_equals",
+      "path": "/after/primitives/0/type",
+      "expected": "Cesium3DTileset",
+      "category": "semantic_scene_state",
+      "critical": true
+    }
+  ],
+  "timeout_ms": 1000,
+  "notes": "This case verifies tileset presence, public reproducibility, readiness, and camera framing with structured evidence."
+}

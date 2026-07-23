@@ -1,0 +1,167 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 8,
+        "total": 8
+      },
+      "source_scenario_id": "eval-003"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-103",
+  "case_name": "layer-management-grid-london",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-imagery/baseline/eval-003-layer-management-grid-london/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer(\"cesiumContainer\", {\n  baseLayer: false,\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Add OSM as the base layer at index 0\nconst osmLayer = new Cesium.ImageryLayer(\n  new Cesium.OpenStreetMapImageryProvider({\n    url: \"https://tile.openstreetmap.org/\",\n    maximumLevel: 18,\n    credit: \"OpenStreetMap contributors\",\n  })\n);\nviewer.imageryLayers.add(osmLayer, 0);\n\n// Add TileCoordinatesImageryProvider overlay on top\nconst tileCoordLayer = new Cesium.ImageryLayer(\n  new Cesium.TileCoordinatesImageryProvider({ color: Cesium.Color.YELLOW })\n);\nviewer.imageryLayers.add(tileCoordLayer);\n\n// Add GridImageryProvider overlay on top\nconst gridLayer = new Cesium.ImageryLayer(new Cesium.GridImageryProvider());\nviewer.imageryLayers.add(gridLayer);\n\n// Remove the tile-coordinates overlay; keep OSM + grid only\nviewer.imageryLayers.remove(tileCoordLayer, true);\n\n// Center on London\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(-0.1276, 51.5074, 300000),\n  orientation: {\n    heading: 0.0,\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "e756c83334ec0f8288fd9f2e2ec414485da11cf163800e29033c2214a5da2112",
+      "programmatic_checks": "f2c51a472878ece399f537773f3a4ec9206838f9960305b4f4431637abdf93d0",
+      "scene_state": "21b185fffc13c8cbefcde5d55db90b29ad46901e20f98a77d1af524e31f305c5",
+      "screenshot_quality": "a85303337bc356b72b6012ac6535f35d8d1cbc7aca3a655803d4e8b110e90f0c",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "5faed6fb6216dc631c1ae59ff9915c99fe9a466e97d39f3368da8eb6574e0b7b"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "8842ef0c98540713f1e9e72185baaf59d58e01470c00fea45cb75fe21337e13e",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "1b41b406152c98040de4abf08204c7c213750c48ea3feeeaac8483735a83a6b0",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:04:47.240843+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses layer collection API",
+        "detail": "Pattern matched: 'viewer.imageryLayers'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses grid provider",
+        "detail": "Pattern matched: 'GridImageryProvider'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Uses tile coordinates provider",
+        "detail": "Pattern matched: 'TileCoordinatesImageryProvider'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Removes a layer",
+        "detail": "Pattern matched: 'imageryLayers.remove'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Targets London coordinates",
+        "detail": "Pattern matched: '-0.12'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-003",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 8,
+      "total": 8
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-imagery/baseline/eval-003-layer-management-grid-london",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 4164717.9079713435,
+        "y": -9275.009226410391,
+        "z": 5203681.502509199
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 2,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-003",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 6262,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 1449367,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 173.76,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-imagery/eval-003-screenshot.png"
+  ],
+  "skill": "cesiumjs-imagery",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-imagery/baseline/eval-003.js"
+}

@@ -1,0 +1,250 @@
+name: Visual Judge Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: "Skill name to evaluate (e.g., cesiumjs-camera), or 'all'"
+        required: true
+        default: 'all'
+        type: string
+      max_iterations:
+        description: 'Maximum number of iterations'
+        required: false
+        default: '3'
+        type: string
+      stop_on:
+        description: 'Stop condition'
+        required: false
+        default: 'max'
+        type: choice
+        options:
+          - max
+          - plateau
+          - regression
+      commit_results:
+        description: 'Commit results back to repo'
+        required: false
+        default: 'true'
+        type: boolean
+      opencode_model:
+        description: 'Fallback OpenCode model id/alias (blank uses role defaults)'
+        required: false
+        default: ''
+        type: string
+      agent_harness:
+        description: 'Agent CLI harness for proposer/codegen/judge phases'
+        required: false
+        default: 'opencode'
+        type: choice
+        options:
+          - opencode
+          - codex
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  visual-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for baseline lookups
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies and build eval CLI
+        run: |
+          npm ci
+          npm run build --workspace @cesiumjs-skills/eval
+          npx playwright install --with-deps chromium
+
+      - name: Check canonical eval surface
+        run: node packages/eval/bin/cesium-eval.js check canonical-surface
+
+      - name: Install agent CLI
+        env:
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+        run: |
+          if [ "$AGENT_HARNESS" = "codex" ]; then
+            npm install -g @openai/codex
+            codex --version
+          else
+            npm install -g opencode-ai@latest
+            opencode --version
+          fi
+
+      - name: Install gitleaks
+        run: |
+          GITLEAKS_VERSION=8.18.2
+          wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+
+      - name: Validate environment secrets
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+        run: |
+          if [ -z "$CESIUM_ION_TOKEN" ]; then
+            echo "Error: CESIUM_ION_TOKEN secret is not set"
+            exit 1
+          fi
+          if [ "$AGENT_HARNESS" = "opencode" ] && [ -z "$OPENCODE_AUTH_CONTENT" ]; then
+            echo "Error: OPENCODE_AUTH_CONTENT OpenAI auth secret is not set"
+            exit 1
+          fi
+          echo "Required Cesium and agent harness secrets are present"
+
+      - name: Determine skill for scheduled/tag runs
+        id: determine-skill
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skill=${{ inputs.skill }}" >> $GITHUB_OUTPUT
+            echo "max_iterations=${{ inputs.max_iterations }}" >> $GITHUB_OUTPUT
+            echo "stop_on=${{ inputs.stop_on }}" >> $GITHUB_OUTPUT
+            echo "commit_results=${{ inputs.commit_results }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "skill=all" >> $GITHUB_OUTPUT
+            echo "max_iterations=1" >> $GITHUB_OUTPUT
+            echo "stop_on=max" >> $GITHUB_OUTPUT
+            echo "commit_results=true" >> $GITHUB_OUTPUT
+          else
+            echo "skill=all" >> $GITHUB_OUTPUT
+            echo "max_iterations=1" >> $GITHUB_OUTPUT
+            echo "stop_on=max" >> $GITHUB_OUTPUT
+            echo "commit_results=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run full evaluation pipeline
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_MODEL: ${{ github.event.inputs.opencode_model || vars.OPENCODE_MODEL || secrets.OPENCODE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_PROPOSER_MODEL: ${{ vars.OPENCODE_PROPOSER_MODEL || secrets.OPENCODE_PROPOSER_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_EVAL_MODEL: ${{ vars.OPENCODE_EVAL_MODEL || secrets.OPENCODE_EVAL_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || secrets.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_PROPOSER_VARIANT: ${{ vars.OPENCODE_PROPOSER_VARIANT || secrets.OPENCODE_PROPOSER_VARIANT || 'high' }}
+          OPENCODE_EVAL_VARIANT: ${{ vars.OPENCODE_EVAL_VARIANT || secrets.OPENCODE_EVAL_VARIANT || 'medium' }}
+          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
+        run: |
+          if [ "${{ steps.determine-skill.outputs.skill }}" = "all" ]; then
+            node packages/eval/bin/cesium-eval.js optimize all \
+              --skills all \
+              --proposer-harness "$AGENT_HARNESS" \
+              --codegen-harness "$AGENT_HARNESS" \
+              --judge-harness "$AGENT_HARNESS" \
+              --max-iterations ${{ steps.determine-skill.outputs.max_iterations }} \
+              --stop-on ${{ steps.determine-skill.outputs.stop_on }}
+          else
+            node packages/eval/bin/cesium-eval.js optimize loop \
+              ${{ steps.determine-skill.outputs.skill }} \
+              --proposer-harness "$AGENT_HARNESS" \
+              --codegen-harness "$AGENT_HARNESS" \
+              --judge-harness "$AGENT_HARNESS" \
+              --max-iterations ${{ steps.determine-skill.outputs.max_iterations }} \
+              --stop-on ${{ steps.determine-skill.outputs.stop_on }}
+          fi
+
+      - name: Sanitize artifacts before upload
+        if: always()
+        run: |
+          # Run public safety check on all eval artifacts
+          node packages/eval/bin/cesium-eval.js check public-artifacts
+
+          # Also run secrets check to be extra safe
+          bash optimization/scripts/check-secrets.sh
+
+          # Raw eval.html embeds CESIUM_ION_TOKEN and must never be uploaded.
+          find optimization/runs/ -name '*.html' -delete 2>/dev/null || true
+
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report-${{ steps.determine-skill.outputs.skill }}-${{ github.run_number }}
+          path: |
+            optimization/results/
+            optimization/results/public-status.json
+            optimization/results/coverage.json
+          retention-days: 90
+
+      - name: Upload sanitized evidence bundles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-bundles-${{ steps.determine-skill.outputs.skill }}-${{ github.run_number }}
+          path: |
+            optimization/runs/
+            !**/*.html
+            !**/raw/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Commit results back to repo
+        if: ${{ success() && steps.determine-skill.outputs.commit_results == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create a new branch for results
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+          BRANCH_NAME="optimization/visual-results-${{ steps.determine-skill.outputs.skill }}-${TIMESTAMP}"
+          git checkout -b "${BRANCH_NAME}"
+
+          # Stage compact aggregate result files only. Full per-iteration
+          # reports, candidate snapshots, history archives, generated code, and
+          # screenshots remain workflow artifacts.
+          git add optimization/results/public-status.json optimization/results/coverage.json || true
+
+          # Commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "optimization: visual results for ${{ steps.determine-skill.outputs.skill }}
+
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.run_number }}
+            Trigger: ${{ github.event_name }}
+            Timestamp: ${TIMESTAMP}
+
+            Automated evaluation results from three-judge visual pipeline."
+
+            # Push the branch
+            git push origin "${BRANCH_NAME}"
+
+            # Create PR if gh CLI is available
+            if command -v gh &> /dev/null; then
+              gh pr create \
+                --title "optimization: visual results for ${{ steps.determine-skill.outputs.skill }}" \
+                --body "Automated visual evaluation results.
+
+                **Skill:** ${{ steps.determine-skill.outputs.skill }}
+                **Workflow Run:** ${{ github.run_number }}
+                **Trigger:** ${{ github.event_name }}
+
+                This PR contains sanitized evaluation results from the autonomous pipeline." \
+                --base main \
+                --head "${BRANCH_NAME}" || echo "Failed to create PR, branch pushed successfully"
+            else
+              echo "Branch ${BRANCH_NAME} pushed. Create PR manually."
+            fi
+          fi

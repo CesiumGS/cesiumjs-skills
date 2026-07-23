@@ -1,0 +1,123 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses no-token procedural terrain provider",
+      "id": "pattern_present_02",
+      "pattern": "CustomHeightmapTerrainProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Enables fog",
+      "id": "pattern_present_03",
+      "pattern": "scene\\.fog\\.enabled",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets fog density",
+      "id": "pattern_present_04",
+      "pattern": "fog\\.density",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Enables lighting",
+      "id": "pattern_present_05",
+      "pattern": "enableLighting",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Enables depth test against terrain",
+      "id": "pattern_present_06",
+      "pattern": "depthTestAgainstTerrain",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Denali longitude",
+      "id": "pattern_present_07",
+      "pattern": "-150\\.9",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Targets Denali latitude",
+      "id": "pattern_present_08",
+      "pattern": "63\\.0",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids ion terrain helpers",
+      "id": "pattern_absent_09",
+      "pattern": "fromIonAssetId|fromWorldTerrain",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Configure scene.fog with high density so distant terrain or globe features fade into atmospheric fog, then frame the camera looking across the Alaskan Denali region. Uses a no-token procedural terrain provider instead of Cesium World Terrain.",
+  "id": "eval-103",
+  "name": "archive-fog-denali-ridge",
+  "notes": "Imported from optimization/scenarios/cesiumjs-terrain-environment/eval-003. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Sets viewer.terrainProvider via CustomHeightmapTerrainProvider",
+      "Enables viewer.scene.globe.depthTestAgainstTerrain",
+      "Sets viewer.scene.fog.enabled = true",
+      "Sets viewer.scene.fog.density > 0.0005 (more aggressive than default)",
+      "Enables viewer.scene.globe.enableLighting",
+      "Positions camera around -150.95 longitude, 63.05 latitude, 3000-6000 m altitude",
+      "Camera heading is northwest (around 300-340 degrees)",
+      "Camera pitch is slight downward (between 0 and -15 degrees)"
+    ],
+    "landmark": "Denali (Mount McKinley), Alaska",
+    "perspective": "atmospheric fog enveloping a mountain ridgeline",
+    "source": "optimization/scenarios",
+    "source_name": "fog-denali-ridge",
+    "source_scenario_id": "eval-003",
+    "visual_expectations": "A near-mountain view in Alaska with snow-covered ridgelines clearly visible in the foreground (likely Denali's silhouette) and distant terrain fading smoothly into atmospheric fog. The fog should be perceptible as a gradient \u2014 distant peaks softer and washed-out compared to the sharply lit foreground. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer and no ion defaults. Set `viewer.terrainProvider` to a `new Cesium.CustomHeightmapTerrainProvider({ width: 32, height: 32, callback: function (x, y, level) { ... } })` whose callback returns varied mountain-like heights. Enable scene.globe.depthTestAgainstTerrain. Configure scene.fog: enabled = true, density = 0.0008, minimumBrightness = 0.1. Enable scene.globe.enableLighting = true. Position the camera south-east of Denali looking northwest: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-150.95, 63.05, 7000), orientation: { heading: Cesium.Math.toRadians(315), pitch: Cesium.Math.toRadians(-8), roll: 0 } }). The high-latitude terrain/map should fade into atmospheric fog. Do not use CesiumTerrainProvider.fromIonAssetId or Terrain.fromWorldTerrain.",
+  "schema_version": 1,
+  "skill": "cesiumjs-terrain-environment",
+  "timeout_ms": 5000
+}

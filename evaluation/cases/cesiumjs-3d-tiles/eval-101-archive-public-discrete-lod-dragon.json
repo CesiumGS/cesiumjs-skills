@@ -1,0 +1,96 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses URL-backed 3D Tiles factory",
+      "id": "pattern_present_02",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses public CesiumGS sample tileset",
+      "id": "pattern_present_03",
+      "pattern": "TilesetWithDiscreteLOD",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Adds tileset to scene primitives",
+      "id": "pattern_present_04",
+      "pattern": "scene\\.primitives\\.add",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Frames the tileset",
+      "id": "pattern_present_05",
+      "pattern": "zoomTo|flyTo|HeadingPitchRange|setView",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids private entitlement-backed assets",
+      "id": "pattern_absent_06",
+      "pattern": "createGooglePhotorealistic3DTileset|createOsmBuildingsAsync|fromIonAssetId",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": true,
+  "description": "Load a public Cesium 3D Tiles sample from a URL and frame the tileset so the subject is clearly visible. Tests Cesium3DTileset.fromUrl, viewer.scene.primitives.add, and camera framing without private ion or Google entitlements.",
+  "id": "eval-101",
+  "name": "archive-public-discrete-lod-dragon",
+  "notes": "Imported from optimization/scenarios/cesiumjs-3d-tiles/eval-001. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Calls Cesium3DTileset.fromUrl with the public CesiumGS 3D Tiles sample URL",
+      "Adds the returned tileset to viewer.scene.primitives",
+      "Uses an eval-stable public viewer base layer rather than ion defaults",
+      "Frames the dragon tileset close enough that it fills a meaningful part of the screenshot",
+      "Does not load private ion terrain, OSM Buildings, or Google Photorealistic 3D Tiles"
+    ],
+    "landmark": "Cesium 3D Tiles sample dragon",
+    "perspective": "public URL-backed tileset close-up",
+    "source": "optimization/scenarios",
+    "source_name": "public-discrete-lod-dragon",
+    "source_scenario_id": "eval-001",
+    "visual_expectations": "A close, nonblank 3D Tiles render of the sample dragon on the globe. The dragon or its tiled geometry should be centered and large enough to inspect, not a tiny speck or a black failed-load frame. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no token-backed ion defaults. Load the public Cesium 3D Tiles Discrete LOD dragon tileset with `await Cesium.Cesium3DTileset.fromUrl('https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json', { maximumScreenSpaceError: 8 })`, add it to `viewer.scene.primitives`, wait for readiness if needed, then frame it with `viewer.flyTo(tileset, { duration: 0, offset: new Cesium.HeadingPitchRange(Cesium.Math.toRadians(30), Cesium.Math.toRadians(-20), tileset.boundingSphere.radius * 1.8) })` or an equivalent camera. Do not use a fixed tiny range such as 30 meters because it can place the camera inside the dragon. Do not call createGooglePhotorealistic3DTileset, createOsmBuildingsAsync, Terrain.fromWorldTerrain, or any ion asset helper.",
+  "schema_version": 1,
+  "skill": "cesiumjs-3d-tiles",
+  "timeout_ms": 5000
+}

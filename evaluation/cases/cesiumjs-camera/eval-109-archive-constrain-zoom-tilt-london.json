@@ -1,0 +1,106 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Accesses camera controller",
+      "id": "pattern_present_02",
+      "pattern": "screenSpaceCameraController",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets min zoom",
+      "id": "pattern_present_03",
+      "pattern": "minimumZoomDistance",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets max zoom",
+      "id": "pattern_present_04",
+      "pattern": "maximumZoomDistance",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets tilt limit",
+      "id": "pattern_present_05",
+      "pattern": "maximumTiltAngle",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Disables rotation",
+      "id": "pattern_present_06",
+      "pattern": "enableRotate.*false",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Does NOT disable all inputs",
+      "id": "pattern_absent_07",
+      "pattern": "enableInputs.*false",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": true,
+  "description": "Set zoom limits and prevent tilting below the horizon. Tests ScreenSpaceCameraController properties: minimumZoomDistance, maximumZoomDistance, maximumTiltAngle, enableRotate.",
+  "id": "eval-109",
+  "name": "archive-constrain-zoom-tilt-london",
+  "notes": "Imported from optimization/scenarios/cesiumjs-camera/eval-009. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "medium",
+    "expected_behaviors": [
+      "Accesses viewer.scene.screenSpaceCameraController",
+      "Sets minimumZoomDistance to 1000",
+      "Sets maximumZoomDistance to 50000",
+      "Sets maximumTiltAngle to Math.PI / 2",
+      "Sets enableRotate to false",
+      "Does NOT disable enableZoom, enableTilt, or enableInputs",
+      "Positions camera over London at 5000m"
+    ],
+    "landmark": "London, UK",
+    "perspective": "constrained navigation overhead",
+    "source": "optimization/scenarios",
+    "source_name": "constrain-zoom-tilt-london",
+    "source_scenario_id": "eval-009",
+    "visual_expectations": "An overhead or angled view of London at 5000m altitude showing the Thames, urban grid, and parks. Navigation constraints are not visible in screenshots but the camera position should be correct. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Set up a CesiumJS viewer looking at London (51.5074 N, 0.1278 W) from 5000 meters. Constrain the camera so users can zoom between 1000m and 50000m, cannot tilt below the horizon, and cannot rotate the globe. Keep all other interactions enabled.",
+  "schema_version": 1,
+  "skill": "cesiumjs-camera",
+  "timeout_ms": 5000
+}

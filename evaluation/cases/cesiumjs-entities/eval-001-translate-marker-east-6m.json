@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "eval-001",
+  "name": "translate-marker-east-6m",
+  "skill": "cesiumjs-entities",
+  "description": "First-contract canonical case. The implementation must move a preloaded named entity by exactly 6 meters east. Pass/fail is decided by the entity_translation_delta matcher comparing the entity's ENU position before vs. after - no judge, no LLM, no regex on source.",
+  "category": "semantic_scene_state",
+  "critical": true,
+  "prompt": "The scene already contains an entity with id 'marker' at longitude -73.985, latitude 40.758, altitude 0. Translate that marker exactly 6 meters east using whatever Cesium API you prefer. The end state must have the marker 6 m east of its initial position, with no north or up drift.",
+  "preflight": {
+    "viewer_setup": "default-globe",
+    "settle_ms": 200,
+    "entities": [
+      {
+        "id": "marker",
+        "position_cartographic": {
+          "longitude_deg": -73.985,
+          "latitude_deg": 40.758,
+          "altitude_m": 0
+        }
+      }
+    ]
+  },
+  "probe": {
+    "capture": [
+      "entities[marker].position_ecef",
+      "entities[marker].position_cartographic"
+    ],
+    "snapshot_before_and_after": true,
+    "before_trigger": "after_entity_added",
+    "after_trigger": "next_paint_after_candidate_completes"
+  },
+  "checks": [
+    {
+      "id": "no_runtime_errors",
+      "type": "no_runtime_errors",
+      "category": "execution_health",
+      "critical": true,
+      "description": "Candidate completes without captured console/runtime errors"
+    },
+    {
+      "id": "marker_exists",
+      "type": "entity_exists",
+      "entity_id": "marker",
+      "snapshot": "both",
+      "category": "entity_state",
+      "critical": true,
+      "description": "Marker exists before and after candidate execution"
+    },
+    {
+      "id": "east_6m",
+      "type": "entity_translation_delta",
+      "entity_id": "marker",
+      "axis": "east",
+      "operator": "==",
+      "value_meters": 6.0,
+      "tolerance_meters": 0.01,
+      "category": "semantic_scene_state",
+      "critical": true,
+      "description": "Marker moved 6 m east +/-1 cm"
+    },
+    {
+      "id": "no_north_drift",
+      "type": "entity_translation_delta",
+      "entity_id": "marker",
+      "axis": "north",
+      "operator": "==",
+      "value_meters": 0.0,
+      "tolerance_meters": 0.01,
+      "category": "semantic_scene_state",
+      "critical": true,
+      "description": "No unintended north/south drift"
+    },
+    {
+      "id": "no_up_drift",
+      "type": "entity_translation_delta",
+      "entity_id": "marker",
+      "axis": "up",
+      "operator": "==",
+      "value_meters": 0.0,
+      "tolerance_meters": 0.01,
+      "category": "semantic_scene_state",
+      "critical": true,
+      "description": "No unintended altitude change"
+    }
+  ],
+  "timeout_ms": 3000,
+  "notes": "This is the worked example the README points to. If an implementation flyTo's the marker to a recomputed lat/lon, it will likely overshoot the 1 cm tolerance and fail - that is intentional. The contract is on the observable outcome, not the API used."
+}

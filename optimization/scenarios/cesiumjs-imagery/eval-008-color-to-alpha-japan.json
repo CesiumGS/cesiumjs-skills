@@ -1,0 +1,64 @@
+{
+  "id": "eval-008",
+  "name": "color-to-alpha-japan",
+  "landmark": "Tokyo, Japan",
+  "perspective": "regional overlay cleanup",
+  "section_coverage": [
+    "Color-to-Alpha",
+    "ImageryLayer Display Properties"
+  ],
+  "difficulty": "medium",
+  "description": "Apply color-to-alpha to a public night-lights layer so dark background pixels disappear while lights remain over Japan.",
+  "prompt": "Create a CesiumJS viewer centered on Japan using OpenStreetMap as the explicit base layer, with no default ion imagery. Add NASA GIBS VIIRS CityLights imagery from `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{TileMatrix}/{TileRow}/{TileCol}.jpeg` as an overlay, then use colorToAlpha and colorToAlphaThreshold so the dark background becomes transparent while the bright city lights remain visible over the underlying base imagery. Position the camera so Tokyo and central Honshu are easy to recognize. Do not use IonImageryProvider or ImageryLayer.fromWorldImagery.",
+  "expected_behaviors": [
+    "Uses colorToAlpha on the imagery layer",
+    "Sets colorToAlphaThreshold",
+    "Adds public NASA GIBS night imagery as an overlay",
+    "Frames Japan at regional scale"
+  ],
+  "visual_expectations": "Japan should remain visible with city lights emphasized, while the dark opaque background of the overlay should be largely removed so the base imagery still shows through. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "colorToAlpha",
+      "description": "Uses color-to-alpha"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "colorToAlphaThreshold",
+      "description": "Sets threshold"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "VIIRS_CityLights_2012|gibs\\.earthdata",
+      "description": "Uses public GIBS night imagery"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "13[89]\\.|3[35]\\.",
+      "description": "Targets Japan region"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "IonImageryProvider|fromWorldImagery",
+      "description": "Avoids ion imagery helpers"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 7000,
+      "description": "Color-to-alpha overlay over Japan"
+    }
+  ],
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
+}

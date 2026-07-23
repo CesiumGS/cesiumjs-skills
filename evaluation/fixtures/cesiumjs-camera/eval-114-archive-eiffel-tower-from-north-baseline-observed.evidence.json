@@ -1,0 +1,153 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6
+      },
+      "source_scenario_id": "eval-014"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-114",
+  "case_name": "eiffel-tower-from-north",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-camera/baseline/eval-014-eiffel-tower-from-north/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({\n    url: 'https://tile.openstreetmap.org/',\n    maximumLevel: 18\n  })),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// Mark the Eiffel Tower location for visual reference\nviewer.entities.add({\n  position: Cesium.Cartesian3.fromDegrees(2.2945, 48.8584, 0.0),\n  point: {\n    pixelSize: 12,\n    color: Cesium.Color.RED,\n    outlineColor: Cesium.Color.WHITE,\n    outlineWidth: 2,\n    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND\n  },\n  label: {\n    text: 'Eiffel Tower',\n    font: '14pt sans-serif',\n    fillColor: Cesium.Color.WHITE,\n    outlineColor: Cesium.Color.BLACK,\n    outlineWidth: 2,\n    style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n    pixelOffset: new Cesium.Cartesian2(0, -16),\n    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND\n  }\n});\n\n// Target the mid-section of the tower (~150 m) so the structure fills the frame\n// rather than just looking at the base footprint.\nconst target = Cesium.Cartesian3.fromDegrees(2.2945, 48.8584, 150.0);\n\n// Heading 180\u00b0 = camera faces south \u2192 camera is positioned north of the target.\n// This puts the Champ de Mars (which extends south of the tower) visible beyond it.\nviewer.camera.lookAt(\n  target,\n  new Cesium.HeadingPitchRange(\n    Cesium.Math.toRadians(180.0),  // face south \u2192 camera north of tower\n    Cesium.Math.toRadians(-25.0),  // 25\u00b0 downward angle\n    1000.0                          // 1000 m standoff distance\n  )\n);\n```\n\n**What this does:**\n\n- **Heading 180\u00b0** \u2014 the camera faces south, placing it to the north of the Eiffel Tower. The Champ de Mars park stretches southward behind the tower into the background.\n- **Pitch \u221225\u00b0** \u2014 a gentle downward angle that keeps the tower prominent vertically while showing enough ground to see the park layout.\n- **Target altitude 150 m** \u2014 locks onto the tower's mid-section rather than its base, so the structure fills the frame vertically rather than appearing to float at the bottom.\n- **Range 1,000 m** \u2014 close enough for the tower to dominate the view, far enough to show its full height and the surrounding Champ de Mars.\n\nTo restore free navigation after inspecting the view, call:\n```js\nviewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "6f5bfc5d75fb27e3154cf9206b1ace62460ea316c5076f94b3cd58797201ceee",
+      "programmatic_checks": "cd42a6676dc9f2510acd7df5e72143c16c3b45d0ea71adecc6118ab3f559af6a",
+      "scene_state": "62b0c08c5f5b4836b48bf44cb0aad96117d1fe062e5f930486566e587962fd4c",
+      "screenshot_quality": "a8a9adbefbde16d103a6416951e647a981b3d0709d6d536699bc8388a81aa8e3",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "531c588a5d1884233f0a37b8a4f4f398a81d2a3daa15e6e5012c28406ad475dd"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "dce1b6248156fc4acbd7dff9059c67f0c0043c8c987cba836905a96a81c92ea1",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "b7b33e39adc61c6289990da7c30cf63fbd540549162dbc015abc17c45f6cad51",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T20:53:34.930086+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses lookAt",
+        "detail": "Pattern matched: 'lookAt'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Uses HeadingPitchRange",
+        "detail": "Pattern matched: 'HeadingPitchRange'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Heading ~180 degrees",
+        "detail": "Pattern matched: '180'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-014",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 6,
+      "total": 6
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-camera/baseline/eval-014-eiffel-tower-from-north",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 3.1415926535897936,
+      "pitch": -0.4364747640612796,
+      "position": {
+        "x": 7.566995918750763e-09,
+        "y": 906.3077870379202,
+        "z": 422.6182617396116
+      },
+      "roll": 6.283185307179586
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 0
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-014",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 4980,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 1350430,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 200.28,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-camera/eval-014-screenshot.png"
+  ],
+  "skill": "cesiumjs-camera",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-camera/baseline/eval-014.js"
+}

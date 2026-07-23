@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "eval-001",
+  "name": "cartesian-translation-contract",
+  "skill": "cesiumjs-spatial-math",
+  "description": "Generated-output semantic case. The evaluator checks a pure function-like contract without relying on rendered imagery.",
+  "category": "semantic_scene_state",
+  "critical": true,
+  "prompt": "Create a helper that translates every Cesium Cartesian3-like point exactly 10 units in the positive X direction and returns new points without mutating the input points.",
+  "preflight": {
+    "input_points": [
+      [1, 2, 3],
+      [-4, 5, 6]
+    ]
+  },
+  "probe": {
+    "capture": [
+      "after.values.translated_points",
+      "after.values.input_points_after_call"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "checks": [
+    {
+      "id": "no_runtime_errors",
+      "type": "no_runtime_errors",
+      "category": "execution_health",
+      "critical": true,
+      "description": "Candidate completes without captured console/runtime errors"
+    },
+    {
+      "id": "translated_points_match_contract",
+      "type": "json_value_equals",
+      "path": "/after/values/translated_points",
+      "expected": [
+        [11, 2, 3],
+        [6, 5, 6]
+      ],
+      "category": "semantic_scene_state",
+      "critical": true,
+      "description": "Returned points are translated exactly +10 along Cartesian X"
+    },
+    {
+      "id": "input_points_not_mutated",
+      "type": "json_value_equals",
+      "path": "/after/values/input_points_after_call",
+      "expected": [
+        [1, 2, 3],
+        [-4, 5, 6]
+      ],
+      "category": "semantic_scene_state",
+      "critical": true,
+      "description": "The generated helper does not mutate the input points"
+    }
+  ],
+  "timeout_ms": 1000,
+  "notes": "This covers the review request for unit-test-like deterministic checks of generated output semantics."
+}

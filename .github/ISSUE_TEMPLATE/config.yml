@@ -12,9 +12,9 @@ contact_links:
   - name: CesiumJS forum
     url: https://community.cesium.com/
     about: Questions about CesiumJS itself (not this skills plugin) belong on the official forum.
-  - name: Claude Code documentation
-    url: https://docs.claude.com/en/docs/claude-code/overview
-    about: Questions about Claude Code, plugins, or the Skill API belong with Anthropic's docs.
+  - name: OpenCode documentation
+    url: https://opencode.ai/docs
+    about: Questions about OpenCode configuration belong with OpenCode's docs.
   - name: Eval and optimization branch
-    url: https://github.com/CesiumGS/cesiumjs-skills/tree/eval-and-optimization
+    url: https://github.com/CesiumGS/cesiumjs-skills/tree/feat/eval-and-optimization
     about: Browse the eval suite, methodology, scoring history, and curated screenshot gallery.

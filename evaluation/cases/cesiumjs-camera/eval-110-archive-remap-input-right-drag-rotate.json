@@ -1,0 +1,105 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Remaps rotation",
+      "id": "pattern_present_02",
+      "pattern": "rotateEventTypes",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Remaps tilt",
+      "id": "pattern_present_03",
+      "pattern": "tiltEventTypes",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses CameraEventType",
+      "id": "pattern_present_04",
+      "pattern": "CameraEventType",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Right-drag for rotation",
+      "id": "pattern_present_05",
+      "pattern": "RIGHT_DRAG",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses modifier keys",
+      "id": "pattern_present_06",
+      "pattern": "KeyboardEventModifier",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Ctrl modifier for tilt",
+      "id": "pattern_present_07",
+      "pattern": "CTRL",
+      "type": "pattern_present"
+    }
+  ],
+  "critical": false,
+  "description": "Remap mouse input so right-drag rotates and Ctrl+left-drag tilts. Tests CameraEventType and KeyboardEventModifier usage.",
+  "id": "eval-110",
+  "name": "archive-remap-input-right-drag-rotate",
+  "notes": "Imported from optimization/scenarios/cesiumjs-camera/eval-010. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Accesses screenSpaceCameraController",
+      "Sets rotateEventTypes to CameraEventType.RIGHT_DRAG",
+      "Sets tiltEventTypes with CameraEventType.LEFT_DRAG and KeyboardEventModifier.CTRL",
+      "Sets or preserves zoomEventTypes as CameraEventType.WHEEL",
+      "Uses CameraEventType enum values",
+      "Uses KeyboardEventModifier enum values"
+    ],
+    "landmark": "Rome, Italy",
+    "perspective": "custom input mapping overhead",
+    "source": "optimization/scenarios",
+    "source_name": "remap-input-right-drag-rotate",
+    "source_scenario_id": "eval-010",
+    "visual_expectations": "An overhead view of Rome at 8000m showing the Tiber River, Colosseum area, and Vatican. The input remapping is not visible in screenshots but the camera position should be correct. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Set up a CesiumJS viewer looking at Rome (41.9028 N, 12.4964 E) from 8000 meters. Remap the mouse controls so that: right-drag rotates the globe (instead of the default left-drag), Ctrl+left-drag tilts the camera, and mouse wheel zooms. Position the camera looking slightly north.",
+  "schema_version": 1,
+  "skill": "cesiumjs-camera",
+  "timeout_ms": 5000
+}

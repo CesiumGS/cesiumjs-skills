@@ -1,0 +1,38 @@
+{
+  "$schema": "./config/eval.config.schema.json",
+  "registry": "config/harness-registry.json",
+  "threshold": 0.95,
+  "roles": {
+    "proposer": { "harness": "opencode", "model": "auto", "variant": "auto" },
+    "codegen": { "harness": "opencode", "model": "auto", "variant": "auto" },
+    "judge": { "harness": "opencode", "model": "auto", "variant": "auto" }
+  },
+  "judgePanel": {
+    "size": 3,
+    "seeds": [42, 123, 789],
+    "pairwiseProtocol": "pairwise-v1",
+    "staticProtocol": "static-visual-v1"
+  },
+  "visionFallback": {
+    "enabled": true,
+    "model": null
+  },
+  "browser": {
+    "cesiumVersion": "1.142",
+    "viewport": { "width": 1280, "height": 720 },
+    "navigationTimeoutMs": 60000,
+    "screenshotTimeoutMs": 90000,
+    "ionPreflightAssetId": 1,
+    "tileSettleTimeoutMs": 45000,
+    "tileSettlePollMs": 250,
+    "tileSettleQuietPolls": 3
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8933,
+    "pollMs": 2500
+  },
+  "liveness": {
+    "runningMaxAgeSeconds": 1800
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "clock-contract",
+  "skill": "cesiumjs-time-properties",
+  "source": "synthetic-fixture",
+  "expected_result": "fail",
+  "execution": {
+    "success": true
+  },
+  "before": {
+    "entities": {},
+    "clock": {
+      "startTime": "2026-01-01T00:00:00Z",
+      "stopTime": "2026-01-01T00:00:00Z",
+      "currentTime": "2026-01-01T00:00:00Z",
+      "multiplier": 1,
+      "shouldAnimate": false
+    }
+  },
+  "after": {
+    "entities": {},
+    "clock": {
+      "startTime": "2026-01-01T00:00:00Z",
+      "stopTime": "2026-01-01T00:01:00Z",
+      "currentTime": "2026-01-01T00:00:00Z",
+      "multiplier": 1,
+      "shouldAnimate": true
+    }
+  },
+  "errors": []
+}

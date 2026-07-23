@@ -1,0 +1,104 @@
+{
+  "category": "archive_baseline_review",
+  "checks": [
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No JS errors",
+      "id": "no_runtime_errors_00",
+      "type": "no_runtime_errors"
+    },
+    {
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime exceptions",
+      "id": "code_runs_01",
+      "type": "code_runs"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses time interval collection",
+      "id": "pattern_present_02",
+      "pattern": "TimeIntervalCollection",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Connects provider to viewer clock",
+      "id": "pattern_present_03",
+      "pattern": "clock",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Sets provider times",
+      "id": "pattern_present_04",
+      "pattern": "times",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses WMTS provider",
+      "id": "pattern_present_05",
+      "pattern": "WebMapTileServiceImageryProvider",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Uses a public GIBS WMTS layer",
+      "id": "pattern_present_06",
+      "pattern": "MODIS_Terra_CorrectedReflectance_TrueColor|gibs\\.earthdata",
+      "type": "pattern_present"
+    },
+    {
+      "category": "generated_output_semantics",
+      "critical": true,
+      "description": "Avoids unavailable legacy layer name",
+      "id": "pattern_absent_07",
+      "pattern": "AMSR2_Snow_Water_Equivalent",
+      "type": "pattern_absent"
+    }
+  ],
+  "critical": false,
+  "description": "Configure a time-dynamic WMTS layer and show a broad northern view where the public raster overlay is visible.",
+  "id": "eval-112",
+  "name": "archive-time-dynamic-wmts-north-atlantic",
+  "notes": "Imported from optimization/scenarios/cesiumjs-imagery/eval-012. Expected source/runtime contracts are scenario-authored; actual values are observed from the archived baseline generated JS and browser artifacts.",
+  "preflight": {
+    "difficulty": "hard",
+    "expected_behaviors": [
+      "Uses WebMapTileServiceImageryProvider",
+      "Creates a TimeIntervalCollection",
+      "Connects clock and times to the provider",
+      "Frames Greenland or the far North Atlantic",
+      "Uses a public GIBS layer name that resolves without tile 400s"
+    ],
+    "landmark": "Greenland and North Atlantic",
+    "perspective": "regional time-dynamic public raster map",
+    "source": "optimization/scenarios",
+    "source_name": "time-dynamic-wmts-north-atlantic",
+    "source_scenario_id": "eval-012",
+    "visual_expectations": "A northern regional view with a visible raster overlay over Greenland or surrounding high-latitude region. The exact overlay coloring may vary but it should look like a thematic raster, not plain base imagery. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+    "screenshot_mode": "cardinal_panorama"
+  },
+  "probe": {
+    "actual_source": "observed baseline run artifacts",
+    "capture": [
+      "generated_code",
+      "execution.success",
+      "errors",
+      "scene_state",
+      "screenshot_quality"
+    ],
+    "snapshot_before_and_after": false
+  },
+  "prompt": "Create a CesiumJS viewer centered on Greenland and the North Atlantic using an explicit public base layer. Add a time-dynamic NASA GIBS WMTS imagery layer using `WebMapTileServiceImageryProvider`, a `TimeIntervalCollection`, and the viewer clock. Use a currently public layer such as `MODIS_Terra_CorrectedReflectance_TrueColor` with url `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/{Time}/GoogleMapsCompatible_Level9/{TileMatrix}/{TileRow}/{TileCol}.jpeg`, tileMatrixSetID `GoogleMapsCompatible_Level9`, format `image/jpeg`, and intervals around a real date such as `2024-07-01`. The final screenshot should show the northern hemisphere region with the WMTS overlay active. Do not use unavailable AMSR2 layer names or ion imagery.",
+  "schema_version": 1,
+  "skill": "cesiumjs-imagery",
+  "timeout_ms": 5000
+}

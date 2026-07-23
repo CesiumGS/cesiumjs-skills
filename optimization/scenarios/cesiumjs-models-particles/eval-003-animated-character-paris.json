@@ -1,0 +1,78 @@
+{
+  "id": "eval-003",
+  "name": "animated-character-paris",
+  "landmark": "Cesium Man sample model over Paris",
+  "perspective": "framed animated character",
+  "difficulty": "medium",
+  "description": "Load the public Cesium Man glb sample model near the Eiffel Tower in Paris, scale and silhouette it large enough to be visible in a public OSM-only browser run, and start playing its first animation via model.activeAnimations.addAll. Tests animation activation and ModelAnimationLoop.",
+  "prompt": "Create an eval-stable public viewer with OpenStreetMap as the explicit base layer (`maximumLevel: 18`) and no ion defaults. Load the public Cesium Man glb sample model from https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumMan/Cesium_Man.glb using Model.fromGltfAsync with scale around 60, minimumPixelSize at least 420, and a visible silhouetteColor/silhouetteSize. Position the model at 2.2980 longitude, 48.8584 latitude, 50 m altitude (about 200 m east of the Eiffel Tower) via Transforms.eastNorthUpToFixedFrame. Add to viewer.scene.primitives. After awaiting model.readyEvent, call model.activeAnimations.addAll({ loop: Cesium.ModelAnimationLoop.REPEAT }) to start the walking animation. Frame with viewer.camera.lookAt(modelPosition, new Cesium.HeadingPitchRange(...)) from an oblique angle close enough that the figure is recognizable against the Paris OSM map context. Do not accept a horizon/map-only screenshot.",
+  "expected_behaviors": [
+    "Calls Model.fromGltfAsync with the public CesiumMan glb URL",
+    "Sets scale or minimumPixelSize large enough to make the figure visible at city distances",
+    "Positions the model near the Eiffel Tower (around 2.295 E, 48.858 N) via Transforms.eastNorthUpToFixedFrame",
+    "Adds the model to viewer.scene.primitives",
+    "Listens for readiness (readyEvent / readyPromise / activeAnimations available)",
+    "Calls model.activeAnimations.addAll with ModelAnimationLoop.REPEAT",
+    "Frames the camera close enough that the figure is recognizable"
+  ],
+  "visual_expectations": "The Cesium Man character figure clearly visible near the Eiffel Tower location on the Paris OSM map. The figure should be upright, recognizable, and silhouette-highlighted; a single still frame is acceptable as long as the model is visible. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Model\\.fromGltfAsync",
+      "description": "Uses Model.fromGltfAsync"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium_Man",
+      "description": "Targets the CesiumMan sample model"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "activeAnimations\\.addAll",
+      "description": "Activates all animations"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ModelAnimationLoop",
+      "description": "Uses ModelAnimationLoop enum"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Transforms\\.eastNorthUpToFixedFrame",
+      "description": "Uses ENU frame"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "48\\.85",
+      "description": "Targets Paris latitude"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:readyEvent|readyPromise|addEventListener)",
+      "description": "Waits for model readiness before animating"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_animation_start",
+      "delay_ms": 9000,
+      "wait_for_tiles": false,
+      "description": "Cesium Man character animated near the Eiffel Tower"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "Animations",
+    "Readiness and Lifecycle"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

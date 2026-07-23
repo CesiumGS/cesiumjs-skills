@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/CesiumGS/cesiumjs-skills/optimization/schemas/run-metadata.schema.json",
+  "title": "CesiumJS Skills Evaluation Run Metadata",
+  "description": "Metadata for a single evaluation run, capturing all information needed for reproducibility",
+  "type": "object",
+  "required": [
+    "scenario_version_hash",
+    "candidate_skill_hash",
+    "runner_git_commit",
+    "model_id",
+    "temperature",
+    "judge_protocol_version",
+    "browser_viewport",
+    "playwright_version",
+    "chromium_version",
+    "timestamp_utc",
+    "artifact_hashes"
+  ],
+  "properties": {
+    "scenario_version_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the scenario manifest content",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "candidate_skill_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the candidate skill content",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "runner_git_commit": {
+      "type": "string",
+      "description": "Git commit hash of the runner code",
+      "pattern": "^[a-f0-9]{7,40}$"
+    },
+    "model_id": {
+      "type": "string",
+      "description": "Model identifier used to generate the code (e.g., github-copilot/gpt-5.6-sol)"
+    },
+    "temperature": {
+      "type": "number",
+      "description": "Temperature parameter used during code generation",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Optional seed for reproducible generation"
+    },
+    "judge_protocol_version": {
+      "type": "string",
+      "description": "Version of the judge protocol (e.g., pairwise-v1)"
+    },
+    "browser_viewport": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "description": "Viewport width in pixels"
+        },
+        "height": {
+          "type": "integer",
+          "description": "Viewport height in pixels"
+        }
+      }
+    },
+    "playwright_version": {
+      "type": "string",
+      "description": "Playwright library version"
+    },
+    "chromium_version": {
+      "type": "string",
+      "description": "Chromium browser version"
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "description": "ISO 8601 timestamp in UTC",
+      "format": "date-time"
+    },
+    "artifact_hashes": {
+      "type": "object",
+      "description": "SHA-256 hashes of output artifacts for integrity verification",
+      "required": ["console", "programmatic_checks"],
+      "properties": {
+        "console": {
+          "type": "string",
+          "description": "Hash of console.json",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "programmatic_checks": {
+          "type": "string",
+          "description": "Hash of programmatic-checks.json",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "screenshots": {
+          "type": "array",
+          "description": "Hashes of screenshot files in order",
+          "items": {
+            "type": "object",
+            "required": ["filename", "hash"],
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "hash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        "scene_state": {
+          "type": "string",
+          "description": "Hash of scene-state.json if present",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  }
+}

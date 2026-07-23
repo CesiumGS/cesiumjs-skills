@@ -1,0 +1,167 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 8,
+        "total": 8
+      },
+      "source_scenario_id": "eval-004"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-104",
+  "case_name": "water-material-polygon-mediterranean",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-materials-shaders/baseline/eval-004-water-material-polygon-mediterranean/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\nconst positions = Cesium.Cartesian3.fromDegreesArray([\n  4.0, 36.0,\n  16.0, 36.0,\n  16.0, 43.0,\n  4.0, 43.0,\n]);\n\nconst polygonHierarchy = new Cesium.PolygonHierarchy(positions);\n\nconst geometry = new Cesium.PolygonGeometry({\n  polygonHierarchy: polygonHierarchy,\n  vertexFormat: Cesium.MaterialAppearance.MaterialSupport.ALL.vertexFormat,\n});\n\nconst geometryInstance = new Cesium.GeometryInstance({\n  geometry: geometry,\n});\n\nconst waterMaterial = Cesium.Material.fromType('Water', {\n  baseWaterColor: Cesium.Color.fromBytes(30, 70, 130, 220),\n  blendColor: Cesium.Color.fromBytes(0, 100, 150, 255),\n  frequency: 1000,\n  animationSpeed: 0.05,\n  amplitude: 7.0,\n});\n\nconst appearance = new Cesium.MaterialAppearance({\n  material: waterMaterial,\n  translucent: true,\n});\n\nconst primitive = new Cesium.Primitive({\n  geometryInstances: geometryInstance,\n  appearance: appearance,\n  asynchronous: false,\n});\n\nviewer.scene.primitives.add(primitive);\n\nviewer.camera.setView({\n  destination: Cesium.Cartesian3.fromDegrees(11.0, 40.0, 1800000),\n  orientation: {\n    heading: 0.0,\n    pitch: Cesium.Math.toRadians(-90),\n    roll: 0.0,\n  },\n});",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "9ada21781a9b2ba99f432bfacd5194060b22cb3d7fef62fcbc922d5fa12e906d",
+      "programmatic_checks": "9732d33054a16cbdc5600b0fc188189aaaa155c8fe894c19cedf7a0db12d3cc4",
+      "scene_state": "fe54c00b9c08bc8fbe68b75946356e215adcf83775a04d219855689cf92815dd",
+      "screenshot_quality": "ed9adb56acd1a021ac6d9aac369ad2a658dc66acca3a0b958e97ef4e3328ad22",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "fcdd367297a355ab76b099bc16341acc9fa617438c93411cd4bd8a1e89c9d20f"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "6a492bfd1553384d455fa61d7193118f5bda12bdf55839238bff923e2ffe927c",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "a964f0e50681e7bce1c2c52c55a9be76aa269c16b1b84207bfcd5057011b11e2",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:07:50.175395+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses Fabric Water material",
+        "detail": "Pattern matched: 'Material.fromType('Water''",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Configures water colour parameters",
+        "detail": "Pattern matched: 'baseWaterColor'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Sets animation speed",
+        "detail": "Pattern matched: 'animationSpeed'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Sets wave amplitude",
+        "detail": "Pattern matched: 'amplitude'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Uses polygon primitive geometry",
+        "detail": "Pattern matched: 'polygonHierarchy'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-004",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 8,
+      "total": 8
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-materials-shaders/baseline/eval-004-water-material-polygon-mediterranean",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 8.881784197001252e-16,
+      "pitch": -1.5707963267948966,
+      "position": {
+        "x": 6156360.869262647,
+        "y": 1196675.3289306266,
+        "z": 5235003.269636147
+      },
+      "roll": 0
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-004",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 3013,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 936761,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 216.74,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-materials-shaders/eval-004-screenshot.png"
+  ],
+  "skill": "cesiumjs-materials-shaders",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-materials-shaders/baseline/eval-004.js"
+}

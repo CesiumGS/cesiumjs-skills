@@ -1,0 +1,252 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvaluationCheck",
+  "description": "One deterministic assertion within an evaluation case. The runner dispatches on `type` to a matcher implementation.",
+  "type": "object",
+  "required": ["id", "type"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable identifier for this check within the case (used in result bundles)."
+    },
+    "type": {
+      "type": "string",
+      "description": "Matcher type. See the registered matchers under evaluation/framework/checks/."
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "description": "Scorecard category for this check."
+    },
+    "critical": {
+      "type": "boolean",
+      "description": "Whether a failing check should fail the scorecard gate."
+    },
+    "weight": {
+      "type": "number",
+      "minimum": 0,
+      "default": 1.0,
+      "description": "Relative score weight within category and overall aggregation."
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/entity_exists" },
+    { "$ref": "#/definitions/entity_translation_delta" },
+    { "$ref": "#/definitions/no_runtime_errors" },
+    { "$ref": "#/definitions/code_runs" },
+    { "$ref": "#/definitions/pattern_present" },
+    { "$ref": "#/definitions/pattern_absent" },
+    { "$ref": "#/definitions/artifact_text_absent" },
+    { "$ref": "#/definitions/camera_target_view" },
+    { "$ref": "#/definitions/json_value_equals" },
+    { "$ref": "#/definitions/json_value_compare" },
+    { "$ref": "#/definitions/collection_count" }
+  ],
+  "definitions": {
+    "no_runtime_errors": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "no_runtime_errors" }
+      },
+      "required": ["type"]
+    },
+    "code_runs": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "code_runs" }
+      },
+      "required": ["type"]
+    },
+    "pattern_present": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "pattern_present" },
+        "pattern": {
+          "type": "string",
+          "description": "Regular expression that must match evidence.generated_code."
+        }
+      },
+      "required": ["type", "pattern"]
+    },
+    "pattern_absent": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "pattern_absent" },
+        "pattern": {
+          "type": "string",
+          "description": "Regular expression that must not match evidence.generated_code."
+        }
+      },
+      "required": ["type", "pattern"]
+    },
+    "json_value_equals": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "json_value_equals" },
+        "path": {
+          "type": "string",
+          "description": "JSON Pointer into the evidence bundle."
+        },
+        "expected": {
+          "description": "Expected JSON value at the pointer."
+        }
+      },
+      "required": ["type", "path", "expected"]
+    },
+    "json_value_compare": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "json_value_compare" },
+        "path": {
+          "type": "string",
+          "description": "JSON Pointer into the evidence bundle."
+        },
+        "operator": {
+          "type": "string",
+          "enum": ["==", "!=", "<", "<=", ">", ">="],
+          "default": "=="
+        },
+        "expected": {
+          "description": "Expected JSON value or numeric comparison target."
+        },
+        "tolerance": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional absolute tolerance for numeric equality/inequality."
+        }
+      },
+      "required": ["type", "path", "expected"]
+    },
+    "collection_count": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "collection_count" },
+        "path": {
+          "type": "string",
+          "description": "JSON Pointer to an object, array, or string in the evidence bundle."
+        },
+        "operator": {
+          "type": "string",
+          "enum": ["==", "!=", "<", "<=", ">", ">="],
+          "default": "=="
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": ["type", "path", "count"]
+    },
+    "artifact_text_absent": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "artifact_text_absent" },
+        "patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Regex patterns that must not appear in selected evidence strings. Defaults to public-safety patterns."
+        },
+        "extra_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Additional regex patterns appended to the default or supplied pattern list."
+        },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional top-level evidence fields to scan. When omitted, all evidence strings are scanned."
+        }
+      },
+      "required": ["type"]
+    },
+    "camera_target_view": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "camera_target_view" },
+        "snapshot": {
+          "type": "string",
+          "enum": ["before", "after"],
+          "default": "after"
+        },
+        "target_entity_id": {
+          "type": "string"
+        },
+        "min_distance_meters": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_distance_meters": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_view_angle_degrees": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180
+        },
+        "max_up_alignment": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "Maximum dot product between target local up and target-to-camera vector."
+        }
+      },
+      "required": ["type", "target_entity_id"]
+    },
+    "entity_exists": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "entity_exists" },
+        "entity_id": {
+          "type": "string",
+          "description": "ID of the entity to inspect (matches viewer.entities.getById)."
+        },
+        "snapshot": {
+          "type": "string",
+          "enum": ["before", "after", "both"],
+          "default": "after",
+          "description": "Which captured snapshot must contain the entity."
+        }
+      },
+      "required": ["type", "entity_id"]
+    },
+    "entity_translation_delta": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "entity_translation_delta" },
+        "frame": {
+          "type": "string",
+          "enum": ["enu", "ecef"],
+          "default": "enu",
+          "description": "Coordinate frame for the axis: local ENU or raw ECEF/Cartesian."
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "ID of the entity to inspect (matches viewer.entities.getById)."
+        },
+        "axis": {
+          "type": "string",
+          "enum": ["east", "north", "up", "x", "y", "z"],
+          "description": "Axis along which the translation is asserted. Use east/north/up for ENU and x/y/z for ECEF."
+        },
+        "operator": {
+          "type": "string",
+          "enum": ["==", "!=", "<", "<=", ">", ">="]
+        },
+        "value_meters": {
+          "type": "number",
+          "description": "Expected delta in meters."
+        },
+        "tolerance_meters": {
+          "type": "number",
+          "default": 0.01,
+          "minimum": 0
+        }
+      },
+      "required": ["type", "entity_id", "axis", "operator", "value_meters"]
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "id": "eval-004",
+  "name": "ground-polyline-route-66",
+  "landmark": "U.S. Route 66 trace from Chicago to Los Angeles",
+  "perspective": "continental US view with a single coloured polyline draped on terrain",
+  "difficulty": "medium",
+  "description": "Use GroundPolylinePrimitive (NOT a Polyline entity) to drape a single PolylineGeometry along an approximated Route 66 path from Chicago to LA, with PolylineColorAppearance and a thick red line. Tests GroundPolylinePrimitive on a public, no-Ion basemap.",
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer, disabled baseLayerPicker/navigationHelpButton/animation/timeline/geocoder/homeButton/sceneModePicker/fullscreenButton/infoBox/selectionIndicator, and `window.viewer` assigned. Do not use Cesium Ion terrain or default Ion base layers. Build a GroundPolylineGeometry with `positions: Cesium.Cartesian3.fromDegreesArray([-87.65, 41.85, -90.20, 38.63, -94.58, 39.10, -97.51, 35.47, -102.20, 35.20, -106.65, 35.08, -109.55, 35.20, -113.50, 35.20, -118.24, 34.05])` and `width: 8.0`. Wrap it in a GeometryInstance with `attributes: { color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.RED) }`. Add `new Cesium.GroundPolylinePrimitive({ geometryInstances: instance, appearance: new Cesium.PolylineColorAppearance({ translucent: false }) })` to `viewer.scene.primitives` (NOT scene.groundPrimitives). Frame with `viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-100, 37, 5500000), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 } });`.",
+  "expected_behaviors": [
+    "Uses a public OpenStreetMap base layer without Ion terrain",
+    "Constructs GroundPolylineGeometry with positions from Cartesian3.fromDegreesArray",
+    "Sets a visible width (>= 4)",
+    "Wraps the geometry in a GeometryInstance with ColorGeometryInstanceAttribute",
+    "Uses Color.RED (or similar high-contrast color)",
+    "Constructs new GroundPolylinePrimitive with PolylineColorAppearance",
+    "Adds to viewer.scene.primitives",
+    "Frames the continental US (around -100 W, 37 N) at 4-7 million m altitude"
+  ],
+  "visual_expectations": "A continental-US camera view with a clearly visible thick red polyline winding from the Chicago area (top right) through the central plains southwest to Los Angeles (bottom left), tracing Route 66. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "GroundPolylineGeometry",
+      "description": "Uses GroundPolylineGeometry"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?GroundPolylinePrimitive",
+      "description": "Uses GroundPolylinePrimitive"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "PolylineColorAppearance",
+      "description": "Uses PolylineColorAppearance"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ColorGeometryInstanceAttribute",
+      "description": "Uses per-instance color"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.RED",
+      "description": "Uses RED"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "fromDegreesArray",
+      "description": "Uses fromDegreesArray for waypoints"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 7000,
+      "description": "Continental US with Route 66 polyline"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "GroundPolylinePrimitive"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

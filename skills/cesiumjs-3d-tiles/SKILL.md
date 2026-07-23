@@ -9,6 +9,11 @@ Version baseline: CesiumJS v1.143 (ES module imports, async factory methods).
 ## Loading a Tileset
 
 Always use async factory methods -- never call the constructor directly.
+For public/no-token examples, prefer URL-backed tilesets such as CesiumGS sample
+tilesets. `fromIonAssetId`, `createOsmBuildingsAsync`, and Google
+Photorealistic 3D Tiles require external entitlements; use them only when the
+caller explicitly asks for those services and the runtime is configured for
+them.
 
 ```js
 import { Cesium3DTileset, HeadingPitchRange, Math as CesiumMath } from "cesium";
@@ -142,11 +147,16 @@ tileset.tileUnload.addEventListener((tile) => { /* tile evicted from cache */ })
 tileset.tileFailed.addEventListener(({ url, message }) => {
   console.error(`Tile ${url}: ${message}`);
 });
+```
+
+```js
+import { Color } from "cesium";
+
 // Per-frame manual styling
 tileset.tileVisible.addEventListener((tile) => {
   const content = tile.content;
   for (let i = 0; i < content.featuresLength; i++) {
-    content.getFeature(i).color = Cesium.Color.fromRandom();
+    content.getFeature(i).color = Color.fromRandom();
   }
 });
 ```
@@ -154,11 +164,11 @@ tileset.tileVisible.addEventListener((tile) => {
 ## Runtime Properties
 
 ```js
+import { Matrix4, Cartesian3 } from "cesium";
+
 tileset.show = false;                     // toggle visibility
 tileset.maximumScreenSpaceError = 8;      // increase quality
 const { center, radius } = tileset.boundingSphere;
-
-import { Matrix4, Cartesian3 } from "cesium";
 tileset.modelMatrix = Matrix4.fromTranslation(new Cartesian3(0, 0, 100));
 ```
 
@@ -167,19 +177,35 @@ tileset.modelMatrix = Matrix4.fromTranslation(new Cartesian3(0, 0, 100));
 Assign a `Cesium3DTileStyle` to `tileset.style`. Expressions reference feature
 properties with `${PropertyName}`.
 
+**Style DSL constraints:**
+- `defined()` is **not supported** in the style expression language; using it causes a render error.
+- Referencing a property that does not exist in the tileset data (e.g., `${Height}` on a tileset with no height attribute) halts style evaluation and triggers a Cesium error panel. Always guard with a `["true", "..."]` catch-all as the last condition.
+- To reset styles, assign `tileset.style = undefined`.
+
 ```js
 import { Cesium3DTileStyle } from "cesium";
 
-// Color by height conditions
+// Color by height conditions -- requires tileset to have a 'Height' property
 tileset.style = new Cesium3DTileStyle({
   color: {
     conditions: [
       ["${Height} >= 100", "color('purple', 0.5)"],
       ["${Height} >= 50",  "color('red')"],
-      ["true",             "color('blue')"],
+      ["true",             "color('blue')"],   // catch-all: always include this
     ],
   },
   show: "${Height} > 0",
+});
+```
+
+```js
+// Safe constant style -- works on any tileset regardless of metadata
+tileset.style = new Cesium3DTileStyle({
+  color: {
+    conditions: [
+      ["true", "color('cyan', 1.0)"],
+    ],
+  },
 });
 ```
 
@@ -365,7 +391,10 @@ tileset.pointCloudShading.eyeDomeLightingStrength = 2.0;
 Shapes: `BOX`, `CYLINDER`, `ELLIPSOID` (see `VoxelShapeType`).
 
 ```js
-import { VoxelPrimitive, Cesium3DTilesVoxelProvider, CustomShader } from "cesium";
+import {
+  VoxelPrimitive, Cesium3DTilesVoxelProvider,
+  CustomShader, viewerVoxelInspectorMixin,
+} from "cesium";
 
 const provider = await Cesium3DTilesVoxelProvider.fromUrl("voxel/tileset.json");
 
@@ -386,7 +415,7 @@ viewer.camera.flyToBoundingSphere(voxelPrimitive.boundingSphere, { duration: 0 }
 // access — see the cesiumjs-custom-shader skill. This skill covers VoxelPrimitive setup.
 
 // Optional inspector widget
-viewer.extend(Cesium.viewerVoxelInspectorMixin);
+viewer.extend(viewerVoxelInspectorMixin);
 viewer.voxelInspector.viewModel.voxelPrimitive = voxelPrimitive;
 ```
 

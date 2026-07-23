@@ -1,0 +1,181 @@
+{
+  "after": {
+    "entities": {},
+    "values": {
+      "programmatic_summary": {
+        "failed": 0,
+        "pass_rate": 1.0,
+        "passed": 10,
+        "total": 10
+      },
+      "source_scenario_id": "eval-001"
+    }
+  },
+  "before": {
+    "entities": {},
+    "values": {}
+  },
+  "case_id": "eval-101",
+  "case_name": "tint-uniform-aircraft",
+  "errors": [],
+  "execution": {
+    "observed_from": "optimization/runs/cesiumjs-custom-shader/baseline/eval-001-tint-uniform-aircraft/programmatic-checks.json",
+    "success": true
+  },
+  "expected_result": "pass",
+  "generated_code": "const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', {\n  baseLayer: new Cesium.ImageryLayer(\n    new Cesium.OpenStreetMapImageryProvider({\n      url: 'https://tile.openstreetmap.org/',\n      maximumLevel: 18,\n    })\n  ),\n  baseLayerPicker: false,\n  navigationHelpButton: false,\n  animation: false,\n  timeline: false,\n  geocoder: false,\n  homeButton: false,\n  sceneModePicker: false,\n  fullscreenButton: false,\n  infoBox: false,\n  selectionIndicator: false,\n}));\n\nviewer.scene.globe.enableLighting = false;\n\n// CustomShader: multiply diffuse by a magenta tint uniform\nconst customShader = new Cesium.CustomShader({\n  uniforms: {\n    u_tint: {\n      type: Cesium.UniformType.VEC3,\n      value: new Cesium.Cartesian3(1.0, 0.2, 0.9),\n    },\n  },\n  fragmentShaderText: `\n    void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {\n      material.diffuse = material.diffuse * u_tint;\n    }\n  `,\n});\n\n// Place the model at -120 lon, 35 lat, 30 000 m altitude\nconst modelPosition = Cesium.Cartesian3.fromDegrees(-120.0, 35.0, 30000.0);\nconst modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(modelPosition);\n\nconst model = await Cesium.Model.fromGltfAsync({\n  url: 'https://raw.githubusercontent.com/CesiumGS/cesium/main/Apps/SampleData/models/CesiumAir/Cesium_Air.glb',\n  modelMatrix: modelMatrix,\n  customShader: customShader,\n});\n\nviewer.scene.primitives.add(model);\n\n// Frame the camera: position it ~60 m away from the aircraft,\n// looking slightly downward so the Pacific Ocean fills the lower background.\n// Known position \u2014 no dependency on model.boundingSphere.\nviewer.camera.lookAt(\n  modelPosition,\n  new Cesium.HeadingPitchRange(\n    Cesium.Math.toRadians(30),   // offset heading (view from NE side)\n    Cesium.Math.toRadians(-25),  // camera above, angled down \u2192 ocean visible below\n    60                           // 60 m range \u2014 aircraft fills most of the frame\n  )\n);",
+  "metadata": {
+    "artifact_hashes": {
+      "console": "b67990820ac173ebb0e52cfea6ba25a574eea9fcef9721317be99466f2cc8ecd",
+      "programmatic_checks": "76c50c6d7003392cbd252edc7efd8d5f332a0df26deed9ef74f18409a5732f52",
+      "scene_state": "5a4705a6d97c3bc925cc45827de2d7d9188a72a30556cbad5aafc536462d2fbf",
+      "screenshot_quality": "a4167148784642abd9254f769762c7d2aab4244b5d9414f7a673c1c00bd12247",
+      "screenshots": [
+        {
+          "filename": "screenshot.png",
+          "hash": "982ed7cfb8bbb33c97e461a41441193a589ac7dfbd6c63b5af99558604efee8a"
+        }
+      ]
+    },
+    "browser_viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "candidate_skill_hash": "6f4f5cc1746ef10e5116229ed5c5ae9e22a592550f193cab569254492a8c4ee4",
+    "chromium_version": "147.0.7727.15",
+    "judge_protocol_version": "pairwise-v1",
+    "model_id": "claude-sonnet-4-6",
+    "playwright_version": "unknown",
+    "runner_git_commit": "097efb50dd7b366ba2974f2db402885e5780c29b",
+    "scenario_version_hash": "969a987e4d21287596a03c590d07a009d64c80528040174f1ed7bcad99434ff9",
+    "temperature": 1.0,
+    "timestamp_utc": "2026-05-26T21:00:22.004036+00:00"
+  },
+  "programmatic_checks": {
+    "checks": [
+      {
+        "check_id": "no_console_errors_0",
+        "description": "No JS errors",
+        "detail": "No console or page errors captured",
+        "result": "pass",
+        "type": "no_console_errors"
+      },
+      {
+        "check_id": "code_runs_1",
+        "description": "No runtime exceptions",
+        "detail": "Code completed without captured errors",
+        "result": "pass",
+        "type": "code_runs"
+      },
+      {
+        "check_id": "pattern_present_2",
+        "description": "Uses Model.fromGltfAsync",
+        "detail": "Pattern matched: 'Model.fromGltfAsync'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_3",
+        "description": "Constructs CustomShader",
+        "detail": "Pattern matched: 'new Cesium.CustomShader'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_4",
+        "description": "Declares VEC3 uniform type",
+        "detail": "Pattern matched: 'UniformType.VEC3'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_5",
+        "description": "Defines the u_tint uniform name",
+        "detail": "Pattern matched: 'u_tint'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_6",
+        "description": "Defines fragmentMain function",
+        "detail": "Pattern matched: 'fragmentMain'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_7",
+        "description": "Writes to material.diffuse",
+        "detail": "Pattern matched: 'material.diffuse'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "pattern_present_8",
+        "description": "Uses ENU local frame for positioning",
+        "detail": "Pattern matched: 'Transforms.eastNorthUpToFixedFrame'",
+        "result": "pass",
+        "type": "pattern_present"
+      },
+      {
+        "check_id": "screenshot_quality:screenshot.png",
+        "description": "Captured screenshot is nonblank and has the expected viewport dimensions",
+        "detail": "ok",
+        "result": "pass",
+        "type": "screenshot_quality"
+      }
+    ],
+    "scenario_id": "eval-001",
+    "summary": {
+      "failed": 0,
+      "pass_rate": 1.0,
+      "passed": 10,
+      "total": 10
+    }
+  },
+  "run_artifact_path": "optimization/runs/cesiumjs-custom-shader/baseline/eval-001-tint-uniform-aircraft",
+  "scene_state": {
+    "available": true,
+    "camera": {
+      "heading": 0.5235958127310401,
+      "pitch": -0.4363408073274244,
+      "position": {
+        "x": -27.189233609940857,
+        "y": -47.09313403675333,
+        "z": 25.35709570068866
+      },
+      "roll": 6.283185295770512
+    },
+    "entity_count": 0,
+    "imagery_layer_count": 1,
+    "primitive_count": 1
+  },
+  "schema_version": 1,
+  "screenshot_quality": {
+    "all_passed": true,
+    "scenario_id": "eval-001",
+    "screenshots": [
+      {
+        "bit_depth": 8,
+        "color_type": 2,
+        "detail": "ok",
+        "distinct_sampled_colors": 2623,
+        "expected_height": 720,
+        "expected_width": 1280,
+        "file_size_bytes": 582451,
+        "filename": "screenshot.png",
+        "height": 720,
+        "interlace": 0,
+        "luminance_span": 245.15,
+        "passed": true,
+        "warnings": [],
+        "width": 1280
+      }
+    ]
+  },
+  "screenshots": [
+    "evaluation/artifacts/review-ui/sample-scorecard/screenshots/imported/cesiumjs-custom-shader/eval-001-screenshot.png"
+  ],
+  "skill": "cesiumjs-custom-shader",
+  "source": "manual",
+  "source_path": "optimization/generated/cesiumjs-custom-shader/baseline/eval-001.js"
+}
