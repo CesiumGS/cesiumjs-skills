@@ -171,200 +171,191 @@ button {
   line-height: 1.4;
 }
 
-/* ===================== RAIL ===================== */
+/* ===================== RAIL =====================
+   Four sections, one row shape. Every destination — station or overlay — is a
+   single line: a number gutter, a label, and a badge that only appears when it
+   has something to say. Purpose text lives in the tooltip, not the rail, so the
+   column reads as a quiet index instead of a wall of prose. */
 .rail {
   background: var(--surface);
   border-right: 1px solid var(--hairline);
-  padding: var(--sp-3) var(--sp-2);
-  gap: 2px;
+  padding: var(--sp-3) var(--sp-2) var(--sp-2);
+  gap: 1px;
   overflow-y: auto;
 }
 .rail-section {
-  font-size: var(--fs-50);
-  letter-spacing: 0.12em;
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-3);
-  padding: var(--sp-4) var(--sp-3) var(--sp-2);
+  opacity: 0.7;
+  padding: var(--sp-4) var(--sp-2) var(--sp-2);
 }
-.station {
-  display: flex;
+.rail-section:first-child {
+  padding-top: var(--sp-1);
+}
+
+.nav-row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
   align-items: center;
-  gap: var(--sp-3);
-  padding: 9px var(--sp-3);
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 7px var(--sp-2);
   border-radius: var(--r-2);
   color: var(--text-2);
-  width: 100%;
+  font-size: var(--fs-200);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.01em;
   text-align: left;
   position: relative;
   transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
-.station:hover {
-  background: var(--surface-2);
-  color: var(--text);
-}
-.station.active {
-  background: var(--surface-2);
-  color: var(--text);
-}
-.station.active::before {
-  content: "";
-  position: absolute;
-  left: -8px;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  border-radius: var(--r-pill);
-  background: var(--live);
-}
-.station .st-num {
+.nav-num {
   font-family: var(--font-mono);
   font-size: var(--fs-50);
+  font-weight: var(--fw-regular);
   color: var(--text-3);
-  width: 14px;
+  opacity: 0.6;
+  text-align: center;
+  transition: color var(--dur-1) var(--ease), opacity var(--dur-1) var(--ease);
 }
-.station .st-name {
-  flex: 1;
-  font-weight: var(--fw-medium);
-  font-size: var(--fs-200);
-  letter-spacing: 0.02em;
-}
-.station .st-badge {
-  font-family: var(--font-mono);
-  font-size: var(--fs-50);
-  padding: 1px 7px;
-  border-radius: var(--r-pill);
-  background: var(--surface-3);
-  color: var(--text-2);
-}
-.station .st-badge.hot {
-  background: var(--ink-human-bg);
-  color: var(--ink-human);
-}
-.station .st-badge.live {
-  background: var(--live-bg);
-  color: var(--live);
-}
-/* Rich rail items: name + one-line purpose, so no station is a mystery word. */
-.station--rich {
-  align-items: flex-start;
-  padding: 8px var(--sp-3);
-}
-.station--rich .st-lead {
-  width: 16px;
-  flex: none;
-  display: inline-flex;
-  justify-content: center;
-  color: var(--text-3);
-  margin-top: 2px;
-}
-.station--rich .st-lead .st-num {
-  width: auto;
-}
-.station--rich.active .st-lead {
-  color: var(--text);
-}
-.station--rich .st-text {
-  flex: 1;
+.nav-label {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.station--rich .st-desc {
-  font-size: var(--fs-50);
-  color: var(--text-3);
-  line-height: 1.35;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.station--rich .st-badge {
-  margin-top: 2px;
-  flex: none;
+.nav-row:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.nav-row:hover .nav-num {
+  opacity: 1;
+}
+/* Active: a brand wash that fades out rightward rather than a hard fill, plus
+   the rail's single accent bar. The row lifts without boxing itself in. */
+.nav-row.active {
+  color: var(--text);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--brand-blue) 15%, transparent), transparent 78%),
+    var(--surface-2);
+}
+.nav-row.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, var(--brand-blue), var(--brand-green));
+}
+.nav-row.active .nav-num {
+  color: var(--brand-blue);
+  opacity: 1;
 }
 
-.rail-sub {
-  margin-left: 30px;
-  padding: 7px var(--sp-3);
-  border-radius: var(--r-2);
+/* Badges carry information, never decoration: a count that needs you is bare
+   and colored; a neutral count sits in a quiet chip; "running" is a lit dot. */
+.nav-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  min-width: 18px;
+  text-align: center;
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
   color: var(--text-3);
-  font-size: var(--fs-100);
+}
+.nav-badge.hot {
+  background: none;
+  padding: 0 2px;
+  min-width: 0;
+  font-weight: var(--fw-semibold);
+  color: var(--ink-human);
+}
+.nav-badge.live {
+  background: none;
+  padding: 0;
+  min-width: 0;
+  font-size: 9px;
+  color: var(--live);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--live) 65%, transparent));
+  animation: pulse var(--pulse) var(--ease) infinite;
+}
+
+/* The Review → Optimize handoff: the one rail control that acts, not navigates.
+   It borrows the row's geometry and accent bar so it belongs to the rail, and
+   stays nearly invisible until flags exist — the tint IS the call to action. */
+.rail-handoff {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-}
-.rail-sub:hover {
-  background: var(--surface-2);
-  color: var(--text-2);
-}
-/* The Review → Optimize handoff: the one rail control that acts, not navigates.
-   A compact action card that mirrors the station anatomy (lead icon, name,
-   one-line status) so it reads as part of the lifecycle, not stray text. */
-.rail-handoff {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-3);
-  width: calc(100% - 30px);
-  margin: 2px 0 4px 30px;
-  padding: 7px var(--sp-3);
+  width: 100%;
+  margin-top: 2px;
+  padding: 7px var(--sp-2) 7px 30px; /* label aligns with .nav-label */
+  border: 0;
   border-radius: var(--r-2);
-  border: 1px solid var(--hairline);
-  background: var(--surface);
+  background: transparent;
   color: var(--text-3);
+  font-size: var(--fs-100);
   text-align: left;
-  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease);
+  position: relative;
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease);
 }
 .rail-handoff:disabled {
   cursor: default;
 }
-.rail-handoff .rh-lead {
-  width: 16px;
-  flex: none;
-  display: inline-flex;
-  justify-content: center;
-  margin-top: 2px;
-}
-.rail-handoff .rh-text {
+/* Wraps rather than truncates: at a 200px rail the label becomes two lines
+   instead of "Send 3 flags to Opti…", which would hide the destination. */
+.rail-handoff .rh-label {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.rail-handoff .rh-name {
-  font-size: var(--fs-100);
-  font-weight: var(--fw-medium);
-  letter-spacing: 0.02em;
-}
-.rail-handoff .rh-desc {
-  font-size: var(--fs-50);
   line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.rail-handoff .rh-count {
+.rail-handoff .rh-go {
   flex: none;
-  margin-top: 2px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-50);
-  padding: 1px 7px;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--ink-human) 18%, transparent);
-  color: var(--ink-human);
+  opacity: 0.4;
+  transition: transform var(--dur-1) var(--ease), opacity var(--dur-1) var(--ease);
 }
 /* Armed: confirmed flags are ready to hand off. */
 .rail-handoff.ready {
-  border-color: color-mix(in srgb, var(--ink-human) 35%, transparent);
-  background: var(--ink-human-bg);
   color: var(--ink-human);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--ink-human) 20%, transparent),
+    color-mix(in srgb, var(--ink-human) 7%, transparent) 62%,
+    transparent
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink-human) 16%, transparent);
 }
-.rail-handoff.ready .rh-desc {
-  color: color-mix(in srgb, var(--ink-human) 70%, var(--text-2));
+.rail-handoff.ready::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: var(--r-pill);
+  background: var(--ink-human);
+}
+.rail-handoff.ready .rh-go {
+  opacity: 0.85;
 }
 .rail-handoff.ready:hover {
-  border-color: var(--ink-human);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--ink-human) 30%, transparent),
+    color-mix(in srgb, var(--ink-human) 11%, transparent) 62%,
+    transparent
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink-human) 34%, transparent);
+}
+.rail-handoff.ready:hover .rh-go {
+  opacity: 1;
+  transform: translateX(2px);
 }
 
 /* Freshness accent: marks the newest optimization round. Base .fresh-chip
@@ -373,16 +364,33 @@ button {
   color: var(--keep);
   border-color: color-mix(in srgb, var(--keep) 45%, transparent);
 }
-.rail-overlays {
+
+.rail-foot {
   margin-top: auto;
   padding-top: var(--sp-3);
-  border-top: 1px solid var(--hairline);
 }
-/* Lens rows sit at the rail foot with no lifecycle indent. */
-.rail-overlays .rail-sub {
-  margin-left: 0;
+.rail-foot-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   width: 100%;
+  padding: 7px var(--sp-2);
+  border-radius: var(--r-2);
+  color: var(--text-3);
+  font-size: var(--fs-50);
+  opacity: 0.6;
   text-align: left;
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+    opacity var(--dur-1) var(--ease);
+}
+.rail-foot-btn:hover {
+  background: var(--surface-2);
+  color: var(--text-2);
+  opacity: 1;
+}
+.rail-foot-btn .kbd {
+  padding: 0 4px;
+  font-size: 10px;
 }
 
 /* ===================== FACET BAR ===================== */
@@ -3336,15 +3344,6 @@ button.verb-btn:disabled {
   border-color: var(--brand-blue);
 }
 
-/* Brand accents on chrome only: the active-station bar picks up the Cesium
-   blue-to-green gradient from the logomark; score inks stay untouched. */
-.station.active::before {
-  background: linear-gradient(180deg, var(--brand-blue), var(--brand-green));
-}
-.station.active .st-num {
-  color: var(--brand-blue);
-}
-
 /* ============================================================================
    DASHBOARD SYSTEM — eval-platform layout language: KPI tiles up top, sections
    as elevated cards, leaderboard tables inside. Brand gradient is chrome only.
@@ -3550,9 +3549,6 @@ button.verb-btn:disabled {
 /* ============================================================================
    DASHBOARD STATION — Altitude 0 landing screen.
    ============================================================================ */
-.station--dashboard {
-  margin-bottom: var(--sp-2);
-}
 .fresh-chip {
   font: 500 11px/1 var(--mono);
   color: var(--text-2);

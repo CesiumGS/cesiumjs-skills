@@ -1,14 +1,16 @@
 import type { ReactNode } from "react";
-import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, Cpu, Bot, LayoutDashboard, Rocket, ChevronDown, Eye, EyeOff, TrendingUp, RotateCcw } from "lucide-react";
+import { Command, HelpCircle, Moon, Sun, Layers, ChevronDown, Eye, EyeOff, ArrowRight, RotateCcw } from "lucide-react";
 import { useStore } from "../store";
-import type { Station, AdaptedScorecard } from "../types";
+import type { Station, ConsoleOverlay, AdaptedScorecard } from "../types";
 import type { RunHealth } from "../lib/grade";
 import { harnessLabel, pluralize, relativeTime } from "../lib/format";
 import { healthFromScorecard, healthPct } from "../lib/grade";
 import { liveRunTitle } from "./Live";
 
-/* The five lifecycle steps every focused run travels. Each carries a one-line
-   description (rendered in the rail) and a fuller hint (tooltip) so a first
+/* The five lifecycle steps every focused run travels, split across the two
+   sections that own them: steps 1–2 judge a run (Evaluate), steps 3–5 improve
+   and ship it (Optimize). The rail renders only the number and the name; the
+   one-line description and the fuller hint ride along in the tooltip so a first
    visit to any station never requires guessing what it is for. */
 const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string; desc: string; hint: string }> = [
   {
@@ -47,6 +49,9 @@ const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string; desc: 
     hint: "The deliberate final step and the human gate: KEEP candidates arrive here staged, and nothing touches a live SKILL.md until you promote it (the current version is archived first)."
   }
 ];
+/* Steps 1–2 live under "Evaluate", steps 3–5 under "Optimize". */
+const JUDGE_STEPS = LIFECYCLE_STATIONS.slice(0, 2);
+const IMPROVE_STEPS = LIFECYCLE_STATIONS.slice(2);
 
 /** "scorecard-20260721T142514Z-d3f47ec568b1" → "Jul 21 · 14:25 · d3f47ec". */
 function runShortLabel(runId: string | undefined, timestamp: string | undefined, commit: string | undefined): string {
@@ -246,156 +251,151 @@ export function Rail() {
   /* Badges carry information, never decoration: each one answers "how many
      things wait for me here?" or "is something running?" — and says which. */
   const badge = (id: Station): ReactNode => {
+    if (id === "live")
+      return liveRunning ? (
+        <span className="nav-badge live" title="An eval run is executing right now">
+          ●
+        </span>
+      ) : stalledCount > 0 ? (
+        <span className="nav-badge" title={`${pluralize(stalledCount, "stalled run")} on disk; open to inspect`}>
+          {stalledCount}
+        </span>
+      ) : null;
     if (id === "review")
       return needsYouCount ? (
-        <span className="st-badge hot" title={`${pluralize(needsYouCount, "case")} in this run need your eyes`}>
+        <span className="nav-badge hot" title={`${pluralize(needsYouCount, "case")} in this run need your eyes`}>
           {needsYouCount}
         </span>
       ) : null;
     if (id === "optimize")
       return loopRunning ? (
-        <span className="st-badge live" title="An optimization loop is running right now">
+        <span className="nav-badge live" title="An optimization loop is running right now">
           ●
         </span>
       ) : null;
     if (id === "decide")
       return decidable ? (
-        <span className="st-badge" title={`${pluralize(decidable, "skill")} with a KEEP candidate awaiting your verification`}>
+        <span className="nav-badge" title={`${pluralize(decidable, "skill")} with a KEEP candidate awaiting your verification`}>
           {decidable}
         </span>
       ) : null;
     if (id === "promote")
       return stagedCount ? (
-        <span className="st-badge hot" title={`${pluralize(stagedCount, "staged candidate")} awaiting your promotion approval`}>
+        <span className="nav-badge hot" title={`${pluralize(stagedCount, "staged candidate")} awaiting your promotion approval`}>
           {stagedCount}
         </span>
       ) : null;
     return null;
   };
 
-  const item = (id: Station, lead: ReactNode, name: string, desc: string, hint: string, extra?: ReactNode) => (
+  /* One row shape for everything in the rail: a numbered gutter, a label, and
+     an optional badge. Stations and overlays look identical because to the eye
+     they are the same act — "take me there". */
+  const row = (
+    key: string,
+    opts: {
+      num?: string;
+      label: string;
+      hint: string;
+      kbd: string;
+      active?: boolean;
+      badge?: ReactNode;
+      onClick: () => void;
+    }
+  ) => (
     <button
-      className={`station station--rich${station === id ? " active" : ""}`}
-      onClick={() => setStation(id)}
-      aria-current={station === id ? "page" : undefined}
-      title={hint}
+      key={key}
+      className={`nav-row${opts.active ? " active" : ""}`}
+      onClick={opts.onClick}
+      aria-current={opts.active ? "page" : undefined}
+      title={`${opts.hint}\nShortcut: ${opts.kbd}`}
     >
-      <span className="st-lead">{lead}</span>
-      <span className="st-text">
-        <span className="st-name">{name}</span>
-        <span className="st-desc">{desc}</span>
+      <span className="nav-num" aria-hidden>
+        {opts.num ?? ""}
       </span>
-      {extra}
+      <span className="nav-label">{opts.label}</span>
+      {opts.badge}
     </button>
   );
 
+  const stationRow = (id: Station, label: string, hint: string, kbd: string, num?: string) =>
+    row(id, { num, label, hint, kbd, active: station === id, badge: badge(id), onClick: () => setStation(id) });
+
+  const step = (st: (typeof LIFECYCLE_STATIONS)[number]) =>
+    stationRow(st.id, st.name, `${st.name} — ${st.desc}. ${st.hint}`, st.num, st.num);
+
+  const overlayRow = (kind: Exclude<ConsoleOverlay, null>, label: string, hint: string, kbd: string) =>
+    row(kind, { label, hint, kbd, onClick: () => openOverlay(kind) });
+
   return (
     <nav className="rail col" role="navigation" aria-label="Console navigation">
-      {/* ── Altitude 0: the two screens that are NOT scoped to one run. ── */}
-      <div className="rail-section" style={{ paddingTop: 0 }}>
-        Overview
-      </div>
-      {item(
+      {/* ── Monitor: the screens that are NOT scoped to one focused run. ── */}
+      <div className="rail-section">Monitor</div>
+      {stationRow(
         "dashboard",
-        <LayoutDashboard size={14} aria-hidden />,
         "Dashboard",
-        "All studies at a glance",
-        "Cross-study overview: recent runs, skill health, and what needs your attention. The one screen not scoped to a single run. Shortcut: 0"
+        "Cross-study overview: recent runs, skill health, and what needs your attention. The one screen not scoped to a single run.",
+        "0"
       )}
-      {item(
+      {stationRow(
         "live",
-        <Rocket size={14} aria-hidden />,
         "Run Studies",
-        "Launch & monitor runs",
-        "Your hands on the eval CLI: configure and kick off a new study, then watch its phases, trials, and journal live. Shortcut: 7",
-        liveRunning ? (
-          <span className="st-badge live" title="An eval run is executing right now">
-            ● Live
-          </span>
-        ) : stalledCount > 0 ? (
-          <span className="st-badge" title={`${pluralize(stalledCount, "stalled run")} on disk; open to inspect`}>
-            {stalledCount}
-          </span>
-        ) : null
+        "Your hands on the eval CLI: configure and kick off a new study, then watch its phases, trials, and journal live.",
+        "7"
       )}
+      {overlayRow("harness", "Run Browser", "Browse every run on disk; switch the focused run or set the comparison baseline.", "h")}
 
-      {/* ── The lifecycle: five steps, one focused run. The Focused Run control
-            in the top strip is the single anchor for which run these stations
-            read; the rail stays a pure navigator. ── */}
-      <div className="rail-section">Run Lifecycle</div>
+      {/* ── Evaluate: judge the focused run (steps 1–2), then hand your
+            confirmed flags across to the optimizer. ── */}
+      <div className="rail-section">Evaluate</div>
+      {JUDGE_STEPS.map(step)}
+      <button
+        className={`rail-handoff${flagged ? " ready" : ""}`}
+        onClick={doExport}
+        disabled={!flagged}
+        title={
+          flagged
+            ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set. The optimizer only chases human-confirmed flags.`
+            : suggestedFlagCount
+              ? `${pluralize(suggestedFlagCount, "machine-suggested flag")} await your confirmation. Confirm each in Review (e) before handing off.`
+              : "Flag failing cases in Review first; the optimizer only chases what you confirm."
+        }
+      >
+        <span className="rh-label">
+          {flagged
+            ? `Send ${pluralize(flagged, "flag")} to Optimize`
+            : suggestedFlagCount
+              ? `Confirm ${suggestedFlagCount} suggested`
+              : "Nothing flagged yet"}
+        </span>
+        <ArrowRight size={13} aria-hidden className="rh-go" />
+      </button>
 
-      {LIFECYCLE_STATIONS.map((st) => (
-        <div key={st.id}>
-          {item(
-            st.id,
-            <span className="st-num">{st.num}</span>,
-            st.name,
-            st.desc,
-            `${st.hint} Shortcut: ${st.num}`,
-            badge(st.id)
-          )}
-          {st.id === "review" && (
-            <button
-              className={`rail-handoff${flagged ? " ready" : ""}`}
-              onClick={doExport}
-              disabled={!flagged}
-              title={
-                flagged
-                  ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set. The optimizer only chases human-confirmed flags.`
-                  : suggestedFlagCount
-                    ? `${pluralize(suggestedFlagCount, "machine-suggested flag")} await your confirmation. Confirm each in Review (e) before handing off.`
-                    : "Flag failing cases in Review first; the optimizer only chases what you confirm."
-              }
-            >
-              <span className="rh-lead">
-                <Send size={13} aria-hidden />
-              </span>
-              <span className="rh-text">
-                <span className="rh-name">Send to Optimize</span>
-                <span className="rh-desc">
-                  {flagged
-                    ? "Ready to hand off"
-                    : suggestedFlagCount
-                      ? `${suggestedFlagCount} suggested · 0 confirmed`
-                      : "No flags yet"}
-                </span>
-              </span>
-              {flagged > 0 && <span className="rh-count">{flagged}</span>}
-            </button>
-          )}
-        </div>
-      ))}
+      {/* ── Optimize: improve and ship the run you just judged (steps 3–5). ── */}
+      <div className="rail-section">Optimize</div>
+      {IMPROVE_STEPS.map(step)}
 
-      {/* Insights sit beside the lifecycle, not inside it: auditing models and
-          harnesses is cross-run analysis, not a step in shipping one run. */}
-      <div className="rail-section">Insights</div>
-      {item(
+      {/* ── Analyze: cross-run lenses. Auditing models and harnesses is not a
+            step in shipping one run, so it sits beside the lifecycle. ── */}
+      <div className="rail-section">Analyze</div>
+      {stationRow(
         "models",
-        <Cpu size={14} aria-hidden />,
         "Models",
-        "Catalogs & win rates",
-        "The model as the unit of analysis: declared catalogs and cost tiers beside observed keep and win rates from the artifacts on disk. Shortcut: 6"
+        "The model as the unit of analysis: declared catalogs and cost tiers beside observed keep and win rates from the artifacts on disk.",
+        "6"
       )}
-      {item(
+      {stationRow(
         "harnesses",
-        <Bot size={14} aria-hidden />,
         "Harnesses",
-        "Capability & run outcomes",
-        "The harness as the unit of analysis: registry capability cards beside run-level scorecard outcomes per harness. Shortcut: 8"
+        "The harness as the unit of analysis: registry capability cards beside run-level scorecard outcomes per harness.",
+        "8"
       )}
+      {overlayRow("matrix", "Matrix", "Skill × category matrix: where each skill is strong or weak across the scoring categories.", "m")}
+      {overlayRow("trends", "Trends", "Win-rate trends: how each skill's keep and win rates have moved across optimization rounds.", "t")}
 
-      <div className="rail-overlays">
-        <div className="rail-section" style={{ paddingTop: 0 }}>
-          Lenses
-        </div>
-        <button className="rail-sub" onClick={() => openOverlay("matrix")}>
-          <Grid3x3 size={13} /> Skill × Category Matrix <span className="kbd" style={{ marginLeft: "auto" }}>m</span>
-        </button>
-        <button className="rail-sub" onClick={() => openOverlay("trends")}>
-          <TrendingUp size={13} /> Win-Rate Trends <span className="kbd" style={{ marginLeft: "auto" }}>t</span>
-        </button>
-        <button className="rail-sub" onClick={() => openOverlay("harness")}>
-          <Layers size={13} /> Run Browser <span className="kbd" style={{ marginLeft: "auto" }}>h</span>
+      <div className="rail-foot">
+        <button className="rail-foot-btn" onClick={() => openOverlay("help")} title="Every keyboard shortcut in the console.">
+          Press <span className="kbd">?</span> for shortcuts
         </button>
       </div>
     </nav>
