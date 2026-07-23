@@ -3,7 +3,6 @@ import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, Cpu, Bot, Layout
 import { useStore } from "../store";
 import type { Station } from "../types";
 import { harnessLabel, pluralize, relativeTime } from "../lib/format";
-import { ProvGlyph } from "./primitives";
 import { liveRunTitle } from "./Live";
 
 /* The five lifecycle steps every focused run travels. Each carries a one-line
@@ -184,7 +183,7 @@ export function TopStrip() {
           title={`Eval run in progress: ${liveRunTitle(liveRun)}. Open Run Studies (7).`}
         >
           <span className="dot" aria-hidden />
-          <ProvGlyph kind="live" /> {liveRunTitle(liveRun)}
+          {liveRunTitle(liveRun)}
           <span className="mono">{Math.round(liveRun.progress * 100)}%</span>
         </button>
       )}
