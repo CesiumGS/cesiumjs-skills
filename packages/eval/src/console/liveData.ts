@@ -5,7 +5,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { readJson, readJsonl, readJsonOrNull, writeJsonPlain } from "../lib/json.js";
 import { fromRepoRoot, globFiles, listDirs, walkFiles } from "../lib/paths.js";
@@ -433,6 +433,27 @@ function launchLogTail(auditDir: string, maxLines = 4): string | null {
   return lines.slice(-maxLines).join("\n");
 }
 
+/** The recorded launch argv as a readable one-liner: absolute paths inside the
+ *  repo are shortened to repo-relative, and the node binary and CLI entry
+ *  collapse to the command a human would type. */
+function auditCommandLine(launchMeta: Record<string, any>): string | null {
+  const argv: unknown = launchMeta.argv;
+  if (!Array.isArray(argv) || argv.length < 3) return null;
+  const root = fromRepoRoot(".") + path.sep;
+  // Paths recorded by another checkout (or through a symlinked artifacts tree)
+  // do not share this root, so fall back to cutting at the first repo-owned
+  // segment rather than printing someone else's absolute path.
+  const TOP_LEVEL = ["evaluation", "optimization", "packages", "apps", "config", "skills"];
+  const shorten = (token: string) => {
+    if (token.startsWith(root)) return token.slice(root.length);
+    if (!path.isAbsolute(token)) return token;
+    const parts = token.split(path.sep);
+    const cut = parts.findIndex((part) => TOP_LEVEL.includes(part));
+    return cut === -1 ? token : parts.slice(cut).join(path.sep);
+  };
+  return ["cesium-eval", ...argv.slice(2).map((token) => shorten(String(token)))].join(" ");
+}
+
 /** Assemble a live-run row from a launch's journal + metadata. The caller has
  *  already classified the run, so `status`/`error` come in ready to attach. */
 function auditRunRow(
@@ -479,6 +500,9 @@ function auditRunRow(
     judge,
     judge_harness: launchMeta.judge_harness ?? null,
     codegen_harness: launchMeta.codegen_harness ?? null,
+    // The exact invocation, so a launch that died on its own command line can
+    // show the reader which flag it choked on instead of just the error text.
+    command: auditCommandLine(launchMeta),
     concurrency,
     status,
     error,
@@ -604,6 +628,44 @@ export function availableSkills(): string[] {
   return listDirs(fixturesRoot());
 }
 
+/** Flags the installed `audit` command actually accepts, read from its own
+ *  --help. The console builds an audit argv by hand, so a flag renamed in the
+ *  CLI (or a console running against a newer/older build) would otherwise spawn
+ *  a process that dies on `unknown option` — after the launch was accepted, with
+ *  the failure only visible hours later as an empty run folder. Asking the exact
+ *  binary we are about to exec keeps the two in sync without a hand-copied list.
+ *  Cached per process; `null` means help was unreadable and preflight is skipped
+ *  rather than blocking launches on a diagnostic. */
+let auditFlagCache: Set<string> | null | undefined;
+function auditCliFlags(cliEntry: string): Set<string> | null {
+  if (auditFlagCache !== undefined) return auditFlagCache;
+  auditFlagCache = null;
+  try {
+    const help = spawnSync(process.execPath, [cliEntry, "audit", "--help"], {
+      encoding: "utf8",
+      timeout: 15_000,
+    });
+    const text = `${help.stdout ?? ""}${help.stderr ?? ""}`;
+    const flags = new Set(text.match(/--[a-z0-9][a-z0-9-]*/g) ?? []);
+    if (flags.size) auditFlagCache = flags;
+  } catch {
+    auditFlagCache = null;
+  }
+  return auditFlagCache;
+}
+
+/** Reject an argv the CLI would reject anyway, while the caller is still on the
+ *  other end of the HTTP request and can be told why. */
+function preflightAuditArgv(cliEntry: string, argv: string[]): void {
+  const known = auditCliFlags(cliEntry);
+  if (!known) return;
+  const unsupported = argv.filter((token) => token.startsWith("--") && !known.has(token));
+  if (!unsupported.length) return;
+  throw new Error(
+    `the installed audit CLI does not accept ${unsupported.join(", ")} — the console and packages/eval are out of sync; rebuild with 'npm run build'`,
+  );
+}
+
 /**
  * Validate and start a combined baseline audit as a detached child process;
  * progress flows back exclusively through the journal.
@@ -694,7 +756,6 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
 
   const launchId = "live-" + new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const outDir = path.join(auditsRoot(), launchId);
-  fs.mkdirSync(outDir, { recursive: true });
   const journalPath = path.join(outDir, AUDIT_JOURNAL_NAME);
   const logPath = path.join(outDir, "launch.log");
 
@@ -725,6 +786,11 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (threshold !== null) argv.push("--threshold", String(threshold));
   if (bundleRoot) argv.push("--bundle-root", bundleRoot);
 
+  // Fail the request, not the run: an argv the CLI would reject leaves no
+  // half-born run folder behind.
+  preflightAuditArgv(cliEntry, argv);
+
+  fs.mkdirSync(outDir, { recursive: true });
   const logFd = fs.openSync(logPath, "w");
   const child = spawn(process.execPath, argv, {
     cwd: ctx.repoRoot,

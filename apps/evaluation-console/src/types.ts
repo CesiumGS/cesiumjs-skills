@@ -450,6 +450,8 @@ export interface LiveRun {
   /** Console-launched audits: the harnesses the launch requested. */
   judge_harness?: string | null;
   codegen_harness?: string | null;
+  /** Console-launched audits: the recorded invocation, repo-relative. */
+  command?: string | null;
   status: LiveRunStatus;
   /** Populated when status is "failed": why the launch/run did not record data. */
   error?: string | null;

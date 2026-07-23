@@ -424,6 +424,11 @@ function LiveRunCard({ run }: { run: LiveRun }) {
   const { selectSkill, setStation, cancelLiveRun } = useStore();
   const running = run.status === "running";
   const failed = run.status === "failed";
+  // A launch that died before its first journal event has no progress to
+  // report. Rendering the bar, the phase train and an empty case board for it
+  // would dress up "nothing happened" as "0% done"; the card collapses to the
+  // only facts on disk — what was launched and what it said on the way out.
+  const stillborn = failed && run.trials.length === 0 && run.journal_tail.length === 0;
   const pct = Math.round(run.progress * 100);
   const isAudit = run.kind === "audit";
   const doneTrials = isAudit
@@ -467,9 +472,15 @@ function LiveRunCard({ run }: { run: LiveRun }) {
           </span>
         )}
         <span className="spacer" />
-        <span className="lrc-meta" title="Wall clock since the run's first journal event.">
-          <Clock size={11} aria-hidden /> {fmtDuration(run.elapsed_s)}
-        </span>
+        {stillborn ? (
+          <span className="lrc-meta" title="When this launch exited. It never ran, so it has no wall clock.">
+            <Clock size={11} aria-hidden /> exited {relativeTime(run.last_activity_utc ?? run.started_utc ?? "")}
+          </span>
+        ) : (
+          <span className="lrc-meta" title="Wall clock since the run's first journal event.">
+            <Clock size={11} aria-hidden /> {fmtDuration(run.elapsed_s)}
+          </span>
+        )}
         {isAudit && run.launch_id && running && (
           <button
             className="pill cancel-pill"
@@ -503,52 +514,70 @@ function LiveRunCard({ run }: { run: LiveRun }) {
 
       {failed && run.error && <div className="lrc-error">{run.error}</div>}
 
-      <div className="lrc-bar-row">
-        <LiveProgressBar run={run} />
-        <span className="lrc-pct mono">{pct}%</span>
-      </div>
-      <div className="lrc-bar-sub">
-        <span>
-          Phase {run.phase_index}/{run.phase_total}
-          {run.current_phase_label ? ` · ${run.current_phase_label}` : ""}
-          {failedPhase ? ` · ${failedPhase.label} failed` : ""}
-        </span>
-        <span className="spacer" />
-        <span className="mono">
-          {doneTrials}/{isAudit ? run.trials.length : runnable} {doneWord}
-        </span>
-      </div>
-
-      <div className="lp-phases">
-        {run.phases.map((p) => (
-          <PhaseChip key={p.id} phase={p} running={running} />
-        ))}
-      </div>
-
-      <div className="lrc-columns">
-        <div>
-          <div className="lrc-col-head">
-            {pluralize(run.trials.length, isAudit ? "Case" : "Trial")}
-            {(() => {
-              const groupCount = new Set(run.trials.map((t) => t.group ?? "")).size;
-              return isAudit && groupCount > 1 ? ` · ${groupCount} Skills` : "";
-            })()}
-            {isAudit && (run.concurrency ?? 1) > 1 ? (
-              <span className="lrc-concurrency mono" title={`Judge lane runs ${run.concurrency} cases in parallel`}>
-                {run.concurrency}× parallel
-              </span>
-            ) : null}
+      {stillborn && (
+        <div className="lrc-dead">
+          {run.command ? (
+            <div className="lrc-command mono" title="The invocation recorded in launch.json.">
+              <Terminal size={11} aria-hidden /> {run.command}
+            </div>
+          ) : null}
+          <div className="lrc-dead-note">
+            No journal events and no cases: the process exited before the audit began, so there is nothing to score.
+            Fix the cause above and launch again.
           </div>
-          <TrialBoard run={run} />
-          <WorkerLanes run={run} />
         </div>
-        <div>
-          <div className="lrc-col-head">
-            <Terminal size={11} aria-hidden /> Journal
+      )}
+
+      {stillborn ? null : (
+        <>
+          <div className="lrc-bar-row">
+            <LiveProgressBar run={run} />
+            <span className="lrc-pct mono">{pct}%</span>
           </div>
-          <JournalTail run={run} />
-        </div>
-      </div>
+          <div className="lrc-bar-sub">
+            <span>
+              Phase {run.phase_index}/{run.phase_total}
+              {run.current_phase_label ? ` · ${run.current_phase_label}` : ""}
+              {failedPhase ? ` · ${failedPhase.label} failed` : ""}
+            </span>
+            <span className="spacer" />
+            <span className="mono">
+              {doneTrials}/{isAudit ? run.trials.length : runnable} {doneWord}
+            </span>
+          </div>
+
+          <div className="lp-phases">
+            {run.phases.map((p) => (
+              <PhaseChip key={p.id} phase={p} running={running} />
+            ))}
+          </div>
+
+          <div className="lrc-columns">
+            <div>
+              <div className="lrc-col-head">
+                {pluralize(run.trials.length, isAudit ? "Case" : "Trial")}
+                {(() => {
+                  const groupCount = new Set(run.trials.map((t) => t.group ?? "")).size;
+                  return isAudit && groupCount > 1 ? ` · ${groupCount} Skills` : "";
+                })()}
+                {isAudit && (run.concurrency ?? 1) > 1 ? (
+                  <span className="lrc-concurrency mono" title={`Judge lane runs ${run.concurrency} cases in parallel`}>
+                    {run.concurrency}× parallel
+                  </span>
+                ) : null}
+              </div>
+              <TrialBoard run={run} />
+              <WorkerLanes run={run} />
+            </div>
+            <div>
+              <div className="lrc-col-head">
+                <Terminal size={11} aria-hidden /> Journal
+              </div>
+              <JournalTail run={run} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

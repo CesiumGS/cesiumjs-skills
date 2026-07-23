@@ -3735,6 +3735,28 @@ button.verb-btn:disabled {
   font-size: var(--fs-100);
   color: var(--text-2);
 }
+/* A launch that never ran: the invocation plus why there is nothing else. */
+.lrc-dead {
+  margin-top: var(--sp-2);
+}
+.lrc-command {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: var(--fs-100);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.lrc-dead-note {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-100);
+  color: var(--text-3);
+}
 .lrc-bar-row {
   display: flex;
   align-items: center;
