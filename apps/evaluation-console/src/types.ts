@@ -406,7 +406,7 @@ export interface SkillOverview {
 // by /api/live and polled by the store while the console is visible)
 // ============================================================================
 export type LivePhaseState = "pending" | "active" | "done" | "failed";
-export type LiveRunStatus = "running" | "stalled";
+export type LiveRunStatus = "running" | "stalled" | "failed";
 
 export interface LivePhase {
   id: string;
@@ -447,7 +447,12 @@ export interface LiveRun {
   judge?: boolean;
   /** Audit runs: how many cases the judge lane works at once (worker count). */
   concurrency?: number | null;
+  /** Console-launched audits: the harnesses the launch requested. */
+  judge_harness?: string | null;
+  codegen_harness?: string | null;
   status: LiveRunStatus;
+  /** Populated when status is "failed": why the launch/run did not record data. */
+  error?: string | null;
   started_utc: string | null;
   last_activity_utc: string | null;
   elapsed_s: number | null;

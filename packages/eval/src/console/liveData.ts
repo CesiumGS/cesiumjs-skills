@@ -404,20 +404,44 @@ function auditTrials(journal: Array<Record<string, any>>): Array<Record<string, 
   });
 }
 
-function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, any> | null {
-  let journal = readJsonl(path.join(auditDir, AUDIT_JOURNAL_NAME));
-  const launchMeta = readJsonOrNull(path.join(auditDir, LAUNCH_META_NAME)) ?? {};
-  if (!journal.length) {
-    if (!Object.keys(launchMeta).length) return null;
-    const started = String(launchMeta.started_utc ?? "");
-    if (!isFresh(started, maxAgeSeconds)) return null; // dead launch, not live
-    journal = [{ timestamp_utc: started, event: "launch_accepted" }];
+/** Whether a recorded launch pid still names a live process. Missing/invalid
+ *  pids read as dead; EPERM means the process exists under another owner. */
+function pidAlive(pid: unknown): boolean {
+  const value = Number(pid);
+  if (!Number.isInteger(value) || value <= 0) return false;
+  try {
+    process.kill(value, 0);
+    return true;
+  } catch (err: any) {
+    return err?.code === "EPERM";
   }
+}
 
-  const last = journal[journal.length - 1];
-  const lastEvent = String(last.event ?? "");
-  if (AUDIT_TERMINAL.has(lastEvent)) return null;
+/** Last few non-empty lines of a launch's stdout/stderr log, used to explain a
+ *  launch that died before its audit could journal a failure of its own. */
+function launchLogTail(auditDir: string, maxLines = 4): string | null {
+  const logPath = path.join(auditDir, "launch.log");
+  if (!fs.existsSync(logPath)) return null;
+  let text: string;
+  try {
+    text = fs.readFileSync(logPath, "utf8");
+  } catch {
+    return null;
+  }
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (!lines.length) return null;
+  return lines.slice(-maxLines).join("\n");
+}
 
+/** Assemble a live-run row from a launch's journal + metadata. The caller has
+ *  already classified the run, so `status`/`error` come in ready to attach. */
+function auditRunRow(
+  auditDir: string,
+  launchMeta: Record<string, any>,
+  journal: Array<Record<string, any>>,
+  status: string,
+  error: string | null,
+): Record<string, any> {
   const startedEvent = journal.find((e) => String(e.event) === "audit_started");
   const judge = Boolean(startedEvent?.judge ?? launchMeta.judge ?? true);
   const skills: string[] = [...(startedEvent?.skills ?? launchMeta.skills ?? [])];
@@ -426,7 +450,9 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
   const phases = auditPhases(journal, judge);
   const trialRows = auditTrials(journal);
 
-  const startedTs = parseTs(journal[0].timestamp_utc);
+  const startedTs = parseTs(journal[0]?.timestamp_utc) ?? parseTs(launchMeta.started_utc);
+  const last = journal.length ? journal[journal.length - 1] : {};
+  const lastEvent = String(last.event ?? "");
   const journalTs = parseTs(last.timestamp_utc);
   let logTs: Date | null = null;
   const logPath = path.join(auditDir, "launch.log");
@@ -440,7 +466,6 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
   const candidates = [journalTs, logTs].filter((ts): ts is Date => ts !== null);
   const lastActivity = candidates.length ? new Date(Math.max(...candidates.map((ts) => ts.getTime()))) : null;
 
-  const status = lastActivity !== null && isFresh(lastActivity.toISOString(), maxAgeSeconds) ? "running" : "stalled";
   const active = phases.find((p) => p.state === "active" || p.state === "failed") ?? null;
   const doneCount = phases.filter((p) => p.state === "done").length;
   const label = skills.length === 1 ? `Audit \u00b7 ${skills[0]}` : "Combined Audit";
@@ -452,8 +477,11 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
     kind: "audit",
     launch_id: launchMeta.launch_id ?? null,
     judge,
+    judge_harness: launchMeta.judge_harness ?? null,
+    codegen_harness: launchMeta.codegen_harness ?? null,
     concurrency,
     status,
+    error,
     started_utc: startedTs?.toISOString() ?? null,
     last_activity_utc: lastActivity?.toISOString() ?? null,
     elapsed_s: startedTs !== null ? Math.max(0, Math.floor((Date.now() - startedTs.getTime()) / 1000)) : null,
@@ -468,6 +496,62 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
     last_event: { event: lastEvent, step: last.step ?? null, timestamp_utc: last.timestamp_utc ?? null },
     journal_tail: journal.slice(-60),
   };
+}
+
+function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, any> | null {
+  const journal = readJsonl(path.join(auditDir, AUDIT_JOURNAL_NAME));
+  const launchMeta = readJsonOrNull(path.join(auditDir, LAUNCH_META_NAME)) ?? {};
+  const hasLaunch = Object.keys(launchMeta).length > 0;
+  const scorecardWritten = fs.existsSync(path.join(auditDir, "scorecard.json"));
+
+  const last = journal.length ? journal[journal.length - 1] : null;
+  const lastEvent = last ? String(last.event ?? "") : "";
+
+  // A finished or deliberately cancelled run leaves the live view: its scorecard
+  // surfaces under Recent Runs, and a cancel was intentional.
+  if (AUDIT_TERMINAL.has(lastEvent) && lastEvent !== "audit_failed") return null;
+
+  // The run journalled its own failure: keep it visible with a reason instead of
+  // dropping it on the floor.
+  if (lastEvent === "audit_failed") {
+    const reason = (last && typeof last.error === "string" && last.error) || launchLogTail(auditDir) || "audit failed";
+    return auditRunRow(auditDir, launchMeta, journal, "failed", String(reason));
+  }
+
+  // A console launch whose process is gone but that never reached a terminal
+  // event and left no scorecard died silently (bad flag, missing harness CLI,
+  // early crash). Surface it as a failed study carrying its launch-log tail,
+  // rather than a phantom "running" row that later vanishes with no trace.
+  if (hasLaunch && !pidAlive(launchMeta.pid) && !scorecardWritten) {
+    const reason = launchLogTail(auditDir) || (journal.length ? "process exited before completing" : "launch produced no output");
+    return auditRunRow(auditDir, launchMeta, journal, "failed", reason);
+  }
+
+  // No journal yet: the process is coming up (pid alive) or the launch is still
+  // fresh. Show it as a pending/running launch while it settles.
+  if (!journal.length) {
+    if (!hasLaunch) return null;
+    const started = String(launchMeta.started_utc ?? "");
+    if (!isFresh(started, maxAgeSeconds)) return null;
+    const seeded = [{ timestamp_utc: started, event: "launch_accepted" }];
+    return auditRunRow(auditDir, launchMeta, seeded, "running", null);
+  }
+
+  // Journal in progress: running if there was recent activity, else stalled.
+  const journalTs = parseTs(last!.timestamp_utc);
+  let logTs: Date | null = null;
+  const logPath = path.join(auditDir, "launch.log");
+  if (fs.existsSync(logPath)) {
+    try {
+      logTs = new Date(fs.statSync(logPath).mtimeMs);
+    } catch {
+      logTs = null;
+    }
+  }
+  const candidates = [journalTs, logTs].filter((ts): ts is Date => ts !== null);
+  const lastActivity = candidates.length ? new Date(Math.max(...candidates.map((ts) => ts.getTime()))) : null;
+  const status = lastActivity !== null && isFresh(lastActivity.toISOString(), maxAgeSeconds) ? "running" : "stalled";
+  return auditRunRow(auditDir, launchMeta, journal, status, null);
 }
 
 function auditLiveRuns(maxAgeSeconds: number): Array<Record<string, any>> {

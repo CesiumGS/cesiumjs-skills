@@ -3713,6 +3713,25 @@ button.verb-btn:disabled {
   color: var(--defer);
   background: var(--defer-bg);
 }
+.lrc-status.failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fail);
+  background: var(--fail-bg);
+}
+.lrc-error {
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--fail);
+  background: var(--fail-bg);
+  color: var(--fail);
+  font-family: var(--font-mono);
+  font-size: var(--fs-100);
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 6px;
+}
 .lrc-meta {
   display: inline-flex;
   align-items: center;

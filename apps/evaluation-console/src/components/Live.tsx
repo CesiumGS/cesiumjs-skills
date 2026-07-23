@@ -423,6 +423,7 @@ function JournalTail({ run }: { run: LiveRun }) {
 function LiveRunCard({ run }: { run: LiveRun }) {
   const { selectSkill, setStation, cancelLiveRun } = useStore();
   const running = run.status === "running";
+  const failed = run.status === "failed";
   const pct = Math.round(run.progress * 100);
   const isAudit = run.kind === "audit";
   const doneTrials = isAudit
@@ -441,7 +442,7 @@ function LiveRunCard({ run }: { run: LiveRun }) {
       : "trials judged";
 
   return (
-    <div className={`dash-card live-run-card${running ? " running" : ""}`}>
+    <div className={`dash-card live-run-card${running ? " running" : ""}${failed ? " failed" : ""}`}>
       <div className="lrc-head">
         <span className={`lrc-dot${running ? " on" : ""}`} aria-hidden />
         <span className="lrc-skill">{liveRunTitle(run)}</span>
@@ -456,6 +457,10 @@ function LiveRunCard({ run }: { run: LiveRun }) {
         </span>
         {running ? (
           <span className="lrc-status running">RUNNING</span>
+        ) : failed ? (
+          <span className="lrc-status failed" title={run.error ?? "This launch failed before recording any data."}>
+            <XCircle size={11} aria-hidden /> FAILED
+          </span>
         ) : (
           <span className="lrc-status stalled" title={`No journal events or artifact writes recently. Last activity ${relativeTime(run.last_activity_utc ?? "")}.`}>
             <AlertTriangle size={11} aria-hidden /> STALLED
@@ -495,6 +500,8 @@ function LiveRunCard({ run }: { run: LiveRun }) {
           </button>
         )}
       </div>
+
+      {failed && run.error && <div className="lrc-error">{run.error}</div>}
 
       <div className="lrc-bar-row">
         <LiveProgressBar run={run} />
@@ -1178,7 +1185,8 @@ export function LiveStation() {
   const { live } = useStore();
   const runs = live?.active ?? [];
   const runningRuns = useMemo(() => runs.filter((r) => r.status === "running"), [runs]);
-  const stalledRuns = useMemo(() => runs.filter((r) => r.status !== "running"), [runs]);
+  const failedRuns = useMemo(() => runs.filter((r) => r.status === "failed"), [runs]);
+  const stalledRuns = useMemo(() => runs.filter((r) => r.status === "stalled"), [runs]);
 
   return (
     <div className="overview dashboard-station">
@@ -1201,6 +1209,21 @@ export function LiveStation() {
       ))}
 
       {runningRuns.length === 0 && <LiveEmptyState />}
+
+      {failedRuns.length > 0 && (
+        <>
+          <div className="section-title" style={{ marginTop: "var(--sp-4)" }}>
+            Failed Launches
+          </div>
+          <div className="dash-sub" style={{ marginBottom: "var(--sp-3)" }}>
+            Studies that were launched but exited before recording any data, usually a bad flag or an unavailable
+            harness CLI. The card carries the launch log so you can see why.
+          </div>
+          {failedRuns.map((run) => (
+            <LiveRunCard key={`${run.skill}/${run.iteration}`} run={run} />
+          ))}
+        </>
+      )}
 
       <LaunchPanel />
 
