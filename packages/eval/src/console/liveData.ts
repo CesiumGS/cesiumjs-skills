@@ -261,7 +261,7 @@ function liveRun(
     trials_total: trialRows.length,
     progress: progressOf(phases),
     last_event: { event: lastEvent, step: last.step ?? null, timestamp_utc: last.timestamp_utc ?? null },
-    journal_tail: journal.slice(-12),
+    journal_tail: journal.slice(-60),
   };
 }
 
@@ -365,12 +365,18 @@ function auditTrials(journal: Array<Record<string, any>>): Array<Record<string, 
   // Journal-truth parallelism: cases the judge lane has opened but not closed.
   const inflight = new Set<string>();
   const verdicts = new Map<string, string>();
+  // Which worker currently holds each in-flight case (cleared on completion),
+  // so the live board can show "Worker 3 → camera·eval-108".
+  const workerByKey = new Map<string, number>();
   for (const event of journal) {
     const name = String(event.event ?? "");
     const key = `${event.skill ?? ""}\u0000${event.case_id ?? ""}`;
-    if (name === "judge_case_started") inflight.add(key);
-    else if (name === "judge_case_completed") {
+    if (name === "judge_case_started") {
+      inflight.add(key);
+      if (typeof event.worker_id === "number") workerByKey.set(key, event.worker_id);
+    } else if (name === "judge_case_completed") {
       inflight.delete(key);
+      workerByKey.delete(key);
       judged.add(key);
       if (typeof event.status === "string" && event.status) verdicts.set(key, event.status);
     } else if (name === "scoring_case_completed") scored.add(key);
@@ -392,6 +398,7 @@ function auditTrials(journal: Array<Record<string, any>>): Array<Record<string, 
       render_done: scored.has(key),
       judged: judged.has(key),
       inflight: inflight.has(key),
+      worker: workerByKey.get(key) ?? null,
       verdict: verdicts.get(key) ?? null,
     };
   });
@@ -414,6 +421,8 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
   const startedEvent = journal.find((e) => String(e.event) === "audit_started");
   const judge = Boolean(startedEvent?.judge ?? launchMeta.judge ?? true);
   const skills: string[] = [...(startedEvent?.skills ?? launchMeta.skills ?? [])];
+  const judgeStarted = journal.find((e) => String(e.event) === "judge_started");
+  const concurrency = Math.max(1, Number(judgeStarted?.concurrency ?? launchMeta.concurrency ?? 1) || 1);
   const phases = auditPhases(journal, judge);
   const trialRows = auditTrials(journal);
 
@@ -443,6 +452,7 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
     kind: "audit",
     launch_id: launchMeta.launch_id ?? null,
     judge,
+    concurrency,
     status,
     started_utc: startedTs?.toISOString() ?? null,
     last_activity_utc: lastActivity?.toISOString() ?? null,
@@ -456,7 +466,7 @@ function auditLiveRun(auditDir: string, maxAgeSeconds: number): Record<string, a
     trials_total: trialRows.length,
     progress: progressOf(phases),
     last_event: { event: lastEvent, step: last.step ?? null, timestamp_utc: last.timestamp_utc ?? null },
-    journal_tail: journal.slice(-12),
+    journal_tail: journal.slice(-60),
   };
 }
 

@@ -205,12 +205,17 @@ function makeJudgeCall(
   return { call, model: described.model };
 }
 
+/** Cases the visual-judge lane works at once when `--concurrency` is omitted.
+ *  A calm parallel default: fast enough to matter, gentle on harness rate
+ *  limits (each case still fans out to its own n-judge panel). */
+export const DEFAULT_JUDGE_CONCURRENCY = 4;
+
 export interface AuditOptions {
   skills?: string;
   judgeModel?: string;
   judgeVariant?: string;
   nJudges?: number;
-  /** Cases judged in parallel (1-8). Default 1: strictly sequential. */
+  /** Cases judged in parallel (1-8). Default 4; set 1 for strictly sequential. */
   concurrency?: number;
   noJudge?: boolean;
   visualReview?: string;
@@ -305,24 +310,31 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
     ).length;
   } else if (!options.noJudge) {
     const { call, model } = makeJudgeCall(ctx, judgeHarness, options.judgeModel, options.judgeVariant);
-    const concurrency = Math.max(1, Math.min(8, options.concurrency ?? 1));
+    const concurrency = Math.max(1, Math.min(8, options.concurrency ?? DEFAULT_JUDGE_CONCURRENCY));
     const items: Array<Record<string, any>> = new Array(auditCases.length);
+    const workerCount = Math.min(concurrency, auditCases.length);
     journal.emit("judge_started", {
       total: auditCases.length,
       judge_harness: judgeHarness,
       n_judges: nJudges,
       concurrency,
+      workers: workerCount,
     });
     // Worker pool: up to `concurrency` cases in flight at once. Each worker
-    // pulls the next index; items land at their case's slot so the emitted
-    // visual-review doc keeps the roster order regardless of completion order.
+    // carries a stable 1-based id so the journal and the live board can show
+    // *which* worker is judging *which* case. Items land at their case's slot
+    // so the emitted visual-review doc keeps roster order regardless of the
+    // order cases actually finish in.
     let nextIndex = 0;
     let completedCount = 0;
-    const judgeOne = async (index: number) => {
+    const judgeOne = async (workerId: number, index: number) => {
       const auditCase = auditCases[index];
+      const startedAt = Date.now();
       journal.emit("judge_case_started", {
+        worker_id: workerId,
         skill: auditCase.skill,
         case_id: auditCase.caseId,
+        roster_index: index + 1,
         total: auditCases.length,
       });
       const item = await judgeRender(caseMetaFor(auditCase), auditCase.bundleDir ?? "", {
@@ -337,22 +349,27 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
       if (item.status !== null && item.status !== undefined && item.status !== "not_reviewed") judgedCount += 1;
       completedCount += 1;
       journal.emit("judge_case_completed", {
+        worker_id: workerId,
         skill: auditCase.skill,
         case_id: auditCase.caseId,
         index: completedCount,
         total: auditCases.length,
         status: item.status ?? null,
+        duration_ms: Date.now() - startedAt,
       });
     };
-    const workers = Array.from({ length: Math.min(concurrency, auditCases.length) }, async () => {
-      while (nextIndex < auditCases.length) {
-        const index = nextIndex;
-        nextIndex += 1;
-        await judgeOne(index);
-      }
-    });
+    const workers = Array.from({ length: workerCount }, (_unused, slot) =>
+      (async () => {
+        const workerId = slot + 1;
+        while (nextIndex < auditCases.length) {
+          const index = nextIndex;
+          nextIndex += 1;
+          await judgeOne(workerId, index);
+        }
+      })(),
+    );
     await Promise.all(workers);
-    journal.emit("judge_completed", { judged_count: judgedCount, total: auditCases.length });
+    journal.emit("judge_completed", { judged_count: judgedCount, total: auditCases.length, concurrency });
     visualReview = {
       schema_version: "1.0",
       reviewer: "screenshot-visual-judge",

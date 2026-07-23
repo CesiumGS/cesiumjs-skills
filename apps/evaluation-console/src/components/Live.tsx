@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -177,7 +177,7 @@ function LaneBoard({ run, fallback }: { run: LiveRun; fallback: string | null })
     }
     return [...byGroup.entries()];
   }, [run.trials]);
-  const inflightIds = run.trials.filter((t) => t.inflight).map((t) => t.scenario_id);
+  const inflightRows = run.trials.filter((t) => t.inflight);
   const judgeRun = run.judge !== false;
   return (
     <div className="lane-board">
@@ -206,11 +206,19 @@ function LaneBoard({ run, fallback }: { run: LiveRun; fallback: string | null })
           </div>
         );
       })}
-      {inflightIds.length > 0 && (
+      {inflightRows.length > 0 && (
         <div className="lane-inflight">
           <span className="lrc-dot on" aria-hidden />
           Now Judging
-          <span className="mono">{inflightIds.join("  ·  ")}</span>
+          {inflightRows
+            .slice()
+            .sort((a, b) => (a.worker ?? 0) - (b.worker ?? 0))
+            .map((t) => (
+              <span key={t.scenario_id} className="lane-inflight-item mono">
+                {typeof t.worker === "number" && <span className="lt-worker">W{t.worker}</span>}
+                {t.scenario_id}
+              </span>
+            ))}
         </div>
       )}
       <div className="lane-legend" aria-hidden>
@@ -242,12 +250,73 @@ function LaneBoard({ run, fallback }: { run: LiveRun; fallback: string | null })
   );
 }
 
+/** One row per judge worker, showing the case it holds right now (or Idle).
+ *  This is the "which worker is doing what" view the operator asked for; it
+ *  only appears for audits whose judge lane runs more than one case at once. */
+function WorkerLanes({ run }: { run: LiveRun }) {
+  const concurrency = run.concurrency ?? 1;
+  if (run.kind !== "audit" || run.judge === false || concurrency <= 1) return null;
+  const current = new Map<number, LiveTrial>();
+  for (const t of run.trials) {
+    if (t.inflight && typeof t.worker === "number") current.set(t.worker, t);
+  }
+  const lanes = Array.from({ length: concurrency }, (_v, i) => i + 1);
+  const busy = current.size;
+  return (
+    <div className="worker-lanes">
+      <div className="worker-lanes-head">
+        <Cpu size={11} aria-hidden /> Workers
+        <span className="spacer" />
+        <span className="mono">
+          {busy}/{concurrency} busy
+        </span>
+      </div>
+      <div className="worker-lane-grid">
+        {lanes.map((id) => {
+          const t = current.get(id);
+          return (
+            <div key={id} className={`worker-lane${t ? " busy" : ""}`}>
+              <span className="wl-id mono">W{id}</span>
+              {t ? (
+                <span className="wl-case mono" title={t.scenario_id}>
+                  {t.group ? `${skillLabel(t.group)} \u00b7 ` : ""}
+                  {t.case_id ?? t.scenario_id}
+                </span>
+              ) : (
+                <span className="wl-idle">Idle</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** "cesiumjs-camera" + "eval-108" → "camera·eval-108" for journal prose. */
 function journalCaseRef(e: Record<string, unknown>): string {
   const skill = String(e.skill ?? "").replace(/^cesiumjs-/, "");
   const caseId = String(e.case_id ?? "");
   if (skill && caseId) return `${skill}\u00b7${caseId}`;
   return caseId || skill;
+}
+
+/** "W3 " when the event carries a worker id, else "" — so the journal can say
+ *  exactly which worker is doing what. */
+function workerTag(e: Record<string, unknown>): string {
+  const w = e.worker_id;
+  return typeof w === "number" && w > 0 ? `W${w} ` : "";
+}
+
+/** Compact human duration from a millisecond count: "820ms", "2.1s", "1m 4s". */
+function durationText(ms: unknown): string {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  if (n < 1000) return `${Math.round(n)}ms`;
+  if (n < 60_000) return `${(n / 1000).toFixed(1)}s`;
+  const m = Math.floor(n / 60_000);
+  const s = Math.round((n % 60_000) / 1000);
+  return `${m}m ${s}s`;
 }
 
 type JournalTone = "plain" | "eye" | "machine" | "pass" | "fail";
@@ -270,16 +339,17 @@ function describeJournalEvent(e: Record<string, unknown>): { text: string; tone:
     case "judge_started": {
       const par = Number(e.concurrency ?? 1);
       return {
-        text: `Visual Judge opened — ${pluralize(Number(e.total ?? 0), "case")}, ${e.n_judges}-judge panel${par > 1 ? `, ${par} in parallel` : ""}`,
+        text: `Visual Judge opened — ${pluralize(Number(e.total ?? 0), "case")}, ${e.n_judges}-judge panel${par > 1 ? ` · ${par} workers in parallel` : ""}`,
         tone: "eye"
       };
     }
     case "judge_case_started":
-      return { text: `Judging ${journalCaseRef(e)}…`, tone: "eye" };
+      return { text: `${workerTag(e)}judging ${journalCaseRef(e)}…`, tone: "eye" };
     case "judge_case_completed": {
       const status = typeof e.status === "string" && e.status ? titleCase(e.status) : "Done";
+      const dur = durationText(e.duration_ms);
       return {
-        text: `${journalCaseRef(e)} judged — ${status} (${e.index}/${e.total})`,
+        text: `${workerTag(e)}${journalCaseRef(e)} judged — ${status} (${e.index}/${e.total})${dur ? ` · ${dur}` : ""}`,
         tone: e.status === "fail" ? "fail" : "eye"
       };
     }
@@ -318,9 +388,19 @@ function describeJournalEvent(e: Record<string, unknown>): { text: string; tone:
 }
 
 function JournalTail({ run }: { run: LiveRun }) {
-  const tail = run.journal_tail.slice(-9);
+  const tail = run.journal_tail.slice(-14);
+  // Live tail: pin to the newest line as events stream in (only when already
+  // near the bottom, so an operator scrolling back to read isn't yanked away).
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const lastEventKey = String(run.last_event?.timestamp_utc ?? "") + String(run.last_event?.event ?? "");
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    if (nearBottom) el.scrollTop = el.scrollHeight;
+  }, [lastEventKey, tail.length]);
   return (
-    <div className="lp-journal">
+    <div className="lp-journal" ref={scrollRef}>
       {tail.map((e, i) => {
         const described = describeJournalEvent(e);
         return (
@@ -446,8 +526,14 @@ function LiveRunCard({ run }: { run: LiveRun }) {
               const groupCount = new Set(run.trials.map((t) => t.group ?? "")).size;
               return isAudit && groupCount > 1 ? ` · ${groupCount} Skills` : "";
             })()}
+            {isAudit && (run.concurrency ?? 1) > 1 ? (
+              <span className="lrc-concurrency mono" title={`Judge lane runs ${run.concurrency} cases in parallel`}>
+                {run.concurrency}× parallel
+              </span>
+            ) : null}
           </div>
           <TrialBoard run={run} />
+          <WorkerLanes run={run} />
         </div>
         <div>
           <div className="lrc-col-head">

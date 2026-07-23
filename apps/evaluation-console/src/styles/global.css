@@ -3998,6 +3998,108 @@ button.verb-btn:disabled {
 .lane-legend i.lane-cell.inflight {
   animation: none;
 }
+/* Worker attribution on the "Now Judging" strip: a small W-badge per case. */
+.lane-inflight-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-2);
+}
+.lt-worker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: var(--r-1);
+  background: var(--live-bg);
+  border: 1px solid color-mix(in srgb, var(--live) 45%, transparent);
+  color: var(--live);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+/* ---- worker lanes: one row per judge worker, the case it holds right now ----
+   The "which worker is doing what" board, shown only for parallel audits. */
+.worker-lanes {
+  margin-top: var(--sp-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  padding: var(--sp-2) var(--sp-3);
+}
+.worker-lanes-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-50);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: var(--sp-2);
+}
+.worker-lanes-head .mono {
+  color: var(--text-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.worker-lane-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-2);
+}
+.worker-lane {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: var(--r-1);
+  background: var(--surface-3);
+  border: 1px solid var(--hairline);
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.worker-lane.busy {
+  background: var(--live-bg);
+  border-color: color-mix(in srgb, var(--live) 45%, transparent);
+}
+.wl-id {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.worker-lane.busy .wl-id {
+  color: var(--live);
+}
+.wl-case {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-50);
+  color: var(--text-1);
+}
+.wl-idle {
+  font-size: var(--fs-50);
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* Concurrency chip on the Cases column head. */
+.lrc-concurrency {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--live-bg);
+  border: 1px solid color-mix(in srgb, var(--live) 40%, transparent);
+  color: var(--live);
+  font-size: 10px;
+  font-weight: 600;
+}
 
 /* ---- journal tail ---- */
 .lp-journal {

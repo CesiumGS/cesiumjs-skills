@@ -430,6 +430,8 @@ export interface LiveTrial {
   group?: string;
   case_id?: string;
   inflight?: boolean;
+  /** 1-based id of the judge worker currently holding this case (in-flight only). */
+  worker?: number | null;
   verdict?: string | null;
 }
 
@@ -443,6 +445,8 @@ export interface LiveRun {
   launch_id?: string | null;
   // Audit runs: whether the visual-judge lane is part of this run.
   judge?: boolean;
+  /** Audit runs: how many cases the judge lane works at once (worker count). */
+  concurrency?: number | null;
   status: LiveRunStatus;
   started_utc: string | null;
   last_activity_utc: string | null;
