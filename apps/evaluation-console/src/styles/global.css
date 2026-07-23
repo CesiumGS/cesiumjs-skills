@@ -286,25 +286,25 @@ button {
   animation: pulse var(--pulse) var(--ease) infinite;
 }
 
-/* The Review → Optimize handoff: the one rail control that acts, not navigates.
-   It borrows the row's geometry and accent bar so it belongs to the rail, and
-   stays nearly invisible until flags exist — the tint IS the call to action. */
+/* The Review → Optimize handoff is an action, not a destination. Keep it inset
+   and outlined so it cannot be mistaken for the full-width selected nav row. */
 .rail-handoff {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  width: 100%;
-  margin-top: 2px;
-  padding: 7px var(--sp-2) 7px 30px; /* label aligns with .nav-label */
-  border: 0;
+  width: calc(100% - 16px);
+  margin: 5px 8px 4px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid transparent;
   border-radius: var(--r-2);
   background: transparent;
   color: var(--text-3);
   font-size: var(--fs-100);
   text-align: left;
   position: relative;
-  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
-    box-shadow var(--dur-1) var(--ease);
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
 }
 .rail-handoff:disabled {
   cursor: default;
@@ -318,45 +318,42 @@ button {
 }
 .rail-handoff .rh-go {
   flex: none;
+  width: 21px;
+  height: 21px;
+  padding: 4px;
+  border-radius: 50%;
   opacity: 0.4;
-  transition: transform var(--dur-1) var(--ease), opacity var(--dur-1) var(--ease);
+  transition: background var(--dur-1) var(--ease), transform var(--dur-1) var(--ease),
+    opacity var(--dur-1) var(--ease);
 }
 /* Armed: confirmed flags or the suggested fallback are ready to hand off. */
 .rail-handoff.ready {
   color: var(--text);
   background: linear-gradient(
-    100deg,
-    color-mix(in srgb, var(--brand-blue) 19%, transparent),
-    color-mix(in srgb, var(--brand-green) 11%, transparent) 68%,
-    transparent
+    120deg,
+    color-mix(in srgb, var(--brand-blue) 8%, var(--surface)),
+    color-mix(in srgb, var(--brand-green) 6%, var(--surface))
   );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-blue) 24%, transparent);
-}
-.rail-handoff.ready::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  border-radius: var(--r-pill);
-  background: linear-gradient(180deg, var(--brand-blue), var(--brand-green));
+  border-color: color-mix(in srgb, var(--brand-blue) 48%, var(--brand-green));
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--canvas) 30%, transparent);
 }
 .rail-handoff.ready .rh-go {
-  opacity: 0.85;
+  color: var(--canvas);
+  background: var(--brand-grad);
+  opacity: 1;
 }
 .rail-handoff.ready:hover {
   background: linear-gradient(
-    100deg,
-    color-mix(in srgb, var(--brand-blue) 28%, transparent),
-    color-mix(in srgb, var(--brand-green) 17%, transparent) 68%,
-    transparent
+    120deg,
+    color-mix(in srgb, var(--brand-blue) 14%, var(--surface)),
+    color-mix(in srgb, var(--brand-green) 10%, var(--surface))
   );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-blue) 42%, transparent);
+  border-color: color-mix(in srgb, var(--brand-blue) 70%, var(--brand-green));
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--canvas) 38%, transparent);
+  transform: translateY(-1px);
 }
 .rail-handoff.ready:hover .rh-go {
-  opacity: 1;
-  transform: translateX(2px);
+  transform: translateX(1px);
 }
 
 /* Freshness accent: marks the newest optimization round. Base .fresh-chip
