@@ -273,7 +273,8 @@ button {
   padding: 0 2px;
   min-width: 0;
   font-weight: var(--fw-semibold);
-  color: var(--ink-human);
+  color: var(--brand-blue);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--brand-green) 38%, transparent));
 }
 .nav-badge.live {
   background: none;
@@ -320,16 +321,16 @@ button {
   opacity: 0.4;
   transition: transform var(--dur-1) var(--ease), opacity var(--dur-1) var(--ease);
 }
-/* Armed: confirmed flags are ready to hand off. */
+/* Armed: confirmed flags or the suggested fallback are ready to hand off. */
 .rail-handoff.ready {
-  color: var(--ink-human);
+  color: var(--text);
   background: linear-gradient(
     100deg,
-    color-mix(in srgb, var(--ink-human) 20%, transparent),
-    color-mix(in srgb, var(--ink-human) 7%, transparent) 62%,
+    color-mix(in srgb, var(--brand-blue) 19%, transparent),
+    color-mix(in srgb, var(--brand-green) 11%, transparent) 68%,
     transparent
   );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink-human) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-blue) 24%, transparent);
 }
 .rail-handoff.ready::before {
   content: "";
@@ -339,7 +340,7 @@ button {
   bottom: 6px;
   width: 2px;
   border-radius: var(--r-pill);
-  background: var(--ink-human);
+  background: linear-gradient(180deg, var(--brand-blue), var(--brand-green));
 }
 .rail-handoff.ready .rh-go {
   opacity: 0.85;
@@ -347,11 +348,11 @@ button {
 .rail-handoff.ready:hover {
   background: linear-gradient(
     100deg,
-    color-mix(in srgb, var(--ink-human) 30%, transparent),
-    color-mix(in srgb, var(--ink-human) 11%, transparent) 62%,
+    color-mix(in srgb, var(--brand-blue) 28%, transparent),
+    color-mix(in srgb, var(--brand-green) 17%, transparent) 68%,
     transparent
   );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink-human) 34%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-blue) 42%, transparent);
 }
 .rail-handoff.ready:hover .rh-go {
   opacity: 1;
@@ -2060,8 +2061,12 @@ button.verb-btn:disabled {
 
 /* Handoff panel: the seeded loop command, kept until dismissed (N6). */
 .handoff-panel {
-  border: 1px solid var(--ink-human);
-  background: var(--ink-human-bg);
+  border: 1px solid color-mix(in srgb, var(--brand-blue) 58%, var(--brand-green));
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--brand-blue) 13%, var(--surface)),
+    color-mix(in srgb, var(--brand-green) 9%, var(--surface))
+  );
   border-radius: var(--r-2);
   padding: var(--sp-3) var(--sp-4);
   margin-bottom: var(--sp-3);
@@ -3509,11 +3514,24 @@ button.verb-btn:disabled {
   color: var(--text-2);
 }
 .hero-card .review-cta.hot {
-  color: var(--ink-human);
-  border-color: color-mix(in srgb, var(--ink-human) 45%, transparent);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--brand-blue) 62%, var(--brand-green));
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--brand-blue) 18%, transparent),
+    color-mix(in srgb, var(--brand-green) 14%, transparent)
+  );
 }
 .hero-card .review-cta:hover {
   background: var(--surface-2);
+}
+.hero-card .review-cta.hot:hover {
+  border-color: color-mix(in srgb, var(--brand-blue) 78%, var(--brand-green));
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--brand-blue) 27%, transparent),
+    color-mix(in srgb, var(--brand-green) 21%, transparent)
+  );
 }
 
 /* Distribution bar reads as part of the hero */

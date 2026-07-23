@@ -129,9 +129,10 @@ required, and the terminal event tells you whether to collect the scorecard.
 
 ## The optimization bridge
 
-`f` (flag) in Review appends a case to the focus set. **Focus** in the rail hands it
-off, and the server writes `focus.json` via `buildFocus`, restricted to the
-human-confirmed flags, so review genuinely steers the loop:
+`f` (flag) in Review appends a case to the focus set. **Optimize** in the rail
+hands it off, and the server writes `focus.json` via `buildFocus`. Human-confirmed
+flags take precedence; when none exist, the rail can explicitly hand off the
+machine-suggested flags as a reviewable starting set:
 
 ```bash
 node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --skills <auto>
@@ -149,5 +150,5 @@ node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --s
 | File | Purpose |
 |---|---|
 | `review-decisions.json` | Audit trail of grades + human overrides. |
-| `focus.json` | Confirmed-flag focus set for `cesium-eval optimize all --from-focus`. |
+| `focus.json` | Confirmed-flag or explicit suggested-fallback focus set for `cesium-eval optimize all --from-focus`. |
 | `optimization-handoff.json` | Human-readable hand-off summary. |

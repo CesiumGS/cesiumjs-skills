@@ -328,6 +328,7 @@ function ScenarioBoard() {
 
 export function OptimizeStage() {
   const { selectedSkill, selectedSkillData, confirmedFlagKeys, lastHandoff, dismissHandoff, pushToast } = useStore();
+  const handoffSource = lastHandoff?.selectionMode === "confirmed_flags" ? "confirmed" : "suggested";
 
   /* The server generates the exact seeded CLI command on every handoff — the
      bridge from Review flags to a running loop is this panel, not recall. */
@@ -335,7 +336,7 @@ export function OptimizeStage() {
     <div className="handoff-panel" role="region" aria-label="Optimizer handoff">
       <div className="handoff-head">
         <span>
-          ⚑ {lastHandoff.count} confirmed {lastHandoff.count === 1 ? "flag" : "flags"} handed off →{" "}
+          {lastHandoff.count} {handoffSource} {lastHandoff.count === 1 ? "flag" : "flags"} handed off →{" "}
           <span className="mono">{lastHandoff.focus_path.split("/").slice(-2).join("/")}</span>
         </span>
         <span className="spacer" />

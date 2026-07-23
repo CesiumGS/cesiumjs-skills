@@ -49,6 +49,7 @@ import type {
   RunSummary,
   ReviewDecisionDoc,
   SkillOverview,
+  SelectionMode,
   Source,
   Station
 } from "./types";
@@ -112,10 +113,10 @@ export interface Store {
   /** Human-confirmed flags only (decision === "flag" && source === "human"). */
   confirmedFlagKeys: string[];
   confirmedFlagSkills: string[];
-  /** Machine-suggested flags awaiting human confirmation (source === "auto"). */
+  /** Machine-suggested flags available as a fallback optimization focus (source === "auto"). */
   suggestedFlagCount: number;
   /** Last successful handoff to the optimizer (command + paths), until dismissed. */
-  lastHandoff: (HandoffResult & { at: string; count: number }) | null;
+  lastHandoff: (HandoffResult & { at: string; count: number; selectionMode: SelectionMode }) | null;
   dismissHandoff: () => void;
 
   // optimize / decide
@@ -441,8 +442,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [caseViews]);
 
   const needsYouCount = useMemo(() => caseViews.filter(needsYou).length, [caseViews]);
-  // "Confirmed" means a human said so — machine auto-grades are suggestions,
-  // and only confirmed flags may seed the optimizer (finding: error prevention).
+  // "Confirmed" means a human said so. The handoff prefers these curated flags
+  // and falls back to machine suggestions only when no confirmed focus exists.
   const confirmedFlagKeys = useMemo(
     () => caseViews.filter((v) => v.decision === "flag" && v.source === "human").map((v) => v.key),
     [caseViews]
@@ -800,24 +801,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const dismissHandoff = useCallback(() => setLastHandoff(null), []);
 
   const doExport = useCallback(async () => {
-    // Only human-confirmed flags seed the optimizer; machine suggestions must
-    // be confirmed in Review first (press e / the Confirm button).
-    const flags = caseViews.filter((v) => v.decision === "flag" && v.source === "human");
+    // Prefer the human-curated focus when it exists. Otherwise, let the user
+    // hand off the machine suggestions as an explicit, reviewable starting set.
+    const confirmedFlags = caseViews.filter((v) => v.decision === "flag" && v.source === "human");
+    const suggestedFlags = caseViews.filter((v) => v.decision === "flag" && v.source !== "human");
+    const flags = confirmedFlags.length ? confirmedFlags : suggestedFlags;
+    const selectionMode: SelectionMode = confirmedFlags.length ? "confirmed_flags" : "confirmed_and_suggested";
     if (!flags.length) {
-      pushToast("No confirmed flags to hand off. Confirm suggested flags in Review first.", "bad");
+      pushToast("No flagged cases to hand off yet.", "bad");
       return;
     }
     try {
       const keys = flags.map((v) => v.key);
       const sk = [...new Set(flags.map((v) => v.skill))].sort();
-      const res = await exportHandoff(keys, sk, "confirmed_flags");
-      setLastHandoff({ ...res, at: nowIso(), count: keys.length });
-      pushToast(`Handed off ${keys.length} cases → ${res.focus_path.split("/").slice(-2).join("/")}. Run command shown in Optimize.`, "good");
-      setLiveMessage(`${keys.length} confirmed flags handed off to the optimizer across ${sk.length} skills.`);
+      const res = await exportHandoff(keys, sk, selectionMode);
+      const sourceLabel = selectionMode === "confirmed_flags" ? "confirmed" : "suggested";
+      setLastHandoff({ ...res, at: nowIso(), count: keys.length, selectionMode });
+      pushToast(
+        `Handed off ${keys.length} ${sourceLabel} cases → ${res.focus_path.split("/").slice(-2).join("/")}.`,
+        "good"
+      );
+      setLiveMessage(`${keys.length} ${sourceLabel} flags handed off to the optimizer across ${sk.length} skills.`);
+      setStation("optimize");
     } catch (err) {
       pushToast(`Hand-off failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
     }
-  }, [caseViews, pushToast]);
+  }, [caseViews, pushToast, setStation]);
 
   // ---------- launching runs ----------
   // POST the validated request; the server spawns the detached audit process

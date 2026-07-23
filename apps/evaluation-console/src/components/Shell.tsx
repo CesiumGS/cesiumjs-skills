@@ -345,27 +345,27 @@ export function Rail() {
       )}
       {overlayRow("harness", "Run Browser", "Browse every run on disk; switch the focused run or set the comparison baseline.", "h")}
 
-      {/* ── Evaluate: judge the focused run (steps 1–2), then hand your
-            confirmed flags across to the optimizer. ── */}
+      {/* ── Evaluate: judge the focused run (steps 1–2), then hand the
+            confirmed focus—or suggested fallback—across to the optimizer. ── */}
       <div className="rail-section">Evaluate</div>
       {JUDGE_STEPS.map(step)}
       <button
-        className={`rail-handoff${flagged ? " ready" : ""}`}
+        className={`rail-handoff${flagged || suggestedFlagCount ? " ready" : ""}`}
         onClick={doExport}
-        disabled={!flagged}
+        disabled={!flagged && !suggestedFlagCount}
         title={
           flagged
-            ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set. The optimizer only chases human-confirmed flags.`
+            ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set and open Optimize.`
             : suggestedFlagCount
-              ? `${pluralize(suggestedFlagCount, "machine-suggested flag")} await your confirmation. Confirm each in Review (e) before handing off.`
-              : "Flag failing cases in Review first; the optimizer only chases what you confirm."
+              ? `Use ${pluralize(suggestedFlagCount, "machine-suggested flag")} as the focus set and open Optimize.`
+              : "Flag failing cases in Review to create an optimization focus set."
         }
       >
         <span className="rh-label">
           {flagged
-            ? `Send ${pluralize(flagged, "flag")} to Optimize`
+            ? `Optimize ${flagged} confirmed`
             : suggestedFlagCount
-              ? `Confirm ${suggestedFlagCount} suggested`
+              ? `Optimize ${suggestedFlagCount} suggested`
               : "Nothing flagged yet"}
         </span>
         <ArrowRight size={13} aria-hidden className="rh-go" />
