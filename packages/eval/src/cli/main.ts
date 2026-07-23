@@ -99,6 +99,7 @@ program
   .option("--judge-model <id>", "judge model id (default: config/discovery)")
   .option("--judge-variant <id>", "judge reasoning effort / variant (default: config/harness default)")
   .option("--n-judges <n>", "panel size", parseIntArg)
+  .option("--concurrency <n>", "cases judged in parallel, 1-8 (default 1)", parseIntArg)
   .option("--no-judge", "skip the qualitative lane entirely")
   .option("--visual-review <path>", "pre-judged visual-review JSON to inject")
   .option("--emit-cases <path>", "write the audit work list and exit")
