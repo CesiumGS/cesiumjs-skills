@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ArrowRight, Flag } from "lucide-react";
 import { useStore } from "../store";
 import { modelShort, pluralize, relativeTime } from "../lib/format";
+import { healthFromSummary, healthPct } from "../lib/grade";
 import { HarnessChip, Kpi, RunTrend } from "./Compare";
 import { LiveNowBanner } from "./Live";
 import type { RunSummary } from "../types";
@@ -63,7 +64,9 @@ function RecentRuns() {
         {recent.map((r) => {
           const focused = scorecard?.runId === r.run_id;
           const pass = r.overall_result === "pass";
-          const scorePct = typeof r.overall_score === "number" ? `${Math.round(r.overall_score * 100)}%` : "—";
+          const health = healthFromSummary(r);
+          const aggPct = health.aggregate !== null ? healthPct(health.aggregate, pass) : null;
+          const scorePct = aggPct !== null ? `${aggPct}%` : "—";
           return (
             <li key={r.run_id}>
               <button
@@ -72,11 +75,20 @@ function RecentRuns() {
                 title={`${r.run_id}\nClick to focus this run in every station.`}
               >
                 <span className={`rr-verdict ${pass ? "pass" : "fail"}`}>{pass ? "PASS" : "FAIL"}</span>
-                <span className="rr-score mono">{scorePct}</span>
+                <span
+                  className="rr-score mono"
+                  title={
+                    health.hasVisual
+                      ? "Overall health: automated checks and visual review combined equally."
+                      : "Overall health: automated checks only (no visual review)."
+                  }
+                >
+                  {scorePct}
+                </span>
                 <span className="rr-bar" aria-hidden>
                   <span
                     className={`rr-fill ${pass ? "pass" : "fail"}`}
-                    style={{ width: `${Math.round((r.overall_score ?? 0) * 100)}%` }}
+                    style={{ width: `${aggPct ?? 0}%` }}
                   />
                 </span>
                 <HarnessChip harness={runSourceChip(r)} />

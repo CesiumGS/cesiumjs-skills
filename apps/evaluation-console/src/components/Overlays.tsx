@@ -5,6 +5,7 @@ import { artifactUrl } from "../api";
 import type { CaseView, IterationSummary, RunSummary, SkillOverview, Station } from "../types";
 import { LoopBadge, Pct } from "./primitives";
 import { harnessLabel } from "../lib/format";
+import { healthFromSummary, healthPct } from "../lib/grade";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
 /* ============================================================================
@@ -528,6 +529,9 @@ function HarnessOverlay() {
           list.map((r, i) => {
             const loaded = scorecard?.runId === r.run_id;
             const isBaseline = baselineRunId === r.run_id;
+            const pass = r.overall_result === "pass";
+            const health = healthFromSummary(r);
+            const aggPct = health.aggregate !== null ? healthPct(health.aggregate, pass) : null;
             return (
               <div
                 key={r.run_id}
@@ -553,8 +557,18 @@ function HarnessOverlay() {
                   </span>
                 )}
                 <span className={`hr-result ${r.overall_result === "pass" ? "ok" : "bad"}`}>{r.overall_result || "—"}</span>
-                {typeof r.overall_score === "number" && (
-                  <span className="mono" style={{ color: "var(--ink-machine)" }}>{Math.round(r.overall_score * 100)}%</span>
+                {aggPct !== null && (
+                  <span
+                    className="mono"
+                    style={{ color: "var(--ink-machine)" }}
+                    title={
+                      health.hasVisual
+                        ? "Overall health: automated checks and visual review combined equally."
+                        : "Overall health: automated checks only (no visual review)."
+                    }
+                  >
+                    {aggPct}%
+                  </span>
                 )}
                 <span
                   className="mono"

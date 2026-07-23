@@ -73,7 +73,7 @@ function ScoreVsThreshold({ score, threshold }: { score: number; threshold: numb
   const tPct = Math.round(threshold * 100);
   const ok = score >= threshold;
   return (
-    <div className="score-thresh" title={`Overall ${pct}% vs threshold ${tPct}%`}>
+    <div className="score-thresh" title={`Deterministic checks ${pct}% vs pass threshold ${tPct}%`}>
       <div className="st-track">
         <span className={`st-fill${ok ? "" : " under"}`} style={{ width: `${pct}%` }} />
         <span className="st-notch" style={{ left: `${tPct}%` }} title={`Threshold ${tPct}%`} />

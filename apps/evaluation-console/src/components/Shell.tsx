@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { Command, HelpCircle, Moon, Sun, Grid3x3, Send, Layers, Cpu, Bot, LayoutDashboard, Rocket, ChevronDown, Eye, EyeOff, TrendingUp, RotateCcw } from "lucide-react";
 import { useStore } from "../store";
-import type { Station } from "../types";
+import type { Station, AdaptedScorecard } from "../types";
+import type { RunHealth } from "../lib/grade";
 import { harnessLabel, pluralize, relativeTime } from "../lib/format";
+import { healthFromScorecard, healthPct } from "../lib/grade";
 import { liveRunTitle } from "./Live";
 
 /* The five lifecycle steps every focused run travels. Each carries a one-line
@@ -79,6 +81,30 @@ function sourceLabel(source: string | undefined, harness: string | undefined): {
   };
 }
 
+/* The header pill's score decomposed. The pill shows one aggregate number so it
+   can never contradict the verdict (the old "FAIL · Checks 100%"); this tooltip
+   spells out how that number is built and, on a fail, which gate failed. */
+function runScoreTooltip(sc: AdaptedScorecard, h: RunHealth, pass: boolean): string {
+  if (h.aggregate === null) return "No score recorded for this run.";
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const verdict = pass ? "PASS" : "FAIL";
+  const head = `${verdict} · overall health ${healthPct(h.aggregate, pass)}%`;
+  if (h.hasVisual && h.vis !== null && h.det !== null) {
+    const why = pass
+      ? "both gates passed"
+      : sc.deterministicResult === "fail"
+        ? "the automated checks fell below the pass threshold"
+        : "the visual review gate did not pass";
+    return (
+      `${head}\n` +
+      `Both gates weigh equally: automated checks ${pct(h.det)} and visual review ${pct(h.vis)} ` +
+      `(${h.passCount} of ${h.reviewedCount} judged cases passed).\n` +
+      `The run ${pass ? "passes" : "fails"} because ${why}.`
+    );
+  }
+  return `${head}\nAutomated checks only — no visual review was supplied for this run.`;
+}
+
 export function TopStrip() {
   const {
     scorecard,
@@ -96,8 +122,9 @@ export function TopStrip() {
   const judged = scorecard ? scorecard.visualReviewSupplied : null;
   const src = sourceLabel(config?.source, scorecard?.harness ?? config?.harness);
   const pass = scorecard?.overallResult === "pass";
-  const scorePct =
-    typeof scorecard?.overallScore === "number" ? `${Math.round(scorecard.overallScore * 100)}%` : null;
+  const health = scorecard ? healthFromScorecard(scorecard) : null;
+  const aggPct = health && health.aggregate !== null ? healthPct(health.aggregate, pass) : null;
+  const scoreTooltip = scorecard && health ? runScoreTooltip(scorecard, health, pass) : "";
   return (
     <header className="topstrip" role="banner">
       <div className="brand">
@@ -122,12 +149,9 @@ export function TopStrip() {
           <span className="mono rs-id">
             {runShortLabel(scorecard?.runId ?? config?.run_id, scorecard?.timestampUtc, scorecard?.gitCommit)}
           </span>
-          {scorePct && (
-            <span
-              className={`rs-score mono ${pass ? "pass" : "fail"}`}
-              title="Overall verdict combines automated checks and the visual review; the percentage is the automated-check score."
-            >
-              {pass ? "PASS" : "FAIL"} · Checks {scorePct}
+          {aggPct !== null && (
+            <span className={`rs-score mono ${pass ? "pass" : "fail"}`} title={scoreTooltip}>
+              {pass ? "PASS" : "FAIL"} · {aggPct}%
             </span>
           )}
           <ChevronDown size={12} aria-hidden className="rs-chev" />

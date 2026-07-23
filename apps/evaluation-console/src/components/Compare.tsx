@@ -628,7 +628,7 @@ export function RunTrend() {
     <div className="dash-card">
       <div className="section-title">
         Run Score Trend
-        <span className="section-sub">▣ Overall score per run (y) across runs (x). Dot color is the run result.</span>
+        <span className="section-sub">▣ Deterministic checks score per run (y) across runs (x). Dot color is the run result.</span>
         <span className="spacer" />
         <div className="axis-toggle" role="tablist" aria-label="X axis">
           <button
@@ -673,8 +673,8 @@ export function RunTrend() {
                   type="button"
                   className={`chart-pt ${r.overall_result === "pass" ? "pass" : "fail"}${loaded ? " loaded" : ""}`}
                   style={{ left: `${X(r, i)}%`, top: `${Y(r.overall_score as number)}%` }}
-                  title={`${r.run_id}\n${pct}% · ${r.overall_result} · ${r.total_cases} cases\n${r.timestamp_utc.slice(0, 16).replace("T", " ")} UTC · ${r.git_commit.slice(0, 7)}\nClick to focus this run.`}
-                  aria-label={`${r.run_id}: ${pct}% ${r.overall_result}. Click to focus this run.`}
+                  title={`${r.run_id}\nchecks ${pct}% · ${r.overall_result} · ${r.total_cases} cases\n${r.timestamp_utc.slice(0, 16).replace("T", " ")} UTC · ${r.git_commit.slice(0, 7)}\nClick to focus this run.`}
+                  aria-label={`${r.run_id}: checks ${pct}%, run ${r.overall_result}. Click to focus this run.`}
                   onClick={() => void switchRun(r.run_id)}
                 />
               );

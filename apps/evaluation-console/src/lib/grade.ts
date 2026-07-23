@@ -1,4 +1,87 @@
-import type { AdaptedCase, CaseView, Decision, FilterKind } from "../types";
+import type { AdaptedCase, AdaptedScorecard, CaseView, Decision, FilterKind, RunSummary } from "../types";
+
+// ---------------------------------------------------------------------------
+// Run health: one aggregate score that combines the two gates the verdict is
+// built from — deterministic checks AND visual review.
+//
+// The verdict (overall_result) fails if EITHER gate fails, but the raw
+// `overall_score` reflects only the deterministic checks. That let a run read
+// "FAIL · 100%" when every check passed but the visual gate failed — the
+// number contradicting the verdict. `runHealth` folds both gates into a single
+// number so the score always agrees with the verdict.
+// ---------------------------------------------------------------------------
+
+export interface RunHealth {
+  det: number | null;       // deterministic check score, 0-1 (null when unknown)
+  vis: number | null;       // visual review score, 0-1 (null when no visual verdict)
+  aggregate: number | null; // combined health, 0-1 (null when det unknown)
+  hasVisual: boolean;       // true when visual review contributes to the aggregate
+  passCount: number;        // visual passes
+  reviewedCount: number;    // cases carrying a visual verdict (pass + fail + needs_review)
+}
+
+interface HealthInput {
+  det: number | null;
+  visualSupplied: boolean;
+  passCount: number;
+  failCount: number;
+  needsCount: number;
+}
+
+function clamp01(n: number): number {
+  return n < 0 ? 0 : n > 1 ? 1 : n;
+}
+
+function computeHealth(i: HealthInput): RunHealth {
+  const det = typeof i.det === "number" && Number.isFinite(i.det) ? clamp01(i.det) : null;
+  const reviewedCount = i.passCount + i.failCount + i.needsCount;
+  // needs_review counts against the visual score (denominator, not numerator):
+  // an unresolved case is not a pass, so it must keep the aggregate below 100%.
+  const vis = i.visualSupplied && reviewedCount > 0 ? i.passCount / reviewedCount : null;
+  const hasVisual = vis !== null;
+  // Both gates must hold for the run to pass, so they weigh equally. In Mode B
+  // (no visual review) there is only one gate, so the aggregate is just it.
+  const aggregate = det === null ? null : hasVisual ? (det + (vis as number)) / 2 : det;
+  return { det, vis, aggregate, hasVisual, passCount: i.passCount, reviewedCount };
+}
+
+// Full scorecard: derive the visual verdict counts from the adapted cases.
+export function healthFromScorecard(sc: AdaptedScorecard): RunHealth {
+  let passCount = 0;
+  let failCount = 0;
+  let needsCount = 0;
+  for (const c of sc.cases) {
+    if (c.visualStatus === "pass") passCount += 1;
+    else if (c.visualStatus === "fail") failCount += 1;
+    else if (c.visualStatus === "needs_review") needsCount += 1;
+  }
+  return computeHealth({
+    det: typeof sc.overallScore === "number" ? sc.overallScore : null,
+    visualSupplied: sc.visualReviewSupplied,
+    passCount,
+    failCount,
+    needsCount
+  });
+}
+
+// Lightweight run row from the list endpoint: the visual counts are pre-summed.
+export function healthFromSummary(r: RunSummary): RunHealth {
+  return computeHealth({
+    det: typeof r.overall_score === "number" ? r.overall_score : null,
+    visualSupplied: r.visual_review_supplied,
+    passCount: r.pass_count,
+    failCount: r.fail_count,
+    needsCount: r.needs_review_count
+  });
+}
+
+// A health fraction (0-1) as a display percentage. A failing run must never
+// read as 100% — that "FAIL · 100%" contradiction is the whole point — so a
+// fail is floored and capped at 99%. A pass rounds normally.
+export function healthPct(fraction: number, pass: boolean): number {
+  const raw = fraction * 100;
+  return pass ? Math.round(raw) : Math.min(99, Math.floor(raw));
+}
 
 // Auto-grade rule (DESIGN-SPEC §0.2 / Appendix A).
 export function autoGrade(c: AdaptedCase): Decision {
