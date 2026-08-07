@@ -22,6 +22,9 @@ jobs:
   sync:
     # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner labels).
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    # Without this the job inherits the 360-minute default, so a hung git push
+    # against the wiki remote would occupy a runner for six hours.
+    timeout-minutes: 10
 
     steps:
       - name: Check out source repo

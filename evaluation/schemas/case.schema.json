@@ -3,7 +3,14 @@
   "title": "EvaluationCase",
   "description": "A deterministic evaluation case. Pure evaluation only - never references a candidate skill or any optimization-loop concept.",
   "type": "object",
-  "required": ["id", "name", "skill", "schema_version", "prompt", "checks"],
+  "required": [
+    "id",
+    "name",
+    "skill",
+    "schema_version",
+    "prompt",
+    "checks"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -41,7 +48,8 @@
         "time_behavior",
         "source_contract",
         "artifact_hygiene",
-        "public_reproducibility"
+        "public_reproducibility",
+        "entity_state"
       ],
       "description": "Primary scorecard category for this case."
     },
@@ -90,12 +98,16 @@
           "description": "Optional provenance path for imported baseline-observed evidence."
         }
       },
-      "required": ["capture"]
+      "required": [
+        "capture"
+      ]
     },
     "checks": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "check.schema.json" },
+      "items": {
+        "$ref": "check.schema.json"
+      },
       "description": "Deterministic assertions. All must pass for the case to pass."
     },
     "timeout_ms": {

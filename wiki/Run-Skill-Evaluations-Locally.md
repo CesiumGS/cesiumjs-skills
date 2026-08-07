@@ -38,16 +38,30 @@ export AGENT_HARNESS="opencode"  # or "codex", or "copilot"
 
 ## Validate Public Artifacts
 
-Run these checks before proposing changes to eval scenarios, architecture docs, wiki pages, or public summaries:
+Run the blocking CI checks before proposing changes to eval scenarios,
+architecture docs, wiki pages, or public summaries:
 
 ```bash
-node packages/eval/bin/cesium-eval.js validate --suite optimization
-node packages/eval/bin/cesium-eval.js check canonical-surface
-node packages/eval/bin/cesium-eval.js check public-artifacts
-bash optimization/scripts/check-secrets.sh
+npm ci
+npm run gate
+npm run build --workspace @cesiumjs-skills/evaluation-console
+npm test --workspace @cesiumjs-skills/evaluation-console
+bash .github/scripts/workflow-safety.sh
 ```
 
-These checks do not require external model access.
+`npm run gate` runs `.github/scripts/gate.sh`, the same definition CI uses, which
+covers the build, both manifest suites, the unit tests, the deterministic
+scorecard, `verify-fixtures`, and both hygiene checks. The earlier list on this
+page was narrower than CI in ways that mattered: it never ran
+`validate --suite evaluation`, never ran the unit tests, and never scored
+anything. It also listed `check-secrets.sh`, which the `secret-scan` workflow
+does invoke, but running it bare does not reproduce that lane: CI installs a
+pinned gitleaks 8.18.2, runs the scanner self-test first, and narrows the scan to
+the pull-request commit range.
+
+None of these require external model access. Not reproduced locally:
+`actionlint`, the full-history gitleaks scan, and `gate.sh`'s clean-tree
+assertion, which is CI-only by design.
 
 ## Run a Single Scenario
 

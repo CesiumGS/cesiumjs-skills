@@ -93,6 +93,20 @@ program
   );
 
 program
+  .command("verify-fixtures")
+  .description("Assert every tracked fixture produces its declared expected_result, in both polarities.")
+  .option("--cases-root <dir>", "evaluation case manifests root")
+  .option("--fixtures-root <dir>", "synthetic fixture evidence root")
+  .option("--output <path>", "write the verification report JSON here")
+  .action((options) =>
+    run(async () => {
+      const { verifyFixturesCommand } = await import("../commands/verifyFixtures.js");
+      ctx(); // resolve repo root early for clear errors
+      return verifyFixturesCommand(options);
+    }),
+  );
+
+program
   .command("audit")
   .description("Run deterministic + visual-judge lanes over rendered baselines into one combined scorecard.")
   .option("--skills <list>", "'all' or comma-separated skill ids", "all")

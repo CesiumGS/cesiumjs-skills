@@ -1,0 +1,83 @@
+name: Install gitleaks
+description: >-
+  Pinned, checksum-verified gitleaks installed into $RUNNER_TEMP/bin.
+  No sudo, no writes outside the runner temp directory, cached across runs.
+
+# The version and its digests are pinned HERE rather than in repository
+# variables. A checksum is a property of the version, and the version is already
+# in this file, so splitting them across two places only creates a way for them
+# to disagree. Pinned in-tree they are also reviewable in a diff and present for
+# a fork, which a repository variable is not.
+#
+# To bump: change `version`, then replace both digests with the output of
+#   gh release download v<version> -R gitleaks/gitleaks -p '*checksums.txt' -O - \
+#     | grep -E 'linux_(x64|arm64)\.tar\.gz'
+inputs:
+  version:
+    description: gitleaks release version, without a leading v
+    required: false
+    default: '8.18.2'
+  sha256-linux-x64:
+    description: sha256 of gitleaks_<version>_linux_x64.tar.gz
+    required: false
+    default: '6298c9235dfc9278c14b28afd9b7fa4e6f4a289cb1974bd27949fc1e9122bdee'
+  sha256-linux-arm64:
+    description: sha256 of gitleaks_<version>_linux_arm64.tar.gz
+    required: false
+    default: '4df25683f95b9e1dbb8cc71dac74d10067b8aba221e7f991e01cafa05bcbd030'
+
+runs:
+  using: composite
+  steps:
+    - name: Restore cached binary
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/bin/gitleaks
+        key: gitleaks-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}
+
+    - name: Download and verify
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        SHA_X64: ${{ inputs.sha256-linux-x64 }}
+        SHA_ARM64: ${{ inputs.sha256-linux-arm64 }}
+      run: |
+        set -euo pipefail
+        if [ "$(uname -s)" != "Linux" ]; then
+          echo "::error::install-gitleaks supports Linux runners only; got $(uname -s)."
+          exit 1
+        fi
+        case "$(uname -m)" in
+          x86_64)        arch=x64;   want="$SHA_X64" ;;
+          aarch64|arm64) arch=arm64; want="$SHA_ARM64" ;;
+          *) echo "::error::unsupported architecture $(uname -m)"; exit 1 ;;
+        esac
+        # Fail closed on an empty digest. Without this an empty value makes the
+        # checksum line malformed, which happens to fail by accident rather than
+        # by design.
+        if [ -z "$want" ]; then
+          echo "::error title=Missing gitleaks checksum::The ${arch} digest input is empty."
+          exit 1
+        fi
+        asset="gitleaks_${VERSION}_linux_${arch}.tar.gz"
+        mkdir -p "$RUNNER_TEMP/bin" "$RUNNER_TEMP/gitleaks-dl"
+        cd "$RUNNER_TEMP/gitleaks-dl"
+        curl -fsSL --retry 3 --retry-delay 2 -o "$asset" \
+          "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/${asset}"
+        # An unpinned-by-checksum release download is both a supply-chain hole
+        # and a flaky-gate generator: the same commit can pass today and fail
+        # next week for reasons unrelated to the diff.
+        echo "${want}  ${asset}" | sha256sum -c -
+        tar -xzf "$asset" gitleaks
+        # NO sudo. A rootless container runner has no sudo, and
+        # `sudo mv gitleaks /usr/local/bin/` hard-fails there.
+        mv gitleaks "$RUNNER_TEMP/bin/gitleaks"
+        chmod +x "$RUNNER_TEMP/bin/gitleaks"
+
+    - name: Expose on PATH
+      shell: bash
+      run: |
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/bin/gitleaks" version

@@ -7,7 +7,15 @@ import * as path from "node:path";
 import { fromRepoRoot, repoRelative, walkFiles } from "../lib/paths.js";
 import { gitLsFiles } from "../lib/proc.js";
 
-const SCANNED_ROOTS = [".architecture", "docs", "wiki", "optimization", "evaluation", "README.md", ".github/workflows"];
+// `.github` rather than `.github/workflows`: the CI surface grew siblings
+// (.github/scripts/, .github/actions/) that the narrower root left unscanned,
+// and `skills/` is the shipped product yet had never been scanned at all. Both
+// are tracked, both go public with the repo.
+//
+// Deliberately NOT added: apps, config, demo, .claude-plugin. Each carries
+// pre-existing localhost URLs that are ordinary in app and demo code and would
+// turn this gate red for no security benefit.
+const SCANNED_ROOTS = [".architecture", "docs", "wiki", "optimization", "evaluation", "README.md", "skills", ".github"];
 const SKIP_PREFIXES = ["optimization/tests/", "packages/"];
 const SKIP_SUFFIXES = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
 

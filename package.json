@@ -10,7 +10,8 @@
   "scripts": {
     "build": "npm run build --workspace @cesiumjs-skills/eval && npm run build --workspace @cesiumjs-skills/evaluation-console",
     "test": "npm test --workspace @cesiumjs-skills/eval && npm test --workspace @cesiumjs-skills/evaluation-console",
-    "eval": "node packages/eval/bin/cesium-eval.js"
+    "eval": "node packages/eval/bin/cesium-eval.js",
+    "gate": "bash .github/scripts/gate.sh"
   },
   "engines": {
     "node": ">=22"

@@ -76,16 +76,28 @@ The repository now separates pure evaluation from self-optimization:
   candidate generation, browser runs, pairwise judging, keep/reject decisions,
   promotion metadata, and historical results.
 
-Run the lightweight public checks with:
+Reproduce the blocking CI checks locally with:
 
 ```bash
 npm ci
-npm run build --workspace @cesiumjs-skills/eval
-npm test --workspace @cesiumjs-skills/eval
-node packages/eval/bin/cesium-eval.js validate --suite all
-node packages/eval/bin/cesium-eval.js check canonical-surface
-node packages/eval/bin/cesium-eval.js check public-artifacts
+npm run gate
+npm run build --workspace @cesiumjs-skills/evaluation-console
+npm test --workspace @cesiumjs-skills/evaluation-console
+bash .github/scripts/workflow-safety.sh
 ```
+
+`npm run gate` is the same script CI runs (`.github/scripts/gate.sh`): build,
+both manifest suites, the unit tests, the deterministic scorecard, and
+`verify-fixtures`, which asserts that every tracked fixture still produces the
+result it declares. The three commands after it cover the other two blocking
+jobs, and they are separate on purpose: a TypeScript error under
+`apps/evaluation-console/src/` leaves `npm run gate` at exit 0 while the console
+job goes red.
+
+Three parts of CI are not reproduced by the list above: `actionlint` (needs the
+pinned binary the workflow installs), the full-history `gitleaks` scan, and
+`gate.sh`'s clean-tree assertion, which is skipped outside CI by design because a
+dirty working tree is normal while developing.
 
 For local browser-backed optimization scenario reproduction, place generated JavaScript snippets under `optimization/generated/<skill>/<iteration>/`, set `CESIUM_ION_TOKEN`, and run:
 
@@ -122,7 +134,7 @@ cesiumjs-skills/
 
 ## Contributing
 
-Keep product-facing skill guidance under [`skills/`](skills/), public evaluation scenarios and summaries under [`optimization/`](optimization/), and long-form reference material under [`wiki/`](wiki/). When changing skill coverage or public APIs, update [Domain Mapping](wiki/Domain-Mapping.md) and run the public checks listed above before opening a PR.
+Keep product-facing skill guidance under [`skills/`](skills/), public evaluation scenarios and summaries under [`optimization/`](optimization/), and long-form reference material under [`wiki/`](wiki/). When changing skill coverage or public APIs, update [Domain Mapping](wiki/Domain-Mapping.md) and run the blocking CI checks listed above before opening a PR.
 
 ## License
 

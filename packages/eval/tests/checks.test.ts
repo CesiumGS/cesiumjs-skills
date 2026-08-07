@@ -105,6 +105,11 @@ describe("deterministic check matchers", () => {
   it("pattern checks search generated code with multiline semantics", () => {
     const evidence = { generated_code: "const v = new Cesium.Viewer('c');\nviewer.camera.flyTo({});" };
     expect(dispatch({ id: "c", type: "pattern_present", pattern: String.raw`camera\.flyTo` }, evidence).result).toBe("pass");
+    // FR3 requires a failing case for every matcher, and pattern_present was the
+    // one matcher in the registry with a passing assertion, no failing assertion,
+    // and no fixture of either polarity. Without this line a pattern_present that
+    // always returned "pass" would ship green through every gate in the repo.
+    expect(dispatch({ id: "c", type: "pattern_present", pattern: "sampleTerrainMostDetailed" }, evidence).result).toBe("fail");
     expect(dispatch({ id: "c", type: "pattern_absent", pattern: "lookAt" }, evidence).result).toBe("pass");
     expect(dispatch({ id: "c", type: "pattern_absent", pattern: String.raw`camera\.flyTo` }, evidence).result).toBe("fail");
   });

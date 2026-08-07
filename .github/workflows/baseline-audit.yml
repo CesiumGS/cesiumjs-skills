@@ -1,26 +1,17 @@
 name: Baseline Audit (deterministic + qualitative)
 
-# Two-lane baseline audit. The PR gate is the contract lane: schema validation,
-# unit tests, and public-artifact hygiene over tracked sources (no secrets,
-# fast, and every step can genuinely fail). The audit lanes (deterministic
-# execution health + static 0-10 visual judge) need rendered baselines, which
-# live under the gitignored optimization/runs/ — so the nightly / on-demand job
-# renders them first, then runs `cesium-eval audit` over the fresh bundles.
+# The qualitative audit lane: a static 0-10 visual judge over rendered baselines,
+# which live under the gitignored optimization/runs/, so this workflow renders
+# them first and then runs `cesium-eval audit` over the fresh bundles.
+#
+# This lane is ADVISORY and is never reachable from a pull request. The blocking
+# contract lane moved to pr-gate.yml, which runs unconditionally on every pull
+# request and does strictly more than the deterministic job that used to live
+# here (it adds the scorecard, the fixture-expectation check, the console tests,
+# and a clean-tree assertion). The deterministic job below now calls that one
+# definition rather than keeping a second, drifting copy.
 
 on:
-  pull_request:
-    paths:
-      - 'skills/**'
-      - 'evaluation/**'
-      - 'optimization/scenarios/**'
-      - 'packages/eval/**'
-      - '.github/workflows/baseline-audit.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'skills/**'
-      - 'evaluation/**'
-      - 'packages/eval/**'
   workflow_dispatch:
     inputs:
       skills:
@@ -46,44 +37,87 @@ on:
   schedule:
     - cron: '0 3 * * *'   # nightly qualitative audit
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  # ----- Lane 1: contract gate (blocking on PRs, no secrets) -----
+  # ----- Lane 1: the deterministic gate, by reference (SEAM-0) -----
+  # One definition, called before any money is spent. A reusable-workflow job
+  # takes no timeout-minutes; the called workflow's own jobs carry the bound.
   deterministic:
-    # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner labels).
+    uses: ./.github/workflows/pr-gate.yml
+
+  # ----- Preflight: does this lane have what it needs to run at all? -----
+  # Before this job existed, a missing CESIUM_ION_TOKEN failed the nightly at the
+  # "Validate secrets" step, so the scheduled run was RED every night purely
+  # because the secret was never configured. A permanently-red scheduled job is
+  # worse than no scheduled job: it trains maintainers to ignore red, which is
+  # the one signal a nightly exists to produce. An unconfigured credential is a
+  # "not applicable", not a regression, so it now reports as a clean skip with a
+  # visible reason. A secret that IS configured but broken still fails loudly.
+  preflight:
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
-    timeout-minutes: 20
+    timeout-minutes: 5
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build --workspace @cesiumjs-skills/eval
-      - name: Validate evaluation and optimization manifests
-        run: node packages/eval/bin/cesium-eval.js validate --suite all
-      - name: Unit tests (checks, scorecard, judges; CI-safe)
-        run: npm test --workspace @cesiumjs-skills/eval
-      - name: Public-artifact hygiene over tracked sources
-        run: node packages/eval/bin/cesium-eval.js check public-artifacts
+      - name: Check required credentials
+        id: check
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+        run: |
+          missing=()
+          [ -n "$CESIUM_ION_TOKEN" ] || missing+=(CESIUM_ION_TOKEN)
+          if [ "$AGENT_HARNESS" = "opencode" ] && [ -z "$OPENCODE_AUTH_CONTENT" ]; then
+            missing+=(OPENCODE_AUTH_CONTENT)
+          fi
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Qualitative audit skipped"
+              echo
+              echo "Not run because these repository secrets are not configured:"
+              echo
+              for m in "${missing[@]}"; do echo "- \`$m\`"; done
+              echo
+              echo "This is a configuration gap, not an evaluation regression."
+              echo "Configure the secrets to enable this lane."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice title=Qualitative audit skipped::missing secrets: ${missing[*]}"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
 
   # ----- Lane 2: qualitative (nightly / dispatch, advisory) -----
   qualitative:
-    needs: deterministic
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    needs: [deterministic, preflight]
+    if: needs.preflight.outputs.ready == 'true'
     # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner labels).
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 120
+    env:
+      # Single source of truth for the bundle layout. `render-baselines --out`
+      # writes exactly the directory shape that `audit --bundle-root` reads, so
+      # the two must always be given the same value. It is under the gitignored
+      # evaluation/artifacts/ tree.
+      BUNDLE_ROOT: evaluation/artifacts/baselines
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+          # A contents: read installation token otherwise sits in
+          # $GITHUB_WORKSPACE/.git/config for the job's lifetime, readable by the
+          # npm dependency tree and by the agent CLI running in this same job.
+          # Nothing here performs an authenticated git operation.
+          persist-credentials: false
+      - uses: ./.github/actions/setup-eval
       - run: |
-          npm ci
           npm run build --workspace @cesiumjs-skills/eval
           npx playwright install --with-deps chromium
       - name: Install agent CLI
@@ -97,20 +131,7 @@ jobs:
             npm install -g opencode-ai@latest
             opencode --version
           fi
-      - name: Install gitleaks
-        run: |
-          GITLEAKS_VERSION=8.18.2
-          # Runner architecture varies (hosted runners are x64; a self-hosted
-          # pool may be ARM64), so the asset is selected rather than hardcoded.
-          case "$(uname -m)" in
-            x86_64) GITLEAKS_ARCH=x64 ;;
-            aarch64 | arm64) GITLEAKS_ARCH=arm64 ;;
-            *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
-          esac
-          wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${GITLEAKS_ARCH}.tar.gz"
-          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_${GITLEAKS_ARCH}.tar.gz"
-          sudo mv gitleaks /usr/local/bin/
-          gitleaks version
+      - uses: ./.github/actions/install-gitleaks
       - name: Validate secrets
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
@@ -122,34 +143,37 @@ jobs:
             echo "OPENCODE_AUTH_CONTENT OpenAI auth secret missing"
             exit 1
           fi
+      # `render-baselines` is the purpose-built command for exactly this step: it
+      # renders the current scenario baselines into the bundle layout that
+      # `audit --bundle-root` reads, and it writes only under the gitignored
+      # output root.
+      #
+      # It replaces `optimize all --max-iterations 1`, which was a workaround
+      # predating this command and which called updatePublicStatus() into the
+      # TRACKED optimization/results/public-status.json on every iteration, with
+      # no --promote guard (loop.ts:366). Since `validate --suite optimization`
+      # cross-checks that file and is now a blocking gate step, the old form let
+      # a scheduled job rewrite an input of the gate: the pipeline grading
+      # itself. .github/scripts/workflow-safety.sh rule 1 now forbids it
+      # mechanically.
       - name: Render current-best baselines (gitignored; needed for the visual lane)
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
-          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          OPENCODE_MODEL: ${{ github.event.inputs.judge_model || vars.OPENCODE_MODEL || secrets.OPENCODE_MODEL || 'openai/gpt-5.5' }}
-          OPENCODE_PROPOSER_MODEL: ${{ vars.OPENCODE_PROPOSER_MODEL || secrets.OPENCODE_PROPOSER_MODEL || 'openai/gpt-5.5' }}
-          OPENCODE_EVAL_MODEL: ${{ vars.OPENCODE_EVAL_MODEL || secrets.OPENCODE_EVAL_MODEL || 'openai/gpt-5.5' }}
-          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || secrets.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
-          OPENCODE_PROPOSER_VARIANT: ${{ vars.OPENCODE_PROPOSER_VARIANT || secrets.OPENCODE_PROPOSER_VARIANT || 'high' }}
-          OPENCODE_EVAL_VARIANT: ${{ vars.OPENCODE_EVAL_VARIANT || secrets.OPENCODE_EVAL_VARIANT || 'medium' }}
-          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
-          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
-          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
+          # Free-form inputs are passed through the environment, never
+          # interpolated into the shell text of a run block, so a crafted input
+          # value cannot become shell syntax.
+          SKILLS: ${{ github.event.inputs.skills || 'all' }}
         run: |
-          # The optimization loop's baseline guard renders skills/<skill>/SKILL.md
-          # into optimization/runs/<skill>/baseline (1 iteration is enough to
-          # establish the baseline bundle the audit judges).
-          SKILLS="${{ github.event.inputs.skills || 'all' }}"
-          node packages/eval/bin/cesium-eval.js optimize all \
+          node packages/eval/bin/cesium-eval.js render-baselines \
             --skills "$SKILLS" \
-            --proposer-harness "$AGENT_HARNESS" \
-            --codegen-harness "$AGENT_HARNESS" \
-            --judge-harness "$AGENT_HARNESS" \
-            --max-iterations 1 \
-            --stop-on max || true
+            --out "$BUNDLE_ROOT"
+      # No continue-on-error. A lane expresses advisory-ness by not being a
+      # required check, never by suppressing its own failures: this workflow is
+      # reachable only by schedule and workflow_dispatch, so red here is
+      # informative rather than blocking, and a suppressed red is just noise
+      # dressed as green.
       - name: Qualitative + deterministic baseline audit (advisory)
         id: audit
-        continue-on-error: true
         shell: bash
         env:
           AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
@@ -158,24 +182,42 @@ jobs:
           OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
           OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
           OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
+          SKILLS: ${{ github.event.inputs.skills || 'all' }}
+          N_JUDGES: ${{ github.event.inputs.n_judges || '3' }}
         run: |
-          CMD=(node packages/eval/bin/cesium-eval.js audit \
-            --skills "${{ github.event.inputs.skills || 'all' }}" \
-            --judge-harness "$AGENT_HARNESS" \
-            --n-judges "${{ github.event.inputs.n_judges || '3' }}" \
+          CMD=(node packages/eval/bin/cesium-eval.js audit
+            --skills "$SKILLS"
+            --judge-harness "$AGENT_HARNESS"
+            --n-judges "$N_JUDGES"
+            --bundle-root "$BUNDLE_ROOT"
             --output-dir evaluation/artifacts/audits/ci)
           if [ "$AGENT_HARNESS" = "opencode" ] && [ -n "$OPENCODE_MODEL" ]; then
             CMD+=(--judge-model "$OPENCODE_MODEL")
           fi
           "${CMD[@]}"
+      # Ordering matters: delete the token-bearing HTML FIRST, then scan, then
+      # upload. `check public-artifacts` and `check-secrets.sh` both scan only
+      # git-TRACKED files, and every bundle path here is gitignored, so neither
+      # inspects a single byte of what is about to be uploaded. The explicit
+      # find over the bundle roots is the only step that actually touches it.
       - name: Sanitize before upload
+        id: sanitize
         if: always()
         run: |
+          find "$BUNDLE_ROOT" evaluation/artifacts/audits -name '*.html' -delete 2>/dev/null || true
           node packages/eval/bin/cesium-eval.js check public-artifacts
           bash optimization/scripts/check-secrets.sh
-          find optimization/runs/ evaluation/artifacts/ -name '*.html' -delete || true
+          if find "$BUNDLE_ROOT" evaluation/artifacts/audits -name '*.html' 2>/dev/null | grep -q .; then
+            echo "::error title=Sanitization failed::HTML survived the delete pass; refusing to upload."
+            exit 1
+          fi
       - name: Upload audit scorecard
-        if: always()
+        # Gated on the sanitizer SUCCEEDING, not merely on having run. With
+        # `if: always()` alone, a sanitize step that exits non-zero (a surviving
+        # token-bearing file, a tracked-secret hit) still publishes the bundle it
+        # just failed to clean. Still runs when the loop itself failed, because a
+        # failed run's artifacts are the diagnostic material.
+        if: always() && steps.sanitize.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: baseline-audit-qualitative-${{ github.run_number }}
