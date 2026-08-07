@@ -1,6 +1,6 @@
 ---
 name: cesiumjs-3d-tiles
-description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when loading 3D Tiles or Mapbox Vector Tiles, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
+description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when a task involves loading 3D Tiles or Mapbox Vector Tiles, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
 ---
 # CesiumJS 3D Tiles
 
