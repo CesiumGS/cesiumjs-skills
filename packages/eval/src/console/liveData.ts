@@ -18,7 +18,6 @@ const runsRoot = () => fromRepoRoot("optimization", "runs");
 const generatedRoot = () => fromRepoRoot("optimization", "generated");
 const scenariosRoot = () => fromRepoRoot("optimization", "scenarios");
 const auditsRoot = () => fromRepoRoot("evaluation", "artifacts", "audits");
-const fixturesRoot = () => fromRepoRoot("evaluation", "fixtures");
 
 const BUNDLE_REQUIRED = ["console.json", "programmatic-checks.json", "scene-state.json", "metadata.json", "screenshot-quality.json"];
 
@@ -625,7 +624,7 @@ export function liveStatus(ctx: EvalContext): Record<string, any> {
 }
 
 export function availableSkills(): string[] {
-  return listDirs(fixturesRoot());
+  return listDirs(scenariosRoot());
 }
 
 /** Flags the installed `audit` command actually accepts, read from its own

@@ -72,9 +72,10 @@ in `packages/eval/src/evaluation/`.
 
 - `packages/eval/src/evaluation/judge/staticJudge.ts` owns static visual judging,
   panel scoring, and gates; `packages/eval/src/harness/` owns OpenCode/Codex adapters.
-- `cesium-eval audit` runs BOTH lanes over all 14 baselines
-  (`optimization/runs/<skill>/baseline`, bridged via the tracked `*-baseline-observed.evidence.json`
-  fixtures' `run_artifact_path`) → one combined scorecard. Flags: `--skills`, `--no-judge`,
+- `cesium-eval audit` runs BOTH lanes over all 14 baselines: the work list is
+  derived from the tracked scenario manifests (`optimization/scenarios/<skill>/`)
+  and each case is scored against its rendered bundle under
+  `optimization/runs/<skill>/baseline` → one combined scorecard. Flags: `--skills`, `--no-judge`,
   `--visual-review <json>` (inject pre-judged items), `--emit-cases`, `--judge-model`, `--n-judges`,
   `--output-dir`. Exit = combined gate.
 - **CI/CD** (`.github/workflows/baseline-audit.yml`): job 1 deterministic (`--no-judge`, blocking, no secrets);

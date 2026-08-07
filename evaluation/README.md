@@ -16,8 +16,7 @@ current-best metadata, or make promotion decisions. Those actions belong under
 `optimization/`.
 
 `node packages/eval/bin/cesium-eval.js validate --suite evaluation` enforces the
-evaluation data contracts. Evaluation fixtures may still preserve historical
-optimization artifact paths as provenance.
+evaluation data contracts.
 
 ## Feedback Incorporated
 
@@ -139,10 +138,12 @@ Validation checks that generic JSON Pointer assertions such as
 `/after/imagery_layers/0/provider` are backed by a corresponding
 `probe.capture` declaration such as `imagery_layers[*].provider`.
 
-The comprehensive review suite includes all 83 archived optimization prompts
-across the 14 CesiumJS skills as baseline-observed `eval-101+` cases. Those
-cases preserve the original prompt and expected behaviors while checking the
-observed baseline generated code and browser artifacts.
+The comprehensive baseline audit is derived live from the tracked scenario
+manifests (`optimization/scenarios/<skill>/`): `cesium-eval audit` builds one
+execution-health case per scenario and scores it against the rendered bundle
+the optimization loop wrote under the gitignored `optimization/runs/`. No
+captured evidence is committed for it — the audit always judges the current
+baselines, so it can actually fail when a skill regresses.
 
 The hand-built unit-style cases include:
 
@@ -171,6 +172,14 @@ Tracked synthetic evidence fixtures live under:
 ```text
 evaluation/fixtures/
 ```
+
+These fixtures are hand-authored pass/fail pairs: each encodes a specific
+failure mode and proves the corresponding checker catches it. They test the
+evaluation harness itself and double as worked examples of the evidence
+contract. Captured observations (rendered baselines, screenshots, run bundles)
+are never committed here — they live under the gitignored
+`optimization/runs/` and `evaluation/artifacts/`, and `cesium-eval audit`
+reads them live.
 
 ## Two-Lane Baseline Audit (deterministic + qualitative)
 

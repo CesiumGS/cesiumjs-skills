@@ -1,11 +1,11 @@
 name: Baseline Audit (deterministic + qualitative)
 
-# Two-lane baseline audit. The deterministic lane is the binding PR gate and
-# runs over tracked evidence fixtures (no secrets, fast). The qualitative lane
-# (static 0-10 visual judge) needs rendered baselines, which live under the
-# gitignored optimization/runs/ — so it renders them first and runs nightly /
-# on demand, posting an advisory result. Both lanes share ONE entrypoint:
-# `cesium-eval audit`.
+# Two-lane baseline audit. The PR gate is the contract lane: schema validation,
+# unit tests, and public-artifact hygiene over tracked sources (no secrets,
+# fast, and every step can genuinely fail). The audit lanes (deterministic
+# execution health + static 0-10 visual judge) need rendered baselines, which
+# live under the gitignored optimization/runs/ — so the nightly / on-demand job
+# renders them first, then runs `cesium-eval audit` over the fresh bundles.
 
 on:
   pull_request:
@@ -47,7 +47,7 @@ on:
     - cron: '0 3 * * *'   # nightly qualitative audit
 
 jobs:
-  # ----- Lane 1: deterministic (blocking PR gate, no secrets) -----
+  # ----- Lane 1: contract gate (blocking on PRs, no secrets) -----
   deterministic:
     # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner labels).
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
@@ -64,20 +64,8 @@ jobs:
         run: node packages/eval/bin/cesium-eval.js validate --suite evaluation
       - name: Unit tests (checks, scorecard, judges; CI-safe)
         run: npm test --workspace @cesiumjs-skills/eval
-      - name: Deterministic baseline audit over tracked evidence (binding gate)
-        run: |
-          node packages/eval/bin/cesium-eval.js audit \
-            --skills "${{ github.event.inputs.skills || 'all' }}" \
-            --no-judge \
-            --output-dir evaluation/artifacts/audits/ci-deterministic
-      - name: Upload deterministic scorecard
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: baseline-audit-deterministic-${{ github.run_number }}
-          path: |
-            evaluation/artifacts/audits/ci-deterministic/scorecard.*
-            evaluation/artifacts/audits/ci-deterministic/**/scorecard.*
+      - name: Public-artifact hygiene over tracked sources
+        run: node packages/eval/bin/cesium-eval.js check public-artifacts
 
   # ----- Lane 2: qualitative (nightly / dispatch, advisory) -----
   qualitative:
