@@ -270,7 +270,15 @@ function azureAdToken(): string | null {
 export async function start(ctx: EvalContext, id = "litellm"): Promise<AdapterStatus> {
   const spec = adapterSpec(ctx, id);
   const current = await status(ctx, id);
-  if (current.running && current.healthy) return current;
+  if (current.running) {
+    if (current.healthy) return current;
+    // Spawning a second proxy here would fail to bind, overwrite the pid file
+    // with a dead pid, and orphan the real process on the port.
+    throw new Error(
+      `adapter '${id}' is already running (pid ${current.pid ?? "unknown"}) but failed its health probe; ` +
+        `stop it first (cesium-eval adapter stop), then start again`,
+    );
+  }
   const targets = readTargets(ctx, spec);
   if (!targets.length) {
     throw new Error(`no adapter targets configured — write ${spec.run.targets_artifact} (see \`cesium-eval adapter init\`)`);
