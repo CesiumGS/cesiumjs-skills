@@ -73,7 +73,7 @@ function ScoreVsThreshold({ score, threshold }: { score: number; threshold: numb
   const tPct = Math.round(threshold * 100);
   const ok = score >= threshold;
   return (
-    <div className="score-thresh" title={`Deterministic checks ${pct}% vs pass threshold ${tPct}%`}>
+    <div className="score-thresh" title={`Code Tests ${pct}% vs pass threshold ${tPct}%`}>
       <div className="st-track">
         <span className={`st-fill${ok ? "" : " under"}`} style={{ width: `${pct}%` }} />
         <span className="st-notch" style={{ left: `${tPct}%` }} title={`Threshold ${tPct}%`} />
@@ -146,7 +146,7 @@ function ChangedVsBaseline({ diff }: { diff: BaselineDiff | null }) {
     <>
       <div className="section-title">
         Changed vs Baseline
-        <span className="section-sub">Deterministic result flips between the two runs. Click a card to open the exact cases.</span>
+        <span className="section-sub">Code Test results that changed between runs. Click a card to open the exact cases.</span>
         <span className="spacer" />
         <label className="baseline-pick">
           <span>Baseline</span>
@@ -186,7 +186,7 @@ function ChangedVsBaseline({ diff }: { diff: BaselineDiff | null }) {
               <span className="dc-count mono">{diff.removed.length}</span>
               <span className="dc-label">Removed · baseline-only</span>
             </div>
-            <DiffCard label="Incomplete" keys={incompleteKeys} tone="warn" hint="Visual verdict still missing (not reviewed or needs review). Absence of evidence, not a failure." onDrill={() => drill("Incomplete visual review", incompleteKeys)} />
+            <DiffCard label="Incomplete" keys={incompleteKeys} tone="warn" hint="Visual Test result still missing. Absence of evidence, not a failure." onDrill={() => drill("Incomplete Visual Tests", incompleteKeys)} />
           </div>
           {baselineRun && (
             <div className="baseline-meta stage-sub">
@@ -256,8 +256,8 @@ function ProvenanceCard() {
           {chip("when", scorecard.timestampUtc ? `${scorecard.timestampUtc.slice(0, 16).replace("T", " ")} (${relativeTime(scorecard.timestampUtc)})` : null)}
           {chip("harness", harness !== "unknown" ? harness : null)}
           {chip("model", model ? `${modelShort(model)}${scorecard.modelVariant ? ` @${scorecard.modelVariant}` : ""}` : null)}
-          {chip("judge", judge)}
-          {chip("mode", scorecard.visualReviewSupplied ? "A · det + visual" : "B · det-only")}
+          {chip("visual tests", judge)}
+          {chip("mode", scorecard.visualReviewSupplied ? "Code + Visual" : "Code Only")}
           {chip("schema", scorecard.schemaVersion || null)}
           {chip("threshold", `${Math.round(scorecard.threshold * 100)}%`)}
         </div>
@@ -315,18 +315,18 @@ export function EvaluateOverview() {
           </div>
           <div className="gate-chips" aria-label="Verdict composition">
             <span className={`gate-chip ${scorecard.deterministicResult === "pass" ? "ok" : "bad"}`}>
-              ▣ Deterministic {scorecard.deterministicResult.toUpperCase()}
+              ▣ Code Tests {scorecard.deterministicResult.toUpperCase()}
             </span>
             {scorecard.visualReviewSupplied ? (
               <span
                 className={`gate-chip ${pass || scorecard.deterministicResult === "fail" ? (pass ? "ok" : "neutral") : "bad"}`}
-                title="The visual judge gate. Blocking failures fail the run even at a passing deterministic score."
+                title="The Visual Tests gate. Blocking failures fail the run even when Code Tests pass."
               >
-                ◈ Visual {pass ? "PASS" : scorecard.deterministicResult === "pass" ? "FAIL, the gate that failed" : "FAIL"}
+                ◈ Visual Tests {pass ? "PASS" : scorecard.deterministicResult === "pass" ? "FAIL, the gate that failed" : "FAIL"}
               </span>
             ) : (
-              <span className="gate-chip neutral" title="Mode B: no visual review supplied">
-                ◈ Visual not reviewed
+              <span className="gate-chip neutral" title="Visual Tests were not run">
+                ◈ Visual Tests not run
               </span>
             )}
           </div>
@@ -362,7 +362,7 @@ export function EvaluateOverview() {
             </div>
             {counts.neutral > 0 && (
               <div className="stage-sub" style={{ justifyContent: "flex-end" }}>
-                <span style={{ color: "var(--unknown)" }}>{counts.neutral} not visually reviewed</span>
+                <span style={{ color: "var(--unknown)" }}>{counts.neutral} without Visual Tests</span>
               </div>
             )}
           </div>
@@ -375,8 +375,8 @@ export function EvaluateOverview() {
           <span className="kpi-value">{counts.total}</span>
         </div>
         <div className="kpi">
-          <span className="kpi-label">Need You</span>
-          <span className="kpi-value" style={{ color: needsYouCount > 0 ? "var(--ink-human)" : undefined }}>
+          <span className="kpi-label">Needs Attention</span>
+          <span className="kpi-value" style={{ color: needsYouCount > 0 ? "var(--brand-blue)" : undefined }}>
             {needsYouCount}
           </span>
           <span className="kpi-sub">Failing or ambiguous</span>

@@ -8,8 +8,8 @@ import { LoopBadge, ScenarioChip } from "./primitives";
 /* The 5-rule cascade, in the exact order the loop evaluates them (decision.json
    `rule_fired` matches one of these names). DESIGN-SPEC §4(d). */
 const RUNGS: { name: string; label: string }[] = [
-  { name: "rule_1_check_failure", label: "check failure" },
-  { name: "rule_2_critical_judge_loss", label: "critical judge loss" },
+  { name: "rule_1_check_failure", label: "Code Test failure" },
+  { name: "rule_2_critical_judge_loss", label: "critical Visual Test loss" },
   { name: "rule_3_more_wins", label: "net wins" },
   { name: "rule_4_more_losses", label: "net losses" },
   { name: "rule_5_tie_keep_current", label: "tie → keep current" }
@@ -300,7 +300,7 @@ function Judges({ scn }: { scn: ScenarioDetail }) {
   if (scn.judge_unavailable || scn.individual_verdicts.length === 0) {
     return (
       <div className="empty-note" style={{ padding: "var(--sp-2)" }}>
-        Visual judges unavailable for this scenario, so the programmatic ledger is the evidence.
+        Visual Tests are unavailable for this scenario, so the Code Test ledger is the evidence.
       </div>
     );
   }
@@ -360,7 +360,7 @@ export function DecideInspector() {
       </div>
 
       <div className="band eye">
-        <div className="band-head">◈ 3 judges · candidate-relative</div>
+        <div className="band-head">◈ 3 AI reviewers · candidate-relative</div>
         <div className="band-body">{scn ? <Judges scn={scn} /> : <div className="empty-note">No scenario selected.</div>}</div>
       </div>
 

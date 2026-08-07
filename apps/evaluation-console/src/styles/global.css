@@ -286,25 +286,23 @@ button {
   animation: pulse var(--pulse) var(--ease) infinite;
 }
 
-/* The Review → Optimize handoff is an action, not a destination. Keep it inset
-   and outlined so it cannot be mistaken for the full-width selected nav row. */
+/* The Review → Optimize handoff is an inline shortcut, not a destination.
+   Its generous hit target stays invisible so it cannot read as selected nav. */
 .rail-handoff {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   width: calc(100% - 16px);
   margin: 5px 8px 4px;
-  padding: 8px 8px 8px 12px;
-  border: 1px solid transparent;
-  border-radius: var(--r-2);
+  padding: 6px 8px 6px 12px;
+  border: 0;
+  border-radius: var(--r-1);
   background: transparent;
   color: var(--text-3);
   font-size: var(--fs-100);
   text-align: left;
   position: relative;
-  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease),
-    transform var(--dur-1) var(--ease);
+  transition: color var(--dur-1) var(--ease);
 }
 .rail-handoff:disabled {
   cursor: default;
@@ -328,31 +326,19 @@ button {
 }
 /* Armed: confirmed flags or the suggested fallback are ready to hand off. */
 .rail-handoff.ready {
-  color: var(--text);
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--brand-blue) 8%, var(--surface)),
-    color-mix(in srgb, var(--brand-green) 6%, var(--surface))
-  );
-  border-color: color-mix(in srgb, var(--brand-blue) 48%, var(--brand-green));
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--canvas) 30%, transparent);
+  color: var(--text-2);
 }
 .rail-handoff.ready .rh-go {
-  color: var(--canvas);
-  background: var(--brand-grad);
-  opacity: 1;
+  color: var(--text-2);
+  background: var(--surface-3);
+  opacity: 0.72;
 }
 .rail-handoff.ready:hover {
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--brand-blue) 14%, var(--surface)),
-    color-mix(in srgb, var(--brand-green) 10%, var(--surface))
-  );
-  border-color: color-mix(in srgb, var(--brand-blue) 70%, var(--brand-green));
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--canvas) 38%, transparent);
-  transform: translateY(-1px);
+  color: var(--text);
 }
 .rail-handoff.ready:hover .rh-go {
+  color: var(--brand-blue);
+  opacity: 1;
   transform: translateX(1px);
 }
 
@@ -4261,28 +4247,22 @@ button.verb-btn:disabled {
   }
 }
 
-/* ============================================================================
-   TOPSTRIP v2 — the focused-run selector and provenance facts.
-   One labeled control answers "what am I looking at"; the chips after it
-   answer "how was it produced" in plain words.
-   ============================================================================ */
+/* Compact global context. Detailed verdict and provenance live in-page. */
 .run-select {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  background: var(--surface-2);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-2);
-  padding: 4px 10px;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-1);
+  padding: 5px 7px;
   cursor: pointer;
-  color: inherit;
-  text-align: left;
+  color: var(--text-2);
   transition: border-color var(--t-fast), background var(--t-fast);
 }
 .run-select:hover {
-  border-color: var(--brand);
-  background: var(--surface-3);
+  border-color: var(--hairline-strong);
+  background: var(--surface-2);
 }
 .run-select .rs-label {
   font-size: var(--fs-40);
@@ -4290,76 +4270,19 @@ button.verb-btn:disabled {
   letter-spacing: 0.08em;
   color: var(--text-3);
 }
-.run-select .rs-value {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: var(--fs-75);
-  white-space: nowrap;
-}
 .run-select .rs-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex: none;
 }
 .run-select .rs-dot.pass { background: var(--pass); }
 .run-select .rs-dot.fail { background: var(--fail); }
-.run-select .rs-id { color: var(--text-1); }
-.run-select .rs-score { font-size: var(--fs-50); }
-.run-select .rs-score.pass { color: var(--pass); }
-.run-select .rs-score.fail { color: var(--fail); }
-.run-select .rs-chev { color: var(--text-3); }
-
-.run-facts {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: nowrap;
-  min-width: 0;
-  overflow: hidden;
-}
-.fact-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--fs-50);
-  border-radius: var(--r-pill);
-  padding: 2px 9px;
-  white-space: nowrap;
-  border: 1px solid var(--hairline);
-  background: var(--surface-2);
+.run-select .rs-id {
   color: var(--text-2);
+  font-size: var(--fs-75);
 }
-button.fact-chip { cursor: pointer; }
-button.fact-chip:hover { border-color: var(--brand); color: var(--text-1); }
-.fact-chip.judge.on {
-  color: var(--pass);
-  background: color-mix(in srgb, var(--pass) 12%, transparent);
-  border-color: color-mix(in srgb, var(--pass) 35%, transparent);
-}
-.fact-chip.judge.off {
-  color: var(--defer);
-  background: color-mix(in srgb, var(--defer) 12%, transparent);
-  border-color: color-mix(in srgb, var(--defer) 35%, transparent);
-}
-.fact-chip.source.agent { color: var(--harness); background: var(--harness-bg); border-color: transparent; }
-.fact-chip.source.synthetic {
-  color: var(--unknown);
-  background: var(--unknown-bg);
-  border: 1px dashed var(--unknown);
-}
-.fact-chip.source.unknown {
-  color: var(--unknown);
-  background: var(--unknown-bg);
-  border: 1px dashed var(--unknown);
-}
-.fact-plain {
-  font-size: var(--fs-50);
-  color: var(--text-3);
-  white-space: nowrap;
-  flex: none;
-}
+.run-select .rs-chev { color: var(--text-3); }
 
 /* ============================================================================
    CHART SCAFFOLD — real axes for the trend charts. HTML labels never stretch;
@@ -4838,10 +4761,4 @@ button.chart-pt:focus-visible {
   letter-spacing: 0.1em;
   color: var(--text-3);
   margin-bottom: 2px;
-}
-@media (max-width: 1560px) {
-  .topstrip .fact-plain { display: none; }
-}
-@media (max-width: 1380px) {
-  .topstrip .fact-chip.baseline { display: none; }
 }

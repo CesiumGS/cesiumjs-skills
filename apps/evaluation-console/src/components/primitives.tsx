@@ -14,12 +14,12 @@ export function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
-/** Deterministic 0-1 magnitude — steel bar + % + machine glyph. */
+/** Code Test 0-1 magnitude — steel bar + % + machine glyph. */
 export function Score01({ value, label }: { value: number | null | undefined; label?: string }) {
   if (value === null || value === undefined) return <UnknownChip />;
   const pct = Math.round(clamp01(value) * 100);
   return (
-    <span className="score score-machine" title={`${label ?? "deterministic"} ${pct}% (0-1 scale)`}>
+    <span className="score score-machine" title={`${label ?? "Code Tests"} ${pct}% (0-1 scale)`}>
       <span className="score-glyph" aria-hidden>
         ▣
       </span>
@@ -31,13 +31,13 @@ export function Score01({ value, label }: { value: number | null | undefined; la
   );
 }
 
-/** Visual judge — accepts a 0-10 value (already normalized by the adapter). */
+/** Visual Test score — accepts a 0-10 value (already normalized by the adapter). */
 export function Score10({ value, label }: { value: number | null | undefined; label?: string }) {
   if (value === null || value === undefined) return <UnknownChip />;
   const v = Math.max(0, Math.min(10, value));
   const pips = Math.round(v);
   return (
-    <span className="score score-eye" title={`${label ?? "visual judge"} ${v.toFixed(1)}/10 (eye)`}>
+    <span className="score score-eye" title={`${label ?? "Visual Tests"} ${v.toFixed(1)}/10 (visual scale)`}>
       <span className="score-glyph" aria-hidden>
         ◈
       </span>
@@ -64,7 +64,7 @@ export function Pct({ value, label }: { value: number | null | undefined; label?
 
 export function UnknownChip({ small, text = "Unknown" }: { small?: boolean; text?: string }) {
   return (
-    <span className={`unknown-chip${small ? " sm" : ""}`} title="Not reviewed: unknown, not a low score">
+    <span className={`unknown-chip${small ? " sm" : ""}`} title="Visual Tests not run: unknown, not a low score">
       <span className="unknown-ring" aria-hidden />
       {!small && text}
     </span>
@@ -119,9 +119,9 @@ export function ScenarioChip({ verdict, count }: { verdict: ScenarioVerdict; cou
     TIE: { label: "TIE", cls: "tie", mark: "=" }
   };
   const m = verdict ? map[verdict] : null;
-  if (!m) return <span className="scn-chip scn-na" title="Judge unavailable">N/A</span>;
+  if (!m) return <span className="scn-chip scn-na" title="Visual Tests unavailable">N/A</span>;
   return (
-    <span className={`scn-chip scn-${m.cls}`} title={count != null ? `${m.label} (${count}/3 judges)` : m.label}>
+    <span className={`scn-chip scn-${m.cls}`} title={count != null ? `${m.label} (${count}/3 AI reviewers)` : m.label}>
       <span className="scn-mark" aria-hidden>
         {m.mark}
       </span>

@@ -457,7 +457,7 @@ export function Combos() {
               <th scope="col">Iterations</th>
               <th scope="col" title="KEEP decisions over decided iterations.">Keep Rate</th>
               <th scope="col" title="Scenario wins, losses, and ties against the running baseline.">W / L / T</th>
-              <th scope="col" title="Visual win rate W/(W+L), with per-iteration stability.">Win Rate · Stability</th>
+              <th scope="col" title="Visual Test win rate W/(W+L), with per-iteration stability.">Win Rate · Stability</th>
               <th scope="col">Avg Time</th>
               <th scope="col">Skills</th>
               <th scope="col" title="Most recent time this combo generated code or was evaluated by a run.">Last Active</th>
@@ -628,7 +628,7 @@ export function RunTrend() {
     <div className="dash-card">
       <div className="section-title">
         Run Score Trend
-        <span className="section-sub">▣ Deterministic checks score per run (y) across runs (x). Dot color is the run result.</span>
+        <span className="section-sub">▣ Code Test score per run (y) across runs (x). Dot color is the run result.</span>
         <span className="spacer" />
         <div className="axis-toggle" role="tablist" aria-label="X axis">
           <button
@@ -673,8 +673,8 @@ export function RunTrend() {
                   type="button"
                   className={`chart-pt ${r.overall_result === "pass" ? "pass" : "fail"}${loaded ? " loaded" : ""}`}
                   style={{ left: `${X(r, i)}%`, top: `${Y(r.overall_score as number)}%` }}
-                  title={`${r.run_id}\nchecks ${pct}% · ${r.overall_result} · ${r.total_cases} cases\n${r.timestamp_utc.slice(0, 16).replace("T", " ")} UTC · ${r.git_commit.slice(0, 7)}\nClick to focus this run.`}
-                  aria-label={`${r.run_id}: checks ${pct}%, run ${r.overall_result}. Click to focus this run.`}
+                  title={`${r.run_id}\nCode Tests ${pct}% · ${r.overall_result} · ${r.total_cases} cases\n${r.timestamp_utc.slice(0, 16).replace("T", " ")} UTC · ${r.git_commit.slice(0, 7)}\nClick to focus this run.`}
+                  aria-label={`${r.run_id}: Code Tests ${pct}%, run ${r.overall_result}. Click to focus this run.`}
                   onClick={() => void switchRun(r.run_id)}
                 />
               );
@@ -746,7 +746,7 @@ export function SkillTrend() {
       <div className="dash-card">
         <div className="section-title">
           Skill Optimization Trend
-          <span className="section-sub">Visual win rate per iteration for one skill.</span>
+          <span className="section-sub">Visual Test win rate per iteration for one skill.</span>
         </div>
         <div className="empty-note">No optimized skill yet. Run the loop to grow a trend.</div>
       </div>
@@ -789,7 +789,7 @@ export function SkillTrend() {
       <div className="section-title">
         Skill Optimization Trend
         <span className="section-sub">
-          ▣ Visual win rate W/(W+L) per iteration (y) across the loop (x). Gaps mean the judges did not score.
+          ▣ Visual Test win rate W/(W+L) per iteration (y) across the loop (x). Gaps mean Visual Tests were not run.
         </span>
         <span className="spacer" />
         <label className="baseline-pick">
@@ -829,7 +829,7 @@ export function SkillTrend() {
                   key={p.i}
                   className="chart-pt none"
                   style={{ left: `${X(p.i)}%`, top: `${Y(0)}%` }}
-                  title={`#${p.it.iteration}: not scored by the judges (no wins or losses); a gap, not a zero.`}
+                  title={`#${p.it.iteration}: Visual Tests were not run (no wins or losses); a gap, not a zero.`}
                 />
               ) : (
                 <span
@@ -1240,7 +1240,7 @@ export function HarnessesStation() {
         <Kpi
           label="Multimodal"
           value={`${multimodal} of ${harnesses.length}`}
-          sub="Codex judges screenshots natively"
+          sub="Codex runs Visual Tests natively"
           tone={multimodal > 0 ? "good" : "bad"}
         />
       </div>

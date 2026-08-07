@@ -837,7 +837,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const rec = await launchRun(payload);
         pushToast(
           `Run launched: ${rec.skills.length} ${rec.skills.length === 1 ? "skill" : "skills"}, ${
-            rec.judge ? `visual judging on (${rec.n_judges} judges)` : "automated checks only"
+            rec.judge ? `Visual Tests on (${rec.n_judges} AI reviewers)` : "Code Tests only"
           }`,
           "good"
         );

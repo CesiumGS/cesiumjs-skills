@@ -217,7 +217,7 @@ function ScenarioRow({
           <span>{s.scenario_id}</span>
           <span>·</span>
           <span>
-            {s.checks.passed}/{s.checks.total} checks
+            {s.checks.passed}/{s.checks.total} Code Tests
           </span>
           {s.checks.critical_failed > 0 && <span style={{ color: "var(--crit)" }}>✗crit</span>}
         </div>

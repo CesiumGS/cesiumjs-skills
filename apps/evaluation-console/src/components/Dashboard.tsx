@@ -53,7 +53,7 @@ function RecentRuns() {
       <div className="section-title">
         Recent Runs
         <span className="section-sub">
-          Newest first. The verdict combines automated checks and the visual review; the % is the automated-check score. Click a row to focus that run.
+          Newest first. The verdict combines Code Tests and Visual Tests; the % is the Code Test score. Click a row to focus that run.
         </span>
         <span className="spacer" />
         <button className="pill link-pill" onClick={() => openOverlay("harness")} title="Run Browser (h)">
@@ -79,8 +79,8 @@ function RecentRuns() {
                   className="rr-score mono"
                   title={
                     health.hasVisual
-                      ? "Overall health: automated checks and visual review combined equally."
-                      : "Overall health: automated checks only (no visual review)."
+                      ? "Overall health: Code Tests and Visual Tests combined equally."
+                      : "Overall health: Code Tests only."
                   }
                 >
                   {scorePct}
@@ -105,11 +105,11 @@ function RecentRuns() {
                   className={`rr-judge${r.visual_review_supplied ? "" : " off"}`}
                   title={
                     r.visual_review_supplied
-                      ? "Automated checks plus a judge panel that reviewed the rendered screenshots."
-                      : "Automated checks only; no judge reviewed the rendered screenshots."
+                      ? "Code Tests plus Visual Tests of the rendered screenshots."
+                      : "Code Tests only; Visual Tests were not run."
                   }
                 >
-                  {r.visual_review_supplied ? "Checks + Visual" : "Checks Only"}
+                  {r.visual_review_supplied ? "Code + Visual" : "Code Only"}
                 </span>
                 <span className="rr-cases mono">{pluralize(r.total_cases, "case")}</span>
                 <span className="rr-when">{relativeTime(r.timestamp_utc)}</span>
@@ -180,8 +180,8 @@ export function DashboardStation() {
             <>
               <div className="ov-big" style={{ color: "var(--defer)" }}>INCOMPLETE</div>
               <div className="stage-sub" style={{ marginTop: "var(--sp-1)" }}>
-                <span style={{ color: "var(--pass)" }}>checks PASS</span>
-                <span style={{ color: "var(--unknown)" }}>· visual unreviewed, nobody looked at the renders</span>
+                <span style={{ color: "var(--pass)" }}>Code Tests PASS</span>
+                <span style={{ color: "var(--unknown)" }}>· Visual Tests not run</span>
               </div>
             </>
           ) : (

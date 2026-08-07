@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
-import { Command, HelpCircle, Moon, Sun, Layers, ChevronDown, Eye, EyeOff, ArrowRight, RotateCcw } from "lucide-react";
+import { Command, HelpCircle, Moon, Sun, ChevronDown, ArrowRight, RotateCcw } from "lucide-react";
 import { useStore } from "../store";
-import type { Station, ConsoleOverlay, AdaptedScorecard } from "../types";
-import type { RunHealth } from "../lib/grade";
-import { harnessLabel, pluralize, relativeTime } from "../lib/format";
-import { healthFromScorecard, healthPct } from "../lib/grade";
+import type { Station, ConsoleOverlay } from "../types";
+import { pluralize } from "../lib/format";
 import { liveRunTitle } from "./Live";
 
 /* The five lifecycle steps every focused run travels, split across the two
@@ -53,83 +51,11 @@ const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string; desc: 
 const JUDGE_STEPS = LIFECYCLE_STATIONS.slice(0, 2);
 const IMPROVE_STEPS = LIFECYCLE_STATIONS.slice(2);
 
-/** "scorecard-20260721T142514Z-d3f47ec568b1" → "Jul 21 · 14:25 · d3f47ec". */
-function runShortLabel(runId: string | undefined, timestamp: string | undefined, commit: string | undefined): string {
-  if (timestamp) {
-    const d = new Date(timestamp);
-    const day = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
-    return commit ? `${day} ${time} · ${commit.slice(0, 7)}` : `${day} ${time}`;
-  }
-  return runId ? runId.slice(0, 24) : "no run loaded";
-}
-
-function sourceLabel(source: string | undefined, harness: string | undefined): { label: string; cls: string; hint: string } {
-  if (source === "fixtures")
-    return {
-      label: "Synthetic Test Data",
-      cls: "synthetic",
-      hint: "Scored against hand-authored test fixtures. This validates the evaluator itself; no AI agent was involved."
-    };
-  if (source === "mixed")
-    return {
-      label: "Real + Synthetic",
-      cls: "synthetic",
-      hint: "This run scores a mix of real agent output and hand-authored test fixtures in a single sweep."
-    };
-  if (harness && harness !== "unknown")
-    return { label: harnessLabel(harness), cls: "agent", hint: `Real agent output, generated with the ${harnessLabel(harness)} harness.` };
-  return {
-    label: "Origin Unknown",
-    cls: "unknown",
-    hint: "This run predates provenance stamping, so the producing harness can't be determined."
-  };
-}
-
-/* The header pill's score decomposed. The pill shows one aggregate number so it
-   can never contradict the verdict (the old "FAIL · Checks 100%"); this tooltip
-   spells out how that number is built and, on a fail, which gate failed. */
-function runScoreTooltip(sc: AdaptedScorecard, h: RunHealth, pass: boolean): string {
-  if (h.aggregate === null) return "No score recorded for this run.";
-  const pct = (n: number) => `${Math.round(n * 100)}%`;
-  const verdict = pass ? "PASS" : "FAIL";
-  const head = `${verdict} · overall health ${healthPct(h.aggregate, pass)}%`;
-  if (h.hasVisual && h.vis !== null && h.det !== null) {
-    const why = pass
-      ? "both gates passed"
-      : sc.deterministicResult === "fail"
-        ? "the automated checks fell below the pass threshold"
-        : "the visual review gate did not pass";
-    return (
-      `${head}\n` +
-      `Both gates weigh equally: automated checks ${pct(h.det)} and visual review ${pct(h.vis)} ` +
-      `(${h.passCount} of ${h.reviewedCount} judged cases passed).\n` +
-      `The run ${pass ? "passes" : "fails"} because ${why}.`
-    );
-  }
-  return `${head}\nAutomated checks only — no visual review was supplied for this run.`;
-}
-
 export function TopStrip() {
-  const {
-    scorecard,
-    config,
-    theme,
-    toggleTheme,
-    openOverlay,
-    counts,
-    setStation,
-    baselineRun,
-    live,
-    liveRunning
-  } = useStore();
+  const { scorecard, config, theme, toggleTheme, openOverlay, counts, setStation, live, liveRunning } = useStore();
   const liveRun = liveRunning ? live?.active.find((r) => r.status === "running") : undefined;
-  const judged = scorecard ? scorecard.visualReviewSupplied : null;
-  const src = sourceLabel(config?.source, scorecard?.harness ?? config?.harness);
   const pass = scorecard?.overallResult === "pass";
-  const health = scorecard ? healthFromScorecard(scorecard) : null;
-  const aggPct = health && health.aggregate !== null ? healthPct(health.aggregate, pass) : null;
-  const scoreTooltip = scorecard && health ? runScoreTooltip(scorecard, health, pass) : "";
+  const runLabel = scorecard?.gitCommit?.slice(0, 7) ?? scorecard?.runId?.slice(-12) ?? config?.run_id?.slice(-12);
   return (
     <header className="topstrip" role="banner">
       <div className="brand">
@@ -137,8 +63,8 @@ export function TopStrip() {
         Skill Evaluation Console
       </div>
 
-      {/* The one piece of header state: which run the lifecycle stations are
-          reading. A labeled control, not a mystery string — click to switch. */}
+      {/* Global context stays compact here; verdict and provenance belong in
+          the page content, where they have room to be understood. */}
       <button
         className="run-select"
         onClick={() => openOverlay("harness")}
@@ -148,62 +74,12 @@ export function TopStrip() {
             : "No run loaded. Click to browse runs (h)."
         }
       >
-        <span className="rs-label">Focused Run</span>
-        <span className="rs-value">
-          {scorecard && <span className={`rs-dot ${pass ? "pass" : "fail"}`} aria-hidden />}
-          <span className="mono rs-id">
-            {runShortLabel(scorecard?.runId ?? config?.run_id, scorecard?.timestampUtc, scorecard?.gitCommit)}
-          </span>
-          {aggPct !== null && (
-            <span className={`rs-score mono ${pass ? "pass" : "fail"}`} title={scoreTooltip}>
-              {pass ? "PASS" : "FAIL"} · {aggPct}%
-            </span>
-          )}
-          <ChevronDown size={12} aria-hidden className="rs-chev" />
-        </span>
+        {scorecard && <span className={`rs-dot ${pass ? "pass" : "fail"}`} aria-hidden />}
+        <span className="rs-label">Run</span>
+        <span className="mono rs-id">{runLabel ?? "Select"}</span>
+        <ChevronDown size={12} aria-hidden className="rs-chev" />
       </button>
 
-      {scorecard && (
-        <div className="run-facts" aria-label="Focused run provenance">
-          <span
-            className={`fact-chip judge ${judged ? "on" : "off"}`}
-            title={
-              judged
-                ? "Every case ran automated checks, and a judge panel reviewed the rendered screenshots."
-                : "Only automated checks ran; no judge reviewed the rendered screenshots. Launch a new run from Run Studies (7) with visual judging on to add that."
-            }
-          >
-            {judged ? <Eye size={11} aria-hidden /> : <EyeOff size={11} aria-hidden />}
-            {judged ? "Checks + Visual Review" : "No Visual Review"}
-          </span>
-          <button
-            className={`fact-chip source ${src.cls}`}
-            onClick={() => openOverlay("harness")}
-            title={`${src.hint} Opens the Run Browser (h).`}
-          >
-            <Layers size={11} aria-hidden /> {src.label}
-          </button>
-          <button
-            className="fact-chip baseline"
-            onClick={() => openOverlay("harness")}
-            title={
-              baselineRun
-                ? `Comparing against baseline ${baselineRun.run_id}. Change it from the Run Browser (h).`
-                : "No comparison baseline set. Pick one from the Run Browser (h)."
-            }
-          >
-            {baselineRun ? (
-              <>
-                vs <span className="mono">{runShortLabel(baselineRun.run_id, baselineRun.timestamp_utc, undefined)}</span>
-              </>
-            ) : (
-              "No Baseline"
-            )}
-          </button>
-          <span className="fact-plain">{pluralize(counts.total, "case")}</span>
-          {scorecard.timestampUtc && <span className="fact-plain">{relativeTime(scorecard.timestampUtc)}</span>}
-        </div>
-      )}
       <span className="spacer" />
       {liveRun && (
         <button

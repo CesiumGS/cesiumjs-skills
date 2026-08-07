@@ -161,7 +161,7 @@ export function evidenceLinks(ev: RawEvidenceSummary, evidencePath: string): Arr
     { label: "Evidence", path: evidencePath || ev.evidence_path },
     { label: "Console", path: run ? `${run}/console.json` : null },
     { label: "Scene State", path: run ? `${run}/scene-state.json` : null },
-    { label: "Checks", path: run ? `${run}/programmatic-checks.json` : null },
+    { label: "Code Tests", path: run ? `${run}/programmatic-checks.json` : null },
     { label: "Shot Quality", path: run ? `${run}/screenshot-quality.json` : null },
     { label: "Metadata", path: run ? `${run}/metadata.json` : null }
   ];

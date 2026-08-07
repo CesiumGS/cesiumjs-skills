@@ -56,6 +56,16 @@ const TRAIN_STEPS = [
   "archive"
 ] as const;
 
+const TRAIN_STEP_LABELS: Record<(typeof TRAIN_STEPS)[number], string> = {
+  proposer: "Propose",
+  skills_adapter: "Prepare Skill",
+  browser_runner: "Render",
+  judges: "Visual Tests",
+  decision: "Decide",
+  report: "Report",
+  archive: "Archive"
+};
+
 type CarState = "done" | "run" | "fail" | "pending";
 
 interface CarStatus {
@@ -213,7 +223,7 @@ function PipelineTrain() {
             return (
               <div key={step} className={`car ${c.state}`}>
                 <span className="car-dot" aria-hidden />
-                <span style={{ flex: 1, minWidth: 0 }}>{step}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{TRAIN_STEP_LABELS[step]}</span>
                 {c.state === "fail" && c.error && <span className="car-err">{c.error}</span>}
               </div>
             );
@@ -499,9 +509,9 @@ export function OptimizeInspector() {
       <div className="band machine">
         <div className="band-head">▣ scores</div>
         <div className="band-body">
-          <ScoreRow label="programmatic" value={scores?.programmatic ?? null} />
+          <ScoreRow label="Code Tests" value={scores?.programmatic ?? null} />
           <ScoreRow label="api accuracy" value={scores?.api ?? null} />
-          <ScoreRow label="visual win rate" value={scores?.visual_win_rate ?? null} />
+          <ScoreRow label="Visual Test Win Rate" value={scores?.visual_win_rate ?? null} />
         </div>
       </div>
 

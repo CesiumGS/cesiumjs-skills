@@ -50,7 +50,7 @@ const STAGE_WORD: Record<TrialStage, string> = {
   inflight: "In Flight",
   coded: "Code Ready",
   rendered: "Rendered",
-  judged: "Judged",
+  judged: "Visual Tested",
   skipped: "Review-Only"
 };
 
@@ -59,8 +59,8 @@ const AUDIT_STAGE_WORD: Record<TrialStage, string> = {
   queued: "Queued",
   inflight: "In Flight",
   coded: "Queued",
-  rendered: "Scored",
-  judged: "Judged",
+  rendered: "Code Tested",
+  judged: "Visual Tested",
   skipped: "—"
 };
 
@@ -339,31 +339,31 @@ function describeJournalEvent(e: Record<string, unknown>): { text: string; tone:
     case "judge_started": {
       const par = Number(e.concurrency ?? 1);
       return {
-        text: `Visual Judge opened — ${pluralize(Number(e.total ?? 0), "case")}, ${e.n_judges}-judge panel${par > 1 ? ` · ${par} workers in parallel` : ""}`,
+        text: `Visual Tests started — ${pluralize(Number(e.total ?? 0), "case")}, ${e.n_judges} AI reviewers${par > 1 ? ` · ${par} cases in parallel` : ""}`,
         tone: "eye"
       };
     }
     case "judge_case_started":
-      return { text: `${workerTag(e)}judging ${journalCaseRef(e)}…`, tone: "eye" };
+      return { text: `${workerTag(e)}visually testing ${journalCaseRef(e)}…`, tone: "eye" };
     case "judge_case_completed": {
       const status = typeof e.status === "string" && e.status ? titleCase(e.status) : "Done";
       const dur = durationText(e.duration_ms);
       return {
-        text: `${workerTag(e)}${journalCaseRef(e)} judged — ${status} (${e.index}/${e.total})${dur ? ` · ${dur}` : ""}`,
+        text: `${workerTag(e)}${journalCaseRef(e)} visually tested — ${status} (${e.index}/${e.total})${dur ? ` · ${dur}` : ""}`,
         tone: e.status === "fail" ? "fail" : "eye"
       };
     }
     case "judge_completed":
-      return { text: `Visual Judge complete — ${e.judged_count}/${e.total} judged`, tone: "eye" };
+      return { text: `Visual Tests complete — ${e.judged_count}/${e.total} tested`, tone: "eye" };
     case "scoring_started":
-      return { text: `Deterministic Score opened — ${pluralize(Number(e.total ?? 0), "case")}`, tone: "machine" };
+      return { text: `Code Tests started — ${pluralize(Number(e.total ?? 0), "case")}`, tone: "machine" };
     case "scoring_case_completed":
       return {
-        text: `${journalCaseRef(e)} scored — ${titleCase(String(e.result ?? ""))} (${e.index}/${e.total})`,
+        text: `${journalCaseRef(e)} code-tested — ${titleCase(String(e.result ?? ""))} (${e.index}/${e.total})`,
         tone: e.result === "fail" ? "fail" : "machine"
       };
     case "scoring_completed":
-      return { text: "Deterministic Score complete", tone: "machine" };
+      return { text: "Code Tests complete", tone: "machine" };
     case "scorecard_written":
       return {
         text: `Scorecard written — ${titleCase(String(e.overall_result ?? "done"))}`,
@@ -440,11 +440,11 @@ function LiveRunCard({ run }: { run: LiveRun }) {
   const failedPhase = run.phases.find((p) => p.state === "failed");
   const doneWord = isAudit
     ? run.judge
-      ? "cases judged"
-      : "cases scored"
+      ? "cases visually tested"
+      : "cases code-tested"
     : run.kind === "baseline"
       ? "trials rendered"
-      : "trials judged";
+      : "trials visually tested";
 
   return (
     <div className={`dash-card live-run-card${running ? " running" : ""}${failed ? " failed" : ""}`}>
@@ -454,8 +454,8 @@ function LiveRunCard({ run }: { run: LiveRun }) {
         <span className="lrc-iter mono">
           {isAudit
             ? run.judge
-              ? "Checks + Visual Review"
-              : "Checks Only"
+              ? "Code + Visual"
+              : "Code Only"
             : run.kind === "baseline"
               ? "Baseline Prep"
               : `Iteration ${run.iteration}`}
@@ -561,7 +561,7 @@ function LiveRunCard({ run }: { run: LiveRun }) {
                   return isAudit && groupCount > 1 ? ` · ${groupCount} Skills` : "";
                 })()}
                 {isAudit && (run.concurrency ?? 1) > 1 ? (
-                  <span className="lrc-concurrency mono" title={`Judge lane runs ${run.concurrency} cases in parallel`}>
+                  <span className="lrc-concurrency mono" title={`Visual Tests run ${run.concurrency} cases in parallel`}>
                     {run.concurrency}× parallel
                   </span>
                 ) : null}
@@ -750,8 +750,8 @@ function LaunchPanel() {
       <div className="section-title">
         <Rocket size={13} aria-hidden /> Launch an Eval Run
         <span className="section-sub">
-          Combined baseline audit over the archived baselines: deterministic checks
-          {judge ? " plus a visual judge panel" : " only"}. Every field maps to a cesium-eval audit flag.
+          Combined baseline audit over the archived baselines: Code Tests
+          {judge ? " plus Visual Tests" : " only"}. Every field maps to a cesium-eval audit flag.
         </span>
       </div>
 
@@ -896,11 +896,11 @@ function LaunchPanel() {
 
         <fieldset className="launch-role">
           <legend>
-            <Eye size={11} aria-hidden /> Visual Judging
+            <Eye size={11} aria-hidden /> Visual Tests
           </legend>
           <div className="launch-field">
             <div className="launch-label">
-              Judge Panel <code className="launch-flag">--no-judge</code>
+              Visual Tests <code className="launch-flag">--no-judge</code>
             </div>
             <button
               className={`judge-toggle${judge ? " on" : ""}`}
@@ -909,8 +909,8 @@ function LaunchPanel() {
               onClick={() => setJudge((j) => !j)}
               title={
                 judge
-                  ? "A judge panel reviews every rendered screenshot (recommended)."
-                  : "Automated checks only. Nobody will look at the rendered screenshots."
+                  ? "AI reviewers visually test every rendered screenshot (recommended)."
+                  : "Code Tests only. Screenshots will not be visually tested."
               }
             >
               <span className="jt-track" aria-hidden>
@@ -918,25 +918,25 @@ function LaunchPanel() {
               </span>
               {judge ? (
                 <>
-                  <Eye size={12} aria-hidden /> <span className="jt-state">On</span> · Screenshots Reviewed
+                  <Eye size={12} aria-hidden /> <span className="jt-state">On</span> · Code + Visual
                 </>
               ) : (
                 <>
-                  <EyeOff size={12} aria-hidden /> <span className="jt-state">Off</span> · Checks Only
+                  <EyeOff size={12} aria-hidden /> <span className="jt-state">Off</span> · Code Only
                 </>
               )}
             </button>
             {!judge && (
               <div className="launch-warn">
                 <AlertTriangle size={11} aria-hidden /> The scorecard will say nothing about how the renders actually
-                look. Automated checks only.
+                look. Code Tests only.
               </div>
             )}
           </div>
 
           <div className="launch-field">
             <div className="launch-label" id="launch-judge-harness-label">
-              Judge Harness <code className="launch-flag">--judge-harness</code>
+              Visual Test Harness <code className="launch-flag">--judge-harness</code>
             </div>
             <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judge-harness-label">
               {judgeHarnesses.map((a) => {
@@ -956,7 +956,7 @@ function LaunchPanel() {
                         v && !effortLevelsFor(harnessSpec(a), "").includes(v) ? "" : v
                       );
                     }}
-                    title={spec?.vision_note ?? `Judge via the ${harnessLabel(a)} harness`}
+                    title={spec?.vision_note ?? `Run Visual Tests with the ${harnessLabel(a)} harness`}
                   >
                     {harnessLabel(a)}
                     {textOnly && <span className="lk-chip-note">text-only</span>}
@@ -966,7 +966,7 @@ function LaunchPanel() {
             </div>
             {judge && judgeHarnessSpec && !judgeHarnessSpec.multimodal && (
               <div className="launch-hint">
-                {harnessLabel(judgeHarness)} models are text-only here, so screenshot judging reroutes each image call
+                {harnessLabel(judgeHarness)} models are text-only here, so Visual Tests reroute each image call
                 to {harnessLabel(judgeHarnessSpec.vision_fallback_to ?? "codex")} automatically.
               </div>
             )}
@@ -975,7 +975,7 @@ function LaunchPanel() {
           <div className="launch-field">
             <label className="launch-model">
               <span className="launch-label">
-                Judge Model <code className="launch-flag">--judge-model</code>
+                Visual Test Model <code className="launch-flag">--judge-model</code>
               </span>
               <select
                 value={judgeModel}
@@ -1021,21 +1021,21 @@ function LaunchPanel() {
                   aria-checked={judgeVariant === lv}
                   disabled={!judge}
                   onClick={() => setJudgeVariant(lv)}
-                  title={`Judge reasoning effort: ${effortLabel(lv)}`}
+                  title={`Visual Test reasoning effort: ${effortLabel(lv)}`}
                 >
                   {effortLabel(lv)}
                 </button>
               ))}
             </div>
             <div className="launch-hint">
-              How much reasoning each judge call spends. Auto uses the harness default
+              How much reasoning each Visual Test call spends. Auto uses the harness default
               {judgeHarnessSpec ? ` (${effortLabel(judgeHarnessSpec.default_effort)})` : ""}.
             </div>
           </div>
 
           <div className="launch-field">
             <div className="launch-label" id="launch-judges-label">
-              Judges <code className="launch-flag">--n-judges</code>
+              AI Reviewers <code className="launch-flag">--n-judges</code>
             </div>
             <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judges-label">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -1046,7 +1046,7 @@ function LaunchPanel() {
                   aria-checked={nJudges === n}
                   disabled={!judge}
                   onClick={() => setNJudges(n)}
-                  title={`${n}-judge panel`}
+                  title={`${n} AI reviewers per case`}
                 >
                   {n}
                 </button>
@@ -1067,14 +1067,14 @@ function LaunchPanel() {
                   aria-checked={concurrency === n}
                   disabled={!judge}
                   onClick={() => setConcurrency(n)}
-                  title={n === 1 ? "One case at a time" : `${n} cases judged in parallel`}
+                  title={n === 1 ? "One case at a time" : `${n} cases visually tested in parallel`}
                 >
                   {n === 1 ? "1 · Serial" : `${n}×`}
                 </button>
               ))}
             </div>
             <div className="launch-hint">
-              How many cases the Visual Judge works at once. Each case still gets its own {nJudges}-judge panel; the
+              How many cases Visual Tests process at once. Each case still gets {nJudges} AI reviewers; the
               trial board shows every in-flight case live.
             </div>
           </div>
@@ -1155,12 +1155,12 @@ function LaunchPanel() {
                 </span>
                 <span>
                   {judge
-                    ? `Judging on · ${nJudges}-judge panel · ${
+                    ? `Visual Tests on · ${nJudges} AI reviewers · ${
                         concurrency > 1 ? `${concurrency} cases in parallel` : "one case at a time"
                       } · ${harnessLabel(judgeHarness)} harness · model ${
                         judgeModel || "auto"
                       } · effort ${judgeVariant ? effortLabel(judgeVariant) : "auto"} (real LLM calls per case)`
-                    : "Checks only · no judge calls"}
+                    : "Code Tests only · no visual-test calls"}
                 </span>
                 {codegenHarness && (
                   <span>
@@ -1287,7 +1287,7 @@ export function LiveNowBanner() {
         Eval run in progress: <strong>{liveRunTitle(run)}</strong>
         <span className="mono">
           {" "}
-          {run.kind === "audit" ? (run.judge ? "Checks + Judge" : "Checks Only") : run.kind === "baseline" ? "Baseline" : run.iteration}
+          {run.kind === "audit" ? (run.judge ? "Code + Visual" : "Code Only") : run.kind === "baseline" ? "Baseline" : run.iteration}
         </span>
         {run.current_phase_label ? ` · ${run.current_phase_label}` : ""}
       </span>

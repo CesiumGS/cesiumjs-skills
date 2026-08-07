@@ -89,7 +89,7 @@ function DeterministicCheckRow({ c }: { c: RawCheck }) {
 
 function DeterministicBreakdown({ checks }: { checks: RawCheck[] }) {
   if (checks.length === 0) {
-    return <div className="empty-note">No deterministic checks recorded.</div>;
+    return <div className="empty-note">No Code Tests recorded.</div>;
   }
   return (
     <div className="det-check-list">
@@ -105,7 +105,7 @@ function CheckLedgerHero({ v }: { v: CaseView }) {
     <div className="hero">
       <div className="ledger">
         <div className="ledger-head">
-          ▣ deterministic check ledger · no render captured
+          ▣ Code Test ledger · no render captured
         </div>
         <DeterministicBreakdown checks={v.checks} />
       </div>
@@ -152,11 +152,11 @@ function QuantBand({ v }: { v: CaseView }) {
   return (
     <div className="band machine">
       <div className="band-head">
-        ▣ deterministic · machine <span className="bh-score"><Score01 value={v.score} /></span>
+        ▣ Code Tests <span className="bh-score"><Score01 value={v.score} /></span>
       </div>
       <div className="band-body">
         <div style={{ fontSize: "var(--fs-100)", color: "var(--text-2)", marginBottom: "var(--sp-2)" }}>
-          {passing}/{v.checks.length} checks pass
+          {passing}/{v.checks.length} Code Tests pass
           {v.criticalFailedChecks.length > 0 && (
             <span style={{ color: "var(--crit)" }}> · {v.criticalFailedChecks.length} critical ✗</span>
           )}
@@ -201,15 +201,15 @@ function QualBand({ v }: { v: CaseView }) {
   return (
     <div className="band eye">
       <div className="band-head">
-        ◈ visual judge · eye{" "}
+        ◈ Visual Tests{" "}
         <span className="bh-score">
-          {v.visualScore !== null ? <Score10 value={v.visualScore} /> : <UnknownChip small text="not reviewed" />}
+          {v.visualScore !== null ? <Score10 value={v.visualScore} /> : <UnknownChip small text="not run" />}
         </span>
       </div>
       <div className="band-body">
         {!reviewed && (
           <div className="empty-note" style={{ padding: "var(--sp-2)" }}>
-            Not visually reviewed; the deterministic ledger is the evidence.
+            Visual Tests were not run; the Code Test ledger is the evidence.
           </div>
         )}
         {v.dimensions.map((d) => (
