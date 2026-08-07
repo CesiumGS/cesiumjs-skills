@@ -70,12 +70,17 @@ export function resolveBundleDir(scenario: BaselineScenario, bundleRoot: string 
   return null;
 }
 
+/** Screenshots inside a bundle (`screenshot.png`, `screenshot-<n>.png`). */
+export function bundleScreenshots(bundleDir: string): string[] {
+  return globFiles(bundleDir, "screenshot", ".png");
+}
+
 /**
- * Files the audit's deterministic lane reads out of a rendered bundle.
- * `screenshot.png` feeds the visual lane; the two JSON documents feed the
+ * Files the audit's deterministic lane reads out of a rendered bundle. The
+ * screenshots feed the visual lane; these two JSON documents feed the
  * console-error and programmatic-check evidence.
  */
-export const BUNDLE_EVIDENCE_FILES = ["screenshot.png", "console.json", "programmatic-checks.json"] as const;
+export const BUNDLE_EVIDENCE_FILES = ["console.json", "programmatic-checks.json"] as const;
 
 /**
  * Whether a scenario's bundle holds everything an audit reads.
@@ -86,11 +91,42 @@ export const BUNDLE_EVIDENCE_FILES = ["screenshot.png", "console.json", "program
  * incomplete render). "Covered" and "auditable" are different questions —
  * this is the second one, and it lives here so every caller asks it the same
  * way.
+ *
+ * The screenshot requirement goes through bundleScreenshots rather than naming
+ * `screenshot.png`: a multi-shot scenario writes `screenshot-0.png` and never a
+ * plain one, so a literal name reads those bundles as permanently unauditable.
  */
 export function isBundleComplete(scenario: BaselineScenario, bundleRoot: string | null): boolean {
   const dir = resolveBundleDir(scenario, bundleRoot);
-  if (dir === null) return false;
-  return BUNDLE_EVIDENCE_FILES.every((file) => fs.existsSync(path.join(dir, file)));
+  return dir !== null && isBundleDirComplete(dir);
+}
+
+/**
+ * Everything the browser runner writes for one scenario.
+ *
+ * A superset of BUNDLE_EVIDENCE_FILES: those are what the audit READS, these
+ * are what a finished render PRODUCES. The renderer's own verification and the
+ * optimization loop's evidence check ask this stricter question — a bundle
+ * missing scene-state.json is a render that died halfway, even though an audit
+ * could still score it.
+ */
+export const BUNDLE_ARTIFACTS = [
+  ...BUNDLE_EVIDENCE_FILES,
+  "scene-state.json",
+  "screenshot-quality.json",
+  "metadata.json",
+] as const;
+
+/** True when the directory holds a screenshot and every file the audit reads. */
+export function isBundleDirComplete(bundleDir: string): boolean {
+  if (!fs.existsSync(bundleDir) || !bundleScreenshots(bundleDir).length) return false;
+  return BUNDLE_EVIDENCE_FILES.every((file) => fs.existsSync(path.join(bundleDir, file)));
+}
+
+/** True when the directory holds a screenshot and every artifact a full render writes. */
+export function isBundleFullyRendered(bundleDir: string | null): boolean {
+  if (bundleDir === null || !fs.existsSync(bundleDir) || !bundleScreenshots(bundleDir).length) return false;
+  return BUNDLE_ARTIFACTS.every((file) => fs.existsSync(path.join(bundleDir, file)));
 }
 
 /** Where the optimization loop writes a scenario's baseline source. */

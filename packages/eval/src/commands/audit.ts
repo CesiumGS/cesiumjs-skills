@@ -177,6 +177,12 @@ interface AuditCase {
   bundleDir: string | null;
 }
 
+/** The exact command that produces what this audit is missing. */
+function renderHint(skills: string[], bundleRoot: string | null): string {
+  const out = bundleRoot !== null ? ` --out ${repoRelative(bundleRoot)}` : "";
+  return `cesium-eval render-baselines --skills ${skills.join(",")}${out}`;
+}
+
 function collectCases(skills: string[], bundleRoot: string | null): AuditCase[] {
   const collected: AuditCase[] = [];
   for (const skill of skills) {
@@ -195,14 +201,29 @@ function collectCases(skills: string[], bundleRoot: string | null): AuditCase[] 
     }
   }
   if (!collected.length) throw new Error("no scenarios selected for audit");
-  if (collected.every((auditCase) => auditCase.bundleDir === null)) {
-    // Name the root actually searched: reporting the default while judging a
-    // caller-supplied root sends the operator to the wrong directory.
-    const searched = bundleRoot !== null ? `${repoRelative(bundleRoot)}/<skill>/baseline` : "optimization/runs/<skill>/baseline";
+
+  // Name the root actually searched: reporting the default while judging a
+  // caller-supplied root sends the operator to the wrong directory.
+  const searched = bundleRoot !== null ? `${repoRelative(bundleRoot)}/<skill>/baseline` : "optimization/runs/<skill>/baseline";
+  const missing = collected.filter((auditCase) => auditCase.bundleDir === null);
+  if (missing.length === collected.length) {
+    // Nothing to audit at all is a setup problem, not an evaluation result:
+    // name the one command that fixes it rather than leaving the operator to
+    // reverse-engineer the layout.
     throw new Error(
-      `no rendered baseline bundles found under ${searched}; ` +
-        "render them first (cesium-eval optimize <skills> --max-iterations 1) or pass --bundle-root",
+      `no rendered baseline bundles found under ${searched}. Render them first:\n  ${renderHint(skills, bundleRoot)}`,
     );
+  }
+  if (missing.length) {
+    // A partial set IS auditable — the missing cases score as failures, which
+    // is the honest outcome — but say so, so a half-rendered root is never
+    // mistaken for a genuine regression.
+    console.error(
+      `[audit] ${missing.length}/${collected.length} case(s) have no rendered bundle under ${searched} and will score as failures: ` +
+        `${missing.slice(0, 5).map((auditCase) => `${auditCase.skill}/${auditCase.caseId}`).join(", ")}` +
+        `${missing.length > 5 ? `, +${missing.length - 5} more` : ""}`,
+    );
+    console.error(`[audit] render them with: ${renderHint(skills, bundleRoot)}`);
   }
   return collected;
 }

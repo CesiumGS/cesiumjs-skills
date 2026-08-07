@@ -205,6 +205,11 @@ The judge lives in `packages/eval/src/evaluation/judge/staticJudge.ts`
 fan-out both call the same module via one runner:
 
 ```bash
+# Blank run first: from a clean checkout, generate the baseline source and
+# render it into complete evidence bundles under optimization/runs/<skill>/baseline.
+# Resumable — anything already complete is kept, only the gaps are filled.
+node packages/eval/bin/cesium-eval.js render-baselines --skills all
+
 # Deterministic lane only (fast, no LLM) — the CI PR gate:
 node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
 
@@ -219,9 +224,14 @@ node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness copilot
 node packages/eval/bin/cesium-eval.js serve evaluation/artifacts/audits/<run_id>/scorecard.json --open
 ```
 
-The qualitative lane needs rendered baselines under `optimization/runs/<skill>/baseline`
-(gitignored). Local fan-out helpers can run the same judge module across all
-baselines concurrently; CI
+Both lanes need rendered baselines under `optimization/runs/<skill>/baseline`
+(gitignored), which `render-baselines` produces: the visual lane reads the
+screenshots and the deterministic lane reads `console.json` and
+`programmatic-checks.json` from the same bundle, so a bundle missing either is
+not a usable baseline. `--out <dir>` writes the same layout elsewhere (it must
+stay inside the repository — the eval page is served from the repo root) and is
+what `audit --bundle-root <dir>` then reads. Local fan-out helpers can run the
+same judge module across all baselines concurrently; CI
 (`.github/workflows/baseline-audit.yml`) runs the deterministic lane as a blocking
 PR gate and the qualitative lane nightly (rendering baselines first).
 

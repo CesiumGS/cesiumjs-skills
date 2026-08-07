@@ -174,8 +174,35 @@ export interface LoadContextOptions {
   configPath?: string;
 }
 
+/**
+ * Fold `<repo>/.env` into the environment, for the credentials the pipeline
+ * needs but must never track (CESIUM_ION_TOKEN, harness auth). Already-set
+ * variables WIN: an explicit `FOO=bar cesium-eval ...` or a CI secret must not
+ * be silently overridden by a stale file on someone's laptop.
+ *
+ * Deliberately minimal: `KEY=value` lines, `#` comments, optional surrounding
+ * quotes. Anything richer belongs in a real config file, not a secret store.
+ */
+export function loadDotEnv(root: string): void {
+  const envPath = path.join(root, ".env");
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, "utf-8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const name = trimmed.slice(0, eq).trim();
+    if (process.env[name] !== undefined) continue;
+    process.env[name] = trimmed
+      .slice(eq + 1)
+      .trim()
+      .replace(/^(['"])(.*)\1$/, "$2");
+  }
+}
+
 export function loadContext(options: LoadContextOptions = {}): EvalContext {
   const root = findRepoRoot();
+  loadDotEnv(root);
 
   let config = builtinDefaults();
   const configPath = options.configPath

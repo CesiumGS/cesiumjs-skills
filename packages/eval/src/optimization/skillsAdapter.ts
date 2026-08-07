@@ -58,7 +58,9 @@ export interface CodegenOptions {
   iteration: string;
   skillPath: string;
   scenario: Record<string, any>;
-  overrides?: { harness?: string; model?: string; variant?: string };
+  /** `provider` is routed as its own request field, not as a role override —
+   * see the invokeAgent call below. */
+  overrides?: { harness?: string; provider?: string; model?: string; variant?: string };
   temperature?: number;
   outputRoot?: string;
 }
@@ -73,12 +75,20 @@ export async function generateScenarioCode(ctx: EvalContext, options: CodegenOpt
   const skillContentHash = sha256Text(skillContent);
   const timestamp = new Date().toISOString();
 
+  // Provider is NOT a role override: invokeAgent routes it as its own request
+  // field and refuses a provider it cannot honestly serve. Folding it into
+  // `overrides` instead dropped it silently — the run then used the harness's
+  // default binding while downstream flags stamped the requested provider into
+  // the scorecard, which is precisely the attribution lie invokeAgent guards
+  // against.
+  const { provider, ...selection } = options.overrides ?? {};
   const invocation = await invokeAgent(ctx, "codegen", {
     prompt: scenario.prompt,
     system: codegenSystemPrompt(skillContent),
     disableTools: true, // pure code generation; no file access needed
     title: `${options.skill} ${scenario.id} codegen`,
-    overrides: options.overrides,
+    provider: provider ?? null,
+    overrides: selection,
   });
   const responseText = invocation.text;
   if (!responseText) throw new Error("codegen agent returned an empty response");
@@ -98,6 +108,9 @@ export async function generateScenarioCode(ctx: EvalContext, options: CodegenOpt
     harness: invocation.agent.harness,
     model_id: invocation.agent.model,
     model_variant: invocation.agent.variant,
+    // Null means the harness's own binding served the model, which is the
+    // truthful stamp when no provider was requested.
+    model_provider: provider ?? null,
     temperature: options.temperature ?? 1.0,
     skill_content_hash: skillContentHash,
     timestamp_utc: timestamp,

@@ -1761,19 +1761,33 @@ Fully specified today; needs zero phase-one code.
 ### SEAM-3: bundle, the render-to-audit handoff
 
 - Producer: `cesium-eval render-baselines --skills <list> --out optimization/runs`
-  (browser; Ion-optional, the token resolution is inside a try/catch).
+  (codegen for missing source, then the shared browser runner; Ion-optional —
+  a token that is absent renders without Ion, a token that is present but
+  malformed still fails).
 - Consumer: `cesium-eval audit --bundle-root <dir> [--no-judge]`.
-- Shape: the allowlisted filenames in 6.5 only. Never `*.html`.
+- Shape: `evaluation/baselines.ts` owns both predicates, so no caller invents
+  its own. `isBundleComplete(scenario, root)` is AUDITABLE — a screenshot plus
+  `BUNDLE_EVIDENCE_FILES` (`console.json`, `programmatic-checks.json`), what
+  the two lanes read. `isBundleFullyRendered(dir)` is FULLY RENDERED — those
+  plus `scene-state.json`, `screenshot-quality.json`, `metadata.json`, what a
+  finished render produces; `render-baselines` and the loop's
+  `evidenceDirComplete` ask this stricter question, because a bundle missing
+  `scene-state.json` is a render that died halfway even though an audit could
+  still score it. Screenshot presence is counted with `bundleScreenshots()`,
+  never a literal `screenshot.png`: a multi-shot scenario writes
+  `screenshot-0.png` and would otherwise read as permanently unauditable. The
+  runner also writes `eval.html`, which carries the Ion token: the allowlist in
+  6.5 governs upload, never `*.html`.
 - Attach point: render job, then artifact, then audit job. Never a single job.
-  `audit --no-judge` is the LLM-free seam, but `collectCases()` throws when no
-  bundles exist under the gitignored `optimization/runs/<skill>/baseline`, and
-  it throws through the generic catch (exit 1), so a misconfigured
-  `--bundle-root` looks identical to a genuine audit failure. The nightly must
-  assert bundle presence explicitly before invoking audit.
-- Documentation trap: `renderBaselines.ts` declares a `DEFAULT_OUT` constant
-  that `main.ts` overrides with a commander default of `optimization/runs`, so
-  the source constant is dead code. Write documentation against the workflow
-  value; delete the constant in phase 8.
+  `audit --no-judge` is the LLM-free seam. `collectCases()` still throws when
+  NO bundle exists (exit 1), but now names the exact `render-baselines`
+  invocation that fixes it, and a partially-rendered root logs which cases are
+  missing before scoring them as failures. The nightly can still assert bundle
+  presence explicitly; the message is no longer indistinguishable from a
+  genuine audit failure.
+- `render-baselines` exits 2 on a usage error (unknown skill, `--out` outside
+  the repository — the eval page is served from the repo root), 1 when any
+  selected scenario has no complete bundle, 0 only when all of them do.
 
 ---
 

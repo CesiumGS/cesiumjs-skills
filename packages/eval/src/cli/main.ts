@@ -152,11 +152,17 @@ program
 
 program
   .command("render-baselines")
-  .description("Generate and render current scenario baselines into complete audit evidence bundles.")
+  .description("Blank run: generate and render current scenario baselines into complete audit evidence bundles.")
   .option("--skills <list>", "'all' or comma-separated skill ids", "all")
   .option("--out <dir>", "output root (repo-relative)", "optimization/runs")
   .option("--only <list>", "comma-separated case ids to render")
-  .option("--force", "re-render even if a screenshot already exists")
+  .option("--force", "re-render even if a complete bundle already exists")
+  .option("--regenerate", "re-generate the baseline source too (implies --force)")
+  .option("--skip-codegen", "never invoke the codegen agent; report missing source instead")
+  .option("--codegen-harness <id>", "codegen harness (registry id)")
+  .option("--codegen-provider <id>", "canonical provider serving the codegen model")
+  .option("--codegen-model <id>", "codegen model id")
+  .option("--codegen-variant <id>", "codegen reasoning effort / variant")
   .action((options) =>
     run(async () => {
       const { renderBaselinesCommand } = await import("../commands/renderBaselines.js");

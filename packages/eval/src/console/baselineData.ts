@@ -10,9 +10,15 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { EvalContext } from "../config/types.js";
 import { fromRepoRoot } from "../lib/paths.js";
-import { renderBaselinesCommand } from "../commands/renderBaselines.js";
-import { generateBaselinesCommand, type GenerateBaselinesOptions } from "../commands/optimize.js";
-import { baselineScenarios, baselineSkills, generatedCodePath, isBundleComplete, resolveBundleDir } from "../evaluation/baselines.js";
+import { runBaselineBootstrap } from "../commands/renderBaselines.js";
+import {
+  baselineScenarios,
+  baselineSkills,
+  bundleScreenshots,
+  generatedCodePath,
+  isBundleComplete,
+  resolveBundleDir,
+} from "../evaluation/baselines.js";
 
 export const BASELINE_ROOT = "evaluation/artifacts/baselines";
 
@@ -57,8 +63,10 @@ function coverageForSkill(skill: string, bundleRoot: string): SkillCoverage {
   let auditable = 0;
   for (const scenario of scenarios) {
     if (fs.existsSync(generatedCodePath(scenario))) generated += 1;
+    // Any screenshot counts: a multi-shot scenario writes screenshot-0.png,
+    // never a plain screenshot.png, and used to read as uncovered forever.
     const bundleDir = resolveBundleDir(scenario, rootAbs);
-    if (bundleDir !== null && fs.existsSync(path.join(bundleDir, "screenshot.png"))) screenshots += 1;
+    if (bundleDir !== null && bundleScreenshots(bundleDir).length > 0) screenshots += 1;
     if (isBundleComplete(scenario, rootAbs)) auditable += 1;
   }
   return {
@@ -98,10 +106,14 @@ export function baselineCoverage(ctx: EvalContext, skills?: string[], root?: str
 let renderingSkill: string | null = null;
 export class RenderBusyError extends Error {}
 
-export function baselineGenerationOptions(payload: Record<string, any>, skill: string): GenerateBaselinesOptions {
+/** The (harness, provider, model, variant) the console picked for codegen. */
+export function baselineCodegenSelection(payload: Record<string, any>): {
+  harness?: string;
+  provider?: string;
+  model?: string;
+  variant?: string;
+} {
   return {
-    skill,
-    iteration: "baseline",
     harness: payload.codegen_harness ? String(payload.codegen_harness) : undefined,
     provider: payload.codegen_provider ? String(payload.codegen_provider) : undefined,
     model: payload.codegen_model ? String(payload.codegen_model) : undefined,
@@ -118,12 +130,15 @@ function requestedSkills(payload: Record<string, any>): string[] {
   return [...new Set(requested)];
 }
 
+/** Render bundles for source that already exists. Never spends codegen money:
+ * a skill with no generated baseline is reported as uncovered, not silently
+ * sent to an agent. Use prepareBaselines for the full bootstrap. */
 export async function renderBaselines(ctx: EvalContext, payload: Record<string, any>): Promise<BaselineCoverage> {
   const requested = requestedSkills(payload);
   if (renderingSkill !== null) throw new RenderBusyError("a baseline render is already running");
   renderingSkill = requested.join(",");
   try {
-    await renderBaselinesCommand(ctx, { skills: requested.join(","), out: BASELINE_ROOT });
+    await runBaselineBootstrap(ctx, { skills: requested.join(","), out: BASELINE_ROOT, skipCodegen: true });
   } finally {
     renderingSkill = null;
   }
@@ -131,20 +146,32 @@ export async function renderBaselines(ctx: EvalContext, payload: Record<string, 
 }
 
 /** Complete clean-checkout bootstrap: generate any missing current-best
- * baseline JS with the configured codegen agent, then render screenshots into
- * the exact bundle root consumed by the audit. Existing JS/screenshots remain
- * cached, so retrying resumes rather than starting over. */
+ * baseline JS with the configured codegen agent, then render it into complete
+ * evidence bundles at the exact root the audit consumes. Existing source and
+ * bundles remain cached, so retrying resumes rather than starting over.
+ *
+ * Partial success is success: the returned coverage reports exactly what
+ * landed, and only a run that produced nothing at all is an error. Failing the
+ * whole request because one scenario of forty broke would discard the other
+ * thirty-nine and force the operator to start over. */
 export async function prepareBaselines(ctx: EvalContext, payload: Record<string, any>): Promise<BaselineCoverage> {
   const requested = requestedSkills(payload);
   if (renderingSkill !== null) throw new RenderBusyError("a baseline preparation is already running");
   renderingSkill = requested.join(",");
   try {
-    for (const skill of requested) {
-      const generationCode = await generateBaselinesCommand(ctx, baselineGenerationOptions(payload, skill));
-      if (generationCode !== 0) throw new Error(`baseline generation failed for ${skill}`);
+    const codegen = baselineCodegenSelection(payload);
+    const summary = await runBaselineBootstrap(ctx, {
+      skills: requested.join(","),
+      out: BASELINE_ROOT,
+      codegenHarness: codegen.harness,
+      codegenProvider: codegen.provider,
+      codegenModel: codegen.model,
+      codegenVariant: codegen.variant,
+    });
+    if (summary.complete === 0) {
+      const reason = summary.failures[0]?.reason ?? "no bundles were produced";
+      throw new Error(`baseline preparation produced no usable bundles for ${requested.join(", ")}: ${reason}`);
     }
-    const renderCode = await renderBaselinesCommand(ctx, { skills: requested.join(","), out: BASELINE_ROOT });
-    if (renderCode !== 0) throw new Error(`baseline rendering produced no usable screenshots for ${requested.join(", ")}`);
   } finally {
     renderingSkill = null;
   }

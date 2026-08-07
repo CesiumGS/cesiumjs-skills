@@ -9,7 +9,12 @@ import * as path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { loadContext } from "../src/config/load.js";
 import { allSkills } from "../src/commands/audit.js";
-import { BASELINE_ROOT, baselineCoverage, baselineGenerationOptions, normalizeBundleRoot } from "../src/console/baselineData.js";
+import {
+  BASELINE_ROOT,
+  baselineCodegenSelection,
+  baselineCoverage,
+  normalizeBundleRoot,
+} from "../src/console/baselineData.js";
 import { launchRun } from "../src/console/liveData.js";
 import {
   BUNDLE_EVIDENCE_FILES,
@@ -59,22 +64,20 @@ describe("baseline scenario contract", () => {
 
   it("passes the console codegen selection through to baseline generation", () => {
     expect(
-      baselineGenerationOptions(
-        {
-          codegen_harness: "codex",
-          codegen_provider: "openai",
-          codegen_model: "gpt-5.6",
-          codegen_variant: "high",
-        },
-        "cesiumjs-camera",
-      ),
-    ).toEqual({
-      skill: "cesiumjs-camera",
-      iteration: "baseline",
-      harness: "codex",
-      provider: "openai",
-      model: "gpt-5.6",
-      variant: "high",
+      baselineCodegenSelection({
+        codegen_harness: "codex",
+        codegen_provider: "openai",
+        codegen_model: "gpt-5.6",
+        codegen_variant: "high",
+      }),
+    ).toEqual({ harness: "codex", provider: "openai", model: "gpt-5.6", variant: "high" });
+    // An unset field stays undefined so the configured default wins, rather
+    // than being pinned to an empty string the registry cannot resolve.
+    expect(baselineCodegenSelection({})).toEqual({
+      harness: undefined,
+      provider: undefined,
+      model: undefined,
+      variant: undefined,
     });
   });
 

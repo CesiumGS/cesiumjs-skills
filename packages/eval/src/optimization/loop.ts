@@ -17,6 +17,7 @@ import { computeScores, generateSummaryMarkdown, updatePublicStatus } from "./re
 import { scanPublicArtifacts } from "./publicArtifacts.js";
 import { proposeCommand } from "./proposer.js";
 import { describeAgent, invokeAgent } from "../harness/invoke.js";
+import { isBundleFullyRendered } from "../evaluation/baselines.js";
 import { loadScenario } from "./types.js";
 import type { CheckResultEntry, JudgeResultEntry, ScenarioMetaEntry } from "./types.js";
 import type { EvalContext } from "../config/types.js";
@@ -164,13 +165,10 @@ export function expectedBundleCount(skill: string): number {
 
 export function evidenceDirComplete(runsDir: string, expectedCount: number): boolean {
   if (expectedCount === 0 || !fs.existsSync(runsDir)) return false;
-  const required = ["console.json", "programmatic-checks.json", "scene-state.json", "metadata.json", "screenshot-quality.json"];
-  let complete = 0;
-  for (const bundleName of listDirs(runsDir)) {
-    const bundle = path.join(runsDir, bundleName);
-    const hasScreenshot = globFiles(bundle, "screenshot", ".png").length > 0;
-    if (hasScreenshot && required.every((name) => fs.existsSync(path.join(bundle, name)))) complete += 1;
-  }
+  // One definition of "complete bundle", shared with the baseline bootstrap
+  // and the audit, so the loop and the audit can never disagree about whether
+  // a render actually produced usable evidence.
+  const complete = listDirs(runsDir).filter((name) => isBundleFullyRendered(path.join(runsDir, name))).length;
   return complete >= expectedCount;
 }
 
