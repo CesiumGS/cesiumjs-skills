@@ -11,11 +11,13 @@ import {
 import {
   cancelRun,
   exportHandoff,
+  launchOptimization as launchOptimizationRequest,
   launchRun,
   loadConfig,
   loadInsights,
   loadIteration,
   loadLive,
+  loadOptimizationHandoff,
   loadRegistry,
   loadReviewDecisions,
   loadRunCases,
@@ -29,6 +31,10 @@ import {
 import type { HandoffResult, LaunchRecord, LaunchRequest } from "./api";
 import { adaptScorecard } from "./lib/adapt";
 import { autoGrade, matchesFilter, worstFirstSort } from "./lib/grade";
+import {
+  buildOptimizationQueue,
+  type OptimizationQueueSkill,
+} from "./lib/optimizationQueue";
 import type {
   AdaptedCase,
   AdaptedScorecard,
@@ -43,7 +49,9 @@ import type {
   InsightsDTO,
   IterationDetail,
   ConsoleOverlay,
+  LiveRun,
   LiveStatusDTO,
+  OptimizationLaunchRecord,
   RegistryDTO,
   RunCaseLite,
   RunSummary,
@@ -91,9 +99,14 @@ export interface Store {
   registry: RegistryDTO | null;
   insights: InsightsDTO | null;
 
-  // live eval-run progress (polled from /api/live while the tab is visible)
+  // Journal-derived live progress, separated by the workflow that owns it.
   live: LiveStatusDTO | null;
-  liveRunning: boolean;
+  studyRuns: LiveRun[];
+  optimizationRuns: LiveRun[];
+  studyRunning: boolean;
+  optimizationRunning: boolean;
+  /** Accepted Optimize launch waiting for its first on-disk journal event. */
+  optimizationLaunch: OptimizationLaunchRecord | null;
 
   // comparison baseline: another run the loaded run is diffed against
   baselineRunId: string | null;
@@ -112,16 +125,20 @@ export interface Store {
   needsYouCount: number;
   /** Human-confirmed flags only (decision === "flag" && source === "human"). */
   confirmedFlagKeys: string[];
-  confirmedFlagSkills: string[];
-  /** Machine-suggested flags available as a fallback optimization focus (source === "auto"). */
-  suggestedFlagCount: number;
-  /** Last successful handoff to the optimizer (command + paths), until dismissed. */
-  lastHandoff: (HandoffResult & { at: string; count: number; selectionMode: SelectionMode }) | null;
+  /** Last successful persisted handoff to the optimizer (command, paths, and exact queue). */
+  lastHandoff:
+    | (HandoffResult & { at: string; count: number; caseKeys: string[]; selectionMode: SelectionMode })
+    | null;
+  handoffPanelVisible: boolean;
   dismissHandoff: () => void;
+  showHandoff: () => void;
 
   // optimize / decide
   skills: SkillOverview[];
+  /** Review handoff merged with history; includes skills before their first optimization artifact exists. */
+  optimizationQueue: OptimizationQueueSkill[];
   selectedSkill: string | null;
+  selectedOptimizationQueueSkill: OptimizationQueueSkill | null;
   selectedSkillData: SkillOverview | null;
   selectedIterationId: string | null;
   iterationDetail: IterationDetail | null;
@@ -172,6 +189,7 @@ export interface Store {
   dismissToast: (id: number) => void;
   retrySave: () => void;
   doExport: () => Promise<void>;
+  startOptimization: (concurrency?: number) => Promise<boolean>;
   launchEvalRun: (payload: LaunchRequest) => Promise<LaunchRecord | null>;
   cancelLiveRun: (launchId: string) => Promise<void>;
   promoteSkillCandidate: (skill: string, iteration: string) => Promise<boolean>;
@@ -192,6 +210,8 @@ export function useStore(): Store {
 
 const nowIso = () => new Date().toISOString();
 const THEME_KEY = "ec-theme";
+const isStudyRun = (run: LiveRun) => run.kind === "audit";
+const isOptimizationRun = (run: LiveRun) => run.kind === "iteration" || run.kind === "baseline";
 
 function toView(c: AdaptedCase, rec: DecisionRecord | undefined): CaseView {
   return {
@@ -220,6 +240,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [registry, setRegistry] = useState<RegistryDTO | null>(null);
   const [insights, setInsights] = useState<InsightsDTO | null>(null);
   const [live, setLive] = useState<LiveStatusDTO | null>(null);
+  const [optimizationLaunch, setOptimizationLaunch] = useState<OptimizationLaunchRecord | null>(null);
+  const [lastHandoff, setLastHandoff] = useState<Store["lastHandoff"]>(null);
+  const [handoffPanelVisible, setHandoffPanelVisible] = useState(false);
   const [baselineRunId, setBaselineRunId] = useState<string | null>(null);
   const [baselineCases, setBaselineCases] = useState<RunCaseLite[] | null>(null);
   const [baselineLoading, setBaselineLoading] = useState(false);
@@ -252,6 +275,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const undoStack = useRef<Array<{ key: string; prev: DecisionRecord | undefined }>>([]);
   const toastId = useRef(0);
   const iterReq = useRef(0);
+  const optimizationLaunchTimer = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (optimizationLaunchTimer.current) window.clearTimeout(optimizationLaunchTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -302,9 +333,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           `API checkout mismatch: this console belongs to ${expectedRoot}, but the backend serves ${actualRoot}.`,
         );
       }
-      const [raw, decDoc, runList, skillList, reg, ins] = await Promise.all([
+      const [raw, decDoc, persistedHandoff, runList, skillList, reg, ins] = await Promise.all([
         loadScorecard(),
         loadReviewDecisions().catch(() => null),
+        loadOptimizationHandoff().catch(() => null),
         loadRuns().catch(() => [] as RunSummary[]),
         loadSkills().catch(() => [] as SkillOverview[]),
         loadRegistry().catch(() => null),
@@ -324,6 +356,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSkills(skillList);
       setRegistry(reg);
       setInsights(ins);
+      if (persistedHandoff) {
+        const { selection_mode, created_at, case_keys, ...handoff } = persistedHandoff;
+        setLastHandoff({
+          ...handoff,
+          at: created_at || nowIso(),
+          count: case_keys.length,
+          caseKeys: case_keys,
+          selectionMode: selection_mode
+        });
+        setHandoffPanelVisible(true);
+      } else {
+        setLastHandoff(null);
+        setHandoffPanelVisible(false);
+      }
       setCaseScopeState(null);
       // Default comparison baseline: the most recent run strictly older than the
       // loaded run — same harness when one exists, else any harness. The user can
@@ -343,8 +389,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const views = (adapted?.cases ?? []).map((c) => toView(c, seeded[c.key]));
       const ordered = worstFirstSort(views);
       setSelectedKey(ordered[0]?.key ?? "");
-      const firstSkill = skillList.find((s) => s.iteration_count > 0) ?? skillList[0] ?? null;
-      setSelectedSkill(firstSkill?.skill ?? null);
+      const persistedQueue = buildOptimizationQueue(skillList, persistedHandoff?.case_keys ?? []);
+      const firstSkill =
+        persistedQueue[0]?.skill ??
+        skillList.find((s) => s.iteration_count > 0)?.skill ??
+        skillList[0]?.skill ??
+        null;
+      setSelectedSkill(firstSkill);
       setFilterState("all");
       setFacetSkillState(null);
       setDetailsOpen(false);
@@ -449,22 +500,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [caseViews]);
 
   const needsYouCount = useMemo(() => caseViews.filter(needsYou).length, [caseViews]);
-  // "Confirmed" means a human said so. The handoff prefers these curated flags
-  // and falls back to machine suggestions only when no confirmed focus exists.
+  // "Confirmed" means a human said so. Review exposes that distinction while
+  // the explicit bulk handoff transfers every item currently marked Flagged.
   const confirmedFlagKeys = useMemo(
     () => caseViews.filter((v) => v.decision === "flag" && v.source === "human").map((v) => v.key),
     [caseViews]
   );
-  const suggestedFlagCount = useMemo(
-    () => caseViews.filter((v) => v.decision === "flag" && v.source !== "human").length,
-    [caseViews]
-  );
-  const confirmedFlagSkills = useMemo(
-    () => [...new Set(caseViews.filter((v) => v.decision === "flag" && v.source === "human").map((v) => v.skill))].sort(),
-    [caseViews]
-  );
-
   const selectedView = selectedKey ? viewByKey.get(selectedKey) ?? null : null;
+  const optimizationQueue = useMemo(
+    () => buildOptimizationQueue(skills, lastHandoff?.caseKeys ?? []),
+    [skills, lastHandoff],
+  );
+  const selectedOptimizationQueueSkill = useMemo(
+    () => optimizationQueue.find((item) => item.skill === selectedSkill) ?? null,
+    [optimizationQueue, selectedSkill],
+  );
   const selectedSkillData = useMemo(
     () => skills.find((s) => s.skill === selectedSkill) ?? null,
     [skills, selectedSkill]
@@ -551,13 +601,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
   pushToastRef.current = pushToast;
 
-  // ---------- live eval-run progress ----------
-  // Poll /api/live while the tab is visible: fast while a run is active, slow
-  // while idle. When the last active run reaches its terminal event, refresh
-  // the results surfaces (runs / skills / insights) so the console lands on
-  // the fresh outcome without a manual reload.
+  // ---------- live workflow progress ----------
+  const studyRuns = useMemo(() => (live?.active ?? []).filter(isStudyRun), [live]);
+  const optimizationRuns = useMemo(() => (live?.active ?? []).filter(isOptimizationRun), [live]);
+  const studyRunning = studyRuns.some((run) => run.status === "running");
+  const optimizationRunning =
+    optimizationLaunch !== null ||
+    Boolean(live?.optimization_launch) ||
+    optimizationRuns.some((run) => run.status === "running");
+
+  // Poll /api/live while the tab is visible: fast while either lane is active,
+  // slow while idle. Evaluation and optimization transitions are handled
+  // independently so one lane can never light, finish, or refresh the other.
   const liveRef = useRef<LiveStatusDTO | null>(null);
   liveRef.current = live;
+  const selectedSkillLiveRef = useRef<string | null>(null);
+  selectedSkillLiveRef.current = selectedSkill;
+  const selectedIterationLiveRef = useRef<string | null>(null);
+  selectedIterationLiveRef.current = selectedIterationId;
   useEffect(() => {
     let timer: number | null = null;
     let disposed = false;
@@ -575,23 +636,109 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (disposed) return;
         const prev = liveRef.current;
         setLive(next);
-        if (prev?.running && !next.running) {
-          const finished = prev.active.find((r) => r.status === "running");
+        const prevStudyRunning = (prev?.active ?? []).some((run) => isStudyRun(run) && run.status === "running");
+        const nextStudyRunning = next.active.some((run) => isStudyRun(run) && run.status === "running");
+        const prevOptimizationRunning =
+          Boolean(prev?.optimization_launch) ||
+          (prev?.active ?? []).some((run) => isOptimizationRun(run) && run.status === "running");
+        const nextOptimizationRunning =
+          Boolean(next.optimization_launch) ||
+          next.active.some((run) => isOptimizationRun(run) && run.status === "running");
+        const nextOptimizationJournal = next.active.some(
+          (run) => isOptimizationRun(run) && run.status === "running"
+        );
+
+        if (nextOptimizationJournal) {
+          setOptimizationLaunch(null);
+          if (optimizationLaunchTimer.current) {
+            window.clearTimeout(optimizationLaunchTimer.current);
+            optimizationLaunchTimer.current = null;
+          }
+        } else if (next.optimization_launch) {
+          // Rehydrate a dispatcher accepted in a previous tab/session and keep
+          // the starting animation alive between sequential skill journals.
+          setOptimizationLaunch(next.optimization_launch);
+        } else if (!nextOptimizationRunning) {
+          setOptimizationLaunch(null);
+        }
+
+        if (prevStudyRunning && !nextStudyRunning) {
+          const finished = prev!.active.find((run) => isStudyRun(run) && run.status === "running");
           pushToast(
-            finished ? `Eval run finished: ${finished.skill} ${finished.iteration}. Refreshing results.` : "Eval run finished. Refreshing results.",
+            finished ? `Evaluation study finished: ${finished.label ?? finished.iteration}. Refreshing runs.` : "Evaluation study finished. Refreshing runs.",
             "good"
           );
+        }
+        if (prevOptimizationRunning && !nextOptimizationRunning) {
+          const finished = prev!.active.find(
+            (run) => isOptimizationRun(run) && run.status === "running"
+          );
+          const failures = next.active.filter(
+            (run) => isOptimizationRun(run) && run.status === "failed"
+          );
+          if (failures.length) {
+            pushToast(
+              `Optimization stopped with ${failures.length} failed ${failures.length === 1 ? "skill" : "skills"}. Open Optimize for the recorded error and journal.`,
+              "bad"
+            );
+          } else {
+            pushToast(
+              finished
+                ? `Optimization round finished: ${finished.skill} ${finished.iteration}. Refreshing candidates.`
+                : "Optimization workflow finished. Refreshing candidates.",
+              "good"
+            );
+          }
+        }
+
+        const refreshSkills = nextOptimizationRunning || (prevOptimizationRunning && !nextOptimizationRunning);
+        const refreshRuns = prevStudyRunning && !nextStudyRunning;
+        const refreshInsights = refreshSkills || refreshRuns;
+        if (refreshSkills || refreshRuns) {
           const [skillList, runList, ins] = await Promise.all([
-            loadSkills().catch(() => null),
-            loadRuns().catch(() => null),
-            loadInsights().catch(() => null)
+            refreshSkills ? loadSkills().catch(() => null) : Promise.resolve(null),
+            refreshRuns ? loadRuns().catch(() => null) : Promise.resolve(null),
+            refreshInsights ? loadInsights().catch(() => null) : Promise.resolve(null)
           ]);
           if (disposed) return;
           if (skillList) setSkills(skillList);
           if (runList) setRuns(runList);
           if (ins) setInsights(ins);
+
+          // Keep the selected baseline/round inspectable while its journal and
+          // artifacts are still growing. This refresh deliberately preserves
+          // the user's selected scenario rather than replaying fetchIteration's
+          // initial-selection behavior on every poll.
+          const selected = selectedSkillLiveRef.current;
+          if (refreshSkills && selected && skillList) {
+            const overview = skillList.find((item) => item.skill === selected);
+            const liveIteration = next.active.find(
+              (run) => isOptimizationRun(run) && run.skill === selected
+            )?.iteration;
+            const targetIteration =
+              selectedIterationLiveRef.current ??
+              liveIteration ??
+              overview?.latest?.iteration ??
+              overview?.history.find((item) => item.is_baseline)?.iteration ??
+              null;
+            if (targetIteration) {
+              if (selectedIterationLiveRef.current === null) {
+                selectedIterationLiveRef.current = targetIteration;
+                setSelectedIterationId(targetIteration);
+              }
+              const detail = await loadIteration(selected, targetIteration).catch(() => null);
+              if (
+                !disposed &&
+                detail &&
+                selectedSkillLiveRef.current === selected &&
+                selectedIterationLiveRef.current === targetIteration
+              ) {
+                setIterationDetail(detail);
+              }
+            }
+          }
         }
-        schedule(next.running ? (next.poll_ms || 2500) : 8000);
+        schedule(next.running || next.optimization_launch ? (next.poll_ms || 2500) : 8000);
       } catch {
         if (!disposed) schedule(8000); // server briefly away; keep last snapshot
       }
@@ -608,8 +755,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [pushToast]);
-
-  const liveRunning = live?.running ?? false;
 
   // ---------- review mutations ----------
   const applyDecision = useCallback(
@@ -753,7 +898,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (skill: string) => {
       setSelectedSkill(skill);
       const ov = skillsRef.current.find((s) => s.skill === skill);
-      const latest = ov?.latest ?? ov?.history.filter((h) => !h.is_baseline).slice(-1)[0] ?? null;
+      const latest =
+        ov?.latest ??
+        ov?.history.filter((h) => !h.is_baseline).slice(-1)[0] ??
+        ov?.history.find((h) => h.is_baseline) ??
+        null;
       if (latest) fetchIteration(skill, latest.iteration);
       else {
         setIterationDetail(null);
@@ -782,7 +931,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setOverlay(null);
       if ((s === "optimize" || s === "decide") && selectedSkill && !iterationDetail && !iterationLoading) {
         const ov = skillsRef.current.find((x) => x.skill === selectedSkill);
-        const latest = ov?.latest ?? null;
+        const latest = ov?.latest ?? ov?.history.find((item) => item.is_baseline) ?? null;
         if (latest) fetchIteration(selectedSkill, latest.iteration);
       }
     },
@@ -804,16 +953,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const toggleTheme = useCallback(() => setTheme((t) => (t === "dark" ? "light" : "dark")), []);
 
   // ---------- export / runs ----------
-  const [lastHandoff, setLastHandoff] = useState<Store["lastHandoff"]>(null);
-  const dismissHandoff = useCallback(() => setLastHandoff(null), []);
+  const dismissHandoff = useCallback(() => setHandoffPanelVisible(false), []);
+  const showHandoff = useCallback(() => setHandoffPanelVisible(true), []);
 
   const doExport = useCallback(async () => {
-    // Prefer the human-curated focus when it exists. Otherwise, let the user
-    // hand off the machine suggestions as an explicit, reviewable starting set.
+    // The explicit bulk action approves every case currently carrying the
+    // Flagged status. Preserve whether the set is purely human-confirmed or
+    // also contains machine suggestions in the handoff provenance.
     const confirmedFlags = caseViews.filter((v) => v.decision === "flag" && v.source === "human");
     const suggestedFlags = caseViews.filter((v) => v.decision === "flag" && v.source !== "human");
-    const flags = confirmedFlags.length ? confirmedFlags : suggestedFlags;
-    const selectionMode: SelectionMode = confirmedFlags.length ? "confirmed_flags" : "confirmed_and_suggested";
+    const flags = [...confirmedFlags, ...suggestedFlags];
+    const selectionMode: SelectionMode =
+      suggestedFlags.length > 0 ? "confirmed_and_suggested" : "confirmed_flags";
     if (!flags.length) {
       pushToast("No flagged cases to hand off yet.", "bad");
       return;
@@ -821,19 +972,72 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const keys = flags.map((v) => v.key);
       const sk = [...new Set(flags.map((v) => v.skill))].sort();
-      const res = await exportHandoff(keys, sk, selectionMode);
-      const sourceLabel = selectionMode === "confirmed_flags" ? "confirmed" : "suggested";
-      setLastHandoff({ ...res, at: nowIso(), count: keys.length, selectionMode });
+      const res = await exportHandoff(keys, selectionMode);
+      if (res.case_keys.length !== keys.length) {
+        const missing = keys.filter((key) => !res.case_keys.includes(key));
+        throw new Error(
+          `${missing.length} flagged ${missing.length === 1 ? "case was" : "cases were"} not accepted: ${missing.join(", ")}`,
+        );
+      }
+      const sourceLabel = suggestedFlags.length
+        ? `${confirmedFlags.length} confirmed + ${suggestedFlags.length} suggested`
+        : `${confirmedFlags.length} confirmed`;
+      setLastHandoff({
+        ...res,
+        at: res.created_at || nowIso(),
+        count: res.case_keys.length,
+        caseKeys: res.case_keys,
+        selectionMode: res.selection_mode,
+      });
+      setHandoffPanelVisible(true);
+      const queued = buildOptimizationQueue(skillsRef.current, res.case_keys);
+      setSelectedSkill(queued[0]?.skill ?? null);
       pushToast(
-        `Handed off ${keys.length} ${sourceLabel} cases → ${res.focus_path.split("/").slice(-2).join("/")}.`,
+        `Handed off ${res.case_keys.length} flagged cases (${sourceLabel}) → ${res.focus_path.split("/").slice(-2).join("/")}.`,
         "good"
       );
-      setLiveMessage(`${keys.length} ${sourceLabel} flags handed off to the optimizer across ${sk.length} skills.`);
+      setLiveMessage(`${res.case_keys.length} flagged cases handed off to the optimizer across ${sk.length} skills.`);
       setStation("optimize");
     } catch (err) {
       pushToast(`Hand-off failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
     }
   }, [caseViews, pushToast, setStation]);
+
+  const startOptimization = useCallback(async (concurrency = 1): Promise<boolean> => {
+    if (!lastHandoff) {
+      pushToast("Send flagged Review cases to Optimize before starting a round.", "bad");
+      return false;
+    }
+    try {
+      const rec = await launchOptimizationRequest(concurrency);
+      setOptimizationLaunch(rec);
+      pushToast(
+        `Optimization started for ${rec.skills.length} ${rec.skills.length === 1 ? "skill" : "skills"} with ${rec.concurrency} parallel ${rec.concurrency === 1 ? "worker" : "workers"}. KEEP candidates will stop at Promote.`,
+        "good"
+      );
+      setLiveMessage(`Optimization workflow ${rec.launch_id} started.`);
+      setStation("optimize");
+      if (optimizationLaunchTimer.current) window.clearTimeout(optimizationLaunchTimer.current);
+      optimizationLaunchTimer.current = window.setTimeout(() => {
+        setOptimizationLaunch((current) => {
+          if (current?.launch_id !== rec.launch_id) return current;
+          pushToastRef.current?.(
+            `Optimization was accepted but no journal appeared. Inspect ${rec.log}.`,
+            "bad"
+          );
+          return null;
+        });
+        optimizationLaunchTimer.current = null;
+      }, 30_000);
+      window.setTimeout(() => {
+        void loadLive().then(setLive).catch(() => undefined);
+      }, 800);
+      return true;
+    } catch (err) {
+      pushToast(`Optimization launch failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
+      return false;
+    }
+  }, [lastHandoff, pushToast, setStation]);
 
   // ---------- launching runs ----------
   // POST the validated request; the server spawns the detached audit process
@@ -928,7 +1132,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     registry,
     insights,
     live,
-    liveRunning,
+    studyRuns,
+    optimizationRuns,
+    studyRunning,
+    optimizationRunning,
+    optimizationLaunch,
     baselineRunId,
     baselineRun,
     baselineLoading,
@@ -940,12 +1148,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     counts,
     needsYouCount,
     confirmedFlagKeys,
-    confirmedFlagSkills,
-    suggestedFlagCount,
     lastHandoff,
+    handoffPanelVisible,
     dismissHandoff,
+    showHandoff,
     skills,
+    optimizationQueue,
     selectedSkill,
+    selectedOptimizationQueueSkill,
     selectedSkillData,
     selectedIterationId,
     iterationDetail,
@@ -989,6 +1199,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dismissToast,
     retrySave,
     doExport,
+    startOptimization,
     switchRun,
     setActiveHarness,
     setBaselineRun,

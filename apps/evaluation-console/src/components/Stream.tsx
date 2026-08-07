@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
 import { useStore } from "../store";
-import type { CaseView, FilterKind, ScenarioDetail, SkillOverview } from "../types";
+import type { OptimizationQueueSkill } from "../lib/optimizationQueue";
+import type { CaseView, FilterKind, ScenarioDetail } from "../types";
 import { Score01, Score10, ScenarioChip, UnknownChip } from "./primitives";
 
 /** Keep the keyboard-selected row in view as j/k/gg/G move the cursor. */
@@ -146,14 +147,37 @@ function CaseRow({ v, selected, onClick }: { v: CaseView; selected: boolean; onC
   );
 }
 
-function SkillRow({ s, selected, onClick }: { s: SkillOverview; selected: boolean; onClick: () => void }) {
+function SkillRow({
+  item,
+  selected,
+  running,
+  onClick
+}: {
+  item: OptimizationQueueSkill;
+  selected: boolean;
+  running: boolean;
+  onClick: () => void;
+}) {
   const ref = useFollowSelection(selected);
-  const d = s.latest?.decision;
-  const spine = s.running ? "d-tie" : d === "KEEP" ? "d-keep" : d === "REJECT" ? "d-reject" : "d-neutral";
+  const s = item.history;
+  const d = s?.latest?.decision;
+  const queued = item.queuedCaseKeys.length;
+  const failedBaseline = s?.history.find((entry) => entry.is_baseline && entry.status === "failed") ?? null;
+  const spine = running
+    ? "d-tie"
+    : failedBaseline
+      ? "d-reject"
+    : d === "KEEP"
+      ? "d-keep"
+      : d === "REJECT"
+        ? "d-reject"
+        : queued > 0
+          ? "d-flag"
+          : "d-neutral";
   return (
     <div
       ref={ref}
-      id={optionId("skill", s.skill)}
+      id={optionId("skill", item.skill)}
       className={`row${selected ? " sel cursor-cur" : ""}`}
       onClick={onClick}
       role="option"
@@ -162,19 +186,31 @@ function SkillRow({ s, selected, onClick }: { s: SkillOverview; selected: boolea
       <span className={`spine ${spine}`} />
       <div className="row-main">
         <div className="row-l1">
-          <span className="name mono">{s.skill.replace("cesiumjs-", "")}</span>
-          {s.running && <span className="pill pill-live">● running</span>}
+          <span className="name mono">{item.skill.replace("cesiumjs-", "")}</span>
+          {queued > 0 && (
+            <span className="pill queue-pill">
+              {queued} {queued === 1 ? "case" : "cases"} queued
+            </span>
+          )}
+          {running && <span className="pill pill-live">● running</span>}
+          {failedBaseline && !running && <span className="pill optimization-failed-pill">✗ baseline failed</span>}
         </div>
         <div className="row-l2">
-          <span>{s.iteration_count} iter</span>
-          <span>·</span>
-          <span style={{ color: "var(--keep)" }}>{s.kept} kept</span>
-          <span style={{ color: "var(--reject)" }}>{s.rejected} rej</span>
+          {s ? (
+            <>
+              <span>{s.iteration_count} candidate {s.iteration_count === 1 ? "round" : "rounds"}</span>
+              <span>·</span>
+              <span style={{ color: "var(--keep)" }}>{s.kept} kept</span>
+              <span style={{ color: "var(--reject)" }}>{s.rejected} rej</span>
+            </>
+          ) : (
+            <span>Ready for its first optimization round</span>
+          )}
         </div>
       </div>
       <div className="row-right">
         <span className="st-hist" style={{ marginTop: 0 }}>
-          {s.history.slice(-6).map((h) => (
+          {(s?.history ?? []).slice(-6).map((h) => (
             <span
               key={h.iteration}
               className={`hist-tick ${h.is_baseline ? "baseline" : h.status === "failed" ? "failed" : h.decision === "KEEP" ? "keep" : h.decision === "REJECT" ? "reject" : "baseline"}`}
@@ -239,7 +275,7 @@ export function Stream() {
         <FacetBar />
         <div className="stream-head">
           <span>worst-first · {store.orderedCases.length} cases</span>
-          <span>det ▣ · eye ◈</span>
+          <span>code ▣ · visual ◈</span>
         </div>
         <div
           className="col-scroll"
@@ -262,16 +298,19 @@ export function Stream() {
   }
 
   if (station === "optimize") {
-    const skillIdx = store.skills.findIndex((s) => s.skill === store.selectedSkill);
+    const queue = store.optimizationQueue;
+    const queuedCases = queue.reduce((sum, item) => sum + item.queuedCaseKeys.length, 0);
+    const skillIdx = queue.findIndex((s) => s.skill === store.selectedSkill);
     const moveSkill = (delta: number) => {
-      const next = store.skills[Math.max(0, Math.min(store.skills.length - 1, (skillIdx < 0 ? 0 : skillIdx) + delta))];
+      const next = queue[Math.max(0, Math.min(queue.length - 1, (skillIdx < 0 ? 0 : skillIdx) + delta))];
       if (next) store.selectSkill(next.skill);
     };
     return (
       <section className="stream col" aria-label="Skills">
         <div className="stream-head">
           <span>
-            {store.skills.length} skill{store.skills.length === 1 ? "" : "s"} · iteration history
+            {queue.length} skill{queue.length === 1 ? "" : "s"} · {queuedCases} queued{" "}
+            {queuedCases === 1 ? "case" : "cases"}
           </span>
           <span>keep · reject</span>
         </div>
@@ -281,16 +320,23 @@ export function Stream() {
           aria-label="Skills"
           tabIndex={0}
           aria-activedescendant={store.selectedSkill ? optionId("skill", store.selectedSkill) : undefined}
-          onKeyDown={listboxKeys(moveSkill, (edge) => moveSkill(edge === "start" ? -store.skills.length : store.skills.length))}
+          onKeyDown={listboxKeys(moveSkill, (edge) => moveSkill(edge === "start" ? -queue.length : queue.length))}
         >
-          {store.skills.map((s) => (
+          {queue.map((item) => (
             <SkillRow
-              key={s.skill}
-              s={s}
-              selected={s.skill === store.selectedSkill}
-              onClick={() => store.selectSkill(s.skill)}
+              key={item.skill}
+              item={item}
+              selected={item.skill === store.selectedSkill}
+              running={
+                Boolean(item.history?.running) ||
+                store.optimizationRuns.some((run) => run.status === "running" && run.skill === item.skill)
+              }
+              onClick={() => store.selectSkill(item.skill)}
             />
           ))}
+          {queue.length === 0 && (
+            <div className="empty-note">Send flagged Review cases here to create the optimization queue.</div>
+          )}
         </div>
       </section>
     );

@@ -16,7 +16,7 @@ import type { RunSummary } from "../types";
      2. Recent runs and the KPI row: glanceable numbers spanning runs,
         harnesses, and models.
      3. Performance over time: the run-score trend, the anchor chart.
-     4. Links into the Models (6) and Harnesses (8) stations, which own the
+     4. Links into the Models (7) and Harnesses (8) stations, which own the
         deeper per-unit analysis. The dashboard never duplicates their panels.
    The dashboard is read-only: it never mutates review state.
    ============================================================================ */
@@ -144,6 +144,9 @@ export function DashboardStation() {
 
   const combos = insights?.combos ?? [];
   const iterations = combos.reduce((n, c) => n + c.iterations, 0);
+  const failedBaselines = skills.filter((skill) =>
+    skill.history.some((iteration) => iteration.is_baseline && iteration.status === "failed")
+  ).length;
   const best = combos
     .filter((c) => c.win_rate !== null && c.scored_iterations >= 2)
     .sort((a, b) => (b.win_rate as number) - (a.win_rate as number))[0];
@@ -171,7 +174,7 @@ export function DashboardStation() {
 
       {/* 0 — HAPPENING NOW: present only while an eval run is executing.
           The dashboard stays results-oriented; the run's full anatomy
-          (phases, trials, journal) lives in the Live station this links to. */}
+          (phases, trials, journal) lives in the Run station this links to. */}
       <LiveNowBanner />
 
       {/* 1 — STATUS LINE: the focused run's verdict + the primary action.
@@ -206,17 +209,17 @@ export function DashboardStation() {
         <div className="hero-right">
           <button
             className={`review-cta${needsYouCount > 0 ? " hot" : ""}`}
-            onClick={() => setStation(scorecard ? "evaluate" : "live")}
+            onClick={() => setStation(!scorecard ? "live" : needsYouCount > 0 ? "review" : "evaluate")}
           >
             {!scorecard ? (
-              <>Start the first run → Run Studies</>
+              <>Start the first study → Run (1)</>
             ) : needsYouCount > 0 ? (
               <>
                 <Flag size={12} aria-hidden /> {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your
-                eyes → Evaluate (1)
+                eyes → Review (3)
               </>
             ) : (
-              <>Open the focused run → Evaluate (1)</>
+              <>Open the focused run → Evaluate (2)</>
             )}
           </button>
         </div>
@@ -251,7 +254,15 @@ export function DashboardStation() {
           tone={best ? "good" : undefined}
           small
         />
-        <Kpi label="Loop Iterations" value={String(iterations)} sub={`${skills.length} skills under optimization`} />
+        <Kpi
+          label="Candidate Rounds"
+          value={String(iterations)}
+          sub={
+            failedBaselines
+              ? `${failedBaselines} ${failedBaselines === 1 ? "baseline failure" : "baseline failures"} blocked candidate work`
+              : `${skills.length} skills in optimization history`
+          }
+        />
       </div>
 
       {/* 3 — THE ANCHOR CHART: score across runs, over time. */}

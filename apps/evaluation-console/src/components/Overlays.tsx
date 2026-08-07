@@ -625,7 +625,7 @@ interface PaletteItem {
 
 const STATIONS: { id: Station; label: string }[] = [
   { id: "dashboard", label: "Dashboard · all studies at a glance" },
-  { id: "live", label: "Run Studies · launch & watch eval runs" },
+  { id: "live", label: "Run · launch & watch evaluation studies" },
   { id: "evaluate", label: "Evaluate · scorecard for the focused run" },
   { id: "review", label: "Review · triage cases, flag failures" },
   { id: "optimize", label: "Optimize · skill improvement loop" },
@@ -755,13 +755,12 @@ const HELP_ROWS: { keys: string[]; desc: string }[] = [
   { keys: ["Enter"], desc: "Commit the cursor to the stage" },
   { keys: ["Esc"], desc: "Up one altitude / close the overlay" },
   { keys: ["0"], desc: "Dashboard: all studies at a glance" },
-  { keys: ["1", "·", "5"], desc: "Lifecycle stations: Evaluate, Review, Optimize, Decide, Promote" },
-  { keys: ["6"], desc: "Insights: Models" },
-  { keys: ["7"], desc: "Run Studies: launch eval runs and watch them live" },
+  { keys: ["1", "·", "6"], desc: "Lifecycle: Run, Evaluate, Review, Optimize, Decide, Promote" },
+  { keys: ["7"], desc: "Insights: Models" },
   { keys: ["8"], desc: "Insights: Harnesses" },
   { keys: ["b"], desc: "Set the comparison baseline (in the Run Browser, h)" },
   { keys: ["a"], desc: "Accept (Review)" },
-  { keys: ["f"], desc: "Flag into focus.json, the only loop seed (Review)" },
+  { keys: ["f"], desc: "Mark the case Flagged for the bulk Optimize handoff (Review)" },
   { keys: ["d"], desc: "Defer (Review)" },
   { keys: ["e"], desc: "Confirm the decision and advance (Review)" },
   { keys: ["u"], desc: "Undo the last decision" },
@@ -808,7 +807,7 @@ function Help() {
         <div className="help-legend-row"><b>Source chip</b>: who produced the scored output: a real agent harness, synthetic test fixtures, or unknown (pre-provenance runs).</div>
         <div className="help-legend-row"><b>vs baseline chip</b>: the comparison run every delta is measured against; set or clear it from the Run Browser (h).</div>
         <div className="help-legend-row"><b>History ticks</b> (Optimize rail rows): one tick per iteration: green KEEP, red REJECT, gray baseline/failed, newest on the right.</div>
-        <div className="help-legend-row"><b>Phase chips</b> (Run Studies): the run's pipeline phases; a count like 3/14 is real artifacts on disk, a pulse means running with nothing countable.</div>
+        <div className="help-legend-row"><b>Phase chips</b> (Run and Optimize): the owning workflow's pipeline phases; a count like 3/14 is real artifacts on disk, a pulse means running with nothing countable.</div>
         <div className="help-legend-row"><b>Promotion states</b>: <b>staged</b>: a KEEP candidate awaits your approval (SKILL.md untouched); <b>promoted</b>: applied with the previous version archived.</div>
       </div>
     </div>

@@ -348,6 +348,8 @@ export interface IterationSummary {
   is_baseline: boolean;
   status: IterationStatus;
   failed_step: string | null;
+  /** Recorded terminal failure from the current attempt, when present. */
+  error?: string | null;
   decision: LoopDecision;
   rule_fired: string | null;
   rationale: string | null;
@@ -475,12 +477,28 @@ export interface LiveRun {
   journal_tail: JournalEvent[];
 }
 
+/** Detached Optimize dispatcher. It can be alive briefly before (and between)
+ * individual iteration journals, so it is tracked separately from LiveRun. */
+export interface OptimizationLaunchRecord {
+  launch_id: string;
+  kind: "optimization";
+  pid: number;
+  skills: string[];
+  concurrency: number;
+  focus_path: string;
+  command: string;
+  log: string;
+  output_dir: string;
+  started_utc: string;
+}
+
 export interface LiveStatusDTO {
   generated_at: string;
   running: boolean;
   poll_ms: number;
   max_age_s: number;
   active: LiveRun[];
+  optimization_launch: OptimizationLaunchRecord | null;
 }
 
 // ============================================================================

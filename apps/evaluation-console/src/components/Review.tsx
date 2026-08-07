@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useStore } from "../store";
 import { artifactUrl } from "../api";
 import type { AdaptedDimension, CaseView, RawCheck } from "../types";
 import { dimensionShortLabel, humanize } from "../lib/adapt";
-import { dimToneClass } from "../lib/dimtone";
+import { visualScoreTone } from "../lib/dimtone";
 import {
   DecisionChip,
   MetaTag,
@@ -12,6 +12,22 @@ import {
   StatusGlyph,
   UnknownChip
 } from "./primitives";
+
+const REVIEW_SPLIT_KEY = "ec-review-evidence-split";
+const REVIEW_SPLIT_DEFAULT = 42;
+const REVIEW_SPLIT_MIN = 25;
+const REVIEW_SPLIT_MAX = 75;
+
+function savedReviewSplit(): number {
+  try {
+    const saved = Number(localStorage.getItem(REVIEW_SPLIT_KEY));
+    return Number.isFinite(saved) && saved >= REVIEW_SPLIT_MIN && saved <= REVIEW_SPLIT_MAX
+      ? saved
+      : REVIEW_SPLIT_DEFAULT;
+  } catch {
+    return REVIEW_SPLIT_DEFAULT;
+  }
+}
 
 function jsonInline(v: unknown): string {
   if (v === null || v === undefined) return "—";
@@ -288,17 +304,25 @@ function DimRow({ d }: { d: AdaptedDimension }) {
       </div>
     );
   }
-  const pct = Math.round((d.score! / 10) * 100);
+  const score = Math.max(0, Math.min(10, d.score!));
+  const pct = Math.round((score / 10) * 100);
   return (
-    <div className={`dim-row ${dimToneClass(d.status)}`}>
+    <div className={`dim-row ${visualScoreTone(score)}`}>
       <span className="dim-name" title={d.label}>
         {dimensionShortLabel(d.key)}
       </span>
-      <span className="dim-bar">
+      <span
+        className="dim-bar"
+        role="progressbar"
+        aria-label={d.label}
+        aria-valuemin={0}
+        aria-valuemax={10}
+        aria-valuenow={score}
+      >
         <span className="dim-bar-fill" style={{ width: `${pct}%` }} />
       </span>
       <span className="dim-score">
-        {d.score!.toFixed(1)}
+        {score.toFixed(1)}
         <span className="dim-score-max">/10</span>
       </span>
       {d.note && <span className="dim-note">{d.note}</span>}
@@ -403,11 +427,111 @@ export function ReviewStage() {
 
 export function ReviewInspector() {
   const { selectedView: v } = useStore();
-  if (!v) return <aside className="inspector col" />;
+  const gridRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+  const [split, setSplit] = useState(savedReviewSplit);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(REVIEW_SPLIT_KEY, String(split));
+    } catch {
+      // Storage can be unavailable in hardened browser profiles; resizing
+      // remains fully functional for the current session.
+    }
+  }, [split]);
+
+  const resizeAt = useCallback((clientY: number) => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const rect = grid.getBoundingClientRect();
+    const handleHeight = 12;
+    const usable = Math.max(1, rect.height - handleHeight);
+    const next = ((clientY - rect.top - handleHeight / 2) / usable) * 100;
+    setSplit(Math.max(REVIEW_SPLIT_MIN, Math.min(REVIEW_SPLIT_MAX, next)));
+  }, []);
+
+  useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      if (draggingRef.current) resizeAt(event.clientY);
+    };
+    const onMouseMove = (event: MouseEvent) => {
+      if (draggingRef.current) resizeAt(event.clientY);
+    };
+    const stop = () => {
+      draggingRef.current = false;
+    };
+    // Pointer events cover mouse, pen, and touch. Mouse events are retained as
+    // a compatibility fallback for embedded/webview drag synthesizers.
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", stop);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", stop);
+    };
+  }, [resizeAt]);
+
+  if (!v) return <aside className="inspector col review-inspector" />;
   return (
-    <aside className="inspector col" aria-label="Evidence inspector">
-      <QuantBand v={v} />
-      <QualBand v={v} />
+    <aside className="inspector col review-inspector" aria-label="Evidence inspector">
+      <div
+        ref={gridRef}
+        className="review-evidence-grid"
+        style={{
+          gridTemplateRows: `minmax(64px, ${split}fr) 12px minmax(64px, ${100 - split}fr)`
+        }}
+      >
+        <div className="review-evidence-pane">
+          <QuantBand v={v} />
+        </div>
+        <div
+          className="review-evidence-resizer"
+          role="separator"
+          tabIndex={0}
+          aria-label="Resize Code Tests and Visual Tests panels"
+          aria-orientation="horizontal"
+          aria-valuemin={REVIEW_SPLIT_MIN}
+          aria-valuemax={REVIEW_SPLIT_MAX}
+          aria-valuenow={Math.round(split)}
+          title="Drag to resize Code Tests and Visual Tests. Double-click to reset."
+          onPointerDown={(event) => {
+            event.preventDefault();
+            draggingRef.current = true;
+            resizeAt(event.clientY);
+          }}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            draggingRef.current = true;
+            resizeAt(event.clientY);
+          }}
+          onDoubleClick={() => setSplit(REVIEW_SPLIT_DEFAULT)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setSplit((value) => Math.max(REVIEW_SPLIT_MIN, value - 3));
+            } else if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setSplit((value) => Math.min(REVIEW_SPLIT_MAX, value + 3));
+            } else if (event.key === "Home") {
+              event.preventDefault();
+              setSplit(REVIEW_SPLIT_MIN);
+            } else if (event.key === "End") {
+              event.preventDefault();
+              setSplit(REVIEW_SPLIT_MAX);
+            }
+          }}
+        >
+          <span aria-hidden />
+        </div>
+        <div className="review-evidence-pane">
+          <QualBand v={v} />
+        </div>
+      </div>
     </aside>
   );
 }

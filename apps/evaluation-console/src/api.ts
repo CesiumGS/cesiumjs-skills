@@ -7,6 +7,7 @@ import type {
   InsightsDTO,
   IterationDetail,
   LiveStatusDTO,
+  OptimizationLaunchRecord,
   ProbeResultDTO,
   RawScorecard,
   RegistryDTO,
@@ -24,7 +25,15 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText}: ${text}`);
+    let detail = text;
+    try {
+      const body = JSON.parse(text) as { error?: unknown };
+      if (typeof body.error === "string" && body.error.trim()) detail = body.error.trim();
+    } catch {
+      // Keep a non-JSON response verbatim; it is still more useful than the
+      // status text alone when a reverse proxy or dev server reports the error.
+    }
+    throw new Error(`${res.status} ${res.statusText}${detail ? `: ${detail}` : ""}`);
   }
   return (await res.json()) as T;
 }
@@ -40,6 +49,8 @@ export function artifactUrl(path: string | null | undefined): string {
 export const loadConfig = () => req<ConfigDTO>("/api/config");
 export const loadScorecard = () => req<RawScorecard | null>("/api/scorecard");
 export const loadReviewDecisions = () => req<ReviewDecisionDoc | null>("/api/review-decisions");
+export const loadOptimizationHandoff = () =>
+  req<PersistedHandoffResult | null>("/api/optimization-handoff");
 export const loadRuns = () => req<RunSummary[]>("/api/runs");
 export const loadRunCases = (runId: string) =>
   req<RunCasesDTO>(`/api/run-cases?run_id=${encodeURIComponent(runId)}`);
@@ -156,10 +167,24 @@ export interface HandoffResult {
   focus_preview: FocusPreview;
 }
 
-export const exportHandoff = (confirmedCaseKeys: string[], skills: string[], selectionMode: SelectionMode) =>
-  req<HandoffResult>("/api/optimization-handoff", {
+export interface PersistedHandoffResult extends HandoffResult {
+  selection_mode: SelectionMode;
+  created_at: string;
+  case_keys: string[];
+}
+
+export const exportHandoff = (confirmedCaseKeys: string[], selectionMode: SelectionMode) =>
+  req<PersistedHandoffResult>("/api/optimization-handoff", {
     method: "PUT",
-    body: JSON.stringify({ selection_mode: selectionMode, confirmed_case_keys: confirmedCaseKeys, skills })
+    body: JSON.stringify({ selection_mode: selectionMode, confirmed_case_keys: confirmedCaseKeys })
+  });
+
+/** Start the already-handed-off focus with the configured optimization agents.
+ * KEEP candidates remain staged for the explicit Promote gate. */
+export const launchOptimization = (concurrency: number) =>
+  req<OptimizationLaunchRecord>("/api/optimization/launch", {
+    method: "POST",
+    body: JSON.stringify({ concurrency })
   });
 
 export const selectRun = (runId: string) =>

@@ -34,6 +34,7 @@ import type {
   LiveTrial,
   ProbeResultDTO
 } from "../types";
+import { summarizeBaselineCoverage } from "../lib/baselineCoverage";
 import { fmtDuration, harnessLabel, modelShort, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
 
 /* ============================================================================
@@ -119,6 +120,19 @@ function PhaseChip({ phase, running }: { phase: LivePhase; running: boolean }) {
       </span>
       <span className="lp-phase-name">{phase.label}</span>
       {count && <span className="lp-phase-count mono">{count}</span>}
+    </div>
+  );
+}
+
+/** Shared journal-derived phase animation. Run and Optimize use the same
+ * geometry while receiving only the lane-specific rows their pages own. */
+export function LivePhasePipeline({ run }: { run: LiveRun }) {
+  const running = run.status === "running";
+  return (
+    <div className="lp-phases">
+      {run.phases.map((phase) => (
+        <PhaseChip key={phase.id} phase={phase} running={running} />
+      ))}
     </div>
   );
 }
@@ -529,7 +543,7 @@ function LiveRunCard({ run }: { run: LiveRun }) {
               if (run.kind === "iteration") selectSkill(run.skill);
               setStation("optimize");
             }}
-            title="Open this skill's iteration log and pipeline in Optimize (3)"
+            title="Open this skill's iteration log and pipeline in Optimize (4)"
           >
             Optimize <ArrowRight size={11} aria-hidden />
           </button>
@@ -570,11 +584,7 @@ function LiveRunCard({ run }: { run: LiveRun }) {
             </span>
           </div>
 
-          <div className="lp-phases">
-            {run.phases.map((p) => (
-              <PhaseChip key={p.id} phase={p} running={running} />
-            ))}
-          </div>
+          <LivePhasePipeline run={run} />
 
           <div className="lrc-columns">
             <div>
@@ -1102,7 +1112,7 @@ function ProviderPicker({
 }
 
 function LaunchPanel() {
-  const { launchEvalRun, liveRunning, registry } = useStore();
+  const { launchEvalRun, studyRunning, registry } = useStore();
   const [available, setAvailable] = useState<string[]>([]);
   // Tri-state selection (error prevention): "all" is an explicit choice, and
   // an emptied custom set stays empty; it never silently re-arms all skills.
@@ -1176,10 +1186,17 @@ function LaunchPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coverageKey]);
 
-  const coveredCount = coverage?.skills.filter((s) => s.covered).length ?? 0;
-  const totalWithCases = coverage?.skills.filter((s) => s.cases > 0).length ?? 0;
-  const missing = coverage?.skills.filter((s) => s.cases > 0 && !s.covered) ?? [];
-  const fullyCovered = coverage !== null && totalWithCases > 0 && coveredCount === totalWithCases;
+  // The badge denominator is the launch selection, not merely the subset that
+  // already has rendered cases. Otherwise a stale or incomplete bundle set
+  // can claim "1/1 skills rendered" while All (8) is selected.
+  const {
+    coveredCount,
+    selectedCount: selectedCoverageCount,
+    missingScreenshots,
+    missingBaselineCases,
+    fullyCovered,
+  } = summarizeBaselineCoverage(coverage);
+  const coverageIncomplete = coverage !== null && coveredCount < selectedCoverageCount;
   // ZERO screenshots anywhere in the selection: the visual lane would judge
   // nothing and the run lands "incomplete" — block the launch (the server
   // rejects it too; this stops it before the doomed click).
@@ -1208,14 +1225,14 @@ function LaunchPanel() {
   }, [rendering, coverageKey]);
 
   const renderMissing = async () => {
-    if (!missing.length) return;
+    if (!missingScreenshots.length) return;
     setRendering(true);
     setCoverageErr(null);
     try {
       // One skill per request: rendering a large selection in a single POST
       // can outlive the server's request timeout, and per-skill requests let
       // the coverage badge tick up live as each skill finishes.
-      for (const entry of missing) {
+      for (const entry of missingScreenshots) {
         await renderBaselines([entry.skill]);
         setCoverage(await loadBaselineCoverage(currentSkills));
       }
@@ -1579,8 +1596,8 @@ function LaunchPanel() {
               <div className="launch-label">
                 Baseline Screenshots
                 {coverage && (
-                  <span className={`bl-badge${fullyCovered ? " ok" : missing.length ? " warn" : ""}`}>
-                    {coveredCount}/{totalWithCases} skills rendered
+                  <span className={`bl-badge${fullyCovered ? " ok" : coverageIncomplete ? " warn" : ""}`}>
+                    {coveredCount}/{selectedCoverageCount} selected skills ready
                   </span>
                 )}
               </div>
@@ -1588,22 +1605,42 @@ function LaunchPanel() {
                 <span className="bl-note">
                   {fullyCovered
                     ? "Every selected skill has rendered baselines — Visual Tests will judge them."
-                    : missing.length
-                      ? `${missing.map((s) => s.skill.replace(/^cesiumjs-/, "")).join(", ")} need rendering, or Visual Tests will complete "incomplete."`
-                      : "Rendering a skill's baseline code into screenshots the judge can look at."}
+                    : missingScreenshots.length && missingBaselineCases.length
+                      ? `${missingScreenshots.length} selected skill${
+                          missingScreenshots.length === 1 ? "" : "s"
+                        } need rendering; ${missingBaselineCases.length} ${
+                          missingBaselineCases.length === 1 ? "has" : "have"
+                        } no generated baseline cases yet.`
+                      : missingScreenshots.length
+                        ? `${missingScreenshots
+                            .map((s) => s.skill.replace(/^cesiumjs-/, ""))
+                            .join(", ")} need rendering, or Visual Tests will complete "incomplete."`
+                        : missingBaselineCases.length
+                          ? `${missingBaselineCases.length} selected skill${
+                              missingBaselineCases.length === 1 ? " has" : "s have"
+                            } no generated baseline cases, so screenshots cannot be rendered yet.`
+                      : "Generating and rendering complete baseline evidence for the selected scenarios."}
                 </span>
                 <span className="spacer" />
                 <button
                   className="lk-chip"
                   onClick={renderMissing}
-                  disabled={rendering || !missing.length}
+                  disabled={rendering || !missingScreenshots.length}
                   title={
-                    missing.length
-                      ? `Render baselines for ${missing.length} skill(s) (headless browser; no Ion token needed)`
-                      : "All selected skills already have baseline screenshots"
+                    missingScreenshots.length
+                      ? `Generate and render baselines for ${missingScreenshots.length} skill(s) (configured codegen harness and Cesium ion token required)`
+                      : missingBaselineCases.length
+                        ? `${missingBaselineCases.length} selected skill(s) need generated baseline cases before screenshots can be rendered`
+                        : "All selected skills already have baseline screenshots"
                   }
                 >
-                  {rendering ? "Rendering…" : missing.length ? `Render ${missing.length}` : "Rendered"}
+                  {rendering
+                    ? "Rendering…"
+                    : missingScreenshots.length
+                      ? `Render ${missingScreenshots.length}`
+                      : missingBaselineCases.length
+                        ? "Needs cases"
+                        : "Rendered"}
                 </button>
               </div>
               {coverageErr && (
@@ -1831,7 +1868,7 @@ function LaunchPanel() {
               </div>
             </div>
           )}
-          {liveRunning && <div className="launch-note">A run is already in progress. Parallel runs are fine.</div>}
+          {studyRunning && <div className="launch-note">A study is already in progress. Parallel studies are fine.</div>}
         </div>
       </div>
     </div>
@@ -1890,11 +1927,10 @@ function LiveEmptyState() {
       </div>
       <div className="le-title">No Eval Run in Progress</div>
       <div className="le-sub">
-        Launch a baseline audit below, or start the optimization loop from a terminal. Either way, every phase and
-        case journals to disk and streams here within a few seconds.
+        Configure and launch an evaluation study below. Every Code Test and Visual Test journals to disk and streams
+        here within a few seconds.
       </div>
       <pre className="le-cmd mono">
-        node packages/eval/bin/cesium-eval.js optimize all --skills cesiumjs-camera{"\n"}
         node packages/eval/bin/cesium-eval.js audit --skills all --journal &lt;dir&gt;/progress.jsonl
       </pre>
     </div>
@@ -1902,8 +1938,7 @@ function LiveEmptyState() {
 }
 
 export function LiveStation() {
-  const { live } = useStore();
-  const runs = live?.active ?? [];
+  const { live, studyRuns: runs } = useStore();
   const runningRuns = useMemo(() => runs.filter((r) => r.status === "running"), [runs]);
   const failedRuns = useMemo(() => runs.filter((r) => r.status === "failed"), [runs]);
   const stalledRuns = useMemo(() => runs.filter((r) => r.status === "stalled"), [runs]);
@@ -1912,10 +1947,10 @@ export function LiveStation() {
     <div className="overview dashboard-station">
       <div className="dash-head">
         <div>
-          <div className="dash-title">Run Studies</div>
+          <div className="dash-title">Run</div>
           <div className="dash-sub">
-            Launch eval runs against the CLI and watch their real-time progress: phases, trials, and journal, straight
-            from disk.
+            Launch evaluation studies and watch their Code Tests, Visual Tests, and journal progress straight from
+            disk. Optimization activity stays in Optimize.
           </div>
         </div>
         <span className="spacer" />
@@ -1969,30 +2004,53 @@ export function LiveStation() {
   );
 }
 
-/** Compact "happening now" strip for the Dashboard — visible only mid-run. */
+/** Lane-specific "happening now" strips for the Dashboard. */
 export function LiveNowBanner() {
-  const { live, setStation } = useStore();
-  const run = live?.active.find((r) => r.status === "running");
-  if (!run) return null;
-  const pct = Math.round(run.progress * 100);
+  const { studyRuns, optimizationRuns, setStation } = useStore();
+  const running = [
+    ...studyRuns.filter((run) => run.status === "running").map((run) => ({ run, lane: "study" as const })),
+    ...optimizationRuns
+      .filter((run) => run.status === "running")
+      .map((run) => ({ run, lane: "optimization" as const }))
+  ];
+  if (!running.length) return null;
   return (
-    <button className="live-now-banner" onClick={() => setStation("live")} title="Open Run Studies (7)">
-      <span className="lrc-dot on" aria-hidden />
-      <span className="lnb-label">
-        Eval run in progress: <strong>{liveRunTitle(run)}</strong>
-        <span className="mono">
-          {" "}
-          {run.kind === "audit" ? (run.judge ? "Code + Visual" : "Code Only") : run.kind === "baseline" ? "Baseline" : run.iteration}
-        </span>
-        {run.current_phase_label ? ` · ${run.current_phase_label}` : ""}
-      </span>
-      <span className="lnb-bar">
-        <LiveProgressBar run={run} slim />
-      </span>
-      <span className="mono lnb-pct">{pct}%</span>
-      <span className="lnb-cta">
-        Watch Live <ArrowRight size={11} aria-hidden />
-      </span>
-    </button>
+    <div className="live-now-stack">
+      {running.map(({ run, lane }) => {
+        const study = lane === "study";
+        const pct = Math.round(run.progress * 100);
+        return (
+          <button
+            key={`${lane}/${run.skill}/${run.iteration}`}
+            className={`live-now-banner${study ? "" : " optimization"}`}
+            onClick={() => setStation(study ? "live" : "optimize")}
+            title={study ? "Open Run (1)" : "Open Optimize (4)"}
+          >
+            <span className="lrc-dot on" aria-hidden />
+            <span className="lnb-label">
+              {study ? "Evaluation study" : "Optimization"} in progress: <strong>{liveRunTitle(run)}</strong>
+              <span className="mono">
+                {" "}
+                {run.kind === "audit"
+                  ? run.judge
+                    ? "Code + Visual"
+                    : "Code Only"
+                  : run.kind === "baseline"
+                    ? "Baseline"
+                    : run.iteration}
+              </span>
+              {run.current_phase_label ? ` · ${run.current_phase_label}` : ""}
+            </span>
+            <span className="lnb-bar">
+              <LiveProgressBar run={run} slim />
+            </span>
+            <span className="mono lnb-pct">{pct}%</span>
+            <span className="lnb-cta">
+              {study ? "Watch Run" : "Watch Optimize"} <ArrowRight size={11} aria-hidden />
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

@@ -1,59 +1,76 @@
 import type { ReactNode } from "react";
-import { Command, HelpCircle, Moon, Sun, ChevronDown, RotateCcw } from "lucide-react";
+import { ArrowRight, Command, HelpCircle, Moon, Sun, ChevronDown, RotateCcw } from "lucide-react";
 import { useStore } from "../store";
 import type { Station, ConsoleOverlay } from "../types";
 import { pluralize } from "../lib/format";
 import { liveRunTitle } from "./Live";
 
-/* The five lifecycle steps every focused run travels, split across the two
-   sections that own them: steps 1–2 judge a run (Evaluate), steps 3–5 improve
-   and ship it (Optimize). The rail renders only the number and the name; the
+/* The six lifecycle steps split across the two sections that own them:
+   steps 1–3 run and judge a study (Evaluate), steps 4–6 improve and ship it
+   (Optimize). The rail renders only the number and the name; the
    one-line description and the fuller hint ride along in the tooltip so a first
    visit to any station never requires guessing what it is for. */
 const LIFECYCLE_STATIONS: Array<{ id: Station; num: string; name: string; desc: string; hint: string }> = [
   {
-    id: "evaluate",
+    id: "live",
     num: "1",
+    name: "Run",
+    desc: "Launch & watch studies",
+    hint: "Configure an evaluation study, launch it, and watch Code Tests and Visual Tests advance from the journal in real time."
+  },
+  {
+    id: "evaluate",
+    num: "2",
     name: "Evaluate",
     desc: "Scorecard at a glance",
     hint: "Read-only summary of the focused run: overall verdict, category scores, and how it compares to the baseline run."
   },
   {
     id: "review",
-    num: "2",
+    num: "3",
     name: "Review",
     desc: "Triage & flag failures",
-    hint: "Walk the focused run's cases worst-first. Accept, flag, or defer each one; the cases you flag become the optimizer's focus set."
+    hint: "Walk the focused run's cases worst-first. Accept, flag, or defer each one; the bulk action beneath Review transfers every flagged case into Optimize."
   },
   {
     id: "optimize",
-    num: "3",
+    num: "4",
     name: "Optimize",
     desc: "Skill improvement loop",
-    hint: "Watch the autonomous loop propose and test SKILL.md candidates for each skill, seeded by the flags you confirmed in Review."
+    hint: "Start and watch the autonomous loop propose and test SKILL.md candidates for each skill, seeded by the flags transferred from Review."
   },
   {
     id: "decide",
-    num: "4",
+    num: "5",
     name: "Decide",
     desc: "Approve fixes",
     hint: "Diff each candidate's renders against the current best and sanity-check the loop's KEEP / REJECT call before anything ships."
   },
   {
     id: "promote",
-    num: "5",
+    num: "6",
     name: "Promote",
     desc: "Ship winners live",
     hint: "The deliberate final step and the human gate: KEEP candidates arrive here staged, and nothing touches a live SKILL.md until you promote it (the current version is archived first)."
   }
 ];
-/* Steps 1–2 live under "Evaluate", steps 3–5 under "Optimize". */
-const JUDGE_STEPS = LIFECYCLE_STATIONS.slice(0, 2);
-const IMPROVE_STEPS = LIFECYCLE_STATIONS.slice(2);
+const JUDGE_STEPS = LIFECYCLE_STATIONS.slice(0, 3);
+const IMPROVE_STEPS = LIFECYCLE_STATIONS.slice(3);
 
 export function TopStrip() {
-  const { scorecard, config, theme, toggleTheme, openOverlay, counts, setStation, live, liveRunning } = useStore();
-  const liveRun = liveRunning ? live?.active.find((r) => r.status === "running") : undefined;
+  const {
+    scorecard,
+    config,
+    theme,
+    toggleTheme,
+    openOverlay,
+    counts,
+    setStation,
+    studyRuns,
+    optimizationRuns
+  } = useStore();
+  const studyRun = studyRuns.find((run) => run.status === "running");
+  const optimizationRun = optimizationRuns.find((run) => run.status === "running");
   const pass = scorecard?.overallResult === "pass";
   const runLabel = scorecard?.gitCommit?.slice(0, 7) ?? scorecard?.runId?.slice(-12) ?? config?.run_id?.slice(-12);
   return (
@@ -70,7 +87,7 @@ export function TopStrip() {
         onClick={() => openOverlay("harness")}
         title={
           scorecard
-            ? `Focused run: ${scorecard.runId}\nEvery lifecycle station (1–5) reads this run.\n${counts.total} cases · commit ${scorecard.gitCommit?.slice(0, 7) ?? "?"}\nClick to browse and switch runs (h).`
+            ? `Focused run: ${scorecard.runId}\nEvery lifecycle station (1–6) reads this run.\n${counts.total} cases · commit ${scorecard.gitCommit?.slice(0, 7) ?? "?"}\nClick to browse and switch runs (h).`
             : "No run loaded. Click to browse runs (h)."
         }
       >
@@ -81,15 +98,26 @@ export function TopStrip() {
       </button>
 
       <span className="spacer" />
-      {liveRun && (
+      {studyRun && (
         <button
           className="live-pill"
           onClick={() => setStation("live")}
-          title={`Eval run in progress: ${liveRunTitle(liveRun)}. Open Run Studies (7).`}
+          title={`Evaluation study in progress: ${liveRunTitle(studyRun)}. Open Run (1).`}
         >
           <span className="dot" aria-hidden />
-          {liveRunTitle(liveRun)}
-          <span className="mono">{Math.round(liveRun.progress * 100)}%</span>
+          Run · {liveRunTitle(studyRun)}
+          <span className="mono">{Math.round(studyRun.progress * 100)}%</span>
+        </button>
+      )}
+      {optimizationRun && (
+        <button
+          className="live-pill optimize-pill"
+          onClick={() => setStation("optimize")}
+          title={`Optimization in progress: ${liveRunTitle(optimizationRun)}. Open Optimize (4).`}
+        >
+          <span className="dot" aria-hidden />
+          Optimize · {liveRunTitle(optimizationRun)}
+          <span className="mono">{Math.round(optimizationRun.progress * 100)}%</span>
         </button>
       )}
       <button className="icon-btn" title="Command palette (⌘K)" onClick={() => openOverlay("palette")}>
@@ -106,23 +134,42 @@ export function TopStrip() {
 }
 
 export function Rail() {
-  const { station, setStation, needsYouCount, skills, live, liveRunning, openOverlay } = useStore();
-  const loopRunning = liveRunning || skills.some((s) => s.running);
-  const stalledCount = (live?.active ?? []).filter((r) => r.status !== "running").length;
+  const {
+    station,
+    setStation,
+    needsYouCount,
+    counts,
+    skills,
+    studyRuns,
+    optimizationRuns,
+    studyRunning,
+    optimizationRunning,
+    openOverlay,
+    doExport
+  } = useStore();
+  const failedStudyCount = studyRuns.filter((run) => run.status === "failed").length;
+  const stalledStudyCount = studyRuns.filter((run) => run.status === "stalled").length;
+  const failedOptimizationCount = optimizationRuns.filter((run) => run.status === "failed").length;
+  const stalledOptimizationCount = optimizationRuns.filter((run) => run.status === "stalled").length;
   const decidable = skills.filter((s) => s.latest?.decision === "KEEP").length;
   const stagedCount = skills.filter((s) => s.latest?.decision === "KEEP" && s.latest?.promotion === "staged").length;
+  const flagged = counts.flag;
 
   /* Badges carry information, never decoration: each one answers "how many
      things wait for me here?" or "is something running?" — and says which. */
   const badge = (id: Station): ReactNode => {
     if (id === "live")
-      return liveRunning ? (
-        <span className="nav-badge live" title="An eval run is executing right now">
+      return studyRunning ? (
+        <span className="nav-badge live" title="An evaluation study is running right now">
           ●
         </span>
-      ) : stalledCount > 0 ? (
-        <span className="nav-badge" title={`${pluralize(stalledCount, "stalled run")} on disk; open to inspect`}>
-          {stalledCount}
+      ) : failedStudyCount > 0 ? (
+        <span className="nav-badge hot" title={`${pluralize(failedStudyCount, "failed study")} on disk; open to inspect`}>
+          {failedStudyCount}
+        </span>
+      ) : stalledStudyCount > 0 ? (
+        <span className="nav-badge" title={`${pluralize(stalledStudyCount, "stalled study")} on disk; open to inspect`}>
+          {stalledStudyCount}
         </span>
       ) : null;
     if (id === "review")
@@ -132,9 +179,17 @@ export function Rail() {
         </span>
       ) : null;
     if (id === "optimize")
-      return loopRunning ? (
-        <span className="nav-badge live" title="An optimization loop is running right now">
+      return optimizationRunning ? (
+        <span className="nav-badge live optimize-live" title="An optimization loop is running right now">
           ●
+        </span>
+      ) : failedOptimizationCount > 0 ? (
+        <span className="nav-badge hot" title={`${pluralize(failedOptimizationCount, "failed optimization")} on disk; open to inspect`}>
+          {failedOptimizationCount}
+        </span>
+      ) : stalledOptimizationCount > 0 ? (
+        <span className="nav-badge" title={`${pluralize(stalledOptimizationCount, "stalled optimization")} on disk`}>
+          {stalledOptimizationCount}
         </span>
       ) : null;
     if (id === "decide")
@@ -193,7 +248,7 @@ export function Rail() {
 
   return (
     <nav className="rail col" role="navigation" aria-label="Console navigation">
-      {/* ── Monitor: the screens that are NOT scoped to one focused run. ── */}
+      {/* ── Monitor: cross-study results, outside the focused lifecycle. ── */}
       <div className="rail-section">Monitor</div>
       {stationRow(
         "dashboard",
@@ -201,20 +256,27 @@ export function Rail() {
         "Cross-study overview: recent runs, skill health, and what needs your attention. The one screen not scoped to a single run.",
         "0"
       )}
-      {stationRow(
-        "live",
-        "Run Studies",
-        "Your hands on the eval CLI: configure and kick off a new study, then watch its phases, trials, and journal live.",
-        "7"
-      )}
 
-      {/* ── Evaluate: judge the focused run (steps 1–2). The top-strip run
-            selector reaches the Run Browser; Optimize (step 3) is one row
-            down, so a separate handoff button here would just duplicate it. ── */}
+      {/* ── Evaluate: run, inspect, and triage a study (steps 1–3). ── */}
       <div className="rail-section">Evaluate</div>
       {JUDGE_STEPS.map(step)}
+      <button
+        className={`rail-handoff${flagged ? " ready" : ""}`}
+        onClick={() => void doExport()}
+        disabled={!flagged}
+        title={
+          flagged
+            ? `Transfer all ${pluralize(flagged, "flagged case")} into the optimization focus, then open Optimize.`
+            : "Flag cases in Review to create an optimization focus."
+        }
+      >
+        <span className="rh-label">
+          {flagged ? `Send ${flagged} ${flagged === 1 ? "flag" : "flags"} to Optimize` : "No flags ready"}
+        </span>
+        <ArrowRight size={13} aria-hidden className="rh-go" />
+      </button>
 
-      {/* ── Optimize: improve and ship the run you just judged (steps 3–5). ── */}
+      {/* ── Optimize: improve and ship the run you just judged (steps 4–6). ── */}
       <div className="rail-section">Optimize</div>
       {IMPROVE_STEPS.map(step)}
 
@@ -225,7 +287,7 @@ export function Rail() {
         "models",
         "Models",
         "The model as the unit of analysis: declared catalogs and cost tiers beside observed keep and win rates from the artifacts on disk.",
-        "6"
+        "7"
       )}
       {stationRow(
         "harnesses",
@@ -304,7 +366,7 @@ export function ActionBar() {
         {station === "review" && (
           <>
             {verb("Accept", "a", () => selectedView && setDecision(selectedView.key, "accept"), !selectedView)}
-            {verb("Flag → Focus", "f", () => selectedView && setDecision(selectedView.key, "flag"), !selectedView)}
+            {verb("Flag for Optimize", "f", () => selectedView && setDecision(selectedView.key, "flag"), !selectedView)}
             {verb("Defer", "d", () => selectedView && setDecision(selectedView.key, "defer"), !selectedView)}
             {verb("Confirm + next", "e", () => confirmAndAdvance(), !selectedView)}
             {verb("Details", "space", () => toggleDetails())}
@@ -313,8 +375,8 @@ export function ActionBar() {
           </>
         )}
         {station === "evaluate" && (
-          <span className="verb" title="Evaluate is a read-only summary. Grade cases in Review (2).">
-            Read-only · grade in Review (2)
+          <span className="verb" title="Evaluate is a read-only summary. Grade cases in Review (3).">
+            Read-only · grade in Review (3)
           </span>
         )}
         {station === "optimize" && (

@@ -1,7 +1,10 @@
+import { useState } from "react";
+import { Activity, Play, Terminal } from "lucide-react";
 import { useStore } from "../store";
 import type { IterationSummary, JournalEvent, ScenarioDetail } from "../types";
 import { harnessLabel, modelShort, relativeTime } from "../lib/format";
 import { LoopBadge, Pct, ProvGlyph, ScenarioChip } from "./primitives";
+import { LivePhasePipeline, LiveProgressBar } from "./Live";
 
 /** The loaded iteration's recorded codegen provenance — or an honest "unrecorded". */
 function IterationProvenanceChips() {
@@ -40,7 +43,8 @@ function IterationProvenanceChips() {
 }
 
 /* ============================================================================
-   OPTIMIZE — live-loop monitor (DESIGN-SPEC §4c). Read-only over the real
+   OPTIMIZE — launch + live-loop monitor (DESIGN-SPEC §4c). The handoff launch
+   is explicit; every progress surface below remains read-only over the real
    optimization artifacts the store loads via selectSkill / selectIteration.
    Three columns: ITERATION LOG (commit history) · PIPELINE TRAIN (journal 1:1)
    · SCENARIO BOARD (+ journal tail). The right inspector is the skill summary.
@@ -99,6 +103,13 @@ function carStatuses(journal: JournalEvent[]): Record<string, CarStatus> {
 function wlt(it: IterationSummary): string {
   const c = it.counts;
   return `W${c.wins} L${c.losses} T${c.ties}`;
+}
+
+function journalError(event: JournalEvent | undefined): string | null {
+  if (!event) return null;
+  if (typeof event.error === "string" && event.error.trim()) return event.error.trim();
+  const result = event.result;
+  return result && typeof result.error === "string" && result.error.trim() ? result.error.trim() : null;
 }
 
 /** ITERATION LOG — git-style commit history, newest first, baseline at foot. */
@@ -176,12 +187,35 @@ function IterationLog() {
           );
         })}
         {baseline && (
-          <div className="commit" style={{ cursor: "default", opacity: 0.7 }} title="Baseline (current best)">
+          <div
+            className={`commit${baseline.iteration === selectedIterationId ? " sel" : ""}`}
+            onClick={() => selectIteration(baseline.iteration)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                selectIteration(baseline.iteration);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            title={baseline.error ?? "Baseline preparation for the current best skill"}
+          >
             <span className="c-iter">{baseline.iteration}</span>
-            <span className="mono" style={{ fontSize: "var(--fs-50)", color: "var(--text-3)" }}>
-              Baseline
-            </span>
-            <span className="c-wlt">{wlt(baseline)}</span>
+            {baseline.status === "failed" ? (
+              <span className="iteration-failed">
+                <span aria-hidden>✗</span>
+                {baseline.failed_step?.replace(/^baseline_/, "").replaceAll("_", " ") ?? "failed"}
+              </span>
+            ) : baseline.status === "running" ? (
+              <span className="iteration-running">● Preparing baseline</span>
+            ) : baseline.status === "stalled" ? (
+              <span className="iteration-stalled">Baseline stalled</span>
+            ) : (
+              <span className="mono" style={{ fontSize: "var(--fs-50)", color: "var(--text-3)" }}>
+                Baseline ready
+              </span>
+            )}
+            <span className="c-wlt">{baseline.status === "baseline" ? "ready" : baseline.status}</span>
           </div>
         )}
       </div>
@@ -336,17 +370,160 @@ function ScenarioBoard() {
   );
 }
 
-export function OptimizeStage() {
-  const { selectedSkill, selectedSkillData, confirmedFlagKeys, lastHandoff, dismissHandoff, pushToast } = useStore();
-  const handoffSource = lastHandoff?.selectionMode === "confirmed_flags" ? "confirmed" : "suggested";
+/** Optimize owns its own live lane. It reuses the journal-driven phase
+ * geometry from Run, but only receives optimization rows from the store. */
+function OptimizationLivePanel() {
+  const { optimizationRuns, optimizationLaunch, selectedSkill, selectSkill } = useStore();
+  const active = optimizationRuns.filter((run) => run.status === "running");
+  const failed = optimizationRuns.filter((run) => run.status === "failed");
+  const stalled = optimizationRuns.filter((run) => run.status === "stalled");
+  const focusedFailure = failed.find((run) => run.skill === selectedSkill) ?? failed[0] ?? null;
+  const visibleFailed = focusedFailure ? [focusedFailure] : [];
+  const visibleRuns = [...active, ...stalled, ...visibleFailed];
+  const primary = active[0] ?? focusedFailure ?? stalled[0] ?? null;
 
-  /* The server generates the exact seeded CLI command on every handoff — the
-     bridge from Review flags to a running loop is this panel, not recall. */
-  const handoffPanel = lastHandoff ? (
+  if (!optimizationLaunch && visibleRuns.length === 0) return null;
+
+  return (
+    <section className="optimization-live-panel" aria-label="Optimization progress">
+      <div className="optimization-live-head">
+        <span className="optimization-live-title">
+          <Activity size={14} aria-hidden />
+          Optimization activity
+        </span>
+        <span className="spacer" />
+        <span
+          className={`optimization-live-state${active.length || optimizationLaunch ? " on" : ""}${failed.length ? " failed" : ""}`}
+        >
+          {active.length
+            ? `${active.length} ${active.length === 1 ? "round" : "rounds"} running`
+            : optimizationLaunch
+              ? "Dispatcher running"
+              : failed.length
+                ? `${failed.length} failed`
+                : `${stalled.length} stalled`}
+        </span>
+      </div>
+
+      {optimizationLaunch && visibleRuns.length === 0 && (
+        <div className="optimization-launch-pending">
+          <span className="optimization-orbit" aria-hidden>
+            <span />
+          </span>
+          <div>
+            <strong>Dispatcher started</strong>
+            <div>
+              Waiting for the first iteration journal · {optimizationLaunch.skills.length}{" "}
+              {optimizationLaunch.skills.length === 1 ? "skill" : "skills"} queued
+            </div>
+          </div>
+        </div>
+      )}
+
+      {visibleRuns.map((run) => {
+        const pct = Math.round(run.progress * 100);
+        const running = run.status === "running";
+        return (
+          <button
+            key={`${run.kind}/${run.skill}/${run.iteration}`}
+            className={`optimization-live-row ${run.status}`}
+            onClick={() => selectSkill(run.skill)}
+            title={`Open ${run.skill} ${run.iteration}`}
+          >
+            <span className="optimization-orbit" aria-hidden>
+              <span />
+            </span>
+            <span className="optimization-live-copy">
+              <span className="optimization-live-name">
+                <strong>{run.skill.replace("cesiumjs-", "")}</strong>
+                <span className="mono">{run.kind === "baseline" ? "baseline" : run.iteration}</span>
+              </span>
+              <span className="optimization-live-meta">
+                {running ? "Running" : run.status === "failed" ? "Failed" : "Stalled"}
+                {run.current_phase_label ? ` · ${run.current_phase_label}` : " · preparing"}
+                {run.last_activity_utc ? ` · ${relativeTime(run.last_activity_utc)}` : ""}
+              </span>
+            </span>
+            <span className="optimization-live-progress">
+              <LiveProgressBar run={run} slim />
+              <span className="mono">{pct}%</span>
+            </span>
+            <LivePhasePipeline run={run} />
+          </button>
+        );
+      })}
+      {failed.length > visibleFailed.length && (
+        <div className="optimization-failure-overflow">
+          +{failed.length - visibleFailed.length} more failed skills · select them in the skill rail for their journals
+        </div>
+      )}
+      {primary && (
+        <div className={`optimization-journal${primary.status === "failed" ? " failed" : ""}`}>
+          <div className="optimization-journal-head">
+            <span>
+              Event log · {primary.skill.replace("cesiumjs-", "")} ·{" "}
+              {primary.kind === "baseline" ? "baseline preparation" : `candidate round ${primary.iteration}`}
+            </span>
+            <span className="mono">updates live</span>
+          </div>
+          {primary.status === "failed" && (
+            <div className="optimization-error" role="alert">
+              <strong>Optimization stopped before a candidate decision.</strong>
+              <span>{primary.error ?? journalError(primary.journal_tail.at(-1)) ?? "No error detail was recorded."}</span>
+            </div>
+          )}
+          <div className="optimization-journal-lines" aria-live="polite">
+            {primary.journal_tail.slice(-10).map((event, index) => {
+              const isFailure = event.event.endsWith("_failed");
+              const ts = event.timestamp_utc?.slice(11, 19) ?? "";
+              return (
+                <div
+                  className={`journal-line${isFailure ? " fail" : ""}`}
+                  key={`${event.timestamp_utc ?? ""}/${index}`}
+                >
+                  {ts && <span>{ts}</span>}
+                  <span className="jl-ev">{event.event}</span>
+                  {event.step && <span>{event.step}</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function OptimizeStage() {
+  const {
+    selectedOptimizationQueueSkill,
+    selectedSkillData,
+    caseViews,
+    optimizationRuns,
+    optimizationRunning,
+    lastHandoff,
+    handoffPanelVisible,
+    dismissHandoff,
+    showHandoff,
+    pushToast,
+    startOptimization
+  } = useStore();
+  const [launching, setLaunching] = useState(false);
+  const [concurrency, setConcurrency] = useState(2);
+  const handoffSkillCount = lastHandoff
+    ? new Set(lastHandoff.caseKeys.map((key) => key.split("/")[0]).filter(Boolean)).size
+    : 0;
+  const launchCommand = lastHandoff ? `${lastHandoff.command} \\\n  --concurrency ${concurrency}` : "";
+
+  /* The handoff is deliberately two-step: Review transfers the focus, then
+     Optimize visibly starts the configured agents. The exact terminal command
+     remains available as a transparent fallback. */
+  const handoffPanel = !lastHandoff ? null : handoffPanelVisible ? (
     <div className="handoff-panel" role="region" aria-label="Optimizer handoff">
       <div className="handoff-head">
         <span>
-          {lastHandoff.count} {handoffSource} {lastHandoff.count === 1 ? "flag" : "flags"} handed off →{" "}
+          {lastHandoff.count} flagged {lastHandoff.count === 1 ? "case" : "cases"} across {handoffSkillCount}{" "}
+          {handoffSkillCount === 1 ? "skill" : "skills"} ready to optimize →{" "}
           <span className="mono">{lastHandoff.focus_path.split("/").slice(-2).join("/")}</span>
         </span>
         <span className="spacer" />
@@ -355,45 +532,164 @@ export function OptimizeStage() {
         </button>
       </div>
       <div className="handoff-body">
-        <span>Run the seeded loop from a terminal:</span>
-        <pre className="mono handoff-cmd">{lastHandoff.command}</pre>
+        <div className="handoff-summary">
+          The focus is transferred. Start the configured optimization agents here; any KEEP candidate will stop at
+          Promote for your approval.
+        </div>
+        <label className="handoff-concurrency">
+          <span>Parallel skills</span>
+          <select
+            value={concurrency}
+            disabled={launching || optimizationRunning}
+            onChange={(event) => setConcurrency(Number(event.target.value))}
+          >
+            {[1, 2, 3, 4].map((value) => (
+              <option value={value} key={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
-          className="pill"
-          onClick={() => {
-            navigator.clipboard
-              .writeText(lastHandoff.command)
-              .then(() => pushToast("Command copied to clipboard", "good"))
-              .catch(() => pushToast(`Copy failed. Command: ${lastHandoff.command}`, "bad"));
+          className="handoff-start"
+          disabled={launching || optimizationRunning}
+          onClick={async () => {
+            setLaunching(true);
+            try {
+              await startOptimization(concurrency);
+            } finally {
+              setLaunching(false);
+            }
           }}
         >
-          Copy command
+          <Play size={13} fill="currentColor" aria-hidden />
+          {optimizationRunning ? "Optimization running" : launching ? "Starting…" : "Start optimization"}
         </button>
+        <details className="handoff-terminal">
+          <summary>
+            <Terminal size={12} aria-hidden /> Terminal fallback
+          </summary>
+          <pre className="mono handoff-cmd">{launchCommand}</pre>
+          <button
+            className="pill"
+            onClick={() => {
+              navigator.clipboard
+                .writeText(launchCommand)
+                .then(() => pushToast("Command copied to clipboard", "good"))
+                .catch(() => pushToast(`Copy failed. Command: ${launchCommand}`, "bad"));
+            }}
+          >
+            Copy command
+          </button>
+        </details>
       </div>
     </div>
-  ) : null;
+  ) : (
+    <button className="handoff-collapsed" onClick={showHandoff}>
+      <Play size={12} aria-hidden />
+      {lastHandoff.count} queued {lastHandoff.count === 1 ? "case" : "cases"} · Show handoff and start controls
+    </button>
+  );
 
-  if (!selectedSkillData) {
+  if (!selectedOptimizationQueueSkill) {
     return (
-      <main className="stage col" role="main">
+      <main className="stage col optimize-stage" role="main">
         {handoffPanel}
-        <div className="empty-note">Pick a skill on the rail to watch its optimization loop.</div>
+        <OptimizationLivePanel />
+        <div className="empty-note">Send flagged Review cases to Optimize to create a queue.</div>
       </main>
     );
   }
 
-  // confirmedFlagKeys are "skill/case_id" — keep only this skill's human focus.
-  const focus = selectedSkill
-    ? confirmedFlagKeys.filter((k) => k.split("/")[0] === selectedSkill)
-    : [];
+  const focus = selectedOptimizationQueueSkill.queuedCaseKeys;
+  const caseByKey = new Map(caseViews.map((item) => [item.key, item]));
+  const focusCases = focus.map((key) => ({ key, view: caseByKey.get(key) ?? null }));
+
+  const focusPanel = focus.length > 0 ? (
+    <section className="queue-focus panel" aria-label={`${focus.length} queued Review cases`}>
+      <div className="panel-head">
+        Review focus · {focus.length} {focus.length === 1 ? "case" : "cases"} queued
+      </div>
+      <div className="queue-focus-list">
+        {focusCases.map(({ key, view }) => (
+          <div className="queue-focus-case" key={key}>
+            <span className="queue-focus-mark" aria-hidden />
+            <span className="queue-focus-main">
+              <span className="queue-focus-name">{view?.case_name || view?.case_id || key.split("/").slice(1).join("/")}</span>
+              <span className="queue-focus-id mono">{view?.case_id || key.split("/").slice(1).join("/")}</span>
+            </span>
+            <span className="queue-focus-signals">
+              {view ? (
+                <>
+                  <span className={`queue-signal ${view.result === "fail" ? "bad" : "good"}`}>
+                    Code {view.result}
+                  </span>
+                  <span
+                    className={`queue-signal ${
+                      view.visualStatus === "fail"
+                        ? "bad"
+                        : view.visualStatus === "needs_review"
+                          ? "warn"
+                          : "good"
+                    }`}
+                  >
+                    Visual {view.visualStatus.replace("_", " ")}
+                  </span>
+                  <span className="queue-source">{view.source === "human" ? "confirmed" : "suggested"}</span>
+                </>
+              ) : (
+                <span className="queue-source">persisted focus</span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  ) : null;
+
+  if (!selectedSkillData) {
+    return (
+      <main className="stage col optimize-stage" role="main">
+        {handoffPanel}
+        <OptimizationLivePanel />
+        <div className="stage-head">
+          <div>
+            <div className="stage-title">{selectedOptimizationQueueSkill.skill.replace("cesiumjs-", "")}</div>
+            <div className="stage-sub">
+              <span>
+                {focus.length} flagged {focus.length === 1 ? "case" : "cases"} transferred
+              </span>
+              <span>· Ready for its first optimization round</span>
+            </div>
+          </div>
+          <span className="pill queue-ready-pill">Queued</span>
+        </div>
+        {focusPanel}
+        <div className="queue-awaiting">
+          This skill is in the Optimize workflow now. Start optimization above to create its first iteration; no
+          agent has been started by the transfer itself.
+        </div>
+      </main>
+    );
+  }
+
+  const selectedSkillRunning = optimizationRuns.some(
+    (run) => run.skill === selectedSkillData.skill && run.status === "running"
+  );
+  const selectedBaseline = selectedSkillData.history.find((item) => item.is_baseline) ?? null;
 
   return (
-    <main className="stage col" role="main">
+    <main className="stage col optimize-stage" role="main">
       {handoffPanel}
+      <OptimizationLivePanel />
       <div className="stage-head">
         <div>
           <div className="stage-title">{selectedSkillData.skill.replace("cesiumjs-", "")}</div>
           <div className="stage-sub">
-            <span>{selectedSkillData.iteration_count} Iterations</span>
+            <span>
+              {selectedSkillData.iteration_count} completed candidate{" "}
+              {selectedSkillData.iteration_count === 1 ? "round" : "rounds"}
+            </span>
             <span>· {selectedSkillData.kept} Kept</span>
             <span>· {selectedSkillData.rejected} Rejected</span>
             {selectedSkillData.latest?.finished_utc && (
@@ -406,7 +702,7 @@ export function OptimizeStage() {
               </span>
             )}
             <IterationProvenanceChips />
-            {selectedSkillData.running && (
+            {(selectedSkillData.running || selectedSkillRunning) && (
               <span style={{ color: "var(--live)", display: "inline-flex", alignItems: "center", gap: 4 }}>
                 <ProvGlyph kind="live" /> Running
               </span>
@@ -418,21 +714,22 @@ export function OptimizeStage() {
         )}
       </div>
 
-      <div className="chasing">
-        <ProvGlyph kind="human" />
-        {focus.length === 0 ? (
-          <span>No human focus yet, so the loop is exploratory</span>
-        ) : (
-          <>
-            <span style={{ marginRight: "var(--sp-1)" }}>Chasing your flags:</span>
-            {focus.map((k) => (
-              <span key={k} className="mono" style={{ fontSize: "var(--fs-50)" }}>
-                {k.split("/").slice(1).join("/")}
-              </span>
-            ))}
-          </>
-        )}
-      </div>
+      {selectedBaseline?.status === "failed" && (
+        <div className="optimization-baseline-failure" role="alert">
+          <strong>Baseline preparation failed; no candidate iteration was started.</strong>
+          <span>
+            {selectedBaseline.error ??
+              `The ${selectedBaseline.failed_step?.replace(/^baseline_/, "").replaceAll("_", " ") ?? "baseline"} step failed.`}
+          </span>
+        </div>
+      )}
+
+      {focusPanel ?? (
+        <div className="chasing">
+          <ProvGlyph kind="human" />
+          <span>No Review focus is queued, so the loop is exploratory.</span>
+        </div>
+      )}
 
       <div className="loop-cols">
         <IterationLog />
@@ -444,9 +741,49 @@ export function OptimizeStage() {
 }
 
 export function OptimizeInspector() {
-  const { selectedSkillData, iterationDetail } = useStore();
+  const { selectedOptimizationQueueSkill, selectedSkillData, iterationDetail } = useStore();
 
   if (!selectedSkillData) {
+    if (selectedOptimizationQueueSkill) {
+      const queued = selectedOptimizationQueueSkill.queuedCaseKeys;
+      return (
+        <aside className="inspector col" aria-label="Skill summary">
+          <div className="band human">
+            <div className="band-head">
+              ◈ review queue
+              <span className="bh-score">
+                <span className="pill queue-ready-pill">Queued</span>
+              </span>
+            </div>
+            <div className="band-body">
+              <div className="intent">
+                {selectedOptimizationQueueSkill.skill.replace("cesiumjs-", "")} is ready for its first optimization
+                round.
+              </div>
+              <div className="queue-inspector-count">
+                <span className="mono">{queued.length}</span> transferred {queued.length === 1 ? "case" : "cases"}
+              </div>
+              <div className="queue-inspector-list">
+                {queued.map((key) => (
+                  <span className="mono" key={key}>
+                    {key.split("/").slice(1).join("/")}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="band">
+            <div className="band-head">▣ loop status</div>
+            <div className="band-body">
+              <div className="empty-note" style={{ padding: "var(--sp-2)", textAlign: "left" }}>
+                No iteration artifacts yet. Transferring focus does not start an agent; use Start optimization when
+                you are ready.
+              </div>
+            </div>
+          </div>
+        </aside>
+      );
+    }
     return (
       <aside className="inspector col" aria-label="Skill summary">
         <div className="empty-note">No skill selected.</div>

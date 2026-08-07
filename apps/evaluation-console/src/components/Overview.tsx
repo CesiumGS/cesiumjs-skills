@@ -356,10 +356,10 @@ export function EvaluateOverview() {
             {needsYouCount > 0 ? (
               <>
                 <span aria-hidden>⚑ </span>
-                {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your eyes → Review (2)
+                {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your eyes → Review (3)
               </>
             ) : (
-              <>Nothing needs your eyes → Review (2)</>
+              <>Nothing needs your eyes → Review (3)</>
             )}
           </button>
           <div style={{ width: "100%" }}>

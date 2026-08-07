@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Check, X, Flag, Minus, AlertTriangle } from "lucide-react";
 import type { Decision, LoopDecision, ScenarioVerdict } from "../types";
+import { visualScoreTone } from "../lib/dimtone";
 
 /* ============================================================================
    The legibility law (DESIGN-SPEC P3) lives here as TYPED primitives so the two
@@ -14,16 +15,27 @@ export function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
+export function score01Percent(value: number): number {
+  return Math.round(clamp01(value) * 100);
+}
+
 /** Code Test 0-1 magnitude — steel bar + % + machine glyph. */
 export function Score01({ value, label }: { value: number | null | undefined; label?: string }) {
   if (value === null || value === undefined) return <UnknownChip />;
-  const pct = Math.round(clamp01(value) * 100);
+  const pct = score01Percent(value);
   return (
     <span className="score score-machine" title={`${label ?? "Code Tests"} ${pct}% (0-1 scale)`}>
       <span className="score-glyph" aria-hidden>
         ▣
       </span>
-      <span className="score-bar">
+      <span
+        className="score-bar"
+        role="progressbar"
+        aria-label={label ?? "Code Tests"}
+        aria-valuemin={0}
+        aria-valuemax={1}
+        aria-valuenow={clamp01(value)}
+      >
         <span className="score-bar-fill" style={{ width: `${pct}%` }} />
       </span>
       <span className="score-num">{value.toFixed(2).replace(/^0/, "")}</span>
@@ -36,14 +48,25 @@ export function Score10({ value, label }: { value: number | null | undefined; la
   if (value === null || value === undefined) return <UnknownChip />;
   const v = Math.max(0, Math.min(10, value));
   const pips = Math.round(v);
+  const tone = visualScoreTone(v);
   return (
-    <span className="score score-eye" title={`${label ?? "Visual Tests"} ${v.toFixed(1)}/10 (visual scale)`}>
+    <span
+      className={`score score-eye ${tone}`}
+      title={`${label ?? "Visual Tests"} ${v.toFixed(1)}/10 (visual scale)`}
+    >
       <span className="score-glyph" aria-hidden>
         ◈
       </span>
-      <span className="pips" aria-hidden>
+      <span
+        className="pips"
+        role="progressbar"
+        aria-label={label ?? "Visual Tests"}
+        aria-valuemin={0}
+        aria-valuemax={10}
+        aria-valuenow={v}
+      >
         {Array.from({ length: 10 }, (_, i) => (
-          <span key={i} className={`pip${i < pips ? " on" : ""}`} />
+          <span key={i} className={`pip${i < pips ? " on" : ""}`} aria-hidden />
         ))}
       </span>
       <span className="score-num">{v.toFixed(1)}</span>
