@@ -22,7 +22,7 @@ import {
   loadHarnessHealth,
   loadLaunchSkills,
   probeHarness,
-  renderBaselines
+  prepareBaselines
 } from "../api";
 import type {
   AdapterStatusDTO,
@@ -1192,6 +1192,7 @@ function LaunchPanel() {
   const {
     coveredCount,
     selectedCount: selectedCoverageCount,
+    needsPreparation,
     missingScreenshots,
     missingBaselineCases,
     fullyCovered,
@@ -1225,15 +1226,21 @@ function LaunchPanel() {
   }, [rendering, coverageKey]);
 
   const renderMissing = async () => {
-    if (!missingScreenshots.length) return;
+    if (!needsPreparation.length) return;
     setRendering(true);
     setCoverageErr(null);
     try {
       // One skill per request: rendering a large selection in a single POST
       // can outlive the server's request timeout, and per-skill requests let
       // the coverage badge tick up live as each skill finishes.
-      for (const entry of missingScreenshots) {
-        await renderBaselines([entry.skill]);
+      for (const entry of needsPreparation) {
+        await prepareBaselines({
+          skills: [entry.skill],
+          codegen_harness: codegenHarness || undefined,
+          codegen_provider: codegenProvider || undefined,
+          codegen_model: codegenModel || undefined,
+          codegen_variant: codegenVariant || undefined,
+        });
         setCoverage(await loadBaselineCoverage(currentSkills));
       }
     } catch (exc: any) {
@@ -1605,12 +1612,12 @@ function LaunchPanel() {
                 <span className="bl-note">
                   {fullyCovered
                     ? "Every selected skill has rendered baselines — Visual Tests will judge them."
-                    : missingScreenshots.length && missingBaselineCases.length
-                      ? `${missingScreenshots.length} selected skill${
-                          missingScreenshots.length === 1 ? "" : "s"
-                        } need rendering; ${missingBaselineCases.length} ${
+                    : needsPreparation.length && missingBaselineCases.length
+                      ? `${needsPreparation.length} selected skill${
+                          needsPreparation.length === 1 ? "" : "s"
+                        } need preparation; ${missingBaselineCases.length} ${
                           missingBaselineCases.length === 1 ? "has" : "have"
-                        } no generated baseline cases yet.`
+                        } missing generated baseline cases that will be created first.`
                       : missingScreenshots.length
                         ? `${missingScreenshots
                             .map((s) => s.skill.replace(/^cesiumjs-/, ""))
@@ -1618,28 +1625,28 @@ function LaunchPanel() {
                         : missingBaselineCases.length
                           ? `${missingBaselineCases.length} selected skill${
                               missingBaselineCases.length === 1 ? " has" : "s have"
-                            } no generated baseline cases, so screenshots cannot be rendered yet.`
+                            } missing generated baseline cases; Prepare will generate them before rendering.`
                       : "Generating and rendering complete baseline evidence for the selected scenarios."}
                 </span>
                 <span className="spacer" />
                 <button
                   className="lk-chip"
                   onClick={renderMissing}
-                  disabled={rendering || !missingScreenshots.length}
+                  disabled={rendering || !needsPreparation.length}
                   title={
-                    missingScreenshots.length
-                      ? `Generate and render baselines for ${missingScreenshots.length} skill(s) (configured codegen harness and Cesium ion token required)`
+                    needsPreparation.length
+                      ? `Generate missing baseline code and render screenshots for ${needsPreparation.length} skill(s). Agent authentication is required; Cesium ion is optional but improves token-backed scenes.`
                       : missingBaselineCases.length
-                        ? `${missingBaselineCases.length} selected skill(s) need generated baseline cases before screenshots can be rendered`
+                        ? `${missingBaselineCases.length} selected skill(s) need baseline generation before rendering`
                         : "All selected skills already have baseline screenshots"
                   }
                 >
                   {rendering
-                    ? "Rendering…"
-                    : missingScreenshots.length
-                      ? `Render ${missingScreenshots.length}`
+                    ? "Preparing…"
+                    : needsPreparation.length
+                      ? `Prepare ${needsPreparation.length}`
                       : missingBaselineCases.length
-                        ? "Needs cases"
+                        ? "Prepare cases"
                         : "Rendered"}
                 </button>
               </div>

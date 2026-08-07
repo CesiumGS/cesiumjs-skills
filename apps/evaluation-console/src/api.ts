@@ -80,6 +80,18 @@ export const loadBaselineCoverage = (skills: string[]) =>
 export const renderBaselines = (skills: string[]) =>
   req<BaselineCoverageDTO>("/api/baselines/render", { method: "POST", body: JSON.stringify({ skills }) });
 
+export interface PrepareBaselinesRequest {
+  skills: string[];
+  codegen_harness?: string;
+  codegen_provider?: string;
+  codegen_model?: string;
+  codegen_variant?: string;
+}
+
+/** Generate missing current-best baseline JS, then render its screenshots. */
+export const prepareBaselines = (payload: PrepareBaselinesRequest) =>
+  req<BaselineCoverageDTO>("/api/baselines/prepare", { method: "POST", body: JSON.stringify(payload) });
+
 // ---- protocol adapter (LiteLLM) ----
 export const loadAdapter = () => req<AdapterStatusDTO>("/api/adapter");
 export const adapterAction = (action: "start" | "stop") =>

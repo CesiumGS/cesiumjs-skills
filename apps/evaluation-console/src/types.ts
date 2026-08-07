@@ -618,6 +618,8 @@ export interface AdapterTargetDTO {
 export interface SkillCoverageDTO {
   skill: string;
   cases: number;
+  /** Scenario JS already generated for the current-best baseline. */
+  generated: number;
   screenshots: number;
   covered: boolean;
 }

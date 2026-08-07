@@ -9,7 +9,7 @@ import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadContext } from "../src/config/load.js";
 import { allSkills } from "../src/commands/audit.js";
-import { baselineCoverage } from "../src/console/baselineData.js";
+import { baselineCoverage, baselineGenerationOptions } from "../src/console/baselineData.js";
 import { baselineScenarios, baselineSkills, bundleDirFor, resolveBundleDir } from "../src/evaluation/baselines.js";
 
 const ctx = loadContext();
@@ -30,9 +30,31 @@ describe("baseline scenario contract", () => {
 
   it("never counts more screenshots than cases", () => {
     for (const skill of baselineCoverage(ctx).skills) {
+      expect(skill.generated).toBeLessThanOrEqual(skill.cases);
       expect(skill.screenshots).toBeLessThanOrEqual(skill.cases);
       expect(skill.covered).toBe(skill.cases > 0 && skill.screenshots === skill.cases);
     }
+  });
+
+  it("passes the console codegen selection through to baseline generation", () => {
+    expect(
+      baselineGenerationOptions(
+        {
+          codegen_harness: "codex",
+          codegen_provider: "openai",
+          codegen_model: "gpt-5.6",
+          codegen_variant: "high",
+        },
+        "cesiumjs-camera",
+      ),
+    ).toEqual({
+      skill: "cesiumjs-camera",
+      iteration: "baseline",
+      harness: "codex",
+      provider: "openai",
+      model: "gpt-5.6",
+      variant: "high",
+    });
   });
 
   it("gives every scenario a unique, stable bundle directory", () => {

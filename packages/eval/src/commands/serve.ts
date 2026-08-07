@@ -719,6 +719,14 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
             throw exc;
           }
         }
+        if (route === "/api/baselines/prepare") {
+          try {
+            return sendJson(res, await baselineData.prepareBaselines(ctx, payload));
+          } catch (exc) {
+            if (exc instanceof baselineData.RenderBusyError) throw new ConflictError(exc.message);
+            throw exc;
+          }
+        }
         if (route === "/api/probe") {
           // Synchronous by design: the response IS the probe result (2-40s
           // per registry latencies; the UI shows per-row progress). Probes

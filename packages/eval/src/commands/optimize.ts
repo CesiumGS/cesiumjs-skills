@@ -486,6 +486,7 @@ export interface GenerateBaselinesOptions {
   skill?: string;
   iteration?: string;
   harness?: string;
+  provider?: string;
   model?: string;
   variant?: string;
   force?: boolean;
@@ -501,7 +502,12 @@ export async function generateBaselinesCommand(ctx: EvalContext, options: Genera
       .map((item) => item.trim())
       .filter(Boolean),
   );
-  const overrides = { harness: options.harness, model: options.model, variant: options.variant };
+  const overrides = {
+    harness: options.harness,
+    provider: options.provider,
+    model: options.model,
+    variant: options.variant,
+  };
 
   let generated = 0;
   let skipped = 0;
