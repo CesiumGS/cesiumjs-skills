@@ -236,7 +236,14 @@ function scenarioDetail(skill: string, iteration: string, scenarioDir: string): 
   const dirname = path.basename(scenarioDir);
   const [scenarioId, label] = scenarioLabel(dirname);
   const verdicts = readJsonOrNull(path.join(scenarioDir, "judge-verdicts.json")) ?? {};
-  const baselineBundle = path.join(runsRoot(), skill, "baseline", dirname);
+  // Same id-prefix fallback as evaluation/baselines.ts resolveBundleDir: a
+  // bundle rendered under an older scenario name still resolves after a rename.
+  let baselineBundle = path.join(runsRoot(), skill, "baseline", dirname);
+  if (!fs.existsSync(baselineBundle)) {
+    const base = path.join(runsRoot(), skill, "baseline");
+    const fallback = listDirs(base).find((name) => name.startsWith(`${scenarioId}-`));
+    if (fallback) baselineBundle = path.join(base, fallback);
+  }
   return {
     scenario_id: scenarioId,
     label,
