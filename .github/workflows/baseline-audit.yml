@@ -183,9 +183,17 @@ jobs:
         shell: bash
         env:
           AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          OPENCODE_MODEL: ${{ github.event.inputs.judge_model || vars.OPENCODE_MODEL || secrets.OPENCODE_MODEL || 'openai/gpt-5.5' }}
-          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || secrets.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
-          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || secrets.OPENCODE_JUDGE_VARIANT || 'medium' }}
+          # Model ids and reasoning-effort levels are CONFIGURATION, not
+          # credentials, so they resolve from inputs, then repository variables,
+          # then a literal default. A `secrets.*` tier used to sit before the
+          # default; it is deliberately gone. Routing non-secret config through
+          # the secrets namespace inflates the apparent credential surface (it
+          # made this pipeline look like it held a dozen secrets when it holds
+          # one), hides the effective value from anyone reading the settings
+          # page, and buys nothing: a model id is not sensitive.
+          OPENCODE_MODEL: ${{ github.event.inputs.judge_model || vars.OPENCODE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
+          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || 'medium' }}
           OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
           OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
           SKILLS: ${{ github.event.inputs.skills || 'all' }}
