@@ -21,12 +21,12 @@ description: >-
 # The callers choose their harness at runtime from an input or a repository
 # variable, so the obvious single-input form is a ternary:
 #
-#   auth-content: ${{ env.AGENT_HARNESS == 'codex' && secrets.CODEX_AUTH_CONTENT
+#   auth-content: ${{ env.AGENT_HARNESS == 'codex' && secrets.CODEX_AUTH_JSON_B64
 #                     || secrets.OPENCODE_AUTH_CONTENT }}
 #
 # which is a trap. GitHub's `&&`/`||` returns the RIGHT operand whenever the left
 # is falsy, and an unset secret is the empty string, so a missing
-# CODEX_AUTH_CONTENT silently yields the OpenCode credential — written to
+# CODEX_AUTH_JSON_B64 silently yields the OpenCode credential — written to
 # ~/.codex/auth.json, where it fails as a corrupt codex login rather than as the
 # missing secret it is. Passing both and selecting inside the action removes the
 # expression entirely.
@@ -56,18 +56,18 @@ description: >-
 #
 # RESEED RUNBOOK, for when the live lane fails with 401 / invalid_grant:
 #   1. `codex login` on a trusted machine
-#   2. `gh secret set CODEX_AUTH_CONTENT < ~/.codex/auth.json`
-#   3. dispatch the "Codex Auth Keepalive" workflow with force_reseed: true
+#   2. Update CODEX_AUTH_JSON_B64 in the codex-inference environment
+#   3. Dispatch "Provision Codex Auth" with force_reseed: true and approve it
 inputs:
   harness:
     description: "Agent CLI to install: codex or opencode"
     required: true
-  codex-auth-content:
+  codex-auth-json-b64:
     description: >-
-      Contents of ~/.codex/auth.json from a machine where `codex login` has run
-      (auth_mode "chatgpt" for the ChatGPT subscription route). Required when
-      harness is codex. Pass the secret directly; it is masked in logs and
-      written 0600.
+      Base64-encoded ~/.codex/auth.json from a machine where `codex login` has
+      run (auth_mode "chatgpt" for the ChatGPT subscription route). Used only
+      to bootstrap or explicitly reseed the dedicated runner; ordinary jobs
+      reuse its resident credential.
     required: false
     default: ''
   opencode-auth-content:
@@ -80,7 +80,7 @@ inputs:
     description: >-
       When 'true' and the harness is codex, delete any runner-resident
       auth.json before materializing, so the repository secret wins. Use only
-      right after re-running `codex login` and updating CODEX_AUTH_CONTENT;
+      right after re-running `codex login` and updating CODEX_AUTH_JSON_B64;
       at that point the resident file holds the revoked lineage and keeping
       it would be the bug.
     required: false
@@ -97,7 +97,7 @@ runs:
         set -euo pipefail
         case "$HARNESS" in
           codex)
-            npm install -g @openai/codex
+            npm install -g @openai/codex@0.146.1
             codex --version
             ;;
           opencode)
@@ -118,7 +118,7 @@ runs:
       shell: bash
       env:
         HARNESS: ${{ inputs.harness }}
-        CODEX_AUTH_CONTENT_IN: ${{ inputs.codex-auth-content }}
+        CODEX_AUTH_JSON_B64_IN: ${{ inputs.codex-auth-json-b64 }}
         OPENCODE_AUTH_CONTENT_IN: ${{ inputs.opencode-auth-content }}
         FORCE_RESEED: ${{ inputs.force-reseed }}
       run: |
@@ -126,8 +126,8 @@ runs:
         case "$HARNESS" in
           codex)
             auth_path="${CODEX_HOME:-$HOME/.codex}/auth.json"
-            AUTH_CONTENT="${CODEX_AUTH_CONTENT_IN:-}"
-            secret_name=CODEX_AUTH_CONTENT
+            AUTH_CONTENT_B64="${CODEX_AUTH_JSON_B64_IN:-}"
+            secret_name=CODEX_AUTH_JSON_B64
             ;;
           opencode)
             auth_path="$HOME/.local/share/opencode/auth.json"
@@ -160,14 +160,39 @@ runs:
           fi
         fi
 
-        if [ -z "${AUTH_CONTENT:-}" ]; then
+        if [ "$HARNESS" = "codex" ] && [ -z "${AUTH_CONTENT_B64:-}" ]; then
+          echo "::error title=Missing credential::No valid runner-resident Codex credential exists and ${secret_name} was not supplied. Dispatch the protected Provision Codex Auth workflow."
+          exit 1
+        elif [ "$HARNESS" != "codex" ] && [ -z "${AUTH_CONTENT:-}" ]; then
           echo "::error title=Missing credential::harness is '$HARNESS' but no credential was supplied for it. Configure the ${secret_name} repository secret."
           exit 1
         fi
         mkdir -p "$(dirname "$auth_path")"
+        chmod 700 "$(dirname "$auth_path")"
         # umask before creation, not chmod after: a chmod leaves a window in
         # which the credential is world-readable on a shared runner.
-        (umask 077; printf '%s\n' "$AUTH_CONTENT" > "$auth_path")
+        if [ "$HARNESS" = "codex" ]; then
+          tmp_path=$(mktemp "${auth_path}.new.XXXXXX")
+          chmod 600 "$tmp_path"
+          if ! printf '%s' "$AUTH_CONTENT_B64" | base64 --decode > "$tmp_path"; then
+            rm -f "$tmp_path"
+            echo "::error title=Codex credential invalid::${secret_name} is not valid base64."
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const doc = JSON.parse(fs.readFileSync(process.argv[1], "utf-8"));
+            const tokens = doc.tokens ?? {};
+            if (doc.auth_mode !== "chatgpt" || !tokens.access_token || !tokens.refresh_token) process.exit(1);
+          ' "$tmp_path" || {
+            rm -f "$tmp_path"
+            echo "::error title=Codex credential invalid::Decoded ${secret_name} is not managed ChatGPT auth.json."
+            exit 1
+          }
+          mv "$tmp_path" "$auth_path"
+        else
+          (umask 077; printf '%s\n' "$AUTH_CONTENT" > "$auth_path")
+        fi
         echo "wrote $auth_path ($(wc -c < "$auth_path") bytes)"
 
     # A credential that is present but malformed fails later, inside a model

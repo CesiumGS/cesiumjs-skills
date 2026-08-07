@@ -5,7 +5,7 @@ name: Skill Eval (live)
 #
 # It is not answerable from the diff. The skill is a prompt; its effect is
 # whatever a model does with it. So this lane re-runs the real path for exactly
-# the skills the pull request touched — feed the edited SKILL.md to the codegen
+# the skills a trusted main-branch push touched — feed the merged SKILL.md to the codegen
 # harness, render what comes back in a headless browser, and score the result
 # with the same deterministic checks the nightly audit uses. No visual judge:
 # `--no-judge` keeps this lane free of the one part of the audit that is a
@@ -14,16 +14,19 @@ name: Skill Eval (live)
 # What it costs: one model call and one browser render per scenario of each
 # changed skill (4-15 scenarios per skill). That is why it is scoped to changed
 # skills and why the hermetic half of the contract lives in pr-gate.yml instead,
-# where it runs on every pull request for free.
+# where it runs on every pull request for free. The credentialed lane never
+# executes pull-request code; pushes and explicit dispatches on main are its
+# only entry points, and the codex-inference environment limits secret scope.
 #
 # NO path: filter, for the reason pr-gate.yml documents at length: GitHub never
 # reports a conclusion for a skipped workflow, so a path-filtered workflow can
 # never be a required status check. Filtering happens in the `discover` job,
 # which always runs and always reports, and the `skill-eval` job aggregates.
-# That job is the one to name in branch protection.
+# That job is advisory post-merge evidence, not a pull-request status check.
 on:
-  pull_request:
-  merge_group:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       skills:
@@ -35,10 +38,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  # Superseded pushes are cancelled: this lane spends money per run, and the
-  # result of a run against an overwritten head is worth nothing.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Superseded main pushes are cancelled: the newest merged state is the one
+  # worth evaluating. A manually approved dispatch is never cancelled.
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 defaults:
   run:
@@ -47,8 +50,7 @@ defaults:
 jobs:
   discover:
     name: Discover changed skills
-    # Fork-guarded pool routing; see pr-gate.yml deterministic-evals for the rationale.
-    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 5
     outputs:
       skills: ${{ steps.detect.outputs.skills }}
@@ -56,7 +58,7 @@ jobs:
       eligible: ${{ steps.eligibility.outputs.eligible }}
       reason: ${{ steps.eligibility.outputs.reason }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # The whole job is a diff between two commits; a shallow clone cannot
           # resolve the base.
@@ -66,10 +68,10 @@ jobs:
       - name: Detect changed skills
         id: detect
         env:
-          # For a pull request the base SHA is the tip of the target branch as
-          # GitHub resolved it, which is what the merge result will contain.
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          # A push payload names both ends of the exact merged diff. A manual
+          # dispatch has no base and must provide an explicit skills list.
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
           REQUESTED: ${{ github.event.inputs.skills || 'changed' }}
         run: |
           # +e, not the default -e: this step inspects an exit code and reports
@@ -105,6 +107,7 @@ jobs:
             else
               echo "Changed skills ($count):"
               echo
+              # shellcheck disable=SC2016
               printf '%s' "$skills" | tr ',' '\n' | sed 's/^/- `/; s/$/`/'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
@@ -114,42 +117,24 @@ jobs:
             echo "::warning title=Large skill-eval run::$count skills changed; this run renders every scenario of each one and will take a while."
           fi
 
-      # Three independent reasons this lane can be unable to run. All of them are
-      # facts about the run rather than evaluation results, and none of them may
-      # masquerade as a passing evaluation.
+      # The privileged job accepts only the default branch. Environment secrets
+      # are intentionally unavailable in this preflight job; the protected job
+      # validates the credential after approval.
       - name: Check eligibility
         id: eligibility
         env:
           EVENT_NAME: ${{ github.event_name }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          THIS_REPO: ${{ github.repository }}
-          HAS_CODEX_AUTH: ${{ secrets.CODEX_AUTH_CONTENT != '' }}
+          REF_NAME: ${{ github.ref }}
         run: |
           set -uo pipefail
           eligible=true
           reason=""
-          if [ "$EVENT_NAME" = "merge_group" ]; then
-            # A merge_group payload carries no pull_request, so HEAD_REPO is
-            # empty and the fork test below cannot distinguish a queued fork
-            # contribution from a maintainer's own branch. Since the merge
-            # commit contains the contributor's code, an eligible merge_group
-            # run would hand a fork the Codex credential and a self-hosted
-            # runner — the exact exposure the fork test exists to prevent, via
-            # the one event where the test is blind.
-            #
-            # Refusing outright costs nothing real: a same-repo pull request has
-            # already had this lane run against the identical head, and a fork
-            # pull request was never eligible in the first place. The job still
-            # reports a conclusion, so a merge queue that requires `skill-eval`
-            # does not stall.
+          if [ "$REF_NAME" != "refs/heads/main" ]; then
             eligible=false
-            reason="merge_group runs cannot establish who authored the queued change; the live lane runs on the pull request itself"
-          elif [ -n "${HEAD_REPO:-}" ] && [ "$HEAD_REPO" != "$THIS_REPO" ]; then
+            reason="privileged Codex evaluation only runs from refs/heads/main"
+          elif [ "$EVENT_NAME" != "push" ] && [ "$EVENT_NAME" != "workflow_dispatch" ]; then
             eligible=false
-            reason="fork pull request: repository secrets are not available to it"
-          elif [ "$HAS_CODEX_AUTH" != "true" ]; then
-            eligible=false
-            reason="the CODEX_AUTH_CONTENT repository secret is not configured"
+            reason="unsupported event: $EVENT_NAME"
           fi
           echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
@@ -159,9 +144,7 @@ jobs:
               echo
               echo "> **The live lane did not run:** $reason"
               echo ">"
-              echo "> The hermetic skill contract in \`PR Gate\` still ran and still blocks."
-              echo "> Before merging a skill change that skipped this lane, a maintainer should"
-              echo "> dispatch **Skill Eval (live)** with an explicit skills list."
+              echo "> The hermetic skill contract in \`PR Gate\` remains the pre-merge gate."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
@@ -169,11 +152,9 @@ jobs:
     name: Live eval (${{ needs.discover.outputs.skills }})
     needs: discover
     if: needs.discover.outputs.count != '0' && needs.discover.outputs.eligible == 'true'
-    # Routed to the self-hosted pool when one is configured: this is the
-    # expensive job, and the `if:` above has already excluded every fork, so no
-    # untrusted head ref can reach a persistent runner through this lane. The
-    # first step re-asserts that independently, so a future edit to the
-    # condition cannot quietly re-open it.
+    environment: codex-inference
+    # This expensive credentialed job runs only after code has reached main or
+    # an explicit main-branch dispatch enters the environment boundary.
     #
     # CODEX_RUNNER_LABELS narrows the pool to the ONE runner that holds the
     # codex credential. The CLI rotates its refresh token in place on the
@@ -201,23 +182,22 @@ jobs:
       # Independent of the job's `if:` and of the discover job's eligibility
       # output, because both are one edit away from being wrong and this job
       # holds a credential and may run on a persistent shared runner. It refuses
-      # anything it cannot positively identify as this repository's own code.
-      - name: Re-assert the head is trusted
+      # anything it cannot positively identify as the protected default branch.
+      - name: Re-assert the ref is trusted
         env:
           EVENT_NAME: ${{ github.event_name }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          THIS_REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref }}
         run: |
-          if [ "$EVENT_NAME" = "merge_group" ]; then
-            echo "::error title=Refusing to run::merge_group carries no pull_request, so the author of the queued change cannot be established here."
+          if [ "$REF_NAME" != "refs/heads/main" ]; then
+            echo "::error title=Refusing to run::privileged Codex evaluation only runs from refs/heads/main."
             exit 1
           fi
-          if [ -n "${HEAD_REPO:-}" ] && [ "$HEAD_REPO" != "$THIS_REPO" ]; then
-            echo "::error title=Refusing to run::head repo '$HEAD_REPO' is not '$THIS_REPO'; this job holds secrets and may run on a self-hosted runner."
+          if [ "$EVENT_NAME" != "push" ] && [ "$EVENT_NAME" != "workflow_dispatch" ]; then
+            echo "::error title=Refusing to run::unsupported privileged event '$EVENT_NAME'."
             exit 1
           fi
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
           # Nothing here performs an authenticated git operation, and the agent
@@ -234,7 +214,7 @@ jobs:
       - uses: ./.github/actions/setup-agent-harness
         with:
           harness: codex
-          codex-auth-content: ${{ secrets.CODEX_AUTH_CONTENT }}
+          codex-auth-json-b64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
 
       # Generate from the EDITED skill, then render. The skill file is read at
       # codegen time and hashed into the meta sidecar, so the scorecard records
@@ -313,7 +293,7 @@ jobs:
 
       - name: Upload scorecard and evidence
         if: always() && steps.sanitize.outcome == 'success'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: skill-eval-${{ github.run_id }}
           path: |
@@ -327,13 +307,11 @@ jobs:
 
   skill-eval:
     name: skill-eval
-    # THE aggregate. Branch protection names this job, so the lane can be
-    # restructured without an admin touching settings, and a PR that changes no
-    # skill still reports a conclusion instead of hanging on "Expected".
+    # Stable aggregate for post-merge reporting. A push that changes no skill
+    # still reports a clean conclusion instead of scheduling an empty live job.
     needs: [discover, live]
     if: always()
-    # Fork-guarded pool routing; see pr-gate.yml deterministic-evals for the rationale.
-    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 5
     steps:
       - name: Aggregate

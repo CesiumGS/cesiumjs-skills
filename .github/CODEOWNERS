@@ -1,0 +1,7 @@
+# Security-sensitive automation must be reviewed by the repository owner.
+/.github/workflows/ @jdehorty
+/.github/actions/ @jdehorty
+/.github/scripts/ @jdehorty
+/packages/eval/src/harness/ @jdehorty
+/package-lock.json @jdehorty
+

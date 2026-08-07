@@ -31,7 +31,7 @@ runs:
   steps:
     - name: Restore cached binary
       id: cache
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ${{ runner.temp }}/bin/gitleaks
         key: gitleaks-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}

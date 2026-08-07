@@ -18,18 +18,13 @@ name: Codex Auth Keepalive
 #
 # RESEED RUNBOOK, for when this lane or a codex-consuming lane fails with
 # 401 / invalid_grant (token revoked, or two machines refreshed one session):
-#   1. `codex login` on a trusted machine
-#   2. `gh secret set CODEX_AUTH_CONTENT < ~/.codex/auth.json`
-#   3. dispatch this workflow with force_reseed: true
+#   1. Capture a fresh credential from a trusted `codex login`
+#   2. Update CODEX_AUTH_JSON_B64 in the codex-inference environment
+#   3. Dispatch "Provision Codex Auth" from main (approve it if review is enabled)
 on:
   schedule:
     - cron: "0 9 * * 1,4"
   workflow_dispatch:
-    inputs:
-      force_reseed:
-        description: "Discard the runner-resident auth.json and reseed from the CODEX_AUTH_CONTENT secret (only after re-running `codex login` and updating the secret)"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -37,8 +32,8 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}
   # Never cancel a refresh in flight: killing codex mid-rotation is how a
-  # half-written auth.json happens, and the shape gate in setup-agent-harness
-  # would then discard it in favor of a possibly-stale secret.
+  # half-written auth.json happens. A damaged resident credential must fail
+  # closed and be repaired through the protected provisioning workflow.
   cancel-in-progress: false
 
 jobs:
@@ -58,23 +53,20 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
           persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
 
-      # With the seed-only-if-missing behavior, this reuses the runner's live
-      # auth.json when one exists and falls back to the secret when it does
-      # not, which is exactly the bootstrap the official CI guidance describes.
+      # Keepalive never receives a secret. It can only reuse the credential that
+      # the protected provisioning workflow placed on the dedicated runner.
       - uses: ./.github/actions/setup-agent-harness
         with:
           harness: codex
-          codex-auth-content: ${{ secrets.CODEX_AUTH_CONTENT }}
-          force-reseed: ${{ github.event.inputs.force_reseed || 'false' }}
 
       # Any codex invocation triggers the CLI's own refresh logic when the
       # session is near staleness; there is no separate "refresh" subcommand,

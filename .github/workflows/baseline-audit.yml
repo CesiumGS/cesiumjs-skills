@@ -49,6 +49,7 @@ jobs:
   # One definition, called before any money is spent. A reusable-workflow job
   # takes no timeout-minutes; the called workflow's own jobs carry the bound.
   deterministic:
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/pr-gate.yml
 
   # ----- Preflight: does this lane have what it needs to run at all? -----
@@ -60,6 +61,7 @@ jobs:
   # "not applicable", not a regression, so it now reports as a clean skip with a
   # visible reason. A secret that IS configured but broken still fails loudly.
   preflight:
+    if: github.ref == 'refs/heads/main'
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 5
     outputs:
@@ -71,18 +73,15 @@ jobs:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
           AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
           OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
-          CODEX_AUTH_CONTENT: ${{ secrets.CODEX_AUTH_CONTENT }}
         run: |
           missing=()
           [ -n "$CESIUM_ION_TOKEN" ] || missing+=(CESIUM_ION_TOKEN)
-          # Whichever harness this run selected must have ITS credential. The
-          # earlier form only knew about opencode, so a codex run with no
-          # CODEX_AUTH_CONTENT passed preflight and then failed downstream —
-          # the permanently-red-nightly failure mode this job exists to prevent,
-          # reintroduced through the other harness.
+          # OpenCode still uses a repository secret. Codex auth is intentionally
+          # environment-scoped and therefore cannot be inspected by this
+          # unprotected preflight; the protected job validates it after review.
           case "$AGENT_HARNESS" in
             opencode) [ -n "$OPENCODE_AUTH_CONTENT" ] || missing+=(OPENCODE_AUTH_CONTENT) ;;
-            codex)    [ -n "$CODEX_AUTH_CONTENT" ] || missing+=(CODEX_AUTH_CONTENT) ;;
+            codex)    ;;
           esac
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -104,7 +103,8 @@ jobs:
   # ----- Lane 2: qualitative (nightly / dispatch, advisory) -----
   qualitative:
     needs: [deterministic, preflight]
-    if: needs.preflight.outputs.ready == 'true'
+    if: github.ref == 'refs/heads/main' && needs.preflight.outputs.ready == 'true'
+    environment: codex-inference
     # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner
     # labels). CODEX_RUNNER_LABELS narrows further to the one runner holding
     # the codex credential: this lane can select the codex harness, and codex
@@ -128,7 +128,7 @@ jobs:
       # it, without editing this workflow.
       EVAL_HARNESS_STREAM: ${{ vars.EVAL_HARNESS_STREAM || 'full' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           # A contents: read installation token otherwise sits in
@@ -150,7 +150,7 @@ jobs:
       - uses: ./.github/actions/setup-agent-harness
         with:
           harness: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          codex-auth-content: ${{ secrets.CODEX_AUTH_CONTENT }}
+          codex-auth-json-b64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           opencode-auth-content: ${{ secrets.OPENCODE_AUTH_CONTENT }}
       - uses: ./.github/actions/install-gitleaks
       - name: Validate the Ion token
@@ -241,7 +241,7 @@ jobs:
         # just failed to clean. Still runs when the loop itself failed, because a
         # failed run's artifacts are the diagnostic material.
         if: always() && steps.sanitize.outcome == 'success'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: baseline-audit-qualitative-${{ github.run_number }}
           path: |

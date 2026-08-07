@@ -1,0 +1,60 @@
+name: Provision Codex Auth
+
+# This is the only workflow allowed to release CODEX_AUTH_JSON_B64. It runs
+# only from main through the codex-inference environment and writes the
+# credential to the one persistent runner selected by CODEX_RUNNER_LABELS.
+# Add a required reviewer to that environment to gate reseeds behind a human
+# approval. Ordinary Codex jobs reuse the runner-resident file.
+on:
+  workflow_dispatch:
+    inputs:
+      force_reseed:
+        description: "Replace an existing runner credential (use only after capturing a fresh codex login)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codex-auth-provision
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    if: github.ref == 'refs/heads/main'
+    environment: codex-inference
+    runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS) }}
+    timeout-minutes: 15
+    steps:
+      - name: Require the dedicated self-hosted runner
+        run: |
+          set -euo pipefail
+          if [ "${RUNNER_ENVIRONMENT:-}" != "self-hosted" ]; then
+            echo "::error title=Wrong runner::Codex auth may only be provisioned on the dedicated persistent self-hosted runner."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: ./.github/actions/setup-agent-harness
+        with:
+          harness: codex
+          codex-auth-json-b64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
+          force-reseed: ${{ inputs.force_reseed }}
+
+      - name: Verify the account-auth session
+        run: |
+          set -euo pipefail
+          codex login status
+          codex exec --json "Reply with exactly OK" | while IFS= read -r event; do
+            printf '[provision] %.400s\n' "$event"
+          done

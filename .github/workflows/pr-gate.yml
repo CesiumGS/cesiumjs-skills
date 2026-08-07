@@ -68,7 +68,7 @@ jobs:
 
     steps:
       - name: Check out
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # fetch-depth 1 is sufficient: `score` shells out to `git rev-parse
           # HEAD` and both `check` subcommands use `git ls-files`. Neither needs
@@ -132,7 +132,7 @@ jobs:
       # manufacture a second confusing red step.
       - name: Upload scorecard
         if: always() && github.event_name != 'push'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: scorecard-${{ github.run_id }}
           path: ${{ runner.temp }}/scorecard
@@ -145,7 +145,7 @@ jobs:
       # before scoring would report a second, misleading failure.
       - name: Upload scorecard (main reference)
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: scorecard-main
           path: ${{ runner.temp }}/scorecard
@@ -162,7 +162,7 @@ jobs:
     runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -182,7 +182,7 @@ jobs:
     runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
           persist-credentials: false

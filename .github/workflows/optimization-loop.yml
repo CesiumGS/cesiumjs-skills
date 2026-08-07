@@ -77,6 +77,8 @@ concurrency:
 
 jobs:
   optimization-loop:
+    if: github.ref == 'refs/heads/main'
+    environment: codex-inference
     # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner
     # labels). CODEX_RUNNER_LABELS narrows further to the one runner holding
     # the codex credential: this lane can select the codex harness, and codex
@@ -97,7 +99,7 @@ jobs:
 
     steps:
       - name: Check out source repo
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0  # Full history for baseline lookups
           # A contents: read installation token otherwise sits in
@@ -107,7 +109,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -129,7 +131,7 @@ jobs:
       - uses: ./.github/actions/setup-agent-harness
         with:
           harness: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          codex-auth-content: ${{ secrets.CODEX_AUTH_CONTENT }}
+          codex-auth-json-b64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           opencode-auth-content: ${{ secrets.OPENCODE_AUTH_CONTENT }}
 
       - uses: ./.github/actions/install-gitleaks
@@ -219,7 +221,7 @@ jobs:
         # just failed to clean. Still runs when the loop itself failed, because a
         # failed run's artifacts are the diagnostic material.
         if: always() && steps.sanitize.outcome == 'success'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: optimization-report-${{ github.run_id }}
           path: optimization/results/
@@ -233,7 +235,7 @@ jobs:
         # just failed to clean. Still runs when the loop itself failed, because a
         # failed run's artifacts are the diagnostic material.
         if: always() && steps.sanitize.outcome == 'success'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: optimization-bundles-${{ github.run_id }}
           path: |
