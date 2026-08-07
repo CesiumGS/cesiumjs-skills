@@ -94,7 +94,28 @@ export interface ProviderSpec {
   /** Who trained the weights, when fixed. null for brokers/aggregators. */
   first_party_vendor?: string | null;
   credentials: CredentialOption[];
+  /** Per-adapter routing hints keyed by adapter id (litellm model_prefix etc.). */
+  adapter_hints?: Record<string, Record<string, unknown>>;
   notes?: string[];
+}
+
+/** A protocol adapter: a local gateway realizing the derived fourth tier. */
+export interface AdapterSpec {
+  id: string;
+  display_name: string;
+  kind: "local_proxy";
+  serves_protocols: WireProtocol[];
+  install: { recommended_route: string; routes: InstallRoute[] };
+  run: {
+    health_path: string;
+    default_port: number;
+    /** LOCAL-ONLY generated config path (gitignored artifacts). */
+    config_artifact: string;
+    targets_artifact?: string;
+  };
+  security: { min_safe_version: string; blocked_versions?: string[]; advisory: string };
+  attribution_rule?: string;
+  quirks?: string[];
 }
 
 export interface ProtocolSpoken {
@@ -221,6 +242,7 @@ export interface HarnessRegistry {
   protocol_aliases?: Record<string, WireProtocol>;
   provider_aliases?: Record<string, ProviderAlias>;
   providers?: ProviderSpec[];
+  adapters?: AdapterSpec[];
   probe_policy?: { serialize: boolean; token_strategy: string; rules?: string[] };
   harnesses: HarnessSpec[];
 }

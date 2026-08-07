@@ -70,10 +70,16 @@ class ClaudeCodeDriver implements HarnessDriver {
       input: prompt,
       timeoutMs: call.timeoutSeconds * 1000,
       cwd: workdir,
-      env: cleanSubprocessEnv(),
+      // call.env last: adapter routing (ANTHROPIC_BASE_URL + key + simple
+      // mode) must beat the inherited environment.
+      env: { ...cleanSubprocessEnv(), ...(call.env ?? {}) },
     });
     if (result.status !== 0) {
-      throw new HarnessInvocationError(spec.id, result.status ?? -1, result.stderr ?? "", result.stdout ?? "");
+      // The JSON envelope usually carries a readable `result` ("API Error:
+      // 401 …") — surface that instead of the raw envelope blob.
+      const failed = parseEnvelope(result.stdout ?? "");
+      const reason = typeof failed?.result === "string" && failed.result.trim() ? failed.result.trim() : (result.stdout ?? "");
+      throw new HarnessInvocationError(spec.id, result.status ?? -1, result.stderr ?? "", reason);
     }
 
     const envelope = parseEnvelope(result.stdout ?? "");

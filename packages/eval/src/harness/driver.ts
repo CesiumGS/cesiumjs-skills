@@ -20,6 +20,9 @@ export interface AgentCall {
   disableTools?: boolean;
   title?: string | null;
   timeoutSeconds: number;
+  /** Extra env for the subprocess (adapter routing: base-url + key overrides).
+   * Merged AFTER the clean env, so deliberate overrides win. */
+  env?: Record<string, string>;
 }
 
 /** One structured call: the assistant text plus wire-OBSERVED attribution

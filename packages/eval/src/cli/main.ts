@@ -125,11 +125,22 @@ program
   .option("--harness <id>", "registry harness id, comma list, or 'all'", "all")
   .option("--model <id>", "model override for a single-harness probe")
   .option("--variant <id>", "reasoning effort / variant override for a single-harness probe")
+  .option("--adapter <target>", "route a single-harness probe through the protocol adapter to this target name")
   .option("--json", "emit machine-readable results")
   .action((options) =>
     run(async () => {
       const { probeCommand } = await import("../commands/probe.js");
       return probeCommand(ctx(), options);
+    }),
+  );
+
+program
+  .command("adapter <action>")
+  .description("Protocol adapter (LiteLLM) lifecycle: init | start | stop | status. Ships orchestration, not the binary — runs pinned via uvx.")
+  .action((action) =>
+    run(async () => {
+      const { adapterCommand } = await import("../commands/adapter.js");
+      return adapterCommand(ctx(), action);
     }),
   );
 

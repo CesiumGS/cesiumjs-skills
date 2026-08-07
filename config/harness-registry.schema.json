@@ -31,6 +31,11 @@
       }
     },
     "providers": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/provider" } },
+    "adapters": {
+      "description": "Protocol adapters: local gateways that translate between a harness's spoken protocol and a provider's served protocol. An adapter REALIZES the derived fourth tier; which pairs need one stays computed from protocol mismatch, never stored.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/adapter" }
+    },
     "probe_policy": {
       "type": "object",
       "required": ["serialize", "token_strategy"],
@@ -94,7 +99,63 @@
           "description": "Who trained the weights, when fixed. null for brokers/aggregators — vendor is per-model there."
         },
         "credentials": { "type": "array", "items": { "$ref": "#/definitions/credential_option" } },
+        "adapter_hints": {
+          "description": "Per-adapter routing hints, keyed by adapter id (e.g. litellm model_prefix 'azure/', required params, auth options). Free-form per adapter; instances (endpoints, keys) stay in local-only artifacts, never here.",
+          "type": "object",
+          "additionalProperties": { "type": "object" }
+        },
         "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "adapter": {
+      "type": "object",
+      "required": ["id", "display_name", "kind", "serves_protocols", "install", "run", "security"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "display_name": { "type": "string" },
+        "kind": { "enum": ["local_proxy"] },
+        "serves_protocols": {
+          "description": "Inbound protocols the adapter can accept — must cover what a harness speaks for that harness to route through it.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/wire_protocol" }
+        },
+        "install": {
+          "type": "object",
+          "required": ["recommended_route", "routes"],
+          "additionalProperties": false,
+          "properties": {
+            "recommended_route": { "type": "string" },
+            "routes": { "type": "array", "items": { "$ref": "#/definitions/install_route" } }
+          }
+        },
+        "run": {
+          "type": "object",
+          "required": ["health_path", "default_port", "config_artifact"],
+          "additionalProperties": false,
+          "properties": {
+            "health_path": { "type": "string" },
+            "default_port": { "type": "integer" },
+            "config_artifact": { "type": "string", "description": "Repo-relative LOCAL-ONLY path (gitignored artifacts) for the generated config — endpoints and keys are machine-local, never tracked" },
+            "targets_artifact": { "type": "string", "description": "Repo-relative LOCAL-ONLY path holding the user's adapter targets (provider/model/api_base)" }
+          }
+        },
+        "security": {
+          "type": "object",
+          "required": ["min_safe_version", "advisory"],
+          "additionalProperties": false,
+          "properties": {
+            "min_safe_version": { "type": "string" },
+            "blocked_versions": { "type": "array", "items": { "type": "string" } },
+            "advisory": { "type": "string" }
+          }
+        },
+        "attribution_rule": {
+          "type": "string",
+          "description": "How probe attribution changes behind this adapter (e.g. wire provider claims are meaningless; verify on model id instead)"
+        },
+        "quirks": { "type": "array", "items": { "type": "string" } }
       }
     },
     "model": {

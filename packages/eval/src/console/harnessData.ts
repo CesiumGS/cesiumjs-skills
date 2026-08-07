@@ -6,6 +6,7 @@
  * second request gets a 409 from the route via ProbeBusyError.
  */
 import type { EvalContext, HarnessSpec } from "../config/types.js";
+import { AdapterStatus, start as adapterStart, status as adapterStatusOf, stop as adapterStop } from "../harness/adapter.js";
 import { registeredDrivers } from "../harness/driver.js";
 import { ProbeResult, latestProbes, runProbe } from "../harness/probe.js";
 import { resolveBinary } from "../harness/shared.js";
@@ -92,16 +93,32 @@ export async function probeHarness(
   }
   const model = payload.model ? String(payload.model) : null;
   const variant = payload.variant ? String(payload.variant) : null;
+  const adapterTarget = payload.adapter_target ? String(payload.adapter_target) : null;
   if (model && (model.length > 200 || !/^[\w./:-]+$/.test(model))) throw new Error("invalid model");
   if (variant && (variant.length > 32 || !/^[\w-]+$/.test(variant))) throw new Error("invalid variant");
+  if (adapterTarget && (adapterTarget.length > 100 || !/^[\w.:-]+$/.test(adapterTarget))) throw new Error("invalid adapter_target");
 
   if (probeInFlight) {
     throw new ProbeBusyError(`a probe of '${probeInFlight}' is already running; probes are serialized by policy`);
   }
   probeInFlight = harnessId;
   try {
-    return await runProbe(ctx, harnessId, { model, variant });
+    return await runProbe(ctx, harnessId, { model, variant, adapterTarget });
   } finally {
     probeInFlight = null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// protocol adapter (LiteLLM) — status + lifecycle for the console
+// ---------------------------------------------------------------------------
+export async function adapterStatus(ctx: EvalContext): Promise<AdapterStatus> {
+  return adapterStatusOf(ctx);
+}
+
+export async function adapterAction(ctx: EvalContext, payload: Record<string, any>): Promise<AdapterStatus> {
+  const action = String(payload.action ?? "");
+  if (action === "start") return adapterStart(ctx);
+  if (action === "stop") return adapterStop(ctx);
+  throw new Error(`unknown adapter action '${action}' (start|stop)`);
 }

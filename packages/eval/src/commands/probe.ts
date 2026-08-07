@@ -17,6 +17,7 @@ export interface ProbeCommandOptions {
   harness?: string;
   model?: string;
   variant?: string;
+  adapter?: string;
   json?: boolean;
 }
 
@@ -25,12 +26,13 @@ function line(result: ProbeResult): string {
   const provider = attribution.provider.value ?? "unknown";
   const model = attribution.model.value ?? "?";
   const observed = attribution.observed ? "wire" : attribution.provider.source;
+  const via = result.adapter ? `  via ${result.adapter.id}:${result.adapter.target}` : "";
   return [
     result.harness.padEnd(12),
     result.verdict.padEnd(26),
     `${String(result.latency_ms).padStart(6)}ms`,
     `${provider}/${model}`,
-    `(attribution: ${observed})`,
+    `(attribution: ${observed})${via}`,
   ].join("  ");
 }
 
@@ -48,15 +50,19 @@ export async function probeCommand(ctx: EvalContext, options: ProbeCommandOption
       return 2;
     }
   }
-  if (targets.length > 1 && (options.model || options.variant)) {
-    console.error("error: --model/--variant apply to a single harness; pick one with --harness <id>");
+  if (targets.length > 1 && (options.model || options.variant || options.adapter)) {
+    console.error("error: --model/--variant/--adapter apply to a single harness; pick one with --harness <id>");
     return 2;
   }
 
   const results: ProbeResult[] = [];
   for (const target of targets) {
     // Serialized on purpose (probe_policy.serialize).
-    const result = await runProbe(ctx, target, { model: options.model ?? null, variant: options.variant ?? null });
+    const result = await runProbe(ctx, target, {
+      model: options.model ?? null,
+      variant: options.variant ?? null,
+      adapterTarget: options.adapter ?? null,
+    });
     results.push(result);
     if (!options.json) console.log(line(result));
   }

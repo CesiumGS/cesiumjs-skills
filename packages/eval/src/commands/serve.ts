@@ -547,6 +547,7 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
         if (route === "/api/run-cases") return sendJson(res, runCases(ctx, url.searchParams.get("run_id") ?? ""));
         if (route === "/api/registry") return sendJson(res, insightsData.registry(ctx));
         if (route === "/api/harnesses") return sendJson(res, harnessData.harnessHealth(ctx));
+        if (route === "/api/adapter") return sendJson(res, await harnessData.adapterStatus(ctx));
         if (route === "/api/insights") return sendJson(res, insightsData.insights(ctx, listRuns(ctx)));
         if (route === "/api/artifact") {
           const pathValue = url.searchParams.get("path") ?? "";
@@ -630,6 +631,7 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           return sendJson(res, config());
         }
         if (route === "/api/live/launch") return sendJson(res, liveData.launchRun(ctx, payload));
+        if (route === "/api/adapter") return sendJson(res, await harnessData.adapterAction(ctx, payload));
         if (route === "/api/probe") {
           // Synchronous by design: the response IS the probe result (2-40s
           // per registry latencies; the UI shows per-row progress). Probes

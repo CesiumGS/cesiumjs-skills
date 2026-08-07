@@ -1,4 +1,5 @@
 import type {
+  AdapterStatusDTO,
   ConfigDTO,
   FocusPreview,
   HarnessHealthDTO,
@@ -46,12 +47,23 @@ export const loadHarnessHealth = () => req<HarnessHealthDTO>("/api/harnesses");
 
 /** Run one binding probe (capability + observed attribution). Synchronous:
  * the response IS the result (2-40s depending on the harness; probes are
- * serialized server-side — a concurrent request 409s). */
-export const probeHarness = (harness: string, model?: string, variant?: string) =>
+ * serialized server-side — a concurrent request 409s). Pass adapterTarget to
+ * route through the protocol adapter (verification shifts to the model id). */
+export const probeHarness = (harness: string, model?: string, variant?: string, adapterTarget?: string) =>
   req<ProbeResultDTO>("/api/probe", {
     method: "POST",
-    body: JSON.stringify({ harness, model: model || undefined, variant: variant || undefined })
+    body: JSON.stringify({
+      harness,
+      model: model || undefined,
+      variant: variant || undefined,
+      adapter_target: adapterTarget || undefined
+    })
   });
+
+// ---- protocol adapter (LiteLLM) ----
+export const loadAdapter = () => req<AdapterStatusDTO>("/api/adapter");
+export const adapterAction = (action: "start" | "stop") =>
+  req<AdapterStatusDTO>("/api/adapter", { method: "POST", body: JSON.stringify({ action }) });
 export const loadInsights = () => req<InsightsDTO>("/api/insights");
 export const loadLive = () => req<LiveStatusDTO>("/api/live");
 export const loadLaunchSkills = () => req<{ skills: string[] }>("/api/live/skills");

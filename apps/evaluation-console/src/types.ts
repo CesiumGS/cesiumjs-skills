@@ -529,6 +529,8 @@ export interface HarnessSpec {
 export interface ProbeResultDTO {
   probe_id: string;
   harness: string;
+  /** Set when the probe ran through a protocol adapter. */
+  adapter?: { id: string; target: string; provider_id: string; model: string } | null;
   requested: { model: string | null; variant: string | null };
   verdict: "pass" | "pass_provider_unverified" | "fail_capability" | "attribution_mismatch" | "error";
   latency_ms: number;
@@ -568,6 +570,33 @@ export interface HarnessHealthRow {
 
 export interface HarnessHealthDTO {
   harnesses: HarnessHealthRow[];
+}
+
+// ---- protocol adapter (LiteLLM) ----
+
+export interface AdapterTargetDTO {
+  name: string;
+  provider_id: string;
+  model: string;
+  params?: Record<string, string>;
+  credential_env?: string;
+  /** true = credential present at launch; false = missing; null = adapter not running. */
+  credential_ready?: boolean | null;
+  /** Actionable remediation when the credential is missing. */
+  credential_hint?: string | null;
+}
+
+export interface AdapterStatusDTO {
+  id: string;
+  display_name: string;
+  configured: boolean;
+  running: boolean;
+  healthy: boolean;
+  pid: number | null;
+  port: number;
+  version_pin: string;
+  targets: AdapterTargetDTO[];
+  advisory: string;
 }
 
 export interface RegistryDTO {

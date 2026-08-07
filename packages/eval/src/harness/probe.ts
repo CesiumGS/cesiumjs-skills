@@ -21,6 +21,7 @@ import { execFileSync } from "node:child_process";
 import "./drivers.js"; // side-effect: registers built-in drivers
 import type { EvalContext, HarnessSpec } from "../config/types.js";
 import { fromRepoRoot } from "../lib/paths.js";
+import { AdapterTarget, adapterSpec, harnessEnvOverrides, readTargets, status as adapterStatus } from "./adapter.js";
 import { driverFor } from "./driver.js";
 import { HarnessNotFoundError, resolveBinary } from "./shared.js";
 
@@ -29,6 +30,8 @@ export type ProbeVerdict = "pass" | "pass_provider_unverified" | "fail_capabilit
 export interface ProbeResult {
   probe_id: string;
   harness: string;
+  /** Set when the probe ran through a protocol adapter. */
+  adapter: { id: string; target: string; provider_id: string; model: string } | null;
   requested: { model: string | null; variant: string | null };
   verdict: ProbeVerdict;
   latency_ms: number;
@@ -75,6 +78,11 @@ export interface ProbeOptions {
   variant?: string | null;
   /** Override the registry probe timeout (milliseconds). */
   timeoutMs?: number;
+  /** Route the probe through a protocol adapter to this target (an adapter
+   * target name). Behind the adapter the wire PROVIDER claim is meaningless
+   * (registry adapters[].attribution_rule) — verification shifts to the
+   * MODEL id, and provider is inferred from the target's binding. */
+  adapterTarget?: string | null;
 }
 
 export async function runProbe(ctx: EvalContext, harnessId: string, options: ProbeOptions = {}): Promise<ProbeResult> {
@@ -100,6 +108,27 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
   let resolvedModel: string | null = options.model ?? null;
   const t0 = Date.now();
 
+  // Adapter routing: resolve the target, require a healthy adapter, and
+  // override the harness env to point at the proxy.
+  let adapterInfo: ProbeResult["adapter"] = null;
+  let adapterEnv: Record<string, string> | undefined;
+  if (options.adapterTarget) {
+    const adapter = adapterSpec(ctx);
+    const target: AdapterTarget | undefined = readTargets(ctx, adapter).find((entry) => entry.name === options.adapterTarget);
+    if (!target) throw new Error(`unknown adapter target '${options.adapterTarget}' — declare it in ${adapter.run.targets_artifact}`);
+    const state = await adapterStatus(ctx, adapter.id);
+    if (!state.healthy) throw new Error(`adapter '${adapter.id}' is not running/healthy — start it first (cesium-eval adapter start)`);
+    // Preflight: a target whose credential never reached the proxy cannot
+    // succeed — fail HERE with the remediation instead of spending a real
+    // harness call to discover 'Missing credentials' downstream.
+    const targetState = state.targets.find((entry) => entry.name === target.name);
+    if (targetState?.credential_ready === false) {
+      throw new Error(`adapter target '${target.name}' has no credential: ${targetState.credential_hint ?? "set its env var and restart the adapter"}`);
+    }
+    adapterEnv = harnessEnvOverrides(ctx, harnessId, adapter.id);
+    adapterInfo = { id: adapter.id, target: target.name, provider_id: target.provider_id, model: target.name };
+  }
+
   try {
     binaryPath = resolveBinary(spec);
     const driver = driverFor(spec);
@@ -108,7 +137,10 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
     // implicit, a harness falls back to its OWN local default and the probe
     // verifies somebody else's binding — observed live: opencode drifting to
     // its local openai default instead of the registry's github-copilot one.
-    resolvedModel = options.model ?? driver.discoverDefaultModel?.(spec) ?? spec.default_model;
+    // Through an adapter the model is the TARGET name the proxy maps.
+    resolvedModel = adapterInfo
+      ? adapterInfo.model
+      : (options.model ?? driver.discoverDefaultModel?.(spec) ?? spec.default_model);
     const call = {
       prompt: PROBE_PROMPT,
       system: null,
@@ -116,6 +148,7 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
       variant: options.variant ?? null,
       cwd: fixtureDir,
       timeoutSeconds: Math.ceil(timeoutMs / 1000),
+      env: adapterEnv,
     };
 
     let text: string;
@@ -138,12 +171,20 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
 
   // Attribution: observed (wire) beats declared. The expected provider is the
   // harness's registry binding; a wire mismatch is its own failure mode.
-  const providerObserved = rawProvider !== null;
+  //
+  // ADAPTER BINDINGS invert this (adapters[].attribution_rule): behind the
+  // proxy the harness believes it talks to its own first party, so the wire
+  // PROVIDER claim is meaningless (observed live: Claude Code said
+  // 'firstParty' while gpt-5.5 served the call). The MODEL id stays truthful
+  // because the proxy maps model names — so verification shifts to the model.
+  const providerObserved = rawProvider !== null && adapterInfo === null;
   const canonical = canonicalProvider(ctx, rawProvider);
-  const expectedProvider = spec.provider ?? null;
+  const expectedProvider = adapterInfo?.provider_id ?? spec.provider ?? null;
 
   if (capabilityError !== null && !toolUse) {
     verdict = capabilityError.startsWith("not installed") ? "error" : capabilityError.includes("token absent") ? "fail_capability" : "error";
+  } else if (adapterInfo) {
+    verdict = observedModel !== null && observedModel !== adapterInfo.model ? "attribution_mismatch" : "pass";
   } else if (providerObserved && expectedProvider && canonical.id !== expectedProvider) {
     verdict = "attribution_mismatch";
   } else if (providerObserved) {
@@ -157,6 +198,7 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
   const result: ProbeResult = {
     probe_id: probeId,
     harness: harnessId,
+    adapter: adapterInfo,
     requested: { model: resolvedModel, variant: options.variant ?? null },
     verdict,
     latency_ms: latencyMs,
@@ -168,13 +210,19 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
       provider: {
         value: providerObserved ? canonical.id : expectedProvider,
         raw: rawProvider,
-        source: providerObserved ? "wire" : spec.attribution?.provider_source === "inferred_from_binding" ? "inferred_from_binding" : "declared",
+        source: adapterInfo
+          ? "inferred_from_binding"
+          : providerObserved
+            ? "wire"
+            : spec.attribution?.provider_source === "inferred_from_binding"
+              ? "inferred_from_binding"
+              : "declared",
       },
       model: {
         value: observedModel ?? resolvedModel ?? spec.default_model,
         source: observedModel ? "wire" : "declared",
       },
-      credential_route: canonical.route ?? spec.credential_route ?? null,
+      credential_route: adapterInfo ? "adapter" : (canonical.route ?? spec.credential_route ?? null),
     },
     binary: { path: binaryPath, version: binaryPath ? binaryVersion(binaryPath) : null },
   };
@@ -191,7 +239,10 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
   return result;
 }
 
-/** Latest persisted probe per harness id, for the console health panel. */
+/** Latest persisted NATIVE probe per harness id, for the console health
+ * panel. Adapter probes are a different binding (they verify an adapter
+ * target, not the harness's registry provider) — showing one on the harness
+ * row would misattribute it, so they surface in the adapter panel instead. */
 export function latestProbes(): Record<string, ProbeResult> {
   const dir = PROBES_DIR();
   const latest: Record<string, ProbeResult> = {};
@@ -200,7 +251,7 @@ export function latestProbes(): Record<string, ProbeResult> {
     if (!name.endsWith(".json")) continue;
     try {
       const parsed = JSON.parse(fs.readFileSync(path.join(dir, name), "utf-8")) as ProbeResult;
-      if (parsed?.harness) latest[parsed.harness] = parsed; // sorted names => last wins
+      if (parsed?.harness && !parsed.adapter) latest[parsed.harness] = parsed; // sorted names => last wins
     } catch {
       // skip unreadable artifacts
     }

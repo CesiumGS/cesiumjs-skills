@@ -14,8 +14,8 @@ import {
   XCircle
 } from "lucide-react";
 import { useStore } from "../store";
-import { loadHarnessHealth, loadLaunchSkills, probeHarness } from "../api";
-import type { HarnessHealthRow, HarnessSpec, LivePhase, LiveRun, LiveTrial, ProbeResultDTO } from "../types";
+import { adapterAction, loadAdapter, loadHarnessHealth, loadLaunchSkills, probeHarness } from "../api";
+import type { AdapterStatusDTO, HarnessHealthRow, HarnessSpec, LivePhase, LiveRun, LiveTrial, ProbeResultDTO } from "../types";
 import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
 
 /* ============================================================================
@@ -628,9 +628,14 @@ function effortLevelsFor(spec: HarnessSpec | undefined, modelId: string): string
    Probes are serialized server-side; rows disable while one runs.
    --------------------------------------------------------------------------- */
 
+// Capability and attribution are independent assertions, and the UI keeps
+// them apart: the verdict says whether the probe SUCCEEDED (green/red), and a
+// separate neutral chip says how the provider identity is known. A harness
+// whose CLI never reports its provider is not failing — that is a property of
+// the harness, not of the run — so it must not render as a warning.
 const PROBE_VERDICT_LABEL: Record<string, string> = {
   pass: "Pass",
-  pass_provider_unverified: "Pass · provider unverified",
+  pass_provider_unverified: "Pass",
   fail_capability: "No tool use",
   attribution_mismatch: "Wrong provider",
   error: "Error"
@@ -645,10 +650,13 @@ const CREDENTIAL_ROUTE_LABEL: Record<string, string> = {
   local_none: "Local (no auth)"
 };
 
-function probeVerdictTone(verdict: string): "pass" | "warn" | "fail" {
-  if (verdict === "pass") return "pass";
-  if (verdict === "pass_provider_unverified") return "warn";
-  return "fail";
+const ATTRIBUTION_WIRE_HINT =
+  "Verified: this harness reported which provider/model served the call in its own output during the probe.";
+const ATTRIBUTION_REGISTRY_HINT =
+  "This CLI's output does not say which provider served the call, so the identity shown is the registry's declared binding. The capability check passed either way.";
+
+function probeVerdictTone(verdict: string): "pass" | "fail" {
+  return verdict === "pass" || verdict === "pass_provider_unverified" ? "pass" : "fail";
 }
 
 function HarnessHealthPanel() {
@@ -750,25 +758,29 @@ function HarnessHealthPanel() {
               </div>
               <div className="hh-cell hh-probe" role="cell">
                 {isProbing ? (
-                  <span className="hh-verdict warn">Probing… (≤{Math.round((row.probe_timeout_ms ?? 240000) / 1000)}s)</span>
+                  <span className="hh-verdict run">
+                    <Clock size={11} aria-hidden /> Probing… (≤{Math.round((row.probe_timeout_ms ?? 240000) / 1000)}s)
+                  </span>
                 ) : probe ? (
-                  <span
-                    className={`hh-verdict ${tone}`}
-                    title={
-                      probe.capability.error ??
-                      `${probe.attribution.provider.value ?? "?"}/${probe.attribution.model.value ?? "?"} · attribution ${
-                        probe.attribution.observed ? "observed on the wire" : probe.attribution.provider.source
-                      }`
-                    }
-                  >
-                    {tone === "pass" ? <CheckCircle2 size={11} aria-hidden /> : tone === "warn" ? <AlertTriangle size={11} aria-hidden /> : <XCircle size={11} aria-hidden />}
-                    {PROBE_VERDICT_LABEL[probe.verdict] ?? probe.verdict}
-                    <span className="hh-probe-meta mono">
+                  <div className="hh-probe-stack">
+                    <span className={`hh-verdict ${tone}`} title={probe.capability.error ?? undefined}>
+                      {tone === "pass" ? <CheckCircle2 size={11} aria-hidden /> : <XCircle size={11} aria-hidden />}
+                      {PROBE_VERDICT_LABEL[probe.verdict] ?? probe.verdict}
+                      <span
+                        className={`hh-att ${probe.attribution.observed ? "wire" : "reg"}`}
+                        title={probe.attribution.observed ? ATTRIBUTION_WIRE_HINT : ATTRIBUTION_REGISTRY_HINT}
+                      >
+                        {probe.attribution.observed ? "verified live" : "per registry"}
+                      </span>
+                    </span>
+                    <span
+                      className="hh-probe-meta mono"
+                      title={`${probe.attribution.provider.value ?? "?"}/${probe.attribution.model.value ?? "?"} · ${fmtDuration(probe.latency_ms / 1000)}`}
+                    >
                       {probe.attribution.provider.value ?? "?"}/{probe.attribution.model.value ?? "?"} ·{" "}
                       {fmtDuration(probe.latency_ms / 1000)}
-                      {probe.attribution.observed ? "" : " · declared"}
                     </span>
-                  </span>
+                  </div>
                 ) : (
                   <span className="hh-verdict unknown">never probed</span>
                 )}
@@ -791,6 +803,196 @@ function HarnessHealthPanel() {
           );
         })}
         {!rows.length && !error && <div className="dash-sub">Loading harness registry…</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   PROTOCOL ADAPTER: some harness × provider pairs speak different wire
+   protocols (Claude Code speaks only anthropic-messages; Azure/Foundry serves
+   none of it). The adapter (LiteLLM, pinned, run on demand) translates
+   between them. Behind the adapter a harness believes it talks to its own
+   first party, so the wire PROVIDER claim is meaningless — adapter probes
+   verify on the MODEL id, which the proxy maps truthfully.
+   --------------------------------------------------------------------------- */
+
+function AdapterPanel() {
+  const [state, setState] = useState<AdapterStatusDTO | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [probeResult, setProbeResult] = useState<ProbeResultDTO | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = () =>
+    loadAdapter()
+      .then(setState)
+      .catch((exc) => setError(String(exc?.message ?? exc)));
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const lifecycle = async (action: "start" | "stop") => {
+    setBusy(action);
+    setError(null);
+    try {
+      setState(await adapterAction(action));
+    } catch (exc: any) {
+      setError(String(exc?.message ?? exc));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const probeVia = async (target: string) => {
+    setBusy(`probe:${target}`);
+    setError(null);
+    setProbeResult(null);
+    try {
+      // Claude Code is the base_url_override harness — the one the adapter
+      // can redirect purely via env. Others need config-surface changes
+      // (documented in the registry) and are not yet automated.
+      setProbeResult(await probeHarness("claude-code", undefined, undefined, target));
+    } catch (exc: any) {
+      setError(String(exc?.message ?? exc));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (!state) return null;
+
+  const stateTone = state.running ? (state.healthy ? "pass" : "fail") : "unknown";
+  const stateLabel = state.running ? (state.healthy ? `running · :${state.port}` : "running · unhealthy") : "stopped";
+
+  return (
+    <div className="dash-card launch-panel harness-health">
+      <div className="section-title">
+        <ArrowRight size={13} aria-hidden /> Protocol Adapter
+        <span className="section-sub">
+          Translates between wire protocols for harness × provider pairs that don't share one (e.g. Claude Code →
+          Azure/Foundry). {state.display_name}, pinned <code className="mono">=={state.version_pin}</code>, launched on
+          demand — nothing global to keep patched.
+        </span>
+        <span className="spacer" />
+        <span className={`hh-verdict ${stateTone}`} title={state.pid ? `pid ${state.pid}` : undefined}>
+          <span className={`hh-dot${state.healthy ? " on" : ""}`} /> {stateLabel}
+        </span>
+        <button
+          className="lk-chip"
+          onClick={() => lifecycle(state.running ? "stop" : "start")}
+          disabled={busy !== null || (!state.running && !state.configured)}
+          title={
+            state.running
+              ? "Stop the adapter proxy"
+              : state.configured
+                ? "Generate config from targets and launch the pinned proxy"
+                : "No targets configured — run `cesium-eval adapter init`, then edit the local targets file"
+          }
+        >
+          {busy === "start" ? "Starting…" : busy === "stop" ? "Stopping…" : state.running ? "Stop" : "Start"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="launch-warn">
+          <AlertTriangle size={11} aria-hidden /> {error}
+        </div>
+      )}
+
+      <div className="hh-rows">
+        {state.targets.map((target) => {
+          const isProbing = busy === `probe:${target.name}`;
+          const result = probeResult?.adapter?.target === target.name ? probeResult : null;
+          const tone = result ? probeVerdictTone(result.verdict) : null;
+          // A missing credential is a SETUP state, not a failure: name it,
+          // link the remediation, and disable the probe rather than letting
+          // it fail downstream with a cryptic provider error.
+          const credentialMissing = target.credential_ready === false;
+          return (
+            <div key={target.name} className="hh-row" role="row">
+              <div className="hh-cell hh-name" role="cell">
+                <span className="hh-title mono" title={target.name}>{target.name}</span>
+              </div>
+              <div className="hh-cell hh-binding" role="cell" title={target.params?.api_base ?? undefined}>
+                <span className="hh-provider">→ {target.provider_id} · {target.model}</span>
+                {target.credential_env && (
+                  <span
+                    className={`hh-route${credentialMissing ? " missing" : ""}`}
+                    title={credentialMissing ? target.credential_hint ?? undefined : `Credential env: ${target.credential_env}`}
+                  >
+                    {target.credential_env}
+                    {credentialMissing ? " · not set" : ""}
+                  </span>
+                )}
+              </div>
+              <div className="hh-cell hh-vision" role="cell" />
+              <div className="hh-cell hh-probe" role="cell">
+                {isProbing ? (
+                  <span className="hh-verdict run">
+                    <Clock size={11} aria-hidden /> Probing via Claude Code…
+                  </span>
+                ) : credentialMissing ? (
+                  <div className="hh-probe-stack">
+                    <span className="hh-verdict unknown" title={target.credential_hint ?? undefined}>
+                      credential needed
+                    </span>
+                    <span className="hh-probe-meta" title={target.credential_hint ?? undefined}>
+                      {target.credential_hint}
+                    </span>
+                  </div>
+                ) : result ? (
+                  <div className="hh-probe-stack">
+                    <span className={`hh-verdict ${tone}`} title={result.capability.error ?? undefined}>
+                      {tone === "pass" ? <CheckCircle2 size={11} aria-hidden /> : <XCircle size={11} aria-hidden />}
+                      {PROBE_VERDICT_LABEL[result.verdict] ?? result.verdict}
+                      {tone === "pass" && (
+                        <span className="hh-att reg" title="Behind the adapter the harness cannot see the real provider; identity comes from this target's binding. The model id is still verified on the wire.">
+                          model-verified
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className="hh-probe-meta mono"
+                      title={result.capability.error ?? `claude-code → ${result.attribution.provider.value}/${result.attribution.model.value}`}
+                    >
+                      claude-code → {result.attribution.provider.value}/{result.attribution.model.value} ·{" "}
+                      {fmtDuration(result.latency_ms / 1000)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="hh-verdict unknown">not probed this session</span>
+                )}
+              </div>
+              <div className="hh-cell hh-actions" role="cell">
+                <button
+                  className="lk-chip"
+                  onClick={() => probeVia(target.name)}
+                  disabled={busy !== null || !state.healthy || credentialMissing}
+                  title={
+                    credentialMissing
+                      ? target.credential_hint ?? "Credential missing"
+                      : state.healthy
+                        ? `Probe Claude Code through the adapter to ${target.provider_id}/${target.model} — proves the full translation path with real tool use`
+                        : "Start the adapter first"
+                  }
+                >
+                  {isProbing ? "…" : "Probe"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {!state.targets.length && (
+          <div className="dash-sub">
+            No targets configured. Run <code className="mono">cesium-eval adapter init</code>, then edit the local
+            targets file (endpoints stay machine-local, never tracked).
+          </div>
+        )}
+      </div>
+
+      <div className="launch-note" title={state.advisory}>
+        Supply-chain note: LiteLLM {state.version_pin} is pinned deliberately — releases 1.82.7/1.82.8 were compromised.
       </div>
     </div>
   );
@@ -1443,6 +1645,8 @@ export function LiveStation() {
       <LaunchPanel />
 
       <HarnessHealthPanel />
+
+      <AdapterPanel />
 
       {stalledRuns.length > 0 && (
         <>

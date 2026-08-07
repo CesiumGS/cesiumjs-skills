@@ -4770,7 +4770,7 @@ button.chart-pt:focus-visible {
 .hh-rows { display: flex; flex-direction: column; gap: 2px; margin-top: var(--sp-2); }
 .hh-row {
   display: grid;
-  grid-template-columns: minmax(150px, 0.9fr) minmax(200px, 1.2fr) 24px minmax(240px, 1.6fr) auto;
+  grid-template-columns: minmax(140px, 0.9fr) minmax(170px, 1.1fr) 22px minmax(210px, 1.5fr) auto;
   gap: var(--sp-3);
   align-items: center;
   padding: 6px var(--sp-2);
@@ -4779,7 +4779,7 @@ button.chart-pt:focus-visible {
 .hh-row:hover { background: var(--surface-2); }
 .hh-cell { min-width: 0; display: flex; align-items: center; gap: var(--sp-2); }
 .hh-name { font-weight: var(--fw-semibold); font-size: var(--fs-100); }
-.hh-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hh-title { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hh-dot {
   width: 7px; height: 7px; border-radius: 50%; flex: none;
   background: var(--fail); box-shadow: 0 0 0 3px var(--fail-bg);
@@ -4791,19 +4791,42 @@ button.chart-pt:focus-visible {
   border-radius: var(--r-pill); padding: 1px 7px; flex: none;
 }
 .hh-binding { flex-direction: column; align-items: flex-start; gap: 1px; }
-.hh-provider { font-size: var(--fs-50); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.hh-provider {
+  display: block; max-width: 100%; min-width: 0;
+  font-size: var(--fs-50); color: var(--text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .hh-route {
   font-size: var(--fs-40); color: var(--harness); background: var(--harness-bg);
-  border-radius: var(--r-pill); padding: 1px 7px;
+  border-radius: var(--r-pill); padding: 1px 7px; flex: none; max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .hh-vision { color: var(--text-3); justify-content: center; }
+/* Verdict cell: two stacked lines — verdict + attribution chip, then the
+   observed binding in mono. Every line ellipsizes instead of spilling. */
+.hh-probe-stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 100%; }
 .hh-verdict {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: var(--fs-50); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--fs-50); white-space: nowrap; min-width: 0;
 }
+.hh-verdict > svg { flex: none; }
 .hh-verdict.pass { color: var(--pass); }
-.hh-verdict.warn { color: var(--defer); }
 .hh-verdict.fail { color: var(--fail); }
+.hh-verdict.run { color: var(--text-2); }
 .hh-verdict.unknown { color: var(--text-3); }
-.hh-probe-meta { font-size: var(--fs-40); color: var(--text-3); }
+/* Attribution chip: HOW the provider identity is known — never a warning.
+   "verified live" = the harness reported it in its own output; "per registry"
+   = this CLI does not self-report, so the declared binding is shown. */
+.hh-att {
+  font-size: var(--fs-40); border-radius: var(--r-pill); padding: 1px 7px; flex: none;
+  white-space: nowrap;
+}
+.hh-att.wire { color: var(--pass); background: var(--pass-bg); }
+.hh-att.reg { color: var(--text-3); background: var(--surface-3); }
+.hh-probe-meta {
+  display: block; min-width: 0; max-width: 100%;
+  font-size: var(--fs-40); color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .hh-actions { justify-content: flex-end; }
+.hh-route.missing { color: var(--defer); background: var(--defer-bg); }
