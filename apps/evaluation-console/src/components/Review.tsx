@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useStore } from "../store";
 import { artifactUrl } from "../api";
 import type { AdaptedDimension, CaseView, RawCheck } from "../types";
@@ -46,6 +47,113 @@ function checkLabel(c: RawCheck): string {
   return humanize(stripOrdinal(c.check_id || c.type));
 }
 
+/** Regex source → readable text: drop escapes so `Cesium3DTileset\.fromUrl`
+ * reads as `Cesium3DTileset.fromUrl` for a non-regex-literate reader. */
+function prettyPattern(p: string): string {
+  return p.replace(/\\(.)/g, "$1");
+}
+
+/** A token is showable as an API name if it still reads like code after
+ * cleaning — has letters and carries no leftover regex metacharacters. */
+function isShowableToken(t: string): boolean {
+  return /[A-Za-z]/.test(t) && !/[\\^$*+?{}[\]()|]/.test(t) && !t.includes("(?");
+}
+
+interface PatternShape {
+  tokens: string[];
+  /** Every token reads like a plain API name — safe to show as code chips. */
+  showable: boolean;
+  /** Every token is numeric — a coordinate/value assertion, not an API name. */
+  numeric: boolean;
+}
+
+/** Best-effort humanization of a source-check regex: collapse simple
+ * non-capturing groups, split the alternation, and classify the result so the
+ * rationale can show clean API chips, describe a coordinate/value match, or
+ * fall back to generic prose for genuinely complex regex. */
+function patternShape(raw: string): PatternShape {
+  const collapsed = raw
+    .replace(/\(\?:([^()|]*)\)\?/g, "$1") // (?:X)? -> X
+    .replace(/\(\?:([^()|]*)\)/g, "$1"); // (?:X)  -> X
+  const tokens = collapsed
+    .split("|")
+    .map((part) =>
+      prettyPattern(
+        part
+          .trim()
+          .replace(/^\(\?:/, "") // group open left over from splitting an alternation
+          .replace(/\)$/, "") // group close left over from splitting
+          .replace(/^\^/, "")
+          .replace(/\$$/, "")
+      ).trim()
+    )
+    .filter(Boolean);
+  const showable = tokens.length > 0 && tokens.every(isShowableToken);
+  const numeric = tokens.length > 0 && tokens.every((t) => /^[-\d.\s,]+$/.test(t));
+  return { tokens, showable, numeric };
+}
+
+/** Render pattern tokens as a comma-separated run of code chips. */
+function tokenChips(tokens: string[]): ReactNode {
+  return tokens.map((t, i) => (
+    <span key={t}>
+      {i > 0 ? ", " : ""}
+      <code>{t}</code>
+    </span>
+  ));
+}
+
+/** Plain-English explanation of what a code test verifies and why. Rendered
+ * directly under each row so a non-expert reads the deterministic intent before
+ * the raw expected/actual values. Interpolates the concrete API pattern for
+ * source checks; falls back to a category-aware sentence for unmapped types. */
+function checkRationale(c: RawCheck): ReactNode {
+  const pattern = patternValue(c.expected) ?? patternValue(c.actual);
+  const shape = pattern ? patternShape(pattern) : null;
+  switch (c.type) {
+    case "code_runs":
+      return "Runs the generated snippet in a real headless browser and requires it to finish without throwing. The floor check: proof the code actually executes, not just that it looks plausible.";
+    case "no_runtime_errors":
+      return "Watches the browser console during that run and requires zero errors. Catches failures that don't halt execution but still break the scene, like a rejected tile load or a bad API call.";
+    case "pattern_present": {
+      if (shape?.showable) {
+        return shape.tokens.length === 1 ? (
+          <>Requires the generated source to contain {tokenChips(shape.tokens)} — the deterministic fingerprint that the intended CesiumJS API was actually called.</>
+        ) : (
+          <>Requires the generated source to call at least one of {tokenChips(shape.tokens)} — the deterministic fingerprint that the intended CesiumJS API was used rather than approximated.</>
+        );
+      }
+      if (shape?.numeric) {
+        return "Requires the generated source to reference the specific coordinates or numeric values the scenario expects — proof the scene was aimed at the right place, not an arbitrary one.";
+      }
+      return "Requires the generated source to match the API pattern the scenario expects (shown below) — the deterministic fingerprint that the intended CesiumJS call was used.";
+    }
+    case "pattern_absent": {
+      if (shape?.showable) {
+        return (
+          <>Requires the source to use none of {tokenChips(shape.tokens)} — a guardrail against a shortcut the scenario forbids, such as an Ion-only asset where a public one is required.</>
+        );
+      }
+      return "Requires the source to avoid the forbidden pattern shown below — a guardrail against a shortcut the scenario explicitly disallows.";
+    }
+    case "artifact_text_absent":
+      return "Requires a specific string to be absent from the run's output text, usually an error marker or a disallowed fallback.";
+    case "camera_target_view":
+      return "Checks the camera came to rest aimed at the expected target within tolerance — proof the view was framed on the subject instead of left at the default globe.";
+    case "collection_count":
+      return "Counts the objects in a collection after the run and requires the expected number — proof the right quantity was created, not zero and not duplicated.";
+    case "entity_exists":
+      return "Requires a specific named entity to be present in the scene once the run settles.";
+    case "entity_translation_delta":
+      return "Measures how far an entity moved between two time samples and compares it against the expected distance — proof of time-dynamic motion.";
+    case "json_value_equals":
+    case "json_value_compare":
+      return "Reads a specific value out of the run's structured output and compares it against the expected value within tolerance.";
+    default:
+      return `Deterministic ${humanize(c.category || "source contract").toLowerCase()} check: compares the observed result against the expected value.`;
+  }
+}
+
 function shouldShowExpectedActual(c: RawCheck): boolean {
   if (c.expected === undefined && c.actual === undefined) return false;
   if (
@@ -72,6 +180,7 @@ function DeterministicCheckRow({ c }: { c: RawCheck }) {
           </span>
           {!passed && c.critical && <span className="det-check-critical">Critical</span>}
         </div>
+        <div className="det-check-rationale">{checkRationale(c)}</div>
         <div className="det-check-meta">
           <span>{c.type}</span>
           {c.category && <span>{humanize(c.category)}</span>}
@@ -188,8 +297,9 @@ function DimRow({ d }: { d: AdaptedDimension }) {
       <span className="dim-bar">
         <span className="dim-bar-fill" style={{ width: `${pct}%` }} />
       </span>
-      <span className="mono" style={{ fontSize: "var(--fs-50)", color: "var(--ink-eye)" }}>
-        {d.score!.toFixed(0)}
+      <span className="dim-score">
+        {d.score!.toFixed(1)}
+        <span className="dim-score-max">/10</span>
       </span>
       {d.note && <span className="dim-note">{d.note}</span>}
     </div>

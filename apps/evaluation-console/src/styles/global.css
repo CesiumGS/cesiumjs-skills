@@ -738,6 +738,22 @@ button {
   color: var(--text-2);
   font-weight: var(--fw-medium);
 }
+/* Plain-English rationale: what this code test verifies and why. Sits directly
+ * under the title so a non-expert reads the intent before the raw values. */
+.det-check-rationale {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: var(--fs-100);
+  line-height: 1.45;
+}
+.det-check-rationale code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 0 3px;
+  border-radius: var(--r-1);
+  background: color-mix(in srgb, var(--ink-machine-bg) 55%, transparent);
+  color: var(--ink-machine);
+}
 
 /* contact strip (multi-angle) */
 .contact {
@@ -854,16 +870,34 @@ button {
   scrollbar-gutter: stable;
   padding: var(--sp-3);
 }
+/* Visual Tests carry per-dimension bars and notes; give them more room. */
+.band.eye .band-body {
+  max-height: clamp(300px, 48vh, 560px);
+}
 .band-head .bh-score {
   margin-left: auto;
 }
 .dim-row {
   display: grid;
-  grid-template-columns: 98px 1fr auto;
+  grid-template-columns: 104px 1fr auto;
   gap: var(--sp-2);
   align-items: center;
-  padding: 5px 0;
+  padding: 7px 0;
   font-size: var(--fs-100);
+}
+.dim-score {
+  font-family: var(--font-mono);
+  font-size: var(--fs-100);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-eye);
+  min-width: 34px;
+  text-align: right;
+}
+.dim-score .dim-score-max {
+  color: var(--text-3);
+}
+.dim-row.fail .dim-score {
+  color: var(--fail);
 }
 .dim-row .dim-name {
   color: var(--text-2);
@@ -873,15 +907,19 @@ button {
   text-overflow: ellipsis;
 }
 .dim-bar {
-  height: 6px;
+  display: block;
+  height: 8px;
   border-radius: var(--r-pill);
   background: var(--surface-3);
   overflow: hidden;
 }
 .dim-bar-fill {
+  display: block;
+  min-width: 2px;
   height: 100%;
   background: var(--ink-eye);
   border-radius: var(--r-pill);
+  transition: width 0.24s ease;
 }
 .dim-row.fail .dim-bar-fill {
   background: var(--fail);
