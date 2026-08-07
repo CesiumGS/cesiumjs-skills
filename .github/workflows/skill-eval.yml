@@ -173,7 +173,13 @@ jobs:
     # untrusted head ref can reach a persistent runner through this lane. The
     # first step re-asserts that independently, so a future edit to the
     # condition cannot quietly re-open it.
-    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    #
+    # CODEX_RUNNER_LABELS narrows the pool to the ONE runner that holds the
+    # codex credential. The CLI rotates its refresh token in place on the
+    # runner (see setup-agent-harness/action.yml), so two runners refreshing
+    # copies of the same session invalidate each other; every codex-capable
+    # lane must therefore land on the same machine.
+    runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 120
     env:
       # render-baselines --out and audit --bundle-root must be given the same

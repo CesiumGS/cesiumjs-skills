@@ -1,0 +1,99 @@
+name: Codex Auth Keepalive
+
+# The codex credential is a ChatGPT-subscription OAuth pair that the CLI
+# refreshes IN PLACE on the runner, rotating the refresh token as it goes
+# (the full model is documented in setup-agent-harness/action.yml). A session
+# left unrefreshed for roughly eight days goes stale, and a stale session
+# cannot be revived by CI: it takes a human running `codex login`.
+#
+# Skill work does not arrive on a schedule, so a quiet week would let the
+# session lapse. This lane exercises the credential twice a week with the
+# cheapest possible codex call, which is enough for the CLI to refresh the
+# runner-resident auth.json whenever it is near the staleness window.
+#
+# Twice weekly rather than the documented weekly example: the staleness window
+# is ~8 days, and a single Monday cron that fails once (runner offline, npm
+# outage) leaves the next attempt at day 14, past the cliff. Mon+Thu means one
+# missed run still leaves the session inside the window.
+#
+# RESEED RUNBOOK, for when this lane or a codex-consuming lane fails with
+# 401 / invalid_grant (token revoked, or two machines refreshed one session):
+#   1. `codex login` on a trusted machine
+#   2. `gh secret set CODEX_AUTH_CONTENT < ~/.codex/auth.json`
+#   3. dispatch this workflow with force_reseed: true
+on:
+  schedule:
+    - cron: "0 9 * * 1,4"
+  workflow_dispatch:
+    inputs:
+      force_reseed:
+        description: "Discard the runner-resident auth.json and reseed from the CODEX_AUTH_CONTENT secret (only after re-running `codex login` and updating the secret)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  # Never cancel a refresh in flight: killing codex mid-rotation is how a
+  # half-written auth.json happens, and the shape gate in setup-agent-harness
+  # would then discard it in favor of a possibly-stale secret.
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 15
+    steps:
+      # A refresh is a server-side rotation. Running one on a GitHub-hosted
+      # runner would advance the session on a machine that is destroyed
+      # minutes later, stranding the persistent runner's copy on the revoked
+      # lineage. Failing loudly beats a green run that quietly broke the
+      # credential it exists to preserve.
+      - name: Refuse to rotate on an ephemeral host
+        run: |
+          if [ "${RUNNER_ENVIRONMENT:-}" = "github-hosted" ]; then
+            echo "::error title=No persistent runner configured::This lane only makes sense on a self-hosted runner that keeps CODEX_HOME between jobs. Configure the CODEX_RUNNER_LABELS (or RUNNER_LABELS) repository variable."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # With the seed-only-if-missing behavior, this reuses the runner's live
+      # auth.json when one exists and falls back to the secret when it does
+      # not, which is exactly the bootstrap the official CI guidance describes.
+      - uses: ./.github/actions/setup-agent-harness
+        with:
+          harness: codex
+          codex-auth-content: ${{ secrets.CODEX_AUTH_CONTENT }}
+          force-reseed: ${{ github.event.inputs.force_reseed || 'false' }}
+
+      # Any codex invocation triggers the CLI's own refresh logic when the
+      # session is near staleness; there is no separate "refresh" subcommand,
+      # and calling the OAuth endpoint by hand is explicitly unsupported.
+      - name: Exercise the credential
+        run: |
+          codex exec --json "Reply with exactly OK" >/dev/null
+
+      # Metadata only, no token values: enough to see at a glance whether the
+      # session is advancing (last_refresh moves) and which mode it is in.
+      - name: Report credential freshness
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const doc = JSON.parse(fs.readFileSync(process.argv[1], "utf-8"));
+            console.log(JSON.stringify({
+              auth_mode: doc.auth_mode ?? null,
+              last_refresh: doc.tokens?.last_refresh ?? doc.last_refresh ?? null,
+              has_access_token: Boolean(doc.tokens?.access_token),
+              has_refresh_token: Boolean(doc.tokens?.refresh_token),
+            }, null, 2));
+          ' "${CODEX_HOME:-$HOME/.codex}/auth.json"

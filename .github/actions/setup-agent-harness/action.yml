@@ -30,6 +30,34 @@ description: >-
 # ~/.codex/auth.json, where it fails as a corrupt codex login rather than as the
 # missing secret it is. Passing both and selecting inside the action removes the
 # expression entirely.
+
+# WHY THE CODEX CREDENTIAL IS SEEDED ONLY WHEN MISSING
+#
+# The codex credential is a ChatGPT-subscription OAuth pair, and the CLI
+# refreshes it in place: when the session nears staleness (roughly eight days
+# from last_refresh) or a call returns 401, codex obtains a new pair, ROTATES
+# the refresh token server-side, and rewrites auth.json on the runner. From
+# that moment the runner-resident file is the live credential and the
+# repository secret holds a superseded lineage. Overwriting the file from the
+# secret on every run therefore discards the rotated pair and resurrects one
+# the server may already have invalidated, which surfaces days later as an
+# invalid_grant / refresh_token_reused lockout that only a human `codex login`
+# can clear. OpenAI's CI guidance is explicit on this point:
+# https://developers.openai.com/codex/auth/ci-cd-auth
+#
+# So for codex the secret is bootstrap material: it is written only when the
+# runner has no parseable auth.json (first run on a fresh runner, or after a
+# force-reseed). The corollary is that every codex job must land on the same
+# persistent runner (see CODEX_RUNNER_LABELS in the calling workflows): two
+# runners refreshing copies of one session invalidate each other.
+#
+# The opencode credential is a static API key with no rotation, so it keeps
+# the simpler overwrite-every-run behavior.
+#
+# RESEED RUNBOOK, for when the live lane fails with 401 / invalid_grant:
+#   1. `codex login` on a trusted machine
+#   2. `gh secret set CODEX_AUTH_CONTENT < ~/.codex/auth.json`
+#   3. dispatch the "Codex Auth Keepalive" workflow with force_reseed: true
 inputs:
   harness:
     description: "Agent CLI to install: codex or opencode"
@@ -48,6 +76,15 @@ inputs:
       opencode. Same handling as the codex credential.
     required: false
     default: ''
+  force-reseed:
+    description: >-
+      When 'true' and the harness is codex, delete any runner-resident
+      auth.json before materializing, so the repository secret wins. Use only
+      right after re-running `codex login` and updating CODEX_AUTH_CONTENT;
+      at that point the resident file holds the revoked lineage and keeping
+      it would be the bug.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -83,6 +120,7 @@ runs:
         HARNESS: ${{ inputs.harness }}
         CODEX_AUTH_CONTENT_IN: ${{ inputs.codex-auth-content }}
         OPENCODE_AUTH_CONTENT_IN: ${{ inputs.opencode-auth-content }}
+        FORCE_RESEED: ${{ inputs.force-reseed }}
       run: |
         set -euo pipefail
         case "$HARNESS" in
@@ -97,6 +135,31 @@ runs:
             secret_name=OPENCODE_AUTH_CONTENT
             ;;
         esac
+
+        # Codex only: prefer the runner-resident file over the secret. See the
+        # header comment for why (the CLI rotates the refresh token in place,
+        # so the resident file is the live credential and the secret is only
+        # bootstrap material). The shape gate below is the same test the verify
+        # step applies, so a half-written file loses to a reseed rather than
+        # being kept because it merely exists.
+        if [ "$HARNESS" = "codex" ]; then
+          if [ "${FORCE_RESEED:-false}" = "true" ] && [ -f "$auth_path" ]; then
+            rm -f "$auth_path"
+            echo "force-reseed: discarded the runner-resident auth.json"
+          fi
+          if [ -f "$auth_path" ] && node -e '
+            const fs = require("node:fs");
+            try {
+              const doc = JSON.parse(fs.readFileSync(process.argv[1], "utf-8"));
+              const tokens = doc.tokens ?? {};
+              process.exit(tokens.access_token && tokens.refresh_token ? 0 : 1);
+            } catch { process.exit(1); }
+          ' "$auth_path"; then
+            echo "reusing runner-resident $auth_path (codex refreshes it in place; the secret is bootstrap-only)"
+            exit 0
+          fi
+        fi
+
         if [ -z "${AUTH_CONTENT:-}" ]; then
           echo "::error title=Missing credential::harness is '$HARNESS' but no credential was supplied for it. Configure the ${secret_name} repository secret."
           exit 1

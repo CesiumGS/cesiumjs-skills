@@ -105,8 +105,12 @@ jobs:
   qualitative:
     needs: [deterministic, preflight]
     if: needs.preflight.outputs.ready == 'true'
-    # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner labels).
-    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner
+    # labels). CODEX_RUNNER_LABELS narrows further to the one runner holding
+    # the codex credential: this lane can select the codex harness, and codex
+    # sessions must not be refreshed from two machines (see
+    # setup-agent-harness/action.yml).
+    runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 120
     env:
       # Single source of truth for the bundle layout. `render-baselines --out`
