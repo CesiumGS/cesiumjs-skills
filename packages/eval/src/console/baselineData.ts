@@ -9,10 +9,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { EvalContext } from "../config/types.js";
-import { fromRepoRoot, globFiles } from "../lib/paths.js";
+import { fromRepoRoot } from "../lib/paths.js";
 import { renderBaselinesCommand } from "../commands/renderBaselines.js";
+import { baselineScenarios, baselineSkills, resolveBundleDir } from "../evaluation/baselines.js";
 
-const FIXTURES_ROOT = () => fromRepoRoot("evaluation", "fixtures");
 export const BASELINE_ROOT = "evaluation/artifacts/baselines";
 
 export interface SkillCoverage {
@@ -22,35 +22,21 @@ export interface SkillCoverage {
   covered: boolean;
 }
 
-/** Mirror audit.ts bundleDirFor so coverage is judged where the audit looks. */
-function auditBundleDir(evidence: Record<string, any>, skill: string, caseId: string): string {
-  const outAbs = fromRepoRoot(BASELINE_ROOT);
-  const rel = evidence.run_artifact_path;
-  if (!rel) return path.join(outAbs, skill, caseId);
-  const parts = String(rel).split(/[\\/]/);
-  const baselineIndex = parts.indexOf("baseline");
-  return baselineIndex > 0 ? path.join(outAbs, ...parts.slice(baselineIndex - 1)) : path.join(outAbs, path.basename(String(rel)));
-}
-
-function baselineFixtures(skill: string): string[] {
-  return globFiles(path.join(FIXTURES_ROOT(), skill), "", ".evidence.json");
-}
-
+/**
+ * Coverage for a skill, counted over the same scenarios the audit will judge
+ * and at the same bundle locations it resolves (both via ../evaluation/
+ * baselines.js). Reporting a different case set than the audit is what made
+ * the launcher promise a visual lane the run could not deliver.
+ */
 function coverageForSkill(skill: string): SkillCoverage {
-  let cases = 0;
+  const bundleRoot = fromRepoRoot(BASELINE_ROOT);
+  const scenarios = baselineScenarios(skill);
   let screenshots = 0;
-  for (const fixture of baselineFixtures(skill)) {
-    let evidence: Record<string, any>;
-    try {
-      evidence = JSON.parse(fs.readFileSync(fixture, "utf-8"));
-    } catch {
-      continue;
-    }
-    if (typeof evidence.generated_code !== "string" || !evidence.generated_code) continue;
-    cases += 1;
-    if (fs.existsSync(path.join(auditBundleDir(evidence, skill, String(evidence.case_id ?? "")), "screenshot.png"))) screenshots += 1;
+  for (const scenario of scenarios) {
+    const bundleDir = resolveBundleDir(scenario, bundleRoot);
+    if (bundleDir !== null && fs.existsSync(path.join(bundleDir, "screenshot.png"))) screenshots += 1;
   }
-  return { skill, cases, screenshots, covered: cases > 0 && screenshots === cases };
+  return { skill, cases: scenarios.length, screenshots, covered: scenarios.length > 0 && screenshots === scenarios.length };
 }
 
 export interface BaselineCoverage {
@@ -62,10 +48,7 @@ export interface BaselineCoverage {
 }
 
 export function baselineCoverage(ctx: EvalContext, skills?: string[]): BaselineCoverage {
-  const known = fs
-    .readdirSync(FIXTURES_ROOT(), { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
+  const known = baselineSkills();
   const target = skills && skills.length ? skills.filter((s) => known.includes(s)) : known;
   return {
     root: BASELINE_ROOT,

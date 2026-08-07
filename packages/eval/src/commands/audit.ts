@@ -14,7 +14,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { readJson, writeJsonPlain } from "../lib/json.js";
-import { fromRepoRoot, globFiles, listDirs, repoRelative } from "../lib/paths.js";
+import { fromRepoRoot, globFiles, repoRelative } from "../lib/paths.js";
 import { gitCommit } from "../lib/proc.js";
 import { nowIsoSeconds } from "../lib/format.js";
 import { runCase } from "../evaluation/runner.js";
@@ -26,17 +26,22 @@ import {
   writeScorecard,
 } from "../evaluation/scorecard.js";
 import { loadScorecardValidator, loadVisualReviewValidator } from "../evaluation/schema.js";
+import {
+  baselineScenarios,
+  baselineSkills,
+  generatedCodePath,
+  resolveBundleDir,
+  type BaselineScenario,
+} from "../evaluation/baselines.js";
 import { JudgeCall, fakeJudgeCall, judgeRender } from "../evaluation/judge/staticJudge.js";
 import { describeAgent, invokeAgent } from "../harness/invoke.js";
 import type { EvalContext } from "../config/types.js";
 
-const scenariosRoot = () => fromRepoRoot("optimization", "scenarios");
-const runsRoot = () => fromRepoRoot("optimization", "runs");
 const auditsRoot = () => fromRepoRoot("evaluation", "artifacts", "audits");
 const judgePromptsDir = () => fromRepoRoot("evaluation", "prompts", "judge");
 
 export function allSkills(): string[] {
-  return listDirs(scenariosRoot()).filter((name) => !name.startsWith("."));
+  return baselineSkills();
 }
 
 function readJsonIfExists(filePath: string): Record<string, any> | null {
@@ -45,18 +50,6 @@ function readJsonIfExists(filePath: string): Record<string, any> | null {
   } catch {
     return null;
   }
-}
-
-/** Locate a scenario's rendered baseline bundle; mirrors the optimization loop's naming. */
-function resolveBundleDir(skill: string, scenario: Record<string, any>, bundleRoot: string | null): string | null {
-  const base = bundleRoot !== null ? path.join(bundleRoot, skill, "baseline") : path.join(runsRoot(), skill, "baseline");
-  const scenarioId = String(scenario.id ?? "");
-  const expected = path.join(base, `${scenarioId}-${String(scenario.name ?? scenarioId)}`);
-  if (fs.existsSync(expected) && fs.statSync(expected).isDirectory()) return expected;
-  for (const name of listDirs(base)) {
-    if (name.startsWith(`${scenarioId}-`)) return path.join(base, name);
-  }
-  return null;
 }
 
 function evidenceSummaryFor(evidence: Record<string, any>, evidencePath: string, bundleDir: string | null): Record<string, any> {
@@ -100,30 +93,31 @@ const BASELINE_HEALTH_CHECKS: Array<Record<string, any>> = [
   },
 ];
 
-function caseDocFor(skill: string, scenario: Record<string, any>): Record<string, any> {
+function caseDocFor(scenario: BaselineScenario): Record<string, any> {
+  const { doc } = scenario;
   return {
     schema_version: "1.0",
-    id: String(scenario.id ?? ""),
-    name: String(scenario.name ?? scenario.id ?? ""),
-    skill,
+    id: scenario.id,
+    name: scenario.name,
+    skill: scenario.skill,
     category: "baseline_health",
-    critical: Boolean(scenario.regression_critical ?? true),
-    description: scenario.description ?? "",
-    prompt: scenario.prompt ?? "",
+    critical: Boolean(doc.regression_critical ?? true),
+    description: doc.description ?? "",
+    prompt: doc.prompt ?? "",
     preflight: {
-      expected_behaviors: scenario.expected_behaviors ?? null,
-      visual_expectations: scenario.visual_expectations ?? null,
-      screenshot_mode: scenario.screenshot_mode ?? null,
+      expected_behaviors: doc.expected_behaviors ?? null,
+      visual_expectations: doc.visual_expectations ?? null,
+      screenshot_mode: doc.screenshot_mode ?? null,
     },
     checks: BASELINE_HEALTH_CHECKS,
   };
 }
 
-function evidenceFor(skill: string, scenario: Record<string, any>, bundleDir: string | null): Record<string, any> {
+function evidenceFor(scenario: BaselineScenario, bundleDir: string | null): Record<string, any> {
   const checksDoc = bundleDir !== null ? readJsonIfExists(path.join(bundleDir, "programmatic-checks.json")) : null;
   const consoleDoc = bundleDir !== null ? readJsonIfExists(path.join(bundleDir, "console.json")) : null;
-  const scenarioId = String(scenario.id ?? "");
-  const codePath = fromRepoRoot("optimization", "generated", skill, "baseline", `${scenarioId}.js`);
+  const { skill, id: scenarioId } = scenario;
+  const codePath = generatedCodePath(scenario);
   const hasCode = fs.existsSync(codePath);
   // A bundle without parseable console evidence is an incomplete render, not a
   // clean one — surface it as an error so the health checks cannot pass it.
@@ -139,7 +133,7 @@ function evidenceFor(skill: string, scenario: Record<string, any>, bundleDir: st
   return {
     schema_version: "1.0",
     case_id: scenarioId,
-    case_name: String(scenario.name ?? scenarioId),
+    case_name: scenario.name,
     skill,
     source: "baseline-run",
     expected_result: "pass",
@@ -186,16 +180,15 @@ interface AuditCase {
 function collectCases(skills: string[], bundleRoot: string | null): AuditCase[] {
   const collected: AuditCase[] = [];
   for (const skill of skills) {
-    for (const scenarioPath of globFiles(path.join(scenariosRoot(), skill), "eval-", ".json")) {
-      const scenario = readJson(scenarioPath);
-      const bundleDir = resolveBundleDir(skill, scenario, bundleRoot);
-      const evidence = evidenceFor(skill, scenario, bundleDir);
+    for (const scenario of baselineScenarios(skill)) {
+      const bundleDir = resolveBundleDir(scenario, bundleRoot);
+      const evidence = evidenceFor(scenario, bundleDir);
       collected.push({
         skill,
-        caseId: String(scenario.id ?? ""),
-        casePath: scenarioPath,
-        caseDoc: caseDocFor(skill, scenario),
-        evidencePath: bundleDir !== null ? path.join(bundleDir, "programmatic-checks.json") : scenarioPath,
+        caseId: scenario.id,
+        casePath: scenario.scenarioPath,
+        caseDoc: caseDocFor(scenario),
+        evidencePath: bundleDir !== null ? path.join(bundleDir, "programmatic-checks.json") : scenario.scenarioPath,
         evidence,
         bundleDir,
       });

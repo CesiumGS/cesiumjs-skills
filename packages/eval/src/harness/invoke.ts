@@ -84,6 +84,35 @@ export async function invokeAgent(ctx: EvalContext, role: RoleName, request: Age
     );
   }
 
+  // Provider-attribution honesty. A provider override must be served by the
+  // model we actually invoke, or the run records a lie (e.g. OpenCode's default
+  // github-copilot/gpt-5.6-sol still hits the Copilot binding while the run is
+  // stamped as OpenAI, because the driver won't re-prefix a model that already
+  // carries a provider). Models are only provided by providers, so:
+  if (request.provider && request.provider !== (agent.harness.provider ?? null)) {
+    const explicitModel = Boolean(request.overrides?.model && request.overrides.model.toLowerCase() !== "auto");
+    // (a) An auto model is resolved from the harness's own binding — it cannot
+    // be trusted to belong to the override provider. Demand an explicit one.
+    if (!explicitModel) {
+      throw new Error(
+        `${agent.harness.id}: provider override '${request.provider}' needs an explicit model — ` +
+          `the auto model '${model}' comes from the harness's ${agent.harness.provider ?? "default"} binding and ` +
+          `is not guaranteed to be served by '${request.provider}'. Pass a model that '${request.provider}' provides.`,
+      );
+    }
+    // (b) An explicit model that names a different provider prefix contradicts
+    // the override; the driver would route by the prefix and mis-stamp the run.
+    if (model.includes("/")) {
+      const prefix = model.slice(0, model.indexOf("/"));
+      if (prefix !== request.provider) {
+        throw new Error(
+          `${agent.harness.id}: model '${model}' is bound to provider '${prefix}', which contradicts the ` +
+            `'${request.provider}' override — drop the '${prefix}/' prefix or align the provider.`,
+        );
+      }
+    }
+  }
+
   const call: AgentCall & Partial<CodexCall> = {
     prompt: request.prompt,
     system: request.system ?? null,

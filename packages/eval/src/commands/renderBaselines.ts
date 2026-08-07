@@ -1,12 +1,13 @@
 /**
- * `cesium-eval render-baselines` — render each skill's archived baseline code
- * into a screenshot the visual audit can judge.
+ * `cesium-eval render-baselines` — render each skill's baseline code into a
+ * screenshot the visual audit can judge.
  *
- * This closes the "starting data" gap: the baseline fixtures ship generated
- * code and programmatic evidence but no screenshots, so a visual audit had
- * nothing to look at and short-circuited. This renders the baseline code in a
- * headless browser and writes <out>/<skill>/<caseId>/screenshot.png, which
- * `audit --bundle-root <out>` then resolves per case.
+ * This closes the "starting data" gap: a scenario ships a prompt and its
+ * generated baseline source but no screenshot, so a visual audit had nothing
+ * to look at and short-circuited. This renders that source in a headless
+ * browser into exactly the bundle directory `audit --bundle-root <out>`
+ * resolves for the same scenario (both sides share ../evaluation/baselines.js,
+ * so coverage and judging can never disagree about where a screenshot lives).
  *
  * The Ion token is OPTIONAL here: scenarios that bring their own imagery
  * (OpenStreetMap, custom providers) render fully without it. Scenarios that
@@ -18,10 +19,11 @@ import * as http from "node:http";
 import * as path from "node:path";
 import type { AddressInfo } from "node:net";
 import { chromium, type Browser } from "playwright";
-import { readJson, writeJsonPlain } from "../lib/json.js";
-import { fromRepoRoot, globFiles, repoRelative } from "../lib/paths.js";
+import { writeJsonPlain } from "../lib/json.js";
+import { fromRepoRoot, repoRelative } from "../lib/paths.js";
 import type { EvalContext } from "../config/types.js";
 import { resolveIonToken } from "../optimization/browserRunner.js";
+import { baselineScenarios, baselineSkills, bundleDirFor, generatedCodePath, readGeneratedCode } from "../evaluation/baselines.js";
 
 export interface RenderBaselinesOptions {
   skills?: string;
@@ -30,30 +32,7 @@ export interface RenderBaselinesOptions {
   force?: boolean;
 }
 
-const FIXTURES_ROOT = () => fromRepoRoot("evaluation", "fixtures");
 const DEFAULT_OUT = "evaluation/artifacts/baselines";
-
-/**
- * The bundle directory the AUDIT will look in for this case's screenshot,
- * under a given bundle-root. This mirrors audit.ts bundleDirFor exactly so a
- * rendered screenshot lands precisely where the audit resolves it:
- *   run_artifact_path .../baseline/<slug> -> <out>/<skill>/baseline/<slug>
- *   (no artifact path)                    -> <out>/<skill>/<caseId>
- */
-function auditBundleDir(outAbs: string, evidence: Record<string, any>, skill: string, caseId: string): string {
-  const rel = evidence.run_artifact_path;
-  if (!rel) return path.join(outAbs, skill, caseId);
-  const parts = String(rel).split(/[\\/]/);
-  const baselineIndex = parts.indexOf("baseline");
-  return baselineIndex > 0
-    ? path.join(outAbs, ...parts.slice(baselineIndex - 1))
-    : path.join(outAbs, path.basename(String(rel)));
-}
-
-/** Baseline fixtures for a skill: the *.evidence.json with generated code. */
-function baselineFixtures(skill: string): string[] {
-  return globFiles(path.join(FIXTURES_ROOT(), skill), "", ".evidence.json").sort();
-}
 
 function harnessHtml(cesiumVersion: string, ionToken: string | null, code: string): string {
   // Token line is emitted only when present, so a missing token is a no-op
@@ -122,10 +101,7 @@ async function renderOne(
 }
 
 export async function renderBaselinesCommand(ctx: EvalContext, options: RenderBaselinesOptions): Promise<number> {
-  const allSkills = fs
-    .readdirSync(FIXTURES_ROOT(), { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
+  const allSkills = baselineSkills();
   const requested = !options.skills || options.skills === "all" ? allSkills : options.skills.split(",").map((s) => s.trim());
   const unknown = requested.filter((s) => !allSkills.includes(s));
   if (unknown.length) {
@@ -152,19 +128,32 @@ export async function renderBaselinesCommand(ctx: EvalContext, options: RenderBa
   const results: RenderResult[] = [];
   try {
     for (const skill of requested) {
-      for (const fixture of baselineFixtures(skill)) {
-        const evidence = readJson(fixture);
-        const caseId = String(evidence.case_id ?? "");
+      for (const scenario of baselineScenarios(skill)) {
+        const caseId = scenario.id;
         if (onlyCases && !onlyCases.has(caseId)) continue;
-        const code = typeof evidence.generated_code === "string" ? evidence.generated_code : "";
-        const outFile = path.join(auditBundleDir(outAbs, evidence, skill, caseId), "screenshot.png");
-        if (!code) {
-          results.push({ skill, caseId, ok: false, screenshot: null, errors: ["fixture has no generated_code"] });
-          continue;
-        }
+        // Render into exactly the directory the audit resolves for this
+        // scenario, so a rendered screenshot is always the one judged.
+        const outFile = path.join(bundleDirFor(scenario, outAbs), "screenshot.png");
+        // An existing screenshot already satisfies the audit, so report it as
+        // cached before asking for source: a rendered bundle stays usable even
+        // when its generating source is not checked out.
         if (!options.force && fs.existsSync(outFile)) {
           results.push({ skill, caseId, ok: true, screenshot: repoRelative(outFile), errors: [] });
           console.log(`[render-baselines] ${skill}/${caseId} — cached`);
+          continue;
+        }
+        const code = readGeneratedCode(scenario);
+        if (!code) {
+          // Nothing to draw and nothing already drawn. Say so precisely, with
+          // the path we looked for, instead of a silent zero-render success.
+          results.push({
+            skill,
+            caseId,
+            ok: false,
+            screenshot: null,
+            errors: [`no generated baseline source at ${repoRelative(generatedCodePath(scenario))} (run the optimization loop first)`],
+          });
+          console.log(`[render-baselines] ${skill}/${caseId} — SKIPPED (no generated source)`);
           continue;
         }
         const { ok, errors } = await renderOne(browser, harnessHtml(cesiumVersion, ionToken, code), outFile, viewport, tileSettleTimeoutMs);

@@ -2,7 +2,18 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { evidenceSource, resolveCodegenProvenance, scoreForChecks } from "../src/evaluation/scorecard.js";
+import { evidenceSource, resolveCodegenProvenance, scoreForChecks, visualSummary } from "../src/evaluation/scorecard.js";
+
+/** A visual-review case row at a given status. Defaults are required + blocking
+ * off, matching how a missing screenshot surfaces (required but non-blocking). */
+function vcase(status: string, opts: { required?: boolean; blocking?: boolean } = {}) {
+  return {
+    case_id: `c-${status}`,
+    case_name: status,
+    skill: "cesiumjs-camera",
+    visual_review: { status, required: opts.required ?? true, blocking: opts.blocking ?? false },
+  };
+}
 
 const tempDirs: string[] = [];
 
@@ -61,5 +72,37 @@ describe("scorecard helpers", () => {
       model: "github-copilot/gpt-5.6-sol",
       model_variant: "low",
     });
+  });
+});
+
+describe("visualSummary coverage", () => {
+  it("passes when every required case was reviewed and passed", () => {
+    const summary = visualSummary([vcase("pass"), vcase("pass")], true);
+    expect(summary.result).toBe("pass");
+    expect(summary.required_not_reviewed_count).toBe(0);
+  });
+
+  it("marks a fully un-reviewed run as not_run, never pass", () => {
+    const summary = visualSummary([vcase("not_reviewed"), vcase("not_reviewed")], true);
+    expect(summary.result).toBe("not_run");
+  });
+
+  it("treats partial coverage as not_run even when the reviewed cases pass", () => {
+    // The reviewer's gap: one required case judged pass, another required case
+    // never judged (missing screenshot) and non-blocking. Must not read green.
+    const summary = visualSummary([vcase("pass"), vcase("not_reviewed")], true);
+    expect(summary.result).toBe("not_run");
+    expect(summary.required_not_reviewed_count).toBe(1);
+  });
+
+  it("still reports a confirmed blocking failure over incompleteness", () => {
+    const summary = visualSummary([vcase("fail", { blocking: true }), vcase("not_reviewed")], true);
+    expect(summary.result).toBe("fail");
+  });
+
+  it("ignores un-reviewed cases that were not required", () => {
+    const summary = visualSummary([vcase("pass"), vcase("not_reviewed", { required: false })], true);
+    expect(summary.result).toBe("pass");
+    expect(summary.required_not_reviewed_count).toBe(0);
   });
 });

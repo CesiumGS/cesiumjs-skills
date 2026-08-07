@@ -728,10 +728,24 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
       );
     }
   }
-  // Visual Tests need baseline screenshots to judge. With zero coverage
-  // across the selected skills the run would burn nothing but still land as
-  // "incomplete" — reject the launch with the remediation instead.
-  if (judge && judgeHarness !== "fake") {
+  // Parse the optional custom bundle root before the coverage guard: an
+  // advanced launch can point Visual Tests at any rendered directory, and the
+  // guard below must reason about that root, not the default one.
+  let bundleRoot: string | null = null;
+  if (payload.bundle_root !== undefined && payload.bundle_root !== null && payload.bundle_root !== "") {
+    bundleRoot = String(payload.bundle_root);
+    if (path.isAbsolute(bundleRoot) || bundleRoot.split(/[\\/]/).includes("..")) {
+      throw new Error("bundle_root must be a repo-relative path");
+    }
+    if (!fs.existsSync(path.join(ctx.repoRoot, bundleRoot))) throw new Error(`bundle_root does not exist: ${bundleRoot}`);
+  }
+
+  // Visual Tests need baseline screenshots to judge. With zero coverage the run
+  // would burn nothing but still land as "incomplete" — reject with remediation.
+  // Only the default baseline root is measured here; a custom bundle_root is an
+  // advanced opt-in whose contents `audit --bundle-root` judges directly (and
+  // reports 'incomplete' honestly if it turns out empty), so skip the guard for it.
+  if (judge && judgeHarness !== "fake" && !bundleRoot) {
     const coverage = baselineCoverage(ctx, skills);
     if (!coverage.skills.some((skill) => skill.screenshots > 0)) {
       throw new Error(
@@ -791,14 +805,6 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (payload.threshold !== undefined && payload.threshold !== null && payload.threshold !== "") {
     threshold = Number(payload.threshold);
     if (!Number.isFinite(threshold) || threshold <= 0 || threshold > 1) throw new Error("threshold must be in (0, 1]");
-  }
-  let bundleRoot: string | null = null;
-  if (payload.bundle_root !== undefined && payload.bundle_root !== null && payload.bundle_root !== "") {
-    bundleRoot = String(payload.bundle_root);
-    if (path.isAbsolute(bundleRoot) || bundleRoot.split(/[\\/]/).includes("..")) {
-      throw new Error("bundle_root must be a repo-relative path");
-    }
-    if (!fs.existsSync(path.join(ctx.repoRoot, bundleRoot))) throw new Error(`bundle_root does not exist: ${bundleRoot}`);
   }
 
   const launchId = "live-" + new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");

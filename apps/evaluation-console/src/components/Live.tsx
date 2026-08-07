@@ -1420,7 +1420,11 @@ function LaunchPanel() {
             disabled={!codegenHarness}
             onChange={(id) => {
               setCodegenProvider(id);
-              setCodegenModel("");
+              // A non-default provider needs a model it actually serves (the
+              // backend rejects an auto model under an override), so pre-select
+              // the first provider-scoped model; Auto keeps the harness default.
+              const ms = modelsForProvider(registry, codegenHarnessSpec, id);
+              setCodegenModel(id && ms.length ? ms[0].id : "");
             }}
           />
 
@@ -1562,7 +1566,11 @@ function LaunchPanel() {
             disabled={!judge}
             onChange={(id) => {
               setJudgeProvider(id);
-              setJudgeModel("");
+              // A non-default provider needs a model it actually serves (the
+              // backend rejects an auto model under an override), so pre-select
+              // the first provider-scoped model; Auto keeps the harness default.
+              const ms = modelsForProvider(registry, judgeHarnessSpec, id);
+              setJudgeModel(id && ms.length ? ms[0].id : "");
             }}
           />
 
