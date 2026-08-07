@@ -47,7 +47,8 @@ defaults:
 jobs:
   discover:
     name: Discover changed skills
-    runs-on: ubuntu-latest
+    # Fork-guarded pool routing; see pr-gate.yml deterministic-evals for the rationale.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 5
     outputs:
       skills: ${{ steps.detect.outputs.skills }}
@@ -322,7 +323,8 @@ jobs:
     # skill still reports a conclusion instead of hanging on "Expected".
     needs: [discover, live]
     if: always()
-    runs-on: ubuntu-latest
+    # Fork-guarded pool routing; see pr-gate.yml deterministic-evals for the rationale.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 5
     steps:
       - name: Aggregate

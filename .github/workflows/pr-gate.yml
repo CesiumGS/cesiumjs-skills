@@ -36,16 +36,34 @@ defaults:
 jobs:
   deterministic-evals:
     name: Deterministic evals
-    # HARDCODED ubuntu-latest, NOT the RUNNER_LABELS expression.
-    # This job runs untrusted fork code (npm lifecycle scripts). The label
-    # variable is a REPOSITORY variable: the instant it points at a self-hosted
-    # pool, every job including a fork pull request lands on persistent shared
-    # nodes that also hold checkouts of write-capable workflows. This job is a
-    # few seconds of pure Node CPU and does not need a pool. Hardcoding also
-    # removes the fromJSON failure mode (one malformed variable fails every job
-    # at expression-evaluation time with no fallback) and keeps the public-fork
-    # path continuously tested rather than discovered broken on launch day.
-    runs-on: ubuntu-latest
+    # FORK-GUARDED routing, not a bare RUNNER_LABELS expression.
+    #
+    # This job runs untrusted fork code (npm lifecycle scripts), and RUNNER_LABELS
+    # is a REPOSITORY variable: pointing it at a self-hosted pool unguarded lands
+    # every job INCLUDING a fork pull request on persistent shared nodes that also
+    # hold checkouts of write-capable workflows. The guard below keeps that
+    # impossible: a pull request whose head repo is a fork is pinned to hosted no
+    # matter what the variable says, so the public-fork path stays continuously
+    # tested rather than discovered broken on launch day.
+    #
+    # merge_group is pinned to hosted UNCONDITIONALLY, and the order of the two
+    # tests is load-bearing. A merge_group payload carries no pull_request object,
+    # so the fork test alone is not merely false there, it is BLIND: the queued
+    # merge commit contains the contributor's code, and a fork contribution and a
+    # maintainer's own branch are indistinguishable at that point. Testing
+    # event_name first is what keeps a queued fork's npm lifecycle scripts off the
+    # pool. skill-eval.yml refuses the same event for the same reason.
+    #
+    # Everything else (same-repo pull requests, push, dispatch) takes
+    # the pool, because hosted concurrency can queue these lanes for a long
+    # time while a configured self-hosted pool sits idle next to them. The
+    # `|| '["ubuntu-latest"]'` tail is the fallback for an unset OR empty variable,
+    # so an unconfigured repository still runs; a MALFORMED variable still fails at
+    # expression-evaluation time, which is why RUNNER_LABELS sits under CODEOWNERS.
+    #
+    # workflow-safety.sh rule 5 enforces this exact shape: a blocking lane may name
+    # RUNNER_LABELS only on a line that also carries the head.repo.fork guard.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 10
 
     steps:
@@ -140,7 +158,8 @@ jobs:
     # completely independent failure domain. Root `npm run build` and `npm test`
     # chain eval-then-console and fail fast, so a change that breaks both never
     # reports the console half. That is why the root scripts are not used in CI.
-    runs-on: ubuntu-latest
+    # Fork-guarded pool routing; see the deterministic-evals job for the rationale.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -159,7 +178,8 @@ jobs:
 
   workflow-safety:
     name: Workflow safety
-    runs-on: ubuntu-latest
+    # Fork-guarded pool routing; see the deterministic-evals job for the rationale.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
@@ -206,7 +226,8 @@ jobs:
     # "green check that ran nothing" hides behind.
     needs: [deterministic-evals, console, workflow-safety]
     if: always()
-    runs-on: ubuntu-latest
+    # Fork-guarded pool routing; see the deterministic-evals job for the rationale.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 5
     steps:
       - name: Aggregate results

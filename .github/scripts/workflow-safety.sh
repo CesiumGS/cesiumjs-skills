@@ -118,12 +118,47 @@ if [ -z "$pr_gate" ] || code_lines "$pr_gate" | grep -qE 'secrets\.[A-Z_]+'; the
     "Move any secret-consuming step to the nightly lane."
 fi
 
-# RULE 5: no self-hosted routing in any pull_request-reachable lane.
+# RULE 5: no UNGUARDED self-hosted routing in a pull_request-reachable lane.
+#
+# The pool itself is allowed (hosted concurrency queues these lanes for an hour
+# at a time), but only through the fork guard. What must stay impossible is a
+# FORK pull request landing on a persistent shared node that also holds
+# checkouts of write-capable workflows: RUNNER_LABELS is a repository variable,
+# so without the guard a one-line variable edit silently opens that door with no
+# diff anywhere in this tree.
+#
+# So the rule is a SHAPE check, not a ban. It matches the WHOLE expression
+# against one canonical literal rather than looking for the guard as a substring,
+# because presence of the guard text does not mean the guard PROTECTS anything:
+#
+#   fromJSON(vars.RUNNER_LABELS || (<fork test> && '["ubuntu-latest"]') || ...)
+#
+# contains every token a substring check would look for and still routes a fork
+# straight to the pool, because `||` returns the FIRST truthy operand and
+# RUNNER_LABELS is always truthy when set. Operand ORDER is the entire safety
+# property here, and only whole-expression equality constrains order.
+#
+# The canonical form pins BOTH untrusted-code events to hosted:
+#   - a pull request whose head repo is a fork
+#   - every merge_group run, unconditionally, because that payload carries no
+#     pull_request object, so the fork test is blind on the one event whose
+#     merge commit already contains the contributor's code
+#
+# A bare `self-hosted` literal stays banned outright: it hardcodes the pool with
+# no fork branch at all.
+canonical_runs_on="runs-on: \${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '[\"ubuntu-latest\"]' || vars.RUNNER_LABELS || '[\"ubuntu-latest\"]') }}"
 for f in "${blocking_workflows[@]}"; do
-  if code_lines "$f" | grep -qE 'RUNNER_LABELS|self-hosted'; then
-    note "$f" "Blocking lane must stay on hosted runners" \
-      "Routing fork pull requests onto a persistent shared runner pool is a supply-chain hole."
+  if code_lines "$f" | grep -qE '(^|[^_[:alnum:]])self-hosted'; then
+    note "$f" "Hardcoded self-hosted runner in a blocking lane" \
+      "A literal self-hosted label has no fork branch, so it routes fork pull requests onto the pool. Use the canonical fork-guarded expression from pr-gate.yml instead."
   fi
+  # Leading indentation and runs of internal whitespace are normalised first, so
+  # the comparison is about expression STRUCTURE and not YAML nesting depth.
+  while IFS= read -r line; do
+    [ "$line" = "$canonical_runs_on" ] && continue
+    note "$f" "Non-canonical self-hosted routing in a blocking lane" \
+      "A blocking lane may name RUNNER_LABELS only in the exact guarded form used by pr-gate.yml, because operand order decides whether a fork reaches the pool. Expected: $canonical_runs_on"
+  done < <(code_lines "$f" | grep -F 'RUNNER_LABELS' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+/ /g')
 done
 
 # RULE 6: the threshold comes from eval.config.json and nowhere else, so
