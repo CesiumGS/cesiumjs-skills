@@ -221,7 +221,7 @@ jobs:
         if: always() && steps.sanitize.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: optimization-report-${{ github.run_id }}
+          name: optimization-report-${{ github.run_id }}-${{ github.run_attempt }}
           path: optimization/results/
           retention-days: 30
           if-no-files-found: warn
@@ -235,7 +235,7 @@ jobs:
         if: always() && steps.sanitize.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: optimization-bundles-${{ github.run_id }}
+          name: optimization-bundles-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             optimization/runs/
             !**/*.html

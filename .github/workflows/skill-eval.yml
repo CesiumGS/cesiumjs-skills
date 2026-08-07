@@ -302,7 +302,7 @@ jobs:
         if: always() && steps.sanitize.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: skill-eval-${{ github.run_id }}
+          name: skill-eval-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             evaluation/artifacts/skill-eval-scorecard/**
             evaluation/artifacts/skill-eval/**/programmatic-checks.json
