@@ -25,7 +25,9 @@ jobs:
   provision:
     if: github.ref == 'refs/heads/main'
     environment: codex-inference
-    runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS) }}
+    # Hosted fallback so an unconfigured dispatch reaches the runner-guard
+    # step's curated error instead of dying on an opaque fromJSON failure.
+    runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       - name: Require the dedicated self-hosted runner

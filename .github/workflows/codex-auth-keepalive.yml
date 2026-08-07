@@ -38,6 +38,10 @@ concurrency:
 
 jobs:
   keepalive:
+    # An unconfigured repository has no persistent runner to keep alive; a
+    # twice-weekly guaranteed-red cron trains maintainers to ignore red, so
+    # skip cleanly until a runner variable exists.
+    if: vars.CODEX_RUNNER_LABELS != '' || vars.RUNNER_LABELS != ''
     runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:

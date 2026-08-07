@@ -125,6 +125,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref }}
+          CODEX_RUNNER_LABELS_VAR: ${{ vars.CODEX_RUNNER_LABELS }}
         run: |
           set -uo pipefail
           eligible=true
@@ -135,6 +136,12 @@ jobs:
           elif [ "$EVENT_NAME" != "push" ] && [ "$EVENT_NAME" != "workflow_dispatch" ]; then
             eligible=false
             reason="unsupported event: $EVENT_NAME"
+          elif [ -z "${CODEX_RUNNER_LABELS_VAR:-}" ]; then
+            # A configuration gap is not an evaluation regression: without a
+            # provisioned codex runner the live lane cannot authenticate, so
+            # skip cleanly instead of burning five minutes to fail at seeding.
+            eligible=false
+            reason="no codex runner is configured (set the CODEX_RUNNER_LABELS repository variable and provision the credential)"
           fi
           echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
