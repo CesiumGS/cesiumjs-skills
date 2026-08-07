@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { execFileSync } from "node:child_process";
 import type { HarnessSpec } from "../config/types.js";
 import { AgentCall, HarnessDriver, StructuredInvocation, registerDriver } from "./driver.js";
+import type { HarnessProgress } from "./progress.js";
 import { HarnessInvocationError, cleanSubprocessEnv, formatPrompt, resolveBinary, runSubprocess, which } from "./shared.js";
 
 /** Friendly tool names accepted from callers, mapped to permission keys. */
@@ -37,6 +38,78 @@ function permissionEnv(call: AgentCall): string | null {
     permission.external_directory = external;
   }
   return JSON.stringify(permission);
+}
+
+/**
+ * Translate one line of `opencode run --format json` into live commentary.
+ *
+ * OpenCode's stream is part-shaped: `step_start` / `tool_use` / `text` /
+ * `reasoning` / `step_finish`, each carrying the part it just settled. A
+ * multi-step turn emits one step_start..step_finish pair per model call, which
+ * makes step boundaries the natural place to report token spend — that is
+ * where the tokens block lives.
+ *
+ * `tool_use` arrives once per state transition with `part.state.status` of
+ * pending/running/completed/error, so the same call can be reported twice; the
+ * status is in the line, which is exactly the information a reader watching a
+ * slow tool wants.
+ */
+export function reportOpenCodeEvent(progress: HarnessProgress, line: string): void {
+  let event: any;
+  try {
+    event = JSON.parse(line);
+  } catch {
+    return; // non-JSON chatter on stdout
+  }
+  if (!event || typeof event.type !== "string") return;
+  const part = event.part ?? {};
+  const id = String(part.id ?? part.callID ?? "part");
+
+  switch (event.type) {
+    case "step_start":
+      progress.emit({ kind: "session", label: "step started" });
+      return;
+    case "step_finish": {
+      const tokens = part.tokens ?? {};
+      progress.usage({
+        input: tokens.input,
+        output: tokens.output,
+        reasoning: tokens.reasoning,
+        cached: tokens.cache?.read,
+      });
+      if (part.reason && part.reason !== "stop") {
+        progress.emit({ kind: "session", label: "step finished", detail: { reason: part.reason } });
+      }
+      return;
+    }
+    case "tool_use": {
+      const state = part.state ?? {};
+      const input = state.input ?? {};
+      // The interesting argument differs per tool, and dumping the whole input
+      // object buries it. Prefer the conventional ones, fall back to a compact
+      // key list so an unfamiliar tool still shows what it was handed.
+      const summary =
+        input.command ?? input.filePath ?? input.pattern ?? input.path ?? input.url ?? Object.keys(input).join(",");
+      progress.emit({
+        kind: "tool",
+        label: String(part.tool ?? "tool"),
+        text: String(summary ?? ""),
+        detail: { state: state.status ?? "?", error: state.status === "error" ? String(state.error ?? "yes") : undefined },
+      });
+      return;
+    }
+    case "reasoning":
+      progress.emitDelta(`think:${id}`, "thinking", "reasoning", String(part.text ?? ""));
+      return;
+    case "text":
+      progress.emitDelta(`msg:${id}`, "message", "assistant", String(part.text ?? ""));
+      return;
+    case "error":
+      progress.emit({ kind: "notice", label: "harness", text: String(event.error?.message ?? event.error ?? "") });
+      return;
+    default:
+      progress.emit({ kind: "notice", label: event.type });
+  }
 }
 
 function extractTextFromJsonEvents(stdout: string): string {
@@ -153,11 +226,13 @@ class OpenCodeDriver implements HarnessDriver {
     const permission = permissionEnv(call);
     if (permission !== null) env.OPENCODE_PERMISSION = permission;
 
+    const progress = call.progress;
     const result = await runSubprocess(binary, argv, {
       input: formatPrompt(call.prompt, call.system),
       timeoutMs: call.timeoutSeconds * 1000,
       cwd: workdir,
       env,
+      onStdoutLine: progress?.enabled ? (line) => reportOpenCodeEvent(progress, line) : undefined,
     });
     if (result.status !== 0) {
       throw new HarnessInvocationError(spec.id, result.status ?? -1, result.stderr ?? "", result.stdout ?? "");

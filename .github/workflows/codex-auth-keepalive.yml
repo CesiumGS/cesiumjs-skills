@@ -81,7 +81,15 @@ jobs:
       # and calling the OAuth endpoint by hand is explicitly unsupported.
       - name: Exercise the credential
         run: |
-          codex exec --json "Reply with exactly OK" >/dev/null
+          set -euo pipefail
+          # The event stream is echoed rather than discarded: this call is the
+          # only proof the credential still works, and when it hangs or is
+          # throttled the discarded stream held the only account of why. The
+          # prompt is fixed and the reply is one token, so there is nothing
+          # sensitive in the feed and nothing to truncate.
+          codex exec --json "Reply with exactly OK" | while IFS= read -r event; do
+            printf '[keepalive] %.400s\n' "$event"
+          done
 
       # Metadata only, no token values: enough to see at a glance whether the
       # session is advancing (last_refresh moves) and which mode it is in.

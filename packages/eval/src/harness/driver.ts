@@ -5,6 +5,7 @@
  * usable when a driver with the same id is implemented and registered here.
  */
 import type { HarnessSpec } from "../config/types.js";
+import type { HarnessProgress } from "./progress.js";
 
 export interface AgentCall {
   prompt: string;
@@ -28,6 +29,10 @@ export interface AgentCall {
   /** Extra env for the subprocess (adapter routing: base-url + key overrides).
    * Merged AFTER the clean env, so deliberate overrides win. */
   env?: Record<string, string>;
+  /** Live commentary sink. Drivers translate their CLI's own event stream into
+   * reporter events as the lines arrive; when absent (direct driver calls,
+   * tests) they simply skip it. Never load-bearing for the returned text. */
+  progress?: HarnessProgress;
 }
 
 /** One structured call: the assistant text plus wire-OBSERVED attribution

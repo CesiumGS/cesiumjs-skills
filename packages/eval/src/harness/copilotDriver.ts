@@ -2,6 +2,7 @@
 import * as path from "node:path";
 import type { HarnessSpec } from "../config/types.js";
 import { AgentCall, HarnessDriver, registerDriver } from "./driver.js";
+import { reportPlainTextLine } from "./progress.js";
 import { HarnessInvocationError, cleanSubprocessEnv, formatPrompt, resolveBinary, runSubprocess } from "./shared.js";
 
 /** Friendly tool names accepted from callers, mapped to Copilot CLI tool ids. */
@@ -77,6 +78,9 @@ class CopilotDriver implements HarnessDriver {
       timeoutMs: call.timeoutSeconds * 1000,
       cwd: workdir,
       env: cleanSubprocessEnv(),
+      // This CLI emits prose, not events: the live signal is the answer
+      // arriving line by line (see reportPlainTextLine).
+      onStdoutLine: call.progress?.enabled ? (line) => reportPlainTextLine(call.progress!, line) : undefined,
     });
     if (result.status !== 0) {
       throw new HarnessInvocationError(spec.id, result.status ?? -1, result.stderr ?? "", result.stdout ?? "");

@@ -125,6 +125,43 @@ node packages/eval/bin/cesium-eval.js optimize render cesiumjs-camera --iteratio
 
 For the full autonomous optimization loop across every skill scenario group, use `cesium-eval optimize all --skills all --max-iterations 1` after configuring an agent CLI harness and setting `CESIUM_ION_TOKEN`. Role defaults (harness, model, reasoning effort) live in [`eval.config.json`](eval.config.json) and the harness/model catalog in [`config/harness-registry.json`](config/harness-registry.json); command-line flags and environment variables override them. To run the same phases through Codex CLI agents, pass `--proposer-harness codex --codegen-harness codex --judge-harness codex`; for GitHub Copilot CLI agents, use `copilot` as the harness id.
 Raw generated code, HTML, screenshots, and run traces under `optimization/generated/` and `optimization/runs/` are local-only and gitignored by default.
+
+### Watching an agent run
+
+Agent calls narrate themselves as they happen, locally and in CI: the dispatch, the model's reasoning, each tool call and how it settled, token spend, and a heartbeat while a model call is in flight so a long think is distinguishable from a hang.
+
+How much detail arrives depends on what the underlying CLI emits, which differs by harness:
+
+| Harness | Source | Reported |
+| --- | --- | --- |
+| `codex` | `exec --json` | reasoning, tool calls and exit status, token usage |
+| `opencode` | `run --format json` | reasoning, tool calls and status, per-step token usage |
+| `claude-code` | `-p --output-format stream-json` | thinking, tool calls and results, throttling, token usage |
+| `pi` | `-p --mode json` | reasoning, tool execution and outcome, per-turn token usage |
+| `copilot` | `--silent` | assistant prose as it is generated |
+| `hermes` | `-z` | assistant prose as it is generated |
+
+The last two emit no structured event stream in the mode this pipeline uses, so there are no tool or reasoning events to report for them; the answer arriving line by line is the honest signal, and the heartbeat covers the silence before it. Pi emits a *token*-level stream, so it is reported at block boundaries rather than one line per token.
+
+```
+[agent codegen/codex 00:00.0] >> gpt-5.6 · variant=medium prompt=4.2KB tools=Read,Grep timeout=900s
+[agent codegen/codex 00:05.5] ~~ reasoning · I need to inspect the scenario fixture before generating.
+[agent codegen/codex 00:06.4] ** shell · /bin/zsh -lc ls state=running
+[agent codegen/codex 00:06.4] ** shell · /bin/zsh -lc ls state=ok lines=15
+[agent codegen/codex 00:20.0] .. still running · elapsed=20.0s last=shell idle=13.6s
+[agent codegen/codex 00:28.7] << assistant · Here is the viewer setup…
+[agent codegen/codex 00:28.7] ## tokens · in=42.7k cached=31.2k out=240 reasoning=97
+[agent codegen/codex 00:28.9] OK gpt-5.6 · in 28.9s tools=1 messages=2 thinking=1 reply=3.1KB
+```
+
+Two environment variables tune it:
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `EVAL_HARNESS_STREAM` | `status` (`full` in CI) | `off` silences the stream; `status` prints a one-line gist per event; `full` prints reasoning and messages at length |
+| `EVAL_HARNESS_HEARTBEAT_SECONDS` | `20` | How often to report that a silent call is still alive |
+
+In GitHub Actions the level comes from the `EVAL_HARNESS_STREAM` repository variable, defaulting to `full`, so verbosity is tunable without editing a workflow. The same output appears under `act`, which is the only progress signal a local workflow run has.
 The evaluation platform's unit tests live under `packages/eval/tests/`.
 Scenario validation is read-only; update changed scenario hashes explicitly with `cesium-eval optimize rebaseline <skill> <eval-id>`.
 Scenarios marked `runner_mode: "review-only"` are included in the public catalog but skipped by the browser runner until a compatible adapter exists.

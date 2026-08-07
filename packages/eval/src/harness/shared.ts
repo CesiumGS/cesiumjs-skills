@@ -91,6 +91,53 @@ export interface SubprocessOptions {
   cwd?: string;
   env?: Record<string, string>;
   maxBuffer?: number;
+  /**
+   * Called with each complete stdout line AS IT ARRIVES, before the process
+   * exits. This is what makes a live play-by-play possible: agent CLIs emit
+   * one JSON event per line for the whole turn, and waiting for exit throws
+   * away the timing that made them useful. The full stdout is still
+   * accumulated and returned, so end-of-run parsing is unaffected.
+   *
+   * A throwing callback must never take down the run — a formatting bug in the
+   * commentary is not a reason to fail an eval — so callers are invoked inside
+   * a try/catch here.
+   */
+  onStdoutLine?: (line: string) => void;
+  /** Same contract, for stderr (harnesses log rate-limit/retry notices there). */
+  onStderrLine?: (line: string) => void;
+}
+
+/**
+ * Feed a chunked stream to a per-line sink. Chunk boundaries fall anywhere,
+ * including mid-JSON-object, so a naive split-per-chunk would hand the parser
+ * fragments; the remainder is held until its newline arrives.
+ */
+function lineSink(sink: (line: string) => void): { push(chunk: string): void; flush(): void } {
+  let pending = "";
+  const deliver = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    try {
+      sink(trimmed);
+    } catch {
+      // Commentary is best-effort; never let it fail the call.
+    }
+  };
+  return {
+    push(chunk: string) {
+      pending += chunk;
+      let index = pending.indexOf("\n");
+      while (index >= 0) {
+        deliver(pending.slice(0, index));
+        pending = pending.slice(index + 1);
+        index = pending.indexOf("\n");
+      }
+    },
+    flush() {
+      deliver(pending);
+      pending = "";
+    },
+  };
 }
 
 export interface SubprocessResult {
@@ -122,14 +169,18 @@ export function runSubprocess(binary: string, argv: string[], options: Subproces
       () => fail(new Error(`subprocess timed out after ${Math.round(options.timeoutMs / 1000)}s: ${binary}`)),
       options.timeoutMs,
     );
+    const stdoutLines = options.onStdoutLine ? lineSink(options.onStdoutLine) : null;
+    const stderrLines = options.onStderrLine ? lineSink(options.onStderrLine) : null;
     child.stdout.setEncoding("utf-8");
     child.stderr.setEncoding("utf-8");
     child.stdout.on("data", (chunk: string) => {
       stdout += chunk;
+      stdoutLines?.push(chunk);
       if (stdout.length > limit) fail(new Error(`subprocess stdout exceeded ${limit} bytes: ${binary}`));
     });
     child.stderr.on("data", (chunk: string) => {
       stderr += chunk;
+      stderrLines?.push(chunk);
       if (stderr.length > limit) fail(new Error(`subprocess stderr exceeded ${limit} bytes: ${binary}`));
     });
     child.on("error", fail);
@@ -137,6 +188,10 @@ export function runSubprocess(binary: string, argv: string[], options: Subproces
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      // A harness that exits without a trailing newline still has one event
+      // worth reporting — usually the terminal one that explains the exit.
+      stdoutLines?.flush();
+      stderrLines?.flush();
       resolve({ status: code, stdout, stderr });
     });
     if (options.input !== undefined) child.stdin.write(options.input);

@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { HarnessSpec } from "../config/types.js";
 import { AgentCall, HarnessDriver, registerDriver } from "./driver.js";
+import type { HarnessProgress } from "./progress.js";
 import { HarnessInvocationError, cleanSubprocessEnv, formatPrompt, resolveBinary, runSubprocess } from "./shared.js";
 
 /**
@@ -31,6 +32,129 @@ export function readCopilotGhoToken(): string | null {
 
 export interface CodexCall extends AgentCall {
   profile?: string | null;
+}
+
+/**
+ * Translate one line of `codex exec --json` into live commentary.
+ *
+ * The stream is thread/turn/item shaped: `thread.started`, `turn.started`,
+ * then `item.started` / `item.updated` / `item.completed` for each unit of
+ * work (agent_message, reasoning, command_execution, file_change,
+ * mcp_tool_call, web_search, todo_list, error), closing with `turn.completed`
+ * and its usage block. We report the transitions that tell a reader what the
+ * agent is DOING; the redundant ones (a completed message whose text already
+ * streamed) are folded by the reporter's delta tracking.
+ *
+ * Unknown event and item types are reported by name rather than dropped: a
+ * codex release that adds one should show up in the log as something new, not
+ * as silence.
+ */
+export function reportCodexEvent(progress: HarnessProgress, line: string): void {
+  let event: any;
+  try {
+    event = JSON.parse(line);
+  } catch {
+    return; // non-JSON chatter on stdout; the CLI's own logging
+  }
+  if (!event || typeof event.type !== "string") return;
+
+  switch (event.type) {
+    case "thread.started":
+      progress.emit({ kind: "session", label: "thread", detail: { id: event.thread_id } });
+      return;
+    case "turn.started":
+      progress.emit({ kind: "session", label: "turn started" });
+      return;
+    case "turn.completed": {
+      const usage = event.usage ?? {};
+      progress.usage({
+        input: usage.input_tokens,
+        output: usage.output_tokens,
+        reasoning: usage.reasoning_output_tokens,
+        cached: usage.cached_input_tokens,
+      });
+      return;
+    }
+    case "turn.failed":
+      progress.emit({ kind: "notice", label: "turn failed", text: String(event.error?.message ?? event.error ?? "") });
+      return;
+    case "item.started":
+    case "item.updated":
+    case "item.completed":
+      break;
+    default:
+      progress.emit({ kind: "notice", label: event.type });
+      return;
+  }
+
+  const item = event.item ?? {};
+  const id = String(item.id ?? "item");
+  const done = event.type === "item.completed";
+
+  switch (item.type) {
+    case "agent_message":
+      // Deltas only: `item.completed` re-sends the whole message that
+      // `item.updated` already streamed.
+      progress.emitDelta(`msg:${id}`, "message", "assistant", String(item.text ?? ""));
+      return;
+    case "reasoning":
+      progress.emitDelta(`think:${id}`, "thinking", "reasoning", String(item.text ?? item.summary ?? ""));
+      return;
+    case "command_execution": {
+      const command = String(item.command ?? "");
+      if (!done) {
+        progress.emit({ kind: "tool", label: "shell", text: command, detail: { state: "running" } });
+        return;
+      }
+      const output = String(item.aggregated_output ?? "");
+      progress.emit({
+        kind: "tool",
+        label: "shell",
+        text: command,
+        detail: {
+          state: item.exit_code === 0 ? "ok" : "exit " + String(item.exit_code ?? "?"),
+          lines: output ? output.trimEnd().split("\n").length : 0,
+        },
+      });
+      return;
+    }
+    case "file_change": {
+      const changes = Array.isArray(item.changes) ? item.changes : [];
+      progress.emit({
+        kind: "tool",
+        label: "edit",
+        text: changes.map((change: any) => `${change.kind ?? "change"} ${change.path ?? ""}`.trim()).join(", "),
+        detail: { state: done ? "applied" : "running", files: changes.length },
+      });
+      return;
+    }
+    case "mcp_tool_call":
+      progress.emit({
+        kind: "tool",
+        label: `mcp:${item.server ?? "?"}/${item.tool ?? "?"}`,
+        detail: { state: done ? (item.status ?? "done") : "running" },
+      });
+      return;
+    case "web_search":
+      progress.emit({ kind: "tool", label: "web_search", text: String(item.query ?? ""), detail: { state: done ? "done" : "running" } });
+      return;
+    case "todo_list": {
+      const items = Array.isArray(item.items) ? item.items : [];
+      if (!done) return; // the partial list is noise; the settled one is a plan
+      progress.emit({
+        kind: "notice",
+        label: "plan",
+        text: items.map((entry: any) => String(entry.text ?? entry)).join(" | "),
+        detail: { steps: items.length },
+      });
+      return;
+    }
+    case "error":
+      if (done) progress.emit({ kind: "notice", label: "harness", text: String(item.message ?? "") });
+      return;
+    default:
+      if (done) progress.emit({ kind: "tool", label: String(item.type ?? "item"), detail: { state: "done" } });
+  }
 }
 
 class CodexDriver implements HarnessDriver {
@@ -81,11 +205,13 @@ class CodexDriver implements HarnessDriver {
 
     let text = "";
     try {
+      const progress = call.progress;
       const result = await runSubprocess(binary, argv, {
         input: formatPrompt(call.prompt, call.system),
         timeoutMs: call.timeoutSeconds * 1000,
         cwd: workdir,
         env,
+        onStdoutLine: progress?.enabled ? (line) => reportCodexEvent(progress, line) : undefined,
       });
       try {
         text = fs.readFileSync(outputPath, "utf-8").trim();

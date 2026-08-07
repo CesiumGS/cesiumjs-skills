@@ -118,6 +118,15 @@ jobs:
       # the two must always be given the same value. It is under the gitignored
       # evaluation/artifacts/ tree.
       BUNDLE_ROOT: evaluation/artifacts/baselines
+      # Live play-by-play from the agent CLI. Every driver streams the
+      # harness's own JSON event feed (dispatch, reasoning, each tool call and
+      # its outcome, token spend) to stdout as it arrives, plus a heartbeat
+      # while a model call is in flight. Without it an agent step is one silent
+      # block for minutes and a wedged run is indistinguishable from a slow
+      # one. 'full' prints reasoning at length; set the EVAL_HARNESS_STREAM
+      # repository variable to 'status' for one-line gists or 'off' to silence
+      # it, without editing this workflow.
+      EVAL_HARNESS_STREAM: ${{ vars.EVAL_HARNESS_STREAM || 'full' }}
     steps:
       - uses: actions/checkout@v7
         with:

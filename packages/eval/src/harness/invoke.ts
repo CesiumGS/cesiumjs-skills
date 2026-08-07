@@ -7,6 +7,7 @@ import "./drivers.js"; // side-effect: registers built-in drivers
 import type { EvalContext, HarnessSpec, ResolvedAgent, RoleName } from "../config/types.js";
 import { AgentCall, driverFor } from "./driver.js";
 import type { CodexCall } from "./codexDriver.js";
+import { HarnessProgress } from "./progress.js";
 
 export interface AgentRequest {
   prompt: string;
@@ -113,6 +114,21 @@ export async function invokeAgent(ctx: EvalContext, role: RoleName, request: Age
     }
   }
 
+  // The reporter frames the whole call: it announces the dispatch, starts the
+  // heartbeat that proves the process is alive during a long think, receives
+  // the harness's own event stream from the driver, and closes with a
+  // duration. It is created here rather than in the driver so the role — the
+  // one thing the driver has no idea about — appears on every line.
+  const progress = new HarnessProgress({ role, harness: agent.harness.id, model, variant: agent.variant });
+  progress.dispatch({
+    prompt: `${(Buffer.byteLength(request.prompt, "utf-8") / 1024).toFixed(1)}KB`,
+    system: request.system ? "yes" : undefined,
+    images: request.files?.length || undefined,
+    tools: request.disableTools ? "none" : request.allowedTools?.join(",") || "harness default",
+    provider: request.provider ?? undefined,
+    timeout: `${agent.timeoutSeconds}s`,
+  });
+
   const call: AgentCall & Partial<CodexCall> = {
     prompt: request.prompt,
     system: request.system ?? null,
@@ -127,8 +143,18 @@ export async function invokeAgent(ctx: EvalContext, role: RoleName, request: Age
     title: request.title ?? null,
     timeoutSeconds: agent.timeoutSeconds,
     profile: codexProfileFor(role, hasImages),
+    progress,
   };
-  const text = await driverFor(agent.harness).invoke(agent.harness, call);
+  let text: string;
+  try {
+    text = await driverFor(agent.harness).invoke(agent.harness, call);
+  } catch (error) {
+    // A failed call must close its own narrative — otherwise the last line in
+    // the log is a heartbeat and the reader has to guess where it died.
+    progress.fail(error instanceof Error ? error.message : String(error));
+    throw error;
+  }
+  progress.finish({ reply: `${(Buffer.byteLength(text, "utf-8") / 1024).toFixed(1)}KB` });
   return { text, agent: { harness: agent.harness.id, model, variant: agent.variant } };
 }
 

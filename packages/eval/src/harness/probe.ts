@@ -23,6 +23,7 @@ import type { EvalContext, HarnessSpec } from "../config/types.js";
 import { fromRepoRoot } from "../lib/paths.js";
 import { AdapterTarget, adapterSpec, harnessEnvOverrides, readTargets, status as adapterStatus } from "./adapter.js";
 import { driverFor } from "./driver.js";
+import { HarnessProgress } from "./progress.js";
 import { HarnessNotFoundError, resolveBinary } from "./shared.js";
 
 export type ProbeVerdict = "pass" | "pass_provider_unverified" | "fail_capability" | "attribution_mismatch" | "error";
@@ -106,6 +107,9 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
   let rawProvider: string | null = null;
   let observedModel: string | null = null;
   let resolvedModel: string | null = options.model ?? null;
+  // Declared out here so the catch below can close the narrative on a call
+  // that never got as far as returning.
+  let probeProgress: HarnessProgress | null = null;
   const t0 = Date.now();
 
   // Adapter routing: resolve the target, require a healthy adapter, and
@@ -149,7 +153,17 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
       cwd: fixtureDir,
       timeoutSeconds: Math.ceil(timeoutMs / 1000),
       env: adapterEnv,
+      // Probes are the first thing run against a fresh runner and the first
+      // thing to hang when a credential is wrong, so they get the same live
+      // commentary as pipeline calls.
+      progress: (probeProgress = new HarnessProgress({
+        role: "probe",
+        harness: spec.id,
+        model: resolvedModel,
+        variant: options.variant ?? null,
+      })),
     };
+    probeProgress.dispatch({ timeout: `${call.timeoutSeconds}s`, adapter: adapterInfo?.id });
 
     let text: string;
     if (driver.invokeStructured) {
@@ -160,10 +174,12 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
     } else {
       text = await driver.invoke(spec, call);
     }
+    probeProgress.finish({ toolUse: String(text.includes(token)) });
     toolUse = text.includes(token);
     if (!toolUse) capabilityError = "token absent from response (no tool use observed)";
   } catch (error: any) {
     capabilityError = error instanceof HarnessNotFoundError ? `not installed: ${error.message}` : String(error?.message ?? error);
+    probeProgress?.fail(capabilityError);
   } finally {
     fs.rmSync(fixtureDir, { recursive: true, force: true });
   }
