@@ -36,6 +36,16 @@ code_lines() {
     | grep -vE '^[[:space:]]*(-[[:space:]]+)?(run:[[:space:]]*)?(echo|printf)[[:space:]].*::(error|warning|notice)'
 }
 
+# Do not use `code_lines ... | grep -q` under pipefail. Once grep finds an
+# early match it may close the pipe, making the upstream filter exit on SIGPIPE
+# and the otherwise-successful pipeline report status 141. Reading the complete
+# filtered stream keeps the result deterministic across file sizes and runners.
+code_matches() {
+  local file="$1"
+  shift
+  code_lines "$file" | grep "$@" >/dev/null
+}
+
 workflows=()
 while IFS= read -r f; do workflows+=("$f"); done < <(
   find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) | sort
@@ -78,7 +88,7 @@ writer_re='\boptimize[[:space:]]+(rebaseline|coverage|report|promote|loop|all)\b
 for f in "${workflows[@]}" .github/scripts/gate.sh .github/actions/*/action.yml; do
   [ -e "$f" ] || continue
   case "$(basename "$f")" in optimization-loop.yml) continue ;; esac
-  if code_lines "$f" | grep -qE "$writer_re"; then
+  if code_matches "$f" -E "$writer_re"; then
     note "$f" "CI can grade itself" \
       "This file invokes a cesium-eval optimize subcommand that writes a tracked file (optimization/results/*.json or skills/**/SKILL.md). Only optimization-loop.yml, which is dispatch-only and approval-gated, may do that."
   fi
@@ -87,7 +97,7 @@ done
 # RULE 2: pull_request_target is banned outright, with no allowlist.
 for f in "${workflows[@]}"; do
   [ -e "$f" ] || continue
-  if code_lines "$f" | grep -q 'pull_request_target'; then
+  if code_matches "$f" 'pull_request_target'; then
     note "$f" "pull_request_target is banned" \
       "It runs base-repo code with base-repo secrets and a write token against a fork's head ref. Nothing in this pipeline needs it; use workflow_run instead."
   fi
@@ -104,7 +114,7 @@ for f in "${blocking_workflows[@]}"; do
   # It also must not move INSIDE code_lines(): that would exempt the annotated
   # line from all eight rules, letting `pull_request_target: # SAFETY-WAIVER: x`
   # through rule 2 and `runs-on: self-hosted # SAFETY-WAIVER: x` through rule 5.
-  if code_lines <(grep -vE '#[[:space:]]*SAFETY-WAIVER:' "$f") | grep -qE 'continue-on-error|\|\|[[:space:]]*true'; then
+  if code_matches <(grep -vE '#[[:space:]]*SAFETY-WAIVER:' "$f") -E 'continue-on-error|\|\|[[:space:]]*true'; then
     note "$f" "Error suppression in a blocking lane" \
       "Advisory-ness is expressed by a lane being non-required, never by suppressing an error. If a conditional pass is genuinely correct, annotate the line with '# SAFETY-WAIVER: <reason>' so the exemption is a reviewable diff."
   fi
@@ -113,7 +123,7 @@ done
 # RULE 4: the blocking eval lane must consume no secrets. Secret-freedom is what
 # makes this gate produce a real signal on a fork pull request.
 # Fails closed: a missing gate is a violation, not an exemption.
-if [ -z "$pr_gate" ] || code_lines "$pr_gate" | grep -qE 'secrets\.[A-Z_]+'; then
+if [ -z "$pr_gate" ] || code_matches "$pr_gate" -E 'secrets\.[A-Z_]+'; then
   note "${pr_gate:-.github/workflows/pr-gate.yml}" "Gate must stay secret-free" \
     "Move any secret-consuming step to the nightly lane."
 fi
@@ -148,7 +158,7 @@ fi
 # no fork branch at all.
 canonical_runs_on="runs-on: \${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '[\"ubuntu-latest\"]' || vars.RUNNER_LABELS || '[\"ubuntu-latest\"]') }}"
 for f in "${blocking_workflows[@]}"; do
-  if code_lines "$f" | grep -qE '(^|[^_[:alnum:]])self-hosted'; then
+  if code_matches "$f" -E '(^|[^_[:alnum:]])self-hosted'; then
     note "$f" "Hardcoded self-hosted runner in a blocking lane" \
       "A literal self-hosted label has no fork branch, so it routes fork pull requests onto the pool. Use the canonical fork-guarded expression from pr-gate.yml instead."
   fi
@@ -165,7 +175,7 @@ done
 # changing it is a visible one-line diff under CODEOWNERS review.
 for f in "${workflows[@]}"; do
   [ -e "$f" ] || continue
-  if code_lines "$f" | grep -q -- '--threshold'; then
+  if code_matches "$f" -- '--threshold'; then
     note "$f" "Threshold override" \
       "--threshold in a workflow bypasses eval.config.json. Change it there instead."
   fi
@@ -222,25 +232,25 @@ fi
 # unprotected preflight or helper job that also references the token.
 for f in "${workflows[@]}"; do
   [ -e "$f" ] || continue
-  if ! code_lines "$f" | grep -q 'secrets\.COPILOT_GITHUB_TOKEN'; then
+  if ! code_matches "$f" 'secrets\.COPILOT_GITHUB_TOKEN'; then
     continue
   fi
 
-  if code_lines "$f" | grep -qE '^[[:space:]]{2}(pull_request|pull_request_target|merge_group):'; then
+  if code_matches "$f" -E '^[[:space:]]{2}(pull_request|pull_request_target|merge_group):'; then
     note "$f" "Copilot secret reachable from untrusted code" \
       "A workflow that references COPILOT_GITHUB_TOKEN must not have a pull-request or merge-group trigger. Run credentialed evaluation only from trusted main-branch state."
   fi
-  if ! code_lines "$f" | grep -q 'refs/heads/main'; then
-    if code_lines "$f" | grep -qE '^[[:space:]]{2}workflow_run:'; then
-      if ! code_lines "$f" | grep -qE 'workflows:[[:space:]]*\["PR Gate"\]'; then
+  if ! code_matches "$f" 'refs/heads/main'; then
+    if code_matches "$f" -E '^[[:space:]]{2}workflow_run:'; then
+      if ! code_matches "$f" -E 'workflows:[[:space:]]*\["PR Gate"\]'; then
         note "$f" "Privileged workflow_run has no trusted prerequisite" \
           "A Copilot workflow_run lane must be triggered only by the default-branch PR Gate workflow."
       fi
-      if ! code_lines "$f" | grep -q 'ref:.*github\.event\.repository\.default_branch'; then
+      if ! code_matches "$f" 'ref:.*github\.event\.repository\.default_branch'; then
         note "$f" "Privileged workflow_run does not check out the default branch" \
           "The evaluator must come from the trusted default branch; the pull-request head is data, never executable code."
       fi
-      if code_lines "$f" | grep -q 'ref:.*workflow_run\..*head'; then
+      if code_matches "$f" 'ref:.*workflow_run\..*head'; then
         note "$f" "Privileged workflow_run checks out pull-request code" \
           "Never check out workflow_run.head_sha in a secret-bearing workflow; fetch bounded candidate documents as data instead."
       fi
