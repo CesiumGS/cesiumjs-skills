@@ -11,7 +11,7 @@ import { readJson, readJsonl, readJsonOrNull, writeJsonPlain } from "../lib/json
 import { fromRepoRoot, globFiles, listDirs, repoRelative, walkFiles } from "../lib/paths.js";
 import { parseTs } from "../lib/format.js";
 import { currentJournalAttempt, isFresh, journalFor, scenarioLabel } from "./optimizationData.js";
-import { baselineCoverage } from "./baselineData.js";
+import { BASELINE_ROOT, baselineCoverage, normalizeBundleRoot } from "./baselineData.js";
 import { resolveIonToken } from "../optimization/browserRunner.js";
 import type { EvalContext } from "../config/types.js";
 
@@ -845,29 +845,30 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
       );
     }
   }
-  // Parse the optional custom bundle root before the coverage guard: an
-  // advanced launch can point Visual Tests at any rendered directory, and the
-  // guard below must reason about that root, not the default one.
-  let bundleRoot: string | null = null;
-  if (payload.bundle_root !== undefined && payload.bundle_root !== null && payload.bundle_root !== "") {
-    bundleRoot = String(payload.bundle_root);
-    if (path.isAbsolute(bundleRoot) || bundleRoot.split(/[\\/]/).includes("..")) {
-      throw new Error("bundle_root must be a repo-relative path");
-    }
-    if (!fs.existsSync(path.join(ctx.repoRoot, bundleRoot))) throw new Error(`bundle_root does not exist: ${bundleRoot}`);
+  // Resolve the bundle root before the coverage guard, and resolve it exactly
+  // once: an omitted bundle_root means the console's own baseline root, never
+  // the CLI's fallback. The guard below and the `--bundle-root` the child audit
+  // receives are then guaranteed to be the same directory — measuring one root
+  // while judging another is how a passing guard produced an empty run.
+  const bundleRoot = normalizeBundleRoot(payload.bundle_root);
+  const customRoot = bundleRoot !== BASELINE_ROOT;
+  // A hand-typed root must already exist; the default one may legitimately be
+  // absent on a clean checkout, where the guard below explains how to fill it.
+  if (customRoot && !fs.existsSync(path.join(ctx.repoRoot, bundleRoot))) {
+    throw new Error(`bundle_root does not exist: ${bundleRoot}`);
   }
 
   // Visual Tests need baseline screenshots to judge. With zero coverage the run
   // would burn nothing but still land as "incomplete" — reject with remediation.
-  // Only the default baseline root is measured here; a custom bundle_root is an
-  // advanced opt-in whose contents `audit --bundle-root` judges directly (and
-  // reports 'incomplete' honestly if it turns out empty), so skip the guard for it.
-  if (judge && judgeHarness !== "fake" && !bundleRoot) {
-    const coverage = baselineCoverage(ctx, skills);
+  if (judge && judgeHarness !== "fake") {
+    const coverage = baselineCoverage(ctx, skills, bundleRoot);
     if (!coverage.skills.some((skill) => skill.screenshots > 0)) {
       throw new Error(
-        "Visual Tests are on, but none of the selected skills has baseline screenshots to judge — " +
-          "the run would complete 'incomplete'. Render baselines in the launcher (Baseline Screenshots → Render), " +
+        `Visual Tests are on, but none of the selected skills has baseline screenshots under ${bundleRoot} — ` +
+          "the run would complete 'incomplete'. " +
+          (customRoot
+            ? "Point --bundle-root at a rendered bundle directory, clear it to use the console's baseline root, "
+            : "Render baselines in the launcher (Baseline Screenshots → Render), ") +
           "or turn Visual Tests off to run Code Tests only.",
       );
     }
@@ -956,7 +957,9 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (codegenModel) argv.push("--codegen-model", codegenModel);
   if (codegenVariant) argv.push("--codegen-variant", codegenVariant);
   if (threshold !== null) argv.push("--threshold", String(threshold));
-  if (bundleRoot) argv.push("--bundle-root", bundleRoot);
+  // Always explicit: the audit judges the root the guard just measured instead
+  // of falling back to its own default.
+  argv.push("--bundle-root", bundleRoot);
 
   // Fail the request, not the run: an argv the CLI would reject leaves no
   // half-born run folder behind.

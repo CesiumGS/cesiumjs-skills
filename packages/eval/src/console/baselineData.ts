@@ -12,7 +12,7 @@ import type { EvalContext } from "../config/types.js";
 import { fromRepoRoot } from "../lib/paths.js";
 import { renderBaselinesCommand } from "../commands/renderBaselines.js";
 import { generateBaselinesCommand, type GenerateBaselinesOptions } from "../commands/optimize.js";
-import { baselineScenarios, baselineSkills, generatedCodePath, resolveBundleDir } from "../evaluation/baselines.js";
+import { baselineScenarios, baselineSkills, generatedCodePath, isBundleComplete, resolveBundleDir } from "../evaluation/baselines.js";
 
 export const BASELINE_ROOT = "evaluation/artifacts/baselines";
 
@@ -21,35 +21,58 @@ export interface SkillCoverage {
   cases: number;
   generated: number;
   screenshots: number;
+  /** Bundles carrying every artifact the audit reads, not just a screenshot. */
+  auditable: number;
   covered: boolean;
+}
+
+/**
+ * The repo-relative bundle root a request is talking about.
+ *
+ * Everything the console measures, renders into, and launches against must
+ * name the same directory, so an omitted root resolves to BASELINE_ROOT here
+ * rather than being left for a downstream default to invent.
+ */
+export function normalizeBundleRoot(value: unknown): string {
+  if (value === undefined || value === null || value === "") return BASELINE_ROOT;
+  const root = String(value);
+  if (path.isAbsolute(root) || root.split(/[\\/]/).includes("..")) {
+    throw new Error("bundle_root must be a repo-relative path");
+  }
+  return root;
 }
 
 /**
  * Coverage for a skill, counted over the same scenarios the audit will judge
  * and at the same bundle locations it resolves (both via ../evaluation/
- * baselines.js). Reporting a different case set than the audit is what made
- * the launcher promise a visual lane the run could not deliver.
+ * baselines.js). Reporting a different case set — or a different root — than
+ * the audit is what made the launcher promise a visual lane the run could not
+ * deliver.
  */
-function coverageForSkill(skill: string): SkillCoverage {
-  const bundleRoot = fromRepoRoot(BASELINE_ROOT);
+function coverageForSkill(skill: string, bundleRoot: string): SkillCoverage {
+  const rootAbs = fromRepoRoot(bundleRoot);
   const scenarios = baselineScenarios(skill);
   let generated = 0;
   let screenshots = 0;
+  let auditable = 0;
   for (const scenario of scenarios) {
     if (fs.existsSync(generatedCodePath(scenario))) generated += 1;
-    const bundleDir = resolveBundleDir(scenario, bundleRoot);
+    const bundleDir = resolveBundleDir(scenario, rootAbs);
     if (bundleDir !== null && fs.existsSync(path.join(bundleDir, "screenshot.png"))) screenshots += 1;
+    if (isBundleComplete(scenario, rootAbs)) auditable += 1;
   }
   return {
     skill,
     cases: scenarios.length,
     generated,
     screenshots,
+    auditable,
     covered: scenarios.length > 0 && screenshots === scenarios.length,
   };
 }
 
 export interface BaselineCoverage {
+  /** The root these counts were measured at — the one a launch must judge. */
   root: string;
   skills: SkillCoverage[];
   /** Live render activity, so the console can SHOW a render in progress
@@ -57,12 +80,13 @@ export interface BaselineCoverage {
   rendering: { active: boolean; skill: string | null };
 }
 
-export function baselineCoverage(ctx: EvalContext, skills?: string[]): BaselineCoverage {
+export function baselineCoverage(ctx: EvalContext, skills?: string[], root?: string): BaselineCoverage {
+  const bundleRoot = normalizeBundleRoot(root);
   const known = baselineSkills();
   const target = skills && skills.length ? skills.filter((s) => known.includes(s)) : known;
   return {
-    root: BASELINE_ROOT,
-    skills: target.map(coverageForSkill),
+    root: bundleRoot,
+    skills: target.map((skill) => coverageForSkill(skill, bundleRoot)),
     rendering: { active: renderingSkill !== null, skill: renderingSkill },
   };
 }

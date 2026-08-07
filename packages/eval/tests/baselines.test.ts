@@ -6,13 +6,34 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { loadContext } from "../src/config/load.js";
 import { allSkills } from "../src/commands/audit.js";
-import { baselineCoverage, baselineGenerationOptions } from "../src/console/baselineData.js";
-import { baselineScenarios, baselineSkills, bundleDirFor, resolveBundleDir } from "../src/evaluation/baselines.js";
+import { BASELINE_ROOT, baselineCoverage, baselineGenerationOptions, normalizeBundleRoot } from "../src/console/baselineData.js";
+import { launchRun } from "../src/console/liveData.js";
+import {
+  BUNDLE_EVIDENCE_FILES,
+  baselineScenarios,
+  baselineSkills,
+  bundleDirFor,
+  isBundleComplete,
+  resolveBundleDir,
+} from "../src/evaluation/baselines.js";
 
 const ctx = loadContext();
+
+// Scratch bundle roots live under the gitignored artifacts tree so a test root
+// is never mistaken for a real one.
+const scratchRoots: string[] = [];
+function scratchRoot(label: string): string {
+  const root = path.join("evaluation/artifacts", `test-${label}-${process.pid}`);
+  fs.mkdirSync(path.join(ctx.repoRoot, root), { recursive: true });
+  scratchRoots.push(root);
+  return root;
+}
+afterAll(() => {
+  for (const root of scratchRoots) fs.rmSync(path.join(ctx.repoRoot, root), { recursive: true, force: true });
+});
 
 describe("baseline scenario contract", () => {
   it("exposes the same skill set to the audit and the console", () => {
@@ -68,6 +89,25 @@ describe("baseline scenario contract", () => {
     }
   });
 
+  it("separates a screenshot-covered bundle from an auditable one", () => {
+    const root = scratchRoot("complete");
+    const rootAbs = path.join(ctx.repoRoot, root);
+    const scenario = baselineScenarios(baselineSkills()[0])[0];
+    const dir = bundleDirFor(scenario, rootAbs);
+    fs.mkdirSync(dir, { recursive: true });
+
+    fs.writeFileSync(path.join(dir, "screenshot.png"), "");
+    // A screenshot is enough for the visual lane and NOT enough for the
+    // deterministic one — the two predicates must stay distinct.
+    expect(isBundleComplete(scenario, rootAbs)).toBe(false);
+    expect(baselineCoverage(ctx, [scenario.skill], root).skills[0].screenshots).toBe(1);
+    expect(baselineCoverage(ctx, [scenario.skill], root).skills[0].auditable).toBe(0);
+
+    for (const file of BUNDLE_EVIDENCE_FILES) fs.writeFileSync(path.join(dir, file), "");
+    expect(isBundleComplete(scenario, rootAbs)).toBe(true);
+    expect(baselineCoverage(ctx, [scenario.skill], root).skills[0].auditable).toBe(1);
+  });
+
   it("resolves a rendered bundle to a directory that really holds its screenshot", () => {
     const root = path.join(ctx.repoRoot, "evaluation/artifacts/baselines");
     let checked = 0;
@@ -82,5 +122,59 @@ describe("baseline scenario contract", () => {
     // Nothing to assert about counts (a fresh checkout renders none), but any
     // bundle that does resolve must be a real directory.
     expect(checked).toBeGreaterThanOrEqual(0);
+  });
+});
+
+/**
+ * The coverage guard and the audit it launches must judge one directory.
+ * They did not: coverage always counted `evaluation/artifacts/baselines`
+ * while an omitted bundle_root let the child audit fall back to
+ * `optimization/runs/<skill>/baseline`, so a guard satisfied by partial
+ * coverage cleared a run that scored a different (often empty) tree.
+ */
+describe("launch bundle root", () => {
+  it("defaults an omitted root to the one coverage measures", () => {
+    expect(normalizeBundleRoot(undefined)).toBe(BASELINE_ROOT);
+    expect(normalizeBundleRoot(null)).toBe(BASELINE_ROOT);
+    expect(normalizeBundleRoot("")).toBe(BASELINE_ROOT);
+    expect(baselineCoverage(ctx, undefined).root).toBe(BASELINE_ROOT);
+  });
+
+  it("keeps a caller-supplied root, and refuses one that escapes the repo", () => {
+    expect(normalizeBundleRoot("optimization/runs")).toBe("optimization/runs");
+    expect(() => normalizeBundleRoot("/etc")).toThrow(/repo-relative/);
+    expect(() => normalizeBundleRoot("../elsewhere")).toThrow(/repo-relative/);
+  });
+
+  it("counts coverage at the root it is asked about, not a fixed one", () => {
+    const root = scratchRoot("measured");
+    const scenario = baselineScenarios(baselineSkills()[0])[0];
+    const dir = bundleDirFor(scenario, path.join(ctx.repoRoot, root));
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "screenshot.png"), "");
+
+    const measured = baselineCoverage(ctx, [scenario.skill], root);
+    expect(measured.root).toBe(root);
+    expect(measured.skills[0].screenshots).toBe(1);
+    // The same skill at an empty root reports nothing: coverage follows the
+    // root, so the guard can never vouch for a directory the audit won't read.
+    const elsewhere = baselineCoverage(ctx, [scenario.skill], scratchRoot("empty"));
+    expect(elsewhere.skills[0].screenshots).toBe(0);
+  });
+
+  it("rejects a visual launch whose own bundle root holds no screenshots", () => {
+    const root = scratchRoot("unrendered");
+    const skill = baselineSkills()[0];
+    // Previously the guard was skipped whenever a custom root was given, so
+    // this launch started and landed 'incomplete' with nothing to judge.
+    expect(() => launchRun(ctx, { skills: [skill], judge: true, bundle_root: root })).toThrow(
+      `baseline screenshots under ${root}`,
+    );
+  });
+
+  it("rejects a bundle root that does not exist", () => {
+    expect(() => launchRun(ctx, { skills: [baselineSkills()[0]], judge: true, bundle_root: "evaluation/artifacts/nope" })).toThrow(
+      /bundle_root does not exist/,
+    );
   });
 });

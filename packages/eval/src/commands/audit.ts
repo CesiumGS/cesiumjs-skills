@@ -196,8 +196,11 @@ function collectCases(skills: string[], bundleRoot: string | null): AuditCase[] 
   }
   if (!collected.length) throw new Error("no scenarios selected for audit");
   if (collected.every((auditCase) => auditCase.bundleDir === null)) {
+    // Name the root actually searched: reporting the default while judging a
+    // caller-supplied root sends the operator to the wrong directory.
+    const searched = bundleRoot !== null ? `${repoRelative(bundleRoot)}/<skill>/baseline` : "optimization/runs/<skill>/baseline";
     throw new Error(
-      "no rendered baseline bundles found under optimization/runs/<skill>/baseline; " +
+      `no rendered baseline bundles found under ${searched}; ` +
         "render them first (cesium-eval optimize <skills> --max-iterations 1) or pass --bundle-root",
     );
   }

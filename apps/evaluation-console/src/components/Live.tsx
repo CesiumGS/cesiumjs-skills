@@ -1162,13 +1162,15 @@ function LaunchPanel() {
   const codegenEffortLevels = effortLevelsFor(codegenHarnessSpec, codegenModel);
 
   // Coverage for the currently selected skills, refreshed when the selection
-  // or the judge toggle changes. Only meaningful with Visual Tests on.
-  // Computed from state directly so it does not depend on `selectedSkills`,
-  // which is declared further down.
+  // changes. Computed from state directly so it does not depend on
+  // `selectedSkills`, which is declared further down. Loaded whether or not
+  // Visual Tests are on: the badge is judge-only, but the measured root also
+  // fills the Bundle Root field, and a Code-Tests-only run judges that same
+  // root.
   const currentSkills = mode === "all" ? available : [...picked];
-  const coverageKey = judge ? currentSkills.join(",") : "";
+  const coverageKey = currentSkills.join(",");
   useEffect(() => {
-    if (!judge || !currentSkills.length) {
+    if (!currentSkills.length) {
       setCoverage(null);
       return;
     }
@@ -1203,14 +1205,19 @@ function LaunchPanel() {
   // rejects it too; this stops it before the doomed click).
   const noVisualEvidence = judge && coverage !== null && !coverage.skills.some((s) => s.screenshots > 0);
 
-  // When baselines are fully rendered, point the audit at them so Visual Tests
-  // actually judge screenshots. When they are not, clear the auto value so the
-  // launch does not claim a bundle-root it cannot use.
+  // Show the root coverage was measured at, whatever the coverage level. The
+  // launch judges this directory either way (the server fills in the same
+  // default), so clearing the field on partial coverage only hid the fact that
+  // the badge and the run were talking about the same place — or, when the
+  // operator types their own root, that they are not.
+  const bundleRootEdited = useRef(false);
   useEffect(() => {
-    if (judge && fullyCovered && coverage) setBundleRoot(coverage.root);
-    else if (bundleRoot && coverage && bundleRoot === coverage.root && !fullyCovered) setBundleRoot("");
+    if (coverage && !bundleRootEdited.current) setBundleRoot(coverage.root);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [judge, fullyCovered, coverage?.root]);
+  }, [coverage?.root]);
+  // A hand-typed root is judged instead of the measured one: say so rather
+  // than letting a green badge vouch for a directory the run will not read.
+  const rootDiverged = coverage !== null && bundleRoot !== "" && bundleRoot !== coverage.root;
 
   // While a render is running, poll coverage so the badge ticks live even
   // inside a large skill (each screenshot lands on disk as it renders).
@@ -1296,7 +1303,10 @@ function LaunchPanel() {
     if (codegenProvider) parts.push(`--codegen-provider ${codegenProvider}`);
     if (codegenVariant) parts.push(`--codegen-variant ${codegenVariant}`);
     if (threshold) parts.push(`--threshold ${threshold}`);
-    if (bundleRoot) parts.push(`--bundle-root ${bundleRoot}`);
+    // The server always passes a root, defaulting to the one coverage measures,
+    // so show that rather than implying the audit picks its own.
+    const effectiveRoot = bundleRoot || coverage?.root;
+    if (effectiveRoot) parts.push(`--bundle-root ${effectiveRoot}`);
     parts.push("--journal <run-dir>/progress.jsonl", "--output-dir <run-dir>");
     return parts.join(" \\\n  ");
   }, [
@@ -1314,7 +1324,8 @@ function LaunchPanel() {
     codegenProvider,
     codegenVariant,
     threshold,
-    bundleRoot
+    bundleRoot,
+    coverage?.root
   ]);
 
   const launch = async () => {
@@ -1650,6 +1661,12 @@ function LaunchPanel() {
                         : "Rendered"}
                 </button>
               </div>
+              {rootDiverged && (
+                <div className="launch-hint">
+                  <AlertTriangle size={11} aria-hidden /> Coverage above is measured at <code>{coverage?.root}</code>,
+                  but this launch judges <code>{bundleRoot}</code>. Clear Bundle Root to judge what was measured.
+                </div>
+              )}
               {coverageErr && (
                 <div className="launch-hint">
                   <AlertTriangle size={11} aria-hidden /> {coverageErr}
@@ -1790,8 +1807,15 @@ function LaunchPanel() {
               <input
                 type="text"
                 placeholder="default: archived baselines"
+                title="The directory the audit judges. Prefilled with the root baseline coverage is measured at; clearing it restores that default."
                 value={bundleRoot}
-                onChange={(e) => setBundleRoot(e.target.value)}
+                onChange={(e) => {
+                  // Once typed, stop tracking the measured root — an operator
+                  // pointing at their own bundles keeps that choice. Emptying
+                  // the field hands it back.
+                  bundleRootEdited.current = e.target.value !== "";
+                  setBundleRoot(e.target.value);
+                }}
               />
             </label>
           </div>

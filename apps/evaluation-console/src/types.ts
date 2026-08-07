@@ -621,10 +621,13 @@ export interface SkillCoverageDTO {
   /** Scenario JS already generated for the current-best baseline. */
   generated: number;
   screenshots: number;
+  /** Bundles holding every artifact the audit reads, not just a screenshot. */
+  auditable: number;
   covered: boolean;
 }
 
 export interface BaselineCoverageDTO {
+  /** The root these counts were measured at — the one a launch will judge. */
   root: string;
   skills: SkillCoverageDTO[];
   /** Live render activity: lets the console show rendering as work in

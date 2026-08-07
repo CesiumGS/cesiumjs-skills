@@ -4,22 +4,30 @@ import { summarizeBaselineCoverage } from "./baselineCoverage";
 
 function coverage(skills: SkillCoverageDTO[]): BaselineCoverageDTO {
   return {
-    root: "optimization/runs",
+    root: "evaluation/artifacts/baselines",
     skills,
   };
+}
+
+/** A skill row with the fields this summarizer reads; `auditable` (the
+ *  deterministic-lane predicate) defaults to the rendered screenshot count. */
+function skillRow(row: Omit<SkillCoverageDTO, "auditable"> & { auditable?: number }): SkillCoverageDTO {
+  return { ...row, auditable: row.auditable ?? row.screenshots };
 }
 
 describe("summarizeBaselineCoverage", () => {
   it("counts every selected skill when only one has renderable baseline cases", () => {
     const skills: SkillCoverageDTO[] = [
-      { skill: "cesiumjs-imagery", cases: 2, generated: 2, screenshots: 2, covered: true },
-      ...Array.from({ length: 7 }, (_, index) => ({
-        skill: `cesiumjs-unready-${index}`,
-        cases: 2,
-        generated: 0,
-        screenshots: 0,
-        covered: false,
-      })),
+      skillRow({ skill: "cesiumjs-imagery", cases: 2, generated: 2, screenshots: 2, covered: true }),
+      ...Array.from({ length: 7 }, (_, index) =>
+        skillRow({
+          skill: `cesiumjs-unready-${index}`,
+          cases: 2,
+          generated: 0,
+          screenshots: 0,
+          covered: false,
+        }),
+      ),
     ];
 
     const summary = summarizeBaselineCoverage(coverage(skills));
@@ -35,8 +43,8 @@ describe("summarizeBaselineCoverage", () => {
   it("separates renderable screenshot gaps from missing generated cases", () => {
     const summary = summarizeBaselineCoverage(
       coverage([
-        { skill: "cesiumjs-camera", cases: 3, generated: 3, screenshots: 1, covered: false },
-        { skill: "cesiumjs-entities", cases: 2, generated: 0, screenshots: 0, covered: false },
+        skillRow({ skill: "cesiumjs-camera", cases: 3, generated: 3, screenshots: 1, covered: false }),
+        skillRow({ skill: "cesiumjs-entities", cases: 2, generated: 0, screenshots: 0, covered: false }),
       ]),
     );
 
@@ -48,8 +56,8 @@ describe("summarizeBaselineCoverage", () => {
   it("is fully covered only when every selected skill is ready", () => {
     const summary = summarizeBaselineCoverage(
       coverage([
-        { skill: "cesiumjs-camera", cases: 2, generated: 2, screenshots: 2, covered: true },
-        { skill: "cesiumjs-imagery", cases: 1, generated: 1, screenshots: 1, covered: true },
+        skillRow({ skill: "cesiumjs-camera", cases: 2, generated: 2, screenshots: 2, covered: true }),
+        skillRow({ skill: "cesiumjs-imagery", cases: 1, generated: 1, screenshots: 1, covered: true }),
       ]),
     );
 
