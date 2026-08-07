@@ -59,7 +59,8 @@ jobs:
     # time while a configured self-hosted pool sits idle next to them. The
     # `|| '["ubuntu-latest"]'` tail is the fallback for an unset OR empty variable,
     # so an unconfigured repository still runs; a MALFORMED variable still fails at
-    # expression-evaluation time, which is why RUNNER_LABELS sits under CODEOWNERS.
+    # expression-evaluation time, which is why the workflow files carrying this
+    # expression sit under CODEOWNERS.
     #
     # workflow-safety.sh rule 5 enforces this exact shape: a blocking lane may name
     # RUNNER_LABELS only on a line that also carries the head.repo.fork guard.
