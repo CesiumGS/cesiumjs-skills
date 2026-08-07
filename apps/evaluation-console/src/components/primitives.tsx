@@ -124,7 +124,7 @@ export function DecisionChip({ decision, source }: { decision: Decision; source?
 }
 
 /** KEEP / REJECT / TIE (loop decision). */
-export function LoopBadge({ decision, rule }: { decision: LoopDecision | "TIE"; rule?: string | null }) {
+export function LoopBadge({ decision, rule }: { decision: LoopDecision; rule?: string | null }) {
   const d = decision ?? "—";
   const cls = d === "KEEP" ? "keep" : d === "REJECT" ? "reject" : "tie";
   return (

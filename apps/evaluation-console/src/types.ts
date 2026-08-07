@@ -302,7 +302,8 @@ export interface CaseView extends AdaptedCase {
 // ============================================================================
 // Skill Evaluation Console — optimization-lifecycle shapes (mirror packages/eval/src/console/optimizationData.ts)
 // ============================================================================
-export type LoopDecision = "KEEP" | "REJECT" | null;
+/** KEEP is an explicit candidate win; TIE retains the existing current best. */
+export type LoopDecision = "KEEP" | "REJECT" | "TIE" | null;
 export type IterationStatus = "baseline" | "completed" | "failed" | "running" | "stalled" | "empty";
 export type ScenarioVerdict = "CANDIDATE" | "BASELINE" | "TIE" | null; // WIN / LOSS / TIE
 

@@ -1,5 +1,5 @@
 /**
- * Decision engine for autonomous keep/reject of skill candidates.
+ * Decision engine for autonomous keep/reject/tie decisions over skill candidates.
  * Port of optimization/framework/decision/engine.py (five-rule cascade).
  */
 import * as fs from "node:fs";
@@ -7,7 +7,9 @@ import { readJson } from "../lib/json.js";
 import type { CheckResultEntry, JudgeResultEntry, ScenarioMetaEntry } from "./types.js";
 
 export interface DecisionResult {
-  decision: string;
+  /** KEEP means the candidate explicitly won and is eligible for staging.
+   * TIE means retain the existing current best; the candidate must not stage. */
+  decision: "KEEP" | "REJECT" | "TIE";
   rule_fired: string;
   counts: Record<string, number>;
   rationale: string;
@@ -65,7 +67,8 @@ export function checkRebaselineRequired(
 /**
  * Five-rule cascade with rebaseline/environment-invalid exclusions:
  * 1) deterministic check failures -> REJECT, 2) critical judge losses ->
- * REJECT, 3) more wins -> KEEP, 4) more losses -> REJECT, 5) tie -> KEEP.
+ * REJECT, 3) more wins -> KEEP, 4) more losses -> REJECT,
+ * 5) tie -> TIE (retain current best).
  *
  * Check and judge results are joined by scenario_id; mismatched or duplicate
  * ids fail loudly rather than being silently misattributed or truncated.
@@ -202,10 +205,10 @@ export function decide(
     };
   }
   return {
-    decision: "KEEP",
+    decision: "TIE",
     rule_fired: "rule_5_tie_keep_current",
     counts,
-    rationale: `KEEP: Tie (${wins} wins, ${losses} losses, ${ties} ties) - keeping current best`,
+    rationale: `TIE: Candidate did not beat current best (${wins} wins, ${losses} losses, ${ties} ties)`,
     rebaseline_required: rebaselineRequired,
   };
 }

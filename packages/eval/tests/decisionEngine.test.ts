@@ -44,9 +44,23 @@ describe("decide", () => {
       { "cesiumjs-camera": { "eval-001": "old" } },
     );
 
-    expect(result.decision).toBe("KEEP");
+    expect(result.decision).toBe("TIE");
     expect(result.rule_fired).toBe("rule_5_tie_keep_current");
     expect(result.rebaseline_required).toEqual(["eval-001"]);
+  });
+
+  it("retains the current best when candidate wins and baseline wins are tied", () => {
+    const result = decide(
+      [checks("eval-001"), checks("eval-002"), checks("eval-003")],
+      [judge("eval-001", "CANDIDATE"), judge("eval-002", "BASELINE"), judge("eval-003", "TIE")],
+      [scenario("eval-001"), scenario("eval-002"), scenario("eval-003")],
+      {},
+    );
+
+    expect(result.decision).toBe("TIE");
+    expect(result.rule_fired).toBe("rule_5_tie_keep_current");
+    expect(result.rationale).toContain("did not beat current best");
+    expect(result.counts).toMatchObject({ wins: 1, losses: 1, ties: 1 });
   });
 
   it("joins check and judge results by scenario_id, not array position", () => {
