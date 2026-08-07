@@ -108,15 +108,13 @@ jobs:
           # Nothing here performs an authenticated git operation.
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: '22'
-          cache: 'npm'
+      # The shared setup action caches npm downloads only on ephemeral hosted
+      # runners. The current persistent pool reuses its local npm cache without
+      # an actions/cache upload/download round trip.
+      - uses: ./.github/actions/setup-eval
 
-      - name: Install dependencies and build eval CLI
+      - name: Build eval CLI
         run: |
-          npm ci
           npm run build --workspace @cesiumjs-skills/eval
           npx playwright install --with-deps chromium
 

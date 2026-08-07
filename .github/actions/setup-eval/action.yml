@@ -7,13 +7,28 @@ description: >-
 runs:
   using: composite
   steps:
-    - name: Set up Node
+    # A persistent self-hosted runner already retains npm's content-addressed
+    # cache locally. Uploading that shared directory to actions/cache and then
+    # downloading it back into later jobs is pure network/storage churn (and it
+    # can include packages installed by unrelated global CLI setup). Hosted
+    # runners are ephemeral, so they keep the small lockfile-keyed cache.
+    - name: Set up Node (GitHub-hosted with npm cache)
+      if: runner.environment == 'github-hosted'
       uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
       with:
         node-version-file: .nvmrc
         # Deliberately uncached. This workspace has only 119 locked packages,
         # while cache restore/save on the ephemeral self-hosted pool has taken
         # 8-14 minutes and can outlive the build and tests it is meant to speed up.
+
+    - name: Set up Node (self-hosted with runner-local npm cache)
+      if: runner.environment == 'self-hosted'
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      with:
+        node-version-file: .nvmrc
+        # v5 auto-enables package-manager caching when package.json declares
+        # packageManager, so omission is not enough to prevent a remote restore.
+        package-manager-cache: false
 
     - name: Install workspace dependencies
       shell: bash
