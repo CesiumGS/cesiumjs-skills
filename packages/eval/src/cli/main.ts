@@ -242,7 +242,7 @@ program
   .description("Serve the Skill Evaluation Console (SPA + JSON API) over the artifacts.")
   .argument("[scorecard]", "path to the focused run's scorecard.json (defaults to newest run; optional for a blank repo)")
   .option("--state-dir <dir>", "directory for review-decisions.json / focus.json")
-  .option("--host <host>", "bind host")
+  .option("--host <host>", "bind host (the console is loopback-only; non-loopback clients are rejected)")
   .option("--port <port>", "bind port (0 for ephemeral)", parseIntArg)
   .option("--open", "open the system browser after start")
   .action((scorecard, options) =>

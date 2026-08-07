@@ -31,6 +31,15 @@ function knownScenarioSkills(): Set<string> {
 // ---------------------------------------------------------------------------
 // viewer context (focused run + review-state paths)
 // ---------------------------------------------------------------------------
+/**
+ * Review state under a `--state-dir` override lives in one per-run
+ * subdirectory. Both the initial boot and `/api/select-run` resolve through
+ * here, so a re-selected run always reads the grades it wrote.
+ */
+export function stateDirFor(override: string, runId: string): string {
+  return path.join(override, runId);
+}
+
 class ViewerState {
   scorecardPath: string;
   scorecard: Record<string, any>;
@@ -479,9 +488,11 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
     options.scorecard !== undefined
       ? path.resolve(options.scorecard)
       : (listRuns(ctx)[0]?.scorecard_path as string | undefined);
-  let state: ViewerState | null = initialScorecard
-    ? new ViewerState(ctx, initialScorecard, stateDirOverride ?? undefined)
-    : null;
+  let state: ViewerState | null = null;
+  if (initialScorecard) {
+    state = new ViewerState(ctx, initialScorecard);
+    if (stateDirOverride !== null) state.setStateDir(stateDirFor(stateDirOverride, state.runId));
+  }
   const requireFocusedState = (): ViewerState => {
     if (state === null) {
       throw new ConflictError("no evaluation run is loaded; create or select a run first");
@@ -521,9 +532,18 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
       throw new ForbiddenError(`untrusted Host header: '${hostHeader}'`);
     }
     const claimedRoot = req.headers["x-cesium-skills-root"];
-    if (typeof claimedRoot === "string" && path.resolve(claimedRoot) !== path.resolve(ctx.repoRoot)) {
+    // realpath, not resolve: /tmp vs /private/tmp style symlink aliases are
+    // the same checkout and must not read as a mismatch.
+    const canonicalRoot = (value: string): string => {
+      try {
+        return fs.realpathSync(value);
+      } catch {
+        return path.resolve(value);
+      }
+    };
+    if (typeof claimedRoot === "string" && canonicalRoot(claimedRoot) !== canonicalRoot(ctx.repoRoot)) {
       throw new ConflictError(
-        `checkout mismatch: client belongs to '${path.resolve(claimedRoot)}', server belongs to '${ctx.repoRoot}'`,
+        `checkout mismatch: client belongs to '${canonicalRoot(claimedRoot)}', server belongs to '${ctx.repoRoot}'`,
       );
     }
     if (method !== "GET" && method !== "HEAD") {
@@ -702,7 +722,7 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           const target = findRunScorecard(ctx, runId);
           if (target === null || !fs.existsSync(target)) throw new NotFoundError(`run not found: ${runId}`);
           const next = new ViewerState(ctx, target);
-          if (stateDirOverride !== null) next.setStateDir(path.join(stateDirOverride, next.runId));
+          if (stateDirOverride !== null) next.setStateDir(stateDirFor(stateDirOverride, next.runId));
           state = next;
           return sendJson(res, config());
         }
@@ -764,11 +784,22 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           if (!skills.length) {
             throw new ConflictError("the current focus contains no skills with optimization scenarios");
           }
+          // An external --state-dir puts focus.json outside the repository,
+          // which the launch validation rightly refuses (the path becomes
+          // subprocess argv). Mirror it into the gitignored artifacts tree so
+          // the argv stays repo-contained.
+          let focusRel = repoRelative(focused.focusPath);
+          if (path.isAbsolute(focusRel)) {
+            const contained = fromRepoRoot("evaluation", "artifacts", "state", focused.runId, "focus.json");
+            fs.mkdirSync(path.dirname(contained), { recursive: true });
+            fs.copyFileSync(focused.focusPath, contained);
+            focusRel = repoRelative(contained);
+          }
           try {
             return sendJson(
               res,
               liveData.launchOptimization(ctx, {
-                focus_path: repoRelative(focused.focusPath),
+                focus_path: focusRel,
                 skills,
                 concurrency: payload.concurrency,
               }),
