@@ -64,7 +64,9 @@ jobs:
     # workflow-safety.sh rule 5 enforces this exact shape: a blocking lane may name
     # RUNNER_LABELS only on a line that also carries the head.repo.fork guard.
     runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
-    timeout-minutes: 10
+    # The self-hosted pool may spend 10+ minutes provisioning Node/npm on a
+    # cold ephemeral runner before this gate's ~3 seconds of compute begins.
+    timeout-minutes: 20
 
     steps:
       - name: Check out
@@ -99,31 +101,22 @@ jobs:
       - name: Run deterministic gate
         run: bash .github/scripts/gate.sh
 
-      # `score` already emits scorecard.md with result, deterministic result,
-      # overall score, threshold, commit, run id, and the category table. Use it.
+      # gate.sh always emits summary.md, including fail-fast paths before the
+      # evaluation scorecard exists. The compact summary is intentionally the
+      # presentation layer; exhaustive scorecard.md/json and skill-contract.json
+      # remain downloadable in the artifact instead of flooding this page.
       - name: Publish scorecard to job summary
         if: always()
         run: |
-          {
-            echo "## Deterministic scorecard"
-            echo
-            if [ -f "$SCORECARD_DIR/scorecard.md" ]; then
-              cat "$SCORECARD_DIR/scorecard.md"
-            else
-              echo "_No scorecard produced: the run failed before scoring._"
-            fi
-            if [ -f "$SCORECARD_DIR/fixture-verification.json" ]; then
-              # HTML rather than a fenced block: step summaries render HTML, and
-              # this keeps the workflow free of literal backticks.
+          if [ -f "$SCORECARD_DIR/summary.md" ]; then
+            cat "$SCORECARD_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "# ⚠️ Deterministic Gate Summary Unavailable"
               echo
-              echo "<details><summary>Fixture expectations</summary>"
-              echo
-              echo "<pre>"
-              cat "$SCORECARD_DIR/fixture-verification.json"
-              echo "</pre>"
-              echo "</details>"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+              echo "The run stopped before the gate could render its native scorecard. Read the step log above."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # Uploaded even on failure: `score` writes the scorecard BEFORE
       # schema-validating it, so the exit-2 case still produced the file that
@@ -160,7 +153,9 @@ jobs:
     # reports the console half. That is why the root scripts are not used in CI.
     # Fork-guarded pool routing; see the deterministic-evals job for the rationale.
     runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
-    timeout-minutes: 10
+    # Match deterministic-evals: both jobs use setup-eval and can land on a
+    # cold ephemeral runner whose toolchain provisioning exceeds 10 minutes.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

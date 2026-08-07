@@ -58,6 +58,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { writeJsonSorted } from "../lib/json.js";
 import { fromRepoRoot, listDirs, repoRelative } from "../lib/paths.js";
 
 /** One failed rule against one skill. */
@@ -399,6 +400,51 @@ export function skillViolations(skill: string, text: string, options: SkillContr
 export interface CheckSkillsOptions {
   /** 'all' or a comma-separated list of skill ids. */
   skills?: string;
+  /** Optional machine-readable report path for CI summaries and artifacts. */
+  output?: string;
+}
+
+export interface SkillCheckReport {
+  schema_version: "1.0";
+  result: "pass" | "fail" | "error";
+  checked_skills: string[];
+  checked_skill_count: number;
+  registry_symbol_count: number | null;
+  affected_skills: string[];
+  violation_count: number;
+  violations_by_rule: Record<string, number>;
+  violations: SkillViolation[];
+  setup_error: string | null;
+}
+
+/** Stable report shape consumed by the native GitHub Actions scorecard. */
+export function buildSkillCheckReport(
+  selected: string[],
+  registrySymbolCount: number | null,
+  violations: SkillViolation[],
+  setupError: string | null = null,
+): SkillCheckReport {
+  const byRule: Record<string, number> = {};
+  for (const violation of violations) byRule[violation.rule] = (byRule[violation.rule] ?? 0) + 1;
+  return {
+    schema_version: "1.0",
+    result: setupError !== null ? "error" : violations.length ? "fail" : "pass",
+    checked_skills: [...selected].sort(),
+    checked_skill_count: selected.length,
+    registry_symbol_count: registrySymbolCount,
+    affected_skills: [...new Set(violations.map((violation) => violation.skill))].sort(),
+    violation_count: violations.length,
+    violations_by_rule: Object.fromEntries(Object.entries(byRule).sort(([a], [b]) => a.localeCompare(b))),
+    violations,
+    setup_error: setupError,
+  };
+}
+
+function writeReport(output: string | undefined, report: SkillCheckReport): void {
+  if (!output) return;
+  const outPath = path.resolve(output);
+  writeJsonSorted(outPath, report);
+  console.log(`[check skills] wrote ${repoRelative(outPath)}`);
 }
 
 /** Resolve `--skills`, rejecting an unknown id rather than checking nothing. */
@@ -436,6 +482,7 @@ export async function checkSkillsCommand(options: CheckSkillsOptions): Promise<n
   } catch (exc: any) {
     if (exc instanceof SkillCheckSetupError) {
       console.error(`[check skills] SETUP ERROR: ${exc.message}`);
+      writeReport(options.output, buildSkillCheckReport([], null, [], exc.message));
       return 2;
     }
     throw exc;
@@ -462,6 +509,8 @@ export async function checkSkillsCommand(options: CheckSkillsOptions): Promise<n
       });
     }
   }
+
+  writeReport(options.output, buildSkillCheckReport(selected, registry.size, violations));
 
   if (violations.length) {
     console.error(`[check skills] FAIL: ${violations.length} contract violation(s) across ${selected.length} skill(s):`);

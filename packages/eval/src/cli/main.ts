@@ -521,6 +521,7 @@ check
   .command("skills")
   .description("Enforce the skill contract over skills/<id>/SKILL.md (frontmatter, code fences, CesiumJS symbols).")
   .option("--skills <list>", "'all' or comma-separated skill ids", "all")
+  .option("--output <path>", "write a machine-readable skill-contract report")
   .action((options) =>
     run(async () => {
       const { checkSkillsCommand } = await import("../commands/checkSkills.js");

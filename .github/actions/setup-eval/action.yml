@@ -11,7 +11,9 @@ runs:
       uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
       with:
         node-version-file: .nvmrc
-        cache: npm
+        # Deliberately uncached. This workspace has only 119 locked packages,
+        # while cache restore/save on the ephemeral self-hosted pool has taken
+        # 8-14 minutes and can outlive the build and tests it is meant to speed up.
 
     - name: Install workspace dependencies
       shell: bash

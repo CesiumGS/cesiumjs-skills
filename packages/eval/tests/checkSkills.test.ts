@@ -18,6 +18,7 @@ import { fromRepoRoot, listDirs } from "../src/lib/paths.js";
 import {
   MIN_REGISTRY_SYMBOLS,
   SkillCheckSetupError,
+  buildSkillCheckReport,
   type SkillContractOptions,
   type SyntaxChecker,
   javascriptFences,
@@ -194,6 +195,26 @@ describe("skill contract rules", () => {
 });
 
 describe("helpers", () => {
+  it("builds a stable machine-readable report for CI summaries", () => {
+    const violations = [
+      { skill: "b", file: "skills/b/SKILL.md", rule: "title", detail: "missing" },
+      { skill: "a", file: "skills/a/SKILL.md", rule: "description", detail: "empty" },
+      { skill: "b", file: "skills/b/SKILL.md", rule: "description", detail: "empty" },
+    ];
+    expect(buildSkillCheckReport(["b", "a"], 551, violations)).toEqual({
+      schema_version: "1.0",
+      result: "fail",
+      checked_skills: ["a", "b"],
+      checked_skill_count: 2,
+      registry_symbol_count: 551,
+      affected_skills: ["a", "b"],
+      violation_count: 3,
+      violations_by_rule: { description: 2, title: 1 },
+      violations,
+      setup_error: null,
+    });
+  });
+
   it("extracts symbols from both documented styles", () => {
     const found = referencedSymbols(
       'import { Cartesian3, Color as C } from "cesium";\nCesium.Viewer;\nviewer.camera.flyTo();',
