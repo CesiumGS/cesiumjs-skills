@@ -414,7 +414,7 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
   let judgedCount = 0;
 
   if (options.visualReview) {
-    visualReview = readJson(options.visualReview);
+    visualReview = readJson(fromRepoRoot(options.visualReview));
     visualReview!.schema_version ??= "1.0";
     visualReview!.reviewer ??= "screenshot-visual-judge";
     visualReview!.run_id ??= runId;
