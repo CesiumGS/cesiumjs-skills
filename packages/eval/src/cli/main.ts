@@ -135,6 +135,20 @@ program
   );
 
 program
+  .command("render-baselines")
+  .description("Render each skill's archived baseline code into screenshots the visual audit can judge (Ion token optional).")
+  .option("--skills <list>", "'all' or comma-separated skill ids", "all")
+  .option("--out <dir>", "output root (repo-relative)", "evaluation/artifacts/baselines")
+  .option("--only <list>", "comma-separated case ids to render")
+  .option("--force", "re-render even if a screenshot already exists")
+  .action((options) =>
+    run(async () => {
+      const { renderBaselinesCommand } = await import("../commands/renderBaselines.js");
+      return renderBaselinesCommand(ctx(), options);
+    }),
+  );
+
+program
   .command("adapter <action>")
   .description("Protocol adapter (LiteLLM) lifecycle: init | start | stop | status. Ships orchestration, not the binary — runs pinned via uvx.")
   .action((action) =>

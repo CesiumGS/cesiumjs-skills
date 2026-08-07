@@ -241,6 +241,10 @@ function visualSummary(cases: Array<Record<string, any>>, visualReviewSupplied: 
 
   let result: string;
   if (!visualReviewSupplied && requiredCount === 0) result = "not_required";
+  // The judge ran but reviewed nothing: every case fell back to not_reviewed
+  // because no baseline screenshot was found. That is a vacuous run, not a
+  // pass — a study that looked at zero screenshots must never read as green.
+  else if (visualReviewSupplied && cases.length > 0 && reviewedCount === 0) result = "not_run";
   else if (blockingFailures.length) result = "fail";
   else if (statusCounts.fail || statusCounts.needs_review) result = "needs_review";
   else result = "pass";
@@ -410,8 +414,13 @@ export function buildScorecard(inputs: ScorecardInput[], options: BuildScorecard
 
   const deterministicResult = overall.score >= threshold && !criticalFailures.length ? "pass" : "fail";
   const visualResult = summary.result;
-  const overallResult =
-    deterministicResult === "pass" && (visualResult === "pass" || visualResult === "not_required") ? "pass" : "fail";
+  // "incomplete" is distinct from "fail": deterministic passed, but the visual
+  // lane was requested and never actually ran (no screenshots to judge). It
+  // must not read as a green pass, and it is not a red failure either.
+  let overallResult: string;
+  if (deterministicResult === "pass" && (visualResult === "pass" || visualResult === "not_required")) overallResult = "pass";
+  else if (deterministicResult === "pass" && visualResult === "not_run") overallResult = "incomplete";
+  else overallResult = "fail";
 
   const artifactsOut: Record<string, any> = { ...(options.artifacts ?? {}) };
   if (options.harnessJudge && artifactsOut.harness_judge === undefined) artifactsOut.harness_judge = options.harnessJudge;
