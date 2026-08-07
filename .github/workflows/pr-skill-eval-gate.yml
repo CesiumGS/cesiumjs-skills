@@ -223,6 +223,12 @@ jobs:
     permissions:
       actions: read
       contents: read
+    env:
+      # loadContext normally reads a developer .env when present. Define both
+      # names as empty before Node starts so even an unexpectedly preconfigured
+      # runner cannot inject an Ion credential into untrusted browser output.
+      CESIUM_ION_TOKEN: ""
+      CESIUM_ACCESS_TOKEN: ""
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
