@@ -1,0 +1,147 @@
+name: Set up agent harness
+description: >-
+  Install an agent CLI and write its credential to the path the CLI actually
+  reads. Consumes a secret; never use this in a lane reachable by a fork.
+
+# WHY THIS EXISTS
+#
+# Two workflows already passed OPENCODE_AUTH_CONTENT into the environment and
+# checked that it was non-empty, and a third would have done the same for codex.
+# Nothing anywhere ever wrote it to disk. Neither CLI reads its credential from
+# the environment: codex reads $CODEX_HOME/auth.json (default ~/.codex), and
+# opencode reads ~/.local/share/opencode/auth.json. So the secret was validated,
+# logged as present, and then ignored, and every live lane would have failed at
+# the first model call with an authentication error that named nothing.
+#
+# The materialization belongs here rather than in each workflow so there is one
+# place that knows each CLI's credential path.
+
+# WHY BOTH CREDENTIALS ARE SEPARATE INPUTS
+#
+# The callers choose their harness at runtime from an input or a repository
+# variable, so the obvious single-input form is a ternary:
+#
+#   auth-content: ${{ env.AGENT_HARNESS == 'codex' && secrets.CODEX_AUTH_CONTENT
+#                     || secrets.OPENCODE_AUTH_CONTENT }}
+#
+# which is a trap. GitHub's `&&`/`||` returns the RIGHT operand whenever the left
+# is falsy, and an unset secret is the empty string, so a missing
+# CODEX_AUTH_CONTENT silently yields the OpenCode credential — written to
+# ~/.codex/auth.json, where it fails as a corrupt codex login rather than as the
+# missing secret it is. Passing both and selecting inside the action removes the
+# expression entirely.
+inputs:
+  harness:
+    description: "Agent CLI to install: codex or opencode"
+    required: true
+  codex-auth-content:
+    description: >-
+      Contents of ~/.codex/auth.json from a machine where `codex login` has run
+      (auth_mode "chatgpt" for the ChatGPT subscription route). Required when
+      harness is codex. Pass the secret directly; it is masked in logs and
+      written 0600.
+    required: false
+    default: ''
+  opencode-auth-content:
+    description: >-
+      Contents of ~/.local/share/opencode/auth.json. Required when harness is
+      opencode. Same handling as the codex credential.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Install the agent CLI
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness }}
+      run: |
+        set -euo pipefail
+        case "$HARNESS" in
+          codex)
+            npm install -g @openai/codex
+            codex --version
+            ;;
+          opencode)
+            npm install -g opencode-ai@latest
+            opencode --version
+            ;;
+          *)
+            echo "::error title=Unknown harness::'$HARNESS' is not one of: codex, opencode"
+            exit 1
+            ;;
+        esac
+
+    # The credential reaches the shell ONLY through the environment. Writing it
+    # as ${{ inputs.*-auth-content }} inside the run text would splice the value
+    # into a shell program, where a backtick or $(...) in a re-issued credential
+    # becomes a command; an environment variable is inert whatever it contains.
+    - name: Materialize the harness credential
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness }}
+        CODEX_AUTH_CONTENT_IN: ${{ inputs.codex-auth-content }}
+        OPENCODE_AUTH_CONTENT_IN: ${{ inputs.opencode-auth-content }}
+      run: |
+        set -euo pipefail
+        case "$HARNESS" in
+          codex)
+            auth_path="${CODEX_HOME:-$HOME/.codex}/auth.json"
+            AUTH_CONTENT="${CODEX_AUTH_CONTENT_IN:-}"
+            secret_name=CODEX_AUTH_CONTENT
+            ;;
+          opencode)
+            auth_path="$HOME/.local/share/opencode/auth.json"
+            AUTH_CONTENT="${OPENCODE_AUTH_CONTENT_IN:-}"
+            secret_name=OPENCODE_AUTH_CONTENT
+            ;;
+        esac
+        if [ -z "${AUTH_CONTENT:-}" ]; then
+          echo "::error title=Missing credential::harness is '$HARNESS' but no credential was supplied for it. Configure the ${secret_name} repository secret."
+          exit 1
+        fi
+        mkdir -p "$(dirname "$auth_path")"
+        # umask before creation, not chmod after: a chmod leaves a window in
+        # which the credential is world-readable on a shared runner.
+        (umask 077; printf '%s\n' "$AUTH_CONTENT" > "$auth_path")
+        echo "wrote $auth_path ($(wc -c < "$auth_path") bytes)"
+
+    # A credential that is present but malformed fails later, inside a model
+    # call, as an opaque harness error. Shape-check it here, where the message
+    # can name the secret that needs re-issuing. Only structure is inspected;
+    # no value is printed.
+    - name: Verify the credential is well-formed
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness }}
+      run: |
+        set -euo pipefail
+        case "$HARNESS" in
+          codex)   auth_path="${CODEX_HOME:-$HOME/.codex}/auth.json" ;;
+          opencode) auth_path="$HOME/.local/share/opencode/auth.json" ;;
+        esac
+        node -e '
+          const fs = require("node:fs");
+          const harness = process.env.HARNESS;
+          const target = process.argv[1];
+          let doc;
+          try {
+            doc = JSON.parse(fs.readFileSync(target, "utf-8"));
+          } catch (exc) {
+            console.log(`::error title=Credential is not JSON::${target} did not parse (${exc.message}). Re-copy the file verbatim into the secret.`);
+            process.exit(1);
+          }
+          if (harness === "codex") {
+            const tokens = doc.tokens ?? {};
+            const missing = ["access_token", "refresh_token"].filter((key) => !tokens[key]);
+            if (missing.length) {
+              console.log(`::error title=Codex credential incomplete::auth.json has no ${missing.join(", ")}. Re-run "codex login" and copy the fresh ~/.codex/auth.json.`);
+              process.exit(1);
+            }
+            console.log(`codex credential OK (auth_mode=${doc.auth_mode ?? "unset"})`);
+          } else if (!Object.keys(doc).length) {
+            console.log("::error title=OpenCode credential empty::auth.json parsed to an empty object.");
+            process.exit(1);
+          }
+        ' "$auth_path"

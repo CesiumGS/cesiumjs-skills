@@ -231,17 +231,89 @@ screenshots and the deterministic lane reads `console.json` and
 not a usable baseline. `--out <dir>` writes the same layout elsewhere (it must
 stay inside the repository — the eval page is served from the repo root) and is
 what `audit --bundle-root <dir>` then reads. Local fan-out helpers can run the
-same judge module across all baselines concurrently; CI
-(`.github/workflows/baseline-audit.yml`) runs the deterministic lane as a blocking
-PR gate and the qualitative lane nightly (rendering baselines first).
+same judge module across all baselines concurrently; in CI the blocking
+deterministic gate is `.github/workflows/pr-gate.yml`, the per-skill live lane is
+`.github/workflows/skill-eval.yml`, and `.github/workflows/baseline-audit.yml`
+runs the qualitative lane nightly (rendering baselines first).
+
+## What Happens When a Skill Changes
+
+A skill file is a prompt, so editing its wording changes program behaviour. Two
+lanes answer two different questions about that edit, and both run automatically
+on the pull request.
+
+**Tier 1 — the skill contract (hermetic, blocking, free).** `cesium-eval check
+skills` reads `skills/<id>/SKILL.md` directly and decides what can be decided by
+reading it: frontmatter shape, `name` matching the directory, a description that
+still carries its `Use when ...` activation clause and stays inside the length
+limit, an H1, every ```js fence parsing as JavaScript, and every referenced
+CesiumJS symbol existing in `wiki/Domain-Mapping.md`. It also fails when a domain
+skill no longer documents a single symbol it owns, or when live scenarios outlive
+the skill they belong to.
+
+It runs inside `.github/scripts/gate.sh`, so it is part of the required `gate`
+check on every pull request including forks, needs no credentials, and takes
+milliseconds. It is unscoped on purpose: checking all fifteen skills is cheaper
+than working out which ones to check.
+
+```bash
+node packages/eval/bin/cesium-eval.js check skills
+node packages/eval/bin/cesium-eval.js check skills --skills cesiumjs-camera
+```
+
+**Tier 2 — the live lane (`skill-eval.yml`, blocking, costs money).** For each
+skill the pull request touched, it re-runs the real path: the edited `SKILL.md`
+goes into the codegen system prompt, the returned code renders in headless
+Chromium, and the fresh bundles are scored by the same deterministic checks the
+nightly audit uses.
+
+```bash
+node packages/eval/bin/cesium-eval.js render-baselines \
+  --skills cesiumjs-primitives --force --regenerate \
+  --codegen-harness codex --out evaluation/artifacts/skill-eval
+node packages/eval/bin/cesium-eval.js audit \
+  --skills cesiumjs-primitives --no-judge \
+  --bundle-root evaluation/artifacts/skill-eval
+```
+
+`--no-judge` is deliberate: this lane must never fail on a matter of taste, so
+the visual panel stays in the nightly advisory lane and a red here is always
+mechanical — a required API missing from the generated code, a forbidden one
+present, or the page throwing.
+
+Scope and limits worth knowing before relying on it:
+
+- Only skills with `optimization/scenarios/<id>/` are evaluated live; that
+  directory is the work list. A skill without scenarios (the orientation skill,
+  or a new domain whose scenarios have not landed) is covered by Tier 1 only.
+- It needs `CODEX_AUTH_CONTENT`, so it cannot run on a fork pull request. Forks
+  get a loud "did not run" notice in the job summary; a maintainer should
+  dispatch the lane before merging such a change.
+- `CESIUM_ION_TOKEN` is optional. The public scenario suite is built to render
+  without ion entitlements.
+- There is a model in the loop, which makes this lane specific rather than
+  sensitive. A wording change that genuinely misdirects an agent — a wrong
+  deprecation notice, a removed constraint, guidance contradicting a scenario —
+  shows up as failed `pattern_present` / `pattern_absent` / runtime-health
+  checks. A subtly wrong aside often does not: a strong codegen model follows
+  the scenario prompt and ignores it. Tier 1 exists because it does not have
+  this property.
 
 ## Local Validation
 
 ```bash
 node packages/eval/bin/cesium-eval.js validate --suite evaluation
+node packages/eval/bin/cesium-eval.js check skills
 node packages/eval/bin/cesium-eval.js score
 node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
 npm test --workspace @cesiumjs-skills/eval
+```
+
+Or run the whole blocking gate exactly as CI does, which includes all of the
+above except the audit:
+
+```bash
+npm run gate
 ```
 
 The current runner core accepts a case and a captured before/after evidence

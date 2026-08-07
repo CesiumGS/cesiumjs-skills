@@ -107,35 +107,28 @@ jobs:
       - name: Check canonical eval surface
         run: node packages/eval/bin/cesium-eval.js check canonical-surface
 
-      - name: Install agent CLI
-        env:
-          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-        run: |
-          if [ "$AGENT_HARNESS" = "codex" ]; then
-            npm install -g @openai/codex
-            codex --version
-          else
-            npm install -g opencode-ai@latest
-            opencode --version
-          fi
+      # Installs the CLI AND writes its credential where the CLI reads it. The
+      # previous form did the first half only: it asserted OPENCODE_AUTH_CONTENT
+      # was non-empty and never wrote ~/.local/share/opencode/auth.json, so this
+      # lane would have reached its first model call unauthenticated. The action
+      # also shape-checks the credential.
+      - uses: ./.github/actions/setup-agent-harness
+        with:
+          harness: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          codex-auth-content: ${{ secrets.CODEX_AUTH_CONTENT }}
+          opencode-auth-content: ${{ secrets.OPENCODE_AUTH_CONTENT }}
 
       - uses: ./.github/actions/install-gitleaks
 
-      - name: Validate environment secrets
+      - name: Validate the Ion token
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
-          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
         run: |
           if [ -z "$CESIUM_ION_TOKEN" ]; then
             echo "::error title=Missing secret::CESIUM_ION_TOKEN is not configured for this repository."
             exit 1
           fi
-          if [ "$AGENT_HARNESS" = "opencode" ] && [ -z "$OPENCODE_AUTH_CONTENT" ]; then
-            echo "::error title=Missing secret::OPENCODE_AUTH_CONTENT is not configured for this repository."
-            exit 1
-          fi
-          echo "Required Cesium and agent harness secrets are present"
+          echo "CESIUM_ION_TOKEN is present"
 
       # Dispatch-only, so the inputs are always present and always from the
       # choice/string enums declared above. The old "determine skill" step

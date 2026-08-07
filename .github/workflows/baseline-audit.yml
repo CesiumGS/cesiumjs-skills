@@ -71,12 +71,19 @@ jobs:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
           AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
           OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+          CODEX_AUTH_CONTENT: ${{ secrets.CODEX_AUTH_CONTENT }}
         run: |
           missing=()
           [ -n "$CESIUM_ION_TOKEN" ] || missing+=(CESIUM_ION_TOKEN)
-          if [ "$AGENT_HARNESS" = "opencode" ] && [ -z "$OPENCODE_AUTH_CONTENT" ]; then
-            missing+=(OPENCODE_AUTH_CONTENT)
-          fi
+          # Whichever harness this run selected must have ITS credential. The
+          # earlier form only knew about opencode, so a codex run with no
+          # CODEX_AUTH_CONTENT passed preflight and then failed downstream —
+          # the permanently-red-nightly failure mode this job exists to prevent,
+          # reintroduced through the other harness.
+          case "$AGENT_HARNESS" in
+            opencode) [ -n "$OPENCODE_AUTH_CONTENT" ] || missing+=(OPENCODE_AUTH_CONTENT) ;;
+            codex)    [ -n "$CODEX_AUTH_CONTENT" ] || missing+=(CODEX_AUTH_CONTENT) ;;
+          esac
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             {
@@ -120,29 +127,24 @@ jobs:
       - run: |
           npm run build --workspace @cesiumjs-skills/eval
           npx playwright install --with-deps chromium
-      - name: Install agent CLI
-        env:
-          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-        run: |
-          if [ "$AGENT_HARNESS" = "codex" ]; then
-            npm install -g @openai/codex
-            codex --version
-          else
-            npm install -g opencode-ai@latest
-            opencode --version
-          fi
+      # Installs the CLI AND writes its credential to the path the CLI reads.
+      # This step used to install the binary and separately assert the secret was
+      # non-empty, which is not the same thing: nothing ever wrote
+      # ~/.local/share/opencode/auth.json, and opencode does not read its
+      # credential from the environment, so this lane reached its first model
+      # call unauthenticated. The action also shape-checks the credential, which
+      # is what the old "Validate secrets" step was reaching for.
+      - uses: ./.github/actions/setup-agent-harness
+        with:
+          harness: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
+          codex-auth-content: ${{ secrets.CODEX_AUTH_CONTENT }}
+          opencode-auth-content: ${{ secrets.OPENCODE_AUTH_CONTENT }}
       - uses: ./.github/actions/install-gitleaks
-      - name: Validate secrets
+      - name: Validate the Ion token
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
-          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
         run: |
           test -n "$CESIUM_ION_TOKEN" || { echo "CESIUM_ION_TOKEN missing"; exit 1; }
-          if [ "$AGENT_HARNESS" = "opencode" ] && [ -z "$OPENCODE_AUTH_CONTENT" ]; then
-            echo "OPENCODE_AUTH_CONTENT OpenAI auth secret missing"
-            exit 1
-          fi
       # `render-baselines` is the purpose-built command for exactly this step: it
       # renders the current scenario baselines into the bundle layout that
       # `audit --bundle-root` reads, and it writes only under the gitignored

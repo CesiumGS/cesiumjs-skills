@@ -52,6 +52,31 @@ step "validate optimization scenario manifests"
   "Scenario manifest drift" \
   "A tracked scenario manifest changed without rebaselining, or optimization/results/public-status.json counts disagree with the manifests. The validator printed the exact remediation command above; run it locally and commit the result. Never run it in CI." 1
 
+# --- skill contract ---------------------------------------------------------
+# The only step in this gate that reads skills/<id>/SKILL.md. Without it, a pull
+# request that rewrites a skill is indistinguishable from one that changes
+# nothing: every other step here grades fixtures, manifests or the repository
+# layout, so the gate went green because it was never looking at the thing the
+# change touched.
+#
+# Unscoped by design. Checking all fifteen skills is milliseconds, and a
+# --skills filter derived from the diff would mean a rename that orphans a
+# scenario is missed precisely when it is introduced.
+#
+# The semantic half of the question — does the edited wording still make an
+# agent produce working code — is not decidable here. That runs in
+# skill-eval.yml, which needs credentials this lane must never hold.
+step "check the skill contract"
+"${CESIUM_EVAL[@]}" check skills
+skills_code=$?
+case "$skills_code" in
+  0) ;;
+  1) fail "Skill contract violation" \
+       "A skill file broke its contract: frontmatter, activation clause, code-fence syntax, or a CesiumJS symbol that does not exist. Each violation is annotated on its file above." 1 ;;
+  *) fail "Skill contract could not be checked" \
+       "check skills exited $skills_code (bad --skills, missing skills root, or an unreadable/under-parsed wiki/Domain-Mapping.md). This is a pipeline bug, not a skill regression." 2 ;;
+esac
+
 # --- unit tests -------------------------------------------------------------
 step "unit tests (eval CLI)"
 npm test --workspace @cesiumjs-skills/eval \

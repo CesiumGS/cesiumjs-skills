@@ -518,6 +518,18 @@ check
   );
 
 check
+  .command("skills")
+  .description("Enforce the skill contract over skills/<id>/SKILL.md (frontmatter, code fences, CesiumJS symbols).")
+  .option("--skills <list>", "'all' or comma-separated skill ids", "all")
+  .action((options) =>
+    run(async () => {
+      const { checkSkillsCommand } = await import("../commands/checkSkills.js");
+      ctx(); // resolve repo root early for clear errors
+      return checkSkillsCommand(options);
+    }),
+  );
+
+check
   .command("canonical-surface")
   .description("Ensure active eval work stays under optimization/ and evaluation/.")
   .action(() =>

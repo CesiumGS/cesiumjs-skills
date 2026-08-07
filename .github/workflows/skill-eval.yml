@@ -1,0 +1,349 @@
+name: Skill Eval (live)
+
+# The lane that answers the question a wording change actually raises: does an
+# agent reading the EDITED skill still produce code that works?
+#
+# It is not answerable from the diff. The skill is a prompt; its effect is
+# whatever a model does with it. So this lane re-runs the real path for exactly
+# the skills the pull request touched — feed the edited SKILL.md to the codegen
+# harness, render what comes back in a headless browser, and score the result
+# with the same deterministic checks the nightly audit uses. No visual judge:
+# `--no-judge` keeps this lane free of the one part of the audit that is a
+# matter of taste, so a red here is always a mechanical failure.
+#
+# What it costs: one model call and one browser render per scenario of each
+# changed skill (4-15 scenarios per skill). That is why it is scoped to changed
+# skills and why the hermetic half of the contract lives in pr-gate.yml instead,
+# where it runs on every pull request for free.
+#
+# NO path: filter, for the reason pr-gate.yml documents at length: GitHub never
+# reports a conclusion for a skipped workflow, so a path-filtered workflow can
+# never be a required status check. Filtering happens in the `discover` job,
+# which always runs and always reports, and the `skill-eval` job aggregates.
+# That job is the one to name in branch protection.
+on:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+    inputs:
+      skills:
+        description: "Skills to evaluate ('changed' uses the diff, or a comma-separated list)"
+        required: false
+        default: 'changed'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Superseded pushes are cancelled: this lane spends money per run, and the
+  # result of a run against an overwritten head is worth nothing.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  discover:
+    name: Discover changed skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      skills: ${{ steps.detect.outputs.skills }}
+      count: ${{ steps.detect.outputs.count }}
+      eligible: ${{ steps.eligibility.outputs.eligible }}
+      reason: ${{ steps.eligibility.outputs.reason }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The whole job is a diff between two commits; a shallow clone cannot
+          # resolve the base.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect changed skills
+        id: detect
+        env:
+          # For a pull request the base SHA is the tip of the target branch as
+          # GitHub resolved it, which is what the merge result will contain.
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          REQUESTED: ${{ github.event.inputs.skills || 'changed' }}
+        run: |
+          # +e, not the default -e: this step inspects an exit code and reports
+          # it. Under -e the shell dies at the failing command, `status=$?` never
+          # runs, and the annotation that names the failure is never printed.
+          set +e
+          set -uo pipefail
+          if [ "$REQUESTED" != "changed" ]; then
+            skills="$REQUESTED"
+            echo "explicitly requested: $skills"
+          elif [ -z "${BASE_SHA:-}" ]; then
+            # workflow_dispatch on a branch, with no diff to take.
+            skills=""
+            echo "::notice title=No base commit::Nothing to diff against; dispatch with an explicit skills list to force a run."
+          else
+            list=$(bash .github/scripts/changed-skills.sh "$BASE_SHA" "$HEAD_SHA")
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              echo "::error title=Skill detection failed::changed-skills.sh exited $status"
+              exit 1
+            fi
+            skills=$(printf '%s' "$list" | paste -sd, -)
+          fi
+          count=0
+          [ -n "$skills" ] && count=$(printf '%s' "$skills" | tr ',' '\n' | grep -c .)
+          echo "skills=$skills" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Skill eval scope"
+            echo
+            if [ "$count" -eq 0 ]; then
+              echo "No skill directories changed. The live lane has nothing to evaluate."
+            else
+              echo "Changed skills ($count):"
+              echo
+              printf '%s' "$skills" | tr ',' '\n' | sed 's/^/- `/; s/$/`/'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Not a cap, a warning. Silently trimming the list would report a
+          # green lane that covered a fraction of the change.
+          if [ "$count" -gt 5 ]; then
+            echo "::warning title=Large skill-eval run::$count skills changed; this run renders every scenario of each one and will take a while."
+          fi
+
+      # Three independent reasons this lane can be unable to run. All of them are
+      # facts about the run rather than evaluation results, and none of them may
+      # masquerade as a passing evaluation.
+      - name: Check eligibility
+        id: eligibility
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPO: ${{ github.repository }}
+          HAS_CODEX_AUTH: ${{ secrets.CODEX_AUTH_CONTENT != '' }}
+        run: |
+          set -uo pipefail
+          eligible=true
+          reason=""
+          if [ "$EVENT_NAME" = "merge_group" ]; then
+            # A merge_group payload carries no pull_request, so HEAD_REPO is
+            # empty and the fork test below cannot distinguish a queued fork
+            # contribution from a maintainer's own branch. Since the merge
+            # commit contains the contributor's code, an eligible merge_group
+            # run would hand a fork the Codex credential and a self-hosted
+            # runner — the exact exposure the fork test exists to prevent, via
+            # the one event where the test is blind.
+            #
+            # Refusing outright costs nothing real: a same-repo pull request has
+            # already had this lane run against the identical head, and a fork
+            # pull request was never eligible in the first place. The job still
+            # reports a conclusion, so a merge queue that requires `skill-eval`
+            # does not stall.
+            eligible=false
+            reason="merge_group runs cannot establish who authored the queued change; the live lane runs on the pull request itself"
+          elif [ -n "${HEAD_REPO:-}" ] && [ "$HEAD_REPO" != "$THIS_REPO" ]; then
+            eligible=false
+            reason="fork pull request: repository secrets are not available to it"
+          elif [ "$HAS_CODEX_AUTH" != "true" ]; then
+            eligible=false
+            reason="the CODEX_AUTH_CONTENT repository secret is not configured"
+          fi
+          echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          if [ "$eligible" != "true" ]; then
+            echo "::notice title=Live skill eval will not run::$reason"
+            {
+              echo
+              echo "> **The live lane did not run:** $reason"
+              echo ">"
+              echo "> The hermetic skill contract in \`PR Gate\` still ran and still blocks."
+              echo "> Before merging a skill change that skipped this lane, a maintainer should"
+              echo "> dispatch **Skill Eval (live)** with an explicit skills list."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  live:
+    name: Live eval (${{ needs.discover.outputs.skills }})
+    needs: discover
+    if: needs.discover.outputs.count != '0' && needs.discover.outputs.eligible == 'true'
+    # Routed to the self-hosted pool when one is configured: this is the
+    # expensive job, and the `if:` above has already excluded every fork, so no
+    # untrusted head ref can reach a persistent runner through this lane. The
+    # first step re-asserts that independently, so a future edit to the
+    # condition cannot quietly re-open it.
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 120
+    env:
+      # render-baselines --out and audit --bundle-root must be given the same
+      # value: one writes the layout the other reads. Under the gitignored
+      # evaluation/artifacts/ tree, so nothing tracked is ever touched.
+      BUNDLE_ROOT: evaluation/artifacts/skill-eval
+      SCORECARD_DIR: evaluation/artifacts/skill-eval-scorecard
+    steps:
+      # Independent of the job's `if:` and of the discover job's eligibility
+      # output, because both are one edit away from being wrong and this job
+      # holds a credential and may run on a persistent shared runner. It refuses
+      # anything it cannot positively identify as this repository's own code.
+      - name: Re-assert the head is trusted
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPO: ${{ github.repository }}
+        run: |
+          if [ "$EVENT_NAME" = "merge_group" ]; then
+            echo "::error title=Refusing to run::merge_group carries no pull_request, so the author of the queued change cannot be established here."
+            exit 1
+          fi
+          if [ -n "${HEAD_REPO:-}" ] && [ "$HEAD_REPO" != "$THIS_REPO" ]; then
+            echo "::error title=Refusing to run::head repo '$HEAD_REPO' is not '$THIS_REPO'; this job holds secrets and may run on a self-hosted runner."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          # Nothing here performs an authenticated git operation, and the agent
+          # CLI runs in this same job with the workspace readable.
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-eval
+
+      - name: Build eval CLI and install Chromium
+        run: |
+          npm run build --workspace @cesiumjs-skills/eval
+          npx playwright install --with-deps chromium
+
+      - uses: ./.github/actions/setup-agent-harness
+        with:
+          harness: codex
+          codex-auth-content: ${{ secrets.CODEX_AUTH_CONTENT }}
+
+      # Generate from the EDITED skill, then render. The skill file is read at
+      # codegen time and hashed into the meta sidecar, so the scorecard records
+      # which wording produced the code it scored.
+      #
+      # CESIUM_ION_TOKEN is optional by design: the public scenario suite is
+      # built to render without ion entitlements. When the secret is configured
+      # the ion-dependent scenery renders faithfully; when it is not, the run is
+      # still valid.
+      - name: Render baselines from the changed skills
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          SKILLS: ${{ needs.discover.outputs.skills }}
+        run: |
+          node packages/eval/bin/cesium-eval.js render-baselines \
+            --skills "$SKILLS" \
+            --codegen-harness codex \
+            --force \
+            --regenerate \
+            --out "$BUNDLE_ROOT"
+
+      # The assertion. `audit` exits 1 when the scorecard is below the threshold
+      # in eval.config.json or a critical check failed, and 2 when it could not
+      # produce a valid scorecard at all. The two are kept apart: an eval
+      # regression is the finding, a pipeline bug is not.
+      - name: Deterministic audit of the fresh bundles
+        id: audit
+        env:
+          SKILLS: ${{ needs.discover.outputs.skills }}
+        run: |
+          # +e for the same reason as the detect step: the three-state exit
+          # contract is the point, and -e would collapse it into "the step
+          # failed" with no annotation distinguishing a regression from a bug.
+          set +e
+          set -uo pipefail
+          node packages/eval/bin/cesium-eval.js audit \
+            --skills "$SKILLS" \
+            --no-judge \
+            --codegen-harness codex \
+            --bundle-root "$BUNDLE_ROOT" \
+            --output-dir "$SCORECARD_DIR"
+          code=$?
+          case "$code" in
+            0) echo "::notice title=Skill eval passed::deterministic checks pass for $SKILLS" ;;
+            1) echo "::error title=Skill eval regression::A deterministic check failed for $SKILLS after this change. Read the scorecard in the job summary." ;;
+            *) echo "::error title=Skill eval could not run::audit exited $code (usage error or a scorecard that failed its own schema)." ;;
+          esac
+          exit "$code"
+
+      - name: Publish scorecard to the job summary
+        if: always()
+        run: |
+          {
+            echo "## Live skill eval"
+            echo
+            if [ -f "$SCORECARD_DIR/scorecard.md" ]; then
+              cat "$SCORECARD_DIR/scorecard.md"
+            else
+              echo "_No scorecard produced: the run failed before scoring._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Same ordering as every other lane that uploads a bundle: delete the
+      # token-bearing HTML first, verify the delete worked, and only then
+      # upload. eval.html embeds CESIUM_ION_TOKEN when one is configured.
+      - name: Sanitize before upload
+        id: sanitize
+        if: always()
+        run: |
+          find "$BUNDLE_ROOT" "$SCORECARD_DIR" -name '*.html' -delete 2>/dev/null || true
+          node packages/eval/bin/cesium-eval.js check public-artifacts
+          if find "$BUNDLE_ROOT" "$SCORECARD_DIR" -name '*.html' 2>/dev/null | grep -q .; then
+            echo "::error title=Sanitization failed::HTML survived the delete pass; refusing to upload."
+            exit 1
+          fi
+
+      - name: Upload scorecard and evidence
+        if: always() && steps.sanitize.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: skill-eval-${{ github.run_id }}
+          path: |
+            evaluation/artifacts/skill-eval-scorecard/**
+            evaluation/artifacts/skill-eval/**/programmatic-checks.json
+            evaluation/artifacts/skill-eval/**/console.json
+            evaluation/artifacts/skill-eval/**/metadata.json
+            evaluation/artifacts/skill-eval/**/*.png
+          if-no-files-found: warn
+          retention-days: 14
+
+  skill-eval:
+    name: skill-eval
+    # THE aggregate. Branch protection names this job, so the lane can be
+    # restructured without an admin touching settings, and a PR that changes no
+    # skill still reports a conclusion instead of hanging on "Expected".
+    needs: [discover, live]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Aggregate
+        env:
+          R_DISCOVER: ${{ needs.discover.result }}
+          R_LIVE: ${{ needs.live.result }}
+          COUNT: ${{ needs.discover.outputs.count }}
+          ELIGIBLE: ${{ needs.discover.outputs.eligible }}
+          REASON: ${{ needs.discover.outputs.reason }}
+        run: |
+          if [ "$R_DISCOVER" != "success" ]; then
+            echo "::error title=Skill detection failed::discover job result was '$R_DISCOVER'"
+            exit 1
+          fi
+          if [ "${COUNT:-0}" = "0" ]; then
+            echo "no skill changed; nothing to evaluate"
+            exit 0
+          fi
+          if [ "$ELIGIBLE" != "true" ]; then
+            # Reported green, and reported loudly. A configuration gap is not an
+            # evaluation regression, and a permanently red lane trains people to
+            # ignore red. The job summary carries the same message.
+            echo "::warning title=Live skill eval skipped::$REASON. $COUNT changed skill(s) were NOT evaluated live."
+            exit 0
+          fi
+          if [ "$R_LIVE" != "success" ]; then
+            echo "::error title=Live skill eval failed::live job result was '$R_LIVE'"
+            exit 1
+          fi
+          echo "live skill eval passed for $COUNT changed skill(s)"

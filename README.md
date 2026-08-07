@@ -87,12 +87,30 @@ bash .github/scripts/workflow-safety.sh
 ```
 
 `npm run gate` is the same script CI runs (`.github/scripts/gate.sh`): build,
-both manifest suites, the unit tests, the deterministic scorecard, and
-`verify-fixtures`, which asserts that every tracked fixture still produces the
-result it declares. The three commands after it cover the other two blocking
-jobs, and they are separate on purpose: a TypeScript error under
+both manifest suites, the skill contract, the unit tests, the deterministic
+scorecard, and `verify-fixtures`, which asserts that every tracked fixture still
+produces the result it declares. The three commands after it cover the other two
+blocking jobs, and they are separate on purpose: a TypeScript error under
 `apps/evaluation-console/src/` leaves `npm run gate` at exit 0 while the console
 job goes red.
+
+### Changing a skill
+
+Editing `skills/<id>/SKILL.md` changes agent behaviour, so it gets its own CI
+path on top of the gate above:
+
+- **`cesium-eval check skills`** runs inside the gate on every pull request. It
+  reads the skill file itself — frontmatter, the `Use when ...` activation
+  clause, code fences that must parse, and CesiumJS symbols that must exist in
+  [Domain Mapping](wiki/Domain-Mapping.md). Free, hermetic, works on forks.
+- **[`skill-eval.yml`](.github/workflows/skill-eval.yml)** re-runs the real path
+  for each changed skill that has scenarios: the edited wording goes into the
+  codegen prompt, the result renders in headless Chromium, and the deterministic
+  checks score it. Needs the `CODEX_AUTH_CONTENT` secret, so it does not run on
+  forks.
+
+See [ADR-0007](wiki/ADR-0007-Skill-Change-Evaluation.md) for why it is split in
+two and what each tier does not catch.
 
 Three parts of CI are not reproduced by the list above: `actionlint` (needs the
 pinned binary the workflow installs), the full-history `gitleaks` scan, and

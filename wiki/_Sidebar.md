@@ -26,6 +26,7 @@
 * [[ADR-0004: Browser Visual Evaluation|ADR-0004-Browser-Visual-Evaluation]]
 * [[ADR-0005: CI Trigger Policy|ADR-0005-CI-Trigger-Policy]]
 * [[ADR-0006: Public Artifact Policy|ADR-0006-Public-Artifact-Policy]]
+* [[ADR-0007: Skill Change Evaluation|ADR-0007-Skill-Change-Evaluation]]
 
 ## Repository
 
