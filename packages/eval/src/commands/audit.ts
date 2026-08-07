@@ -125,11 +125,14 @@ function evidenceFor(skill: string, scenario: Record<string, any>, bundleDir: st
   const scenarioId = String(scenario.id ?? "");
   const codePath = fromRepoRoot("optimization", "generated", skill, "baseline", `${scenarioId}.js`);
   const hasCode = fs.existsSync(codePath);
-  const errors = Array.isArray(consoleDoc?.errors)
-    ? consoleDoc!.errors
-    : bundleDir === null
+  // A bundle without parseable console evidence is an incomplete render, not a
+  // clean one — surface it as an error so the health checks cannot pass it.
+  const errors =
+    bundleDir === null
       ? ["baseline bundle not rendered (run the optimization loop or pass --bundle-root)"]
-      : [];
+      : !Array.isArray(consoleDoc?.errors)
+        ? ["console.json missing or unreadable in the rendered bundle; re-render the baseline"]
+        : consoleDoc!.errors;
   // summary.failed is 1 when the bundle is missing so the programmatic check
   // fails with a value mismatch instead of aborting on an unresolvable pointer.
   const summary = checksDoc?.summary ?? { total: 0, passed: 0, failed: 1, pass_rate: 0 };

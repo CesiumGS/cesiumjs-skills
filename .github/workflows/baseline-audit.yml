@@ -60,8 +60,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build --workspace @cesiumjs-skills/eval
-      - name: Validate evaluation cases and fixtures
-        run: node packages/eval/bin/cesium-eval.js validate --suite evaluation
+      - name: Validate evaluation and optimization manifests
+        run: node packages/eval/bin/cesium-eval.js validate --suite all
       - name: Unit tests (checks, scorecard, judges; CI-safe)
         run: npm test --workspace @cesiumjs-skills/eval
       - name: Public-artifact hygiene over tracked sources
