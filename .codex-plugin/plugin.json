@@ -1,0 +1,28 @@
+{
+  "name": "cesiumjs-skills",
+  "version": "0.3.0",
+  "description": "CesiumJS domain skills and browser-based iteration via Chrome DevTools.",
+  "author": {
+    "name": "CesiumGS",
+    "url": "https://github.com/CesiumGS"
+  },
+  "homepage": "https://github.com/CesiumGS/cesiumjs-skills",
+  "repository": "https://github.com/CesiumGS/cesiumjs-skills",
+  "license": "Apache-2.0",
+  "keywords": ["cesium", "cesiumjs", "3d", "geospatial", "gis", "maps"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "CesiumJS Skills",
+    "shortDescription": "Expert guidance for CesiumJS development",
+    "longDescription": "Build and verify CesiumJS applications with 14 domain skills and Chrome DevTools browser tooling.",
+    "developerName": "CesiumGS",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "defaultPrompt": [
+      "Build a CesiumJS scene using the appropriate domain skills.",
+      "Debug this CesiumJS app with the browser tooling.",
+      "Review this CesiumJS code for API and performance issues."
+    ]
+  }
+}
