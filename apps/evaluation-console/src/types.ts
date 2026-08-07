@@ -504,7 +504,10 @@ export interface HarnessSpec {
   id: string;
   name: string;
   binary: string;
+  /** Canonical provider id from the registry's providers[] (v2). */
   provider: string;
+  /** How calls are authed/billed: api_key | oauth_subscription | codex_subscription | broker_subscription | … */
+  credential_route?: string | null;
   provider_label: string;
   auth: string;
   multimodal: boolean;
@@ -512,11 +515,59 @@ export interface HarnessSpec {
   roles: string[];
   default_model: string;
   default_effort: string;
-  effort_mechanism: string;
+  effort_mechanism: string | null;
   catalog_source: string;
   catalog_as_of: string;
   defaults_source?: string;
   models: ModelSpec[];
+  quirks?: string[];
+  docs_url?: string;
+}
+
+// ---- harness health + binding probes (registry v2) ----
+
+export interface ProbeResultDTO {
+  probe_id: string;
+  harness: string;
+  requested: { model: string | null; variant: string | null };
+  verdict: "pass" | "pass_provider_unverified" | "fail_capability" | "attribution_mismatch" | "error";
+  latency_ms: number;
+  started_utc: string;
+  capability: { tool_use_asserted: boolean; error: string | null };
+  attribution: {
+    method: string | null;
+    observed: boolean;
+    provider: { value: string | null; raw: string | null; source: string };
+    model: { value: string | null; source: string };
+    credential_route: string | null;
+  };
+  binary: { path: string | null; version: string | null };
+}
+
+export interface HarnessHealthRow {
+  id: string;
+  name: string;
+  provider: string | null;
+  provider_label: string | null;
+  credential_route: string | null;
+  auth: string | null;
+  roles: string[];
+  multimodal: boolean;
+  vision_note: string | null;
+  default_model: string;
+  driver_registered: boolean;
+  available: boolean;
+  availability_error: string | null;
+  attribution_method: string | null;
+  attribution_observed_by_driver: boolean;
+  probe_timeout_ms: number | null;
+  quirks: string[];
+  docs_url: string | null;
+  last_probe: ProbeResultDTO | null;
+}
+
+export interface HarnessHealthDTO {
+  harnesses: HarnessHealthRow[];
 }
 
 export interface RegistryDTO {

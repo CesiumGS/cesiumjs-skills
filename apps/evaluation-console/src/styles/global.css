@@ -4762,3 +4762,48 @@ button.chart-pt:focus-visible {
   color: var(--text-3);
   margin-bottom: 2px;
 }
+
+/* --------------------------------------------------------------------------
+   Harness Health panel (Run Studies): registry harnesses + binding probes.
+   -------------------------------------------------------------------------- */
+.harness-health .section-title { align-items: center; }
+.hh-rows { display: flex; flex-direction: column; gap: 2px; margin-top: var(--sp-2); }
+.hh-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(200px, 1.2fr) 24px minmax(240px, 1.6fr) auto;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: 6px var(--sp-2);
+  border-radius: var(--r-2);
+}
+.hh-row:hover { background: var(--surface-2); }
+.hh-cell { min-width: 0; display: flex; align-items: center; gap: var(--sp-2); }
+.hh-name { font-weight: var(--fw-semibold); font-size: var(--fs-100); }
+.hh-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hh-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: var(--fail); box-shadow: 0 0 0 3px var(--fail-bg);
+}
+.hh-dot.on { background: var(--pass); box-shadow: 0 0 0 3px var(--pass-bg); }
+.hh-flag {
+  font-size: var(--fs-40); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--fail); background: var(--fail-bg);
+  border-radius: var(--r-pill); padding: 1px 7px; flex: none;
+}
+.hh-binding { flex-direction: column; align-items: flex-start; gap: 1px; }
+.hh-provider { font-size: var(--fs-50); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.hh-route {
+  font-size: var(--fs-40); color: var(--harness); background: var(--harness-bg);
+  border-radius: var(--r-pill); padding: 1px 7px;
+}
+.hh-vision { color: var(--text-3); justify-content: center; }
+.hh-verdict {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-50); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hh-verdict.pass { color: var(--pass); }
+.hh-verdict.warn { color: var(--defer); }
+.hh-verdict.fail { color: var(--fail); }
+.hh-verdict.unknown { color: var(--text-3); }
+.hh-probe-meta { font-size: var(--fs-40); color: var(--text-3); }
+.hh-actions { justify-content: flex-end; }

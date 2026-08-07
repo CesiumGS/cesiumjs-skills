@@ -1,9 +1,11 @@
 /** Driver for the OpenCode CLI (`opencode run --format json`). */
+import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
 import type { HarnessSpec } from "../config/types.js";
-import { AgentCall, HarnessDriver, registerDriver } from "./driver.js";
-import { HarnessInvocationError, HarnessNotFoundError, cleanSubprocessEnv, formatPrompt, runSubprocess, which } from "./shared.js";
+import { AgentCall, HarnessDriver, StructuredInvocation, registerDriver } from "./driver.js";
+import { HarnessInvocationError, cleanSubprocessEnv, formatPrompt, resolveBinary, runSubprocess, which } from "./shared.js";
 
 /** Friendly tool names accepted from callers, mapped to permission keys. */
 const TOOL_PERMISSION_NAMES: Record<string, string> = {
@@ -55,18 +57,45 @@ function extractTextFromJsonEvents(stdout: string): string {
   return parts.join("\n").trim();
 }
 
+/** OpenCode's server log records `providerID=... modelID=...` per stream call.
+ * Windowed read: capture the byte offset BEFORE the run, then parse only the
+ * bytes this run appended — last-line-wins is racy under concurrency. */
+const OPENCODE_LOG_PATH = path.join(os.homedir(), ".local", "share", "opencode", "log", "opencode.log");
+
+function logOffset(): number {
+  try {
+    return fs.statSync(OPENCODE_LOG_PATH).size;
+  } catch {
+    return 0;
+  }
+}
+
+function scrapeAttribution(offset: number): { provider: string | null; model: string | null } {
+  try {
+    const fd = fs.openSync(OPENCODE_LOG_PATH, "r");
+    try {
+      const size = fs.fstatSync(fd).size;
+      if (size <= offset) return { provider: null, model: null };
+      const buffer = Buffer.alloc(Math.min(size - offset, 4 * 1024 * 1024));
+      fs.readSync(fd, buffer, 0, buffer.length, offset);
+      const fresh = buffer.toString("utf-8");
+      const hits = [...fresh.matchAll(/providerID=(\S+)\s+modelID=(\S+)/g)];
+      const last = hits.at(-1);
+      return last ? { provider: last[1], model: last[2] } : { provider: null, model: null };
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return { provider: null, model: null };
+  }
+}
+
 class OpenCodeDriver implements HarnessDriver {
   readonly id = "opencode";
   private discovered = new Map<string, string | null>();
 
   ensureAvailable(spec: HarnessSpec): string {
-    const binary = which(spec.binary);
-    if (!binary) {
-      throw new HarnessNotFoundError(
-        `'${spec.binary}' CLI not found on PATH. Install ${spec.name ?? spec.id} and authenticate (${spec.auth ?? "see registry"}).`,
-      );
-    }
-    return binary;
+    return resolveBinary(spec);
   }
 
   /** Live model discovery driven by the registry's `discovery` block. */
@@ -103,8 +132,13 @@ class OpenCodeDriver implements HarnessDriver {
   }
 
   async invoke(spec: HarnessSpec, call: AgentCall): Promise<string> {
+    return (await this.invokeStructured(spec, call)).text;
+  }
+
+  async invokeStructured(spec: HarnessSpec, call: AgentCall): Promise<StructuredInvocation> {
     const binary = this.ensureAvailable(spec);
     const workdir = path.resolve(call.cwd ?? process.cwd());
+    const offset = logOffset();
 
     const argv = ["run", "--format", "json", "--dir", workdir];
     if (call.model) argv.push("--model", call.model);
@@ -129,7 +163,8 @@ class OpenCodeDriver implements HarnessDriver {
     if (!text) {
       throw new HarnessInvocationError(spec.id, 0, result.stderr ?? "", "harness returned no assistant text");
     }
-    return text;
+    const scraped = scrapeAttribution(offset);
+    return { text, observedProviderRaw: scraped.provider, observedModel: scraped.model };
   }
 }
 

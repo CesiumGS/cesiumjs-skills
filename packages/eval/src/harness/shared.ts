@@ -1,21 +1,57 @@
 /** Shared subprocess plumbing for harness drivers. */
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
+import type { HarnessSpec } from "../config/types.js";
 
 /**
  * Secrets that must never reach an agent-CLI subprocess (API-key billing must
- * not silently replace subscription auth).
+ * not silently replace subscription auth). A harness whose registry entry
+ * DECLARES api-key billing (credential.env_passthrough) re-grants a var
+ * explicitly — deliberate is fine, silent is not.
  */
 export const DISALLOWED_ENV_VARS = ["OPENAI_API_KEY"] as const;
 
-export function cleanSubprocessEnv(): Record<string, string> {
+export function cleanSubprocessEnv(allow: string[] = []): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined) env[key] = value;
   }
-  for (const name of DISALLOWED_ENV_VARS) delete env[name];
+  for (const name of DISALLOWED_ENV_VARS) {
+    if (!allow.includes(name)) delete env[name];
+  }
   return env;
+}
+
+function expandHome(candidate: string): string {
+  return candidate.startsWith("~/") ? path.join(os.homedir(), candidate.slice(2)) : candidate;
+}
+
+/**
+ * Resolve a harness binary: registry-declared absolute candidates first
+ * (install scripts often wire PATH via .zshrc, invisible to non-interactive
+ * shells), then PATH lookup. Throws HarnessNotFoundError with install help.
+ */
+export function resolveBinary(spec: HarnessSpec): string {
+  for (const candidate of spec.binary_candidates ?? []) {
+    const expanded = expandHome(candidate);
+    try {
+      fs.accessSync(expanded, fs.constants.X_OK);
+      return expanded;
+    } catch {
+      // keep looking
+    }
+  }
+  const binary = which(spec.binary);
+  if (!binary) {
+    throw new HarnessNotFoundError(
+      `'${spec.binary}' CLI not found on PATH` +
+        (spec.binary_candidates?.length ? ` (also tried: ${spec.binary_candidates.join(", ")})` : "") +
+        `. Install ${spec.name ?? spec.id} and authenticate (${spec.auth ?? "see registry"}).`,
+    );
+  }
+  return binary;
 }
 
 /** Wrap a system instruction + task into a single stdin prompt. */

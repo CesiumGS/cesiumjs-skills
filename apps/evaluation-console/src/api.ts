@@ -1,9 +1,11 @@
 import type {
   ConfigDTO,
   FocusPreview,
+  HarnessHealthDTO,
   InsightsDTO,
   IterationDetail,
   LiveStatusDTO,
+  ProbeResultDTO,
   RawScorecard,
   RegistryDTO,
   ReviewDecisionDoc,
@@ -40,6 +42,16 @@ export const loadRuns = () => req<RunSummary[]>("/api/runs");
 export const loadRunCases = (runId: string) =>
   req<RunCasesDTO>(`/api/run-cases?run_id=${encodeURIComponent(runId)}`);
 export const loadRegistry = () => req<RegistryDTO>("/api/registry");
+export const loadHarnessHealth = () => req<HarnessHealthDTO>("/api/harnesses");
+
+/** Run one binding probe (capability + observed attribution). Synchronous:
+ * the response IS the result (2-40s depending on the harness; probes are
+ * serialized server-side — a concurrent request 409s). */
+export const probeHarness = (harness: string, model?: string, variant?: string) =>
+  req<ProbeResultDTO>("/api/probe", {
+    method: "POST",
+    body: JSON.stringify({ harness, model: model || undefined, variant: variant || undefined })
+  });
 export const loadInsights = () => req<InsightsDTO>("/api/insights");
 export const loadLive = () => req<LiveStatusDTO>("/api/live");
 export const loadLaunchSkills = () => req<{ skills: string[] }>("/api/live/skills");

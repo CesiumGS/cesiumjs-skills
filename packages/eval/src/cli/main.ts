@@ -120,6 +120,20 @@ program
   );
 
 program
+  .command("probe")
+  .description("Verify (harness, model, variant) bindings end-to-end: capability (real tool use) + observed attribution.")
+  .option("--harness <id>", "registry harness id, comma list, or 'all'", "all")
+  .option("--model <id>", "model override for a single-harness probe")
+  .option("--variant <id>", "reasoning effort / variant override for a single-harness probe")
+  .option("--json", "emit machine-readable results")
+  .action((options) =>
+    run(async () => {
+      const { probeCommand } = await import("../commands/probe.js");
+      return probeCommand(ctx(), options);
+    }),
+  );
+
+program
   .command("judge")
   .description("Run the static visual judge panel over one rendered bundle.")
   .requiredOption("--bundle <dir>", "bundle directory with screenshot.png etc.")

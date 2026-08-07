@@ -3,9 +3,7 @@
  * Image-bearing calls must target a vision-capable agent — there is no
  * automatic rerouting. Commands call this; drivers stay dumb.
  */
-import "./opencodeDriver.js"; // side-effect: registers built-in drivers
-import "./codexDriver.js";
-import "./copilotDriver.js";
+import "./drivers.js"; // side-effect: registers built-in drivers
 import type { EvalContext, HarnessSpec, ResolvedAgent, RoleName } from "../config/types.js";
 import { AgentCall, driverFor } from "./driver.js";
 import type { CodexCall } from "./codexDriver.js";

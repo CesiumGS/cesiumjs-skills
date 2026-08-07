@@ -81,7 +81,7 @@ function validateConfigFile(configPath: string, raw: unknown, root: string): voi
   }
 }
 
-function validateRegistry(registry: HarnessRegistry, registryPath: string): void {
+function validateRegistry(registry: HarnessRegistry, registryPath: string, root: string): void {
   if (!Array.isArray(registry.harnesses) || registry.harnesses.length === 0) {
     throw new Error(`${registryPath}: registry must declare at least one harness`);
   }
@@ -89,6 +89,45 @@ function validateRegistry(registry: HarnessRegistry, registryPath: string): void
     for (const field of ["id", "binary", "default_model", "default_effort"] as const) {
       if (typeof harness[field] !== "string" || !harness[field]) {
         throw new Error(`${registryPath}: harness entry missing required field '${field}'`);
+      }
+    }
+  }
+
+  // Full JSON-Schema validation (config/harness-registry.schema.json), same
+  // pattern as eval.config.json: skipped only when the schema file is absent.
+  const schemaPath = path.join(root, "config", "harness-registry.schema.json");
+  if (fs.existsSync(schemaPath)) {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(readJson(schemaPath));
+    if (!validate(registry)) {
+      const details = (validate.errors ?? [])
+        .map((error) => `  ${error.instancePath || "<root>"}: ${error.message}`)
+        .join("\n");
+      throw new Error(`${registryPath} failed schema validation:\n${details}`);
+    }
+  }
+
+  // Referential integrity across the registry's own axes. Providers are the
+  // canonical entities; every harness/alias reference must resolve to one.
+  const providerIds = new Set((registry.providers ?? []).map((provider) => provider.id));
+  if (providerIds.size) {
+    for (const harness of registry.harnesses) {
+      if (harness.provider && !providerIds.has(harness.provider)) {
+        throw new Error(`${registryPath}: harness '${harness.id}' references unknown provider '${harness.provider}'`);
+      }
+      const support = harness.provider_support;
+      for (const ref of [...(support?.native ?? []), ...(support?.native_3p ?? [])]) {
+        if (!providerIds.has(ref)) {
+          throw new Error(`${registryPath}: harness '${harness.id}' provider_support references unknown provider '${ref}'`);
+        }
+      }
+      if (!harness.models.some((model) => model.id === harness.default_model)) {
+        throw new Error(`${registryPath}: harness '${harness.id}' default_model '${harness.default_model}' is not in its catalog`);
+      }
+    }
+    for (const [alias, spec] of Object.entries(registry.provider_aliases ?? {})) {
+      if (!providerIds.has(spec.provider_id)) {
+        throw new Error(`${registryPath}: provider_aliases['${alias}'] references unknown provider '${spec.provider_id}'`);
       }
     }
   }
@@ -153,7 +192,7 @@ export function loadContext(options: LoadContextOptions = {}): EvalContext {
 
   const registryPath = path.isAbsolute(config.registry) ? config.registry : path.join(root, config.registry);
   const registry = readJson(registryPath) as HarnessRegistry;
-  validateRegistry(registry, registryPath);
+  validateRegistry(registry, registryPath, root);
 
   const byId = new Map<string, HarnessSpec>(registry.harnesses.map((harness) => [harness.id, harness]));
 

@@ -2,7 +2,7 @@
 import * as path from "node:path";
 import type { HarnessSpec } from "../config/types.js";
 import { AgentCall, HarnessDriver, registerDriver } from "./driver.js";
-import { HarnessInvocationError, HarnessNotFoundError, cleanSubprocessEnv, formatPrompt, runSubprocess, which } from "./shared.js";
+import { HarnessInvocationError, cleanSubprocessEnv, formatPrompt, resolveBinary, runSubprocess } from "./shared.js";
 
 /** Friendly tool names accepted from callers, mapped to Copilot CLI tool ids. */
 const TOOL_NAMES: Record<string, string> = {
@@ -44,13 +44,7 @@ class CopilotDriver implements HarnessDriver {
   readonly id = "copilot";
 
   ensureAvailable(spec: HarnessSpec): string {
-    const binary = which(spec.binary);
-    if (!binary) {
-      throw new HarnessNotFoundError(
-        `'${spec.binary}' CLI not found on PATH. Install ${spec.name ?? spec.id} and authenticate (${spec.auth ?? "see registry"}).`,
-      );
-    }
-    return binary;
+    return resolveBinary(spec);
   }
 
   async invoke(spec: HarnessSpec, call: AgentCall): Promise<string> {

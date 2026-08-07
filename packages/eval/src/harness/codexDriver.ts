@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { HarnessSpec } from "../config/types.js";
 import { AgentCall, HarnessDriver, registerDriver } from "./driver.js";
-import { HarnessInvocationError, HarnessNotFoundError, cleanSubprocessEnv, formatPrompt, runSubprocess, which } from "./shared.js";
+import { HarnessInvocationError, cleanSubprocessEnv, formatPrompt, resolveBinary, runSubprocess } from "./shared.js";
 
 /**
  * Optional profile support: `CODEX_PROFILE` (or `CODEX_<ROLE>_PROFILE`,
@@ -37,13 +37,7 @@ class CodexDriver implements HarnessDriver {
   readonly id = "codex";
 
   ensureAvailable(spec: HarnessSpec): string {
-    const binary = which(spec.binary);
-    if (!binary) {
-      throw new HarnessNotFoundError(
-        `'${spec.binary}' CLI not found on PATH. Install ${spec.name ?? spec.id} and authenticate (${spec.auth ?? "see registry"}).`,
-      );
-    }
-    return binary;
+    return resolveBinary(spec);
   }
 
   async invoke(spec: HarnessSpec, call: CodexCall): Promise<string> {

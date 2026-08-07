@@ -22,6 +22,17 @@ export interface AgentCall {
   timeoutSeconds: number;
 }
 
+/** One structured call: the assistant text plus wire-OBSERVED attribution
+ * (which provider/model actually served it), when the harness surfaces it.
+ * Raw provider strings normalize through the registry's provider_aliases. */
+export interface StructuredInvocation {
+  text: string;
+  /** Provider string as reported on the wire (e.g. "firstParty", "openai-codex"), or null when unobservable. */
+  observedProviderRaw: string | null;
+  /** Model id as reported on the wire, or null when unobservable. */
+  observedModel: string | null;
+}
+
 export interface HarnessDriver {
   readonly id: string;
   /** Absolute path to the binary; throws HarnessNotFoundError when missing. */
@@ -31,6 +42,9 @@ export interface HarnessDriver {
   /** Run one non-interactive call and return the assistant text (async; the
    * event loop stays free for signals and concurrent panel calls). */
   invoke(spec: HarnessSpec, call: AgentCall): Promise<string>;
+  /** Like invoke, but also extracts observed attribution where this harness's
+   * output path supports it (registry attribution.observed_by_driver). */
+  invokeStructured?(spec: HarnessSpec, call: AgentCall): Promise<StructuredInvocation>;
 }
 
 const DRIVERS = new Map<string, HarnessDriver>();

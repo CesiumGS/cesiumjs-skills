@@ -14,8 +14,8 @@ import {
   XCircle
 } from "lucide-react";
 import { useStore } from "../store";
-import { loadLaunchSkills } from "../api";
-import type { HarnessSpec, LivePhase, LiveRun, LiveTrial } from "../types";
+import { loadHarnessHealth, loadLaunchSkills, probeHarness } from "../api";
+import type { HarnessHealthRow, HarnessSpec, LivePhase, LiveRun, LiveTrial, ProbeResultDTO } from "../types";
 import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
 
 /* ============================================================================
@@ -617,6 +617,183 @@ function effortLevelsFor(spec: HarnessSpec | undefined, modelId: string): string
     : [...new Set((spec?.models ?? []).flatMap((m) => m.effort_levels ?? []))];
   const levels = raw.length ? raw : ["low", "medium", "high", "xhigh", "max"];
   return [...levels].sort((a, b) => effortRank(a) - effortRank(b));
+}
+
+/* ---------------------------------------------------------------------------
+   HARNESS HEALTH: every registry harness with its provider binding, live
+   availability, and a binding probe. A probe asserts two INDEPENDENT things
+   (registry probe_policy): capability — the harness really read a token file
+   (tool use, not recall) — and attribution — which provider/model actually
+   served the call, observed on the wire where the harness supports it.
+   Probes are serialized server-side; rows disable while one runs.
+   --------------------------------------------------------------------------- */
+
+const PROBE_VERDICT_LABEL: Record<string, string> = {
+  pass: "Pass",
+  pass_provider_unverified: "Pass · provider unverified",
+  fail_capability: "No tool use",
+  attribution_mismatch: "Wrong provider",
+  error: "Error"
+};
+
+const CREDENTIAL_ROUTE_LABEL: Record<string, string> = {
+  api_key: "API key",
+  oauth_subscription: "Subscription OAuth",
+  codex_subscription: "Codex subscription",
+  broker_subscription: "Broker subscription",
+  cloud_iam: "Cloud IAM",
+  local_none: "Local (no auth)"
+};
+
+function probeVerdictTone(verdict: string): "pass" | "warn" | "fail" {
+  if (verdict === "pass") return "pass";
+  if (verdict === "pass_provider_unverified") return "warn";
+  return "fail";
+}
+
+function HarnessHealthPanel() {
+  const [rows, setRows] = useState<HarnessHealthRow[]>([]);
+  const [probing, setProbing] = useState<string | null>(null);
+  const [probeAll, setProbeAll] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = () =>
+    loadHarnessHealth()
+      .then((health) => setRows(health.harnesses))
+      .catch((exc) => setError(String(exc?.message ?? exc)));
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const applyResult = (result: ProbeResultDTO) =>
+    setRows((prev) => prev.map((row) => (row.id === result.harness ? { ...row, last_probe: result } : row)));
+
+  const probeOne = async (id: string) => {
+    setProbing(id);
+    setError(null);
+    try {
+      applyResult(await probeHarness(id));
+    } catch (exc: any) {
+      setError(`${id}: ${String(exc?.message ?? exc)}`);
+    } finally {
+      setProbing(null);
+    }
+  };
+
+  // Serialized on purpose (registry probe_policy): overlapping probes produced
+  // false timeouts when this pipeline was designed.
+  const probeEverything = async () => {
+    setProbeAll(true);
+    setError(null);
+    try {
+      for (const row of rows) {
+        if (!row.available || !row.driver_registered) continue;
+        setProbing(row.id);
+        try {
+          applyResult(await probeHarness(row.id));
+        } catch (exc: any) {
+          setError(`${row.id}: ${String(exc?.message ?? exc)}`);
+        }
+      }
+    } finally {
+      setProbing(null);
+      setProbeAll(false);
+    }
+  };
+
+  const busy = probing !== null || probeAll;
+
+  return (
+    <div className="dash-card launch-panel harness-health">
+      <div className="section-title">
+        <Activity size={13} aria-hidden /> Harness Health
+        <span className="section-sub">
+          Every registry harness with its provider binding and a live binding probe: capability (a real token-file
+          read — tool use, not recall) plus wire-observed attribution of which provider/model actually served the
+          call. Probes run one at a time.
+        </span>
+        <span className="spacer" />
+        <button className="lk-chip" onClick={probeEverything} disabled={busy || !rows.length} title="Probe every available harness, serialized">
+          {probeAll ? "Probing…" : "Probe all"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="launch-warn">
+          <AlertTriangle size={11} aria-hidden /> {error}
+        </div>
+      )}
+
+      <div className="hh-rows" role="table" aria-label="Harness health">
+        {rows.map((row) => {
+          const probe = row.last_probe;
+          const tone = probe ? probeVerdictTone(probe.verdict) : null;
+          const isProbing = probing === row.id;
+          return (
+            <div key={row.id} className="hh-row" role="row">
+              <div className="hh-cell hh-name" role="cell">
+                <span className={`hh-dot${row.available ? " on" : ""}`} title={row.available ? "CLI resolved" : row.availability_error ?? "not installed"} />
+                <span className="hh-title">{row.name}</span>
+                {!row.driver_registered && (
+                  <span className="hh-flag" title="Registry entry has no driver implementation">no driver</span>
+                )}
+              </div>
+              <div className="hh-cell hh-binding" role="cell" title={row.auth ?? undefined}>
+                <span className="hh-provider">{row.provider_label ?? row.provider ?? "—"}</span>
+                {row.credential_route && (
+                  <span className="hh-route">{CREDENTIAL_ROUTE_LABEL[row.credential_route] ?? row.credential_route}</span>
+                )}
+              </div>
+              <div className="hh-cell hh-vision" role="cell" title={row.vision_note ?? undefined}>
+                {row.multimodal ? <Eye size={12} aria-label="Vision-capable" /> : <EyeOff size={12} aria-label="Text-only" />}
+              </div>
+              <div className="hh-cell hh-probe" role="cell">
+                {isProbing ? (
+                  <span className="hh-verdict warn">Probing… (≤{Math.round((row.probe_timeout_ms ?? 240000) / 1000)}s)</span>
+                ) : probe ? (
+                  <span
+                    className={`hh-verdict ${tone}`}
+                    title={
+                      probe.capability.error ??
+                      `${probe.attribution.provider.value ?? "?"}/${probe.attribution.model.value ?? "?"} · attribution ${
+                        probe.attribution.observed ? "observed on the wire" : probe.attribution.provider.source
+                      }`
+                    }
+                  >
+                    {tone === "pass" ? <CheckCircle2 size={11} aria-hidden /> : tone === "warn" ? <AlertTriangle size={11} aria-hidden /> : <XCircle size={11} aria-hidden />}
+                    {PROBE_VERDICT_LABEL[probe.verdict] ?? probe.verdict}
+                    <span className="hh-probe-meta mono">
+                      {probe.attribution.provider.value ?? "?"}/{probe.attribution.model.value ?? "?"} ·{" "}
+                      {fmtDuration(probe.latency_ms / 1000)}
+                      {probe.attribution.observed ? "" : " · declared"}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="hh-verdict unknown">never probed</span>
+                )}
+              </div>
+              <div className="hh-cell hh-actions" role="cell">
+                <button
+                  className="lk-chip"
+                  onClick={() => probeOne(row.id)}
+                  disabled={busy || !row.available || !row.driver_registered}
+                  title={
+                    row.available
+                      ? `Probe ${row.name}: token-file capability + observed attribution`
+                      : row.availability_error ?? "CLI not installed"
+                  }
+                >
+                  {isProbing ? "…" : "Probe"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {!rows.length && !error && <div className="dash-sub">Loading harness registry…</div>}
+      </div>
+    </div>
+  );
 }
 
 function LaunchPanel() {
@@ -1264,6 +1441,8 @@ export function LiveStation() {
       )}
 
       <LaunchPanel />
+
+      <HarnessHealthPanel />
 
       {stalledRuns.length > 0 && (
         <>
