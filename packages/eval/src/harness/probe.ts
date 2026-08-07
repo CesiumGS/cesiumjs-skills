@@ -93,8 +93,6 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
   const token = `PROBE-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
 
   const fixtureDir = path.join(PROBES_DIR(), `.fixture-${probeId}`);
-  fs.mkdirSync(fixtureDir, { recursive: true });
-  fs.writeFileSync(path.join(fixtureDir, "token.txt"), `token=${token}\n`);
 
   const declaredMethod = spec.attribution?.method ?? null;
   const observedByDriver = spec.attribution?.observed_by_driver === true;
@@ -132,6 +130,11 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
     adapterEnv = harnessEnvOverrides(ctx, harnessId, adapter.id);
     adapterInfo = { id: adapter.id, target: target.name, provider_id: target.provider_id, model: target.name };
   }
+
+  // Created only after the adapter preflight: the throws above run before the
+  // try/finally below, and a fixture written before them would leak.
+  fs.mkdirSync(fixtureDir, { recursive: true });
+  fs.writeFileSync(path.join(fixtureDir, "token.txt"), `token=${token}\n`);
 
   try {
     binaryPath = resolveBinary(spec);
