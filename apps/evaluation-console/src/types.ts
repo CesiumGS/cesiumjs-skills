@@ -525,6 +525,9 @@ export interface HarnessSpec {
   catalog_as_of: string;
   defaults_source?: string;
   models: ModelSpec[];
+  /** Providers this harness can reach natively (registry v2). Models are only
+   * provided by providers, so choosing one scopes the model options. */
+  provider_support?: { native: string[]; native_note?: string; native_3p?: string[] };
   quirks?: string[];
   docs_url?: string;
 }
@@ -603,6 +606,9 @@ export interface SkillCoverageDTO {
 export interface BaselineCoverageDTO {
   root: string;
   skills: SkillCoverageDTO[];
+  /** Live render activity: lets the console show rendering as work in
+   * progress instead of claiming nothing is running. */
+  rendering?: { active: boolean; skill: string | null };
 }
 
 export interface AdapterStatusDTO {

@@ -4853,3 +4853,16 @@ button.chart-pt:focus-visible {
 /* Verdict chips: incomplete = Visual Tests never ran; amber, not red. */
 .rr-verdict.incomplete { color: var(--defer); background: var(--defer-bg); }
 .hr-result.warn { color: var(--defer); }
+
+/* Live station: baseline rendering occupies the live slot while it runs. */
+.live-empty.rendering .le-title { color: var(--text); }
+.le-render-bar {
+  width: min(420px, 80%); height: 4px; margin: var(--sp-3) auto 0;
+  background: var(--surface-3); border-radius: var(--r-pill); overflow: hidden;
+}
+.le-render-bar > span {
+  display: block; height: 100%;
+  background: var(--brand-grad, var(--pass));
+  border-radius: var(--r-pill);
+  transition: width 600ms ease;
+}

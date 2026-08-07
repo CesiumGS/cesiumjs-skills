@@ -53,30 +53,43 @@ function coverageForSkill(skill: string): SkillCoverage {
   return { skill, cases, screenshots, covered: cases > 0 && screenshots === cases };
 }
 
-export function baselineCoverage(ctx: EvalContext, skills?: string[]): { root: string; skills: SkillCoverage[] } {
+export interface BaselineCoverage {
+  root: string;
+  skills: SkillCoverage[];
+  /** Live render activity, so the console can SHOW a render in progress
+   * instead of claiming nothing is running while screenshots are produced. */
+  rendering: { active: boolean; skill: string | null };
+}
+
+export function baselineCoverage(ctx: EvalContext, skills?: string[]): BaselineCoverage {
   const known = fs
     .readdirSync(FIXTURES_ROOT(), { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
   const target = skills && skills.length ? skills.filter((s) => known.includes(s)) : known;
-  return { root: BASELINE_ROOT, skills: target.map(coverageForSkill) };
+  return {
+    root: BASELINE_ROOT,
+    skills: target.map(coverageForSkill),
+    rendering: { active: renderingSkill !== null, skill: renderingSkill },
+  };
 }
 
 // One render in flight at a time (headless browser + network): a second
 // request while one is running is rejected so the launcher can disable
-// re-entry rather than spawn overlapping browsers.
-let rendering = false;
+// re-entry rather than spawn overlapping browsers. The active skill is
+// exposed via baselineCoverage so any client can see the work happening.
+let renderingSkill: string | null = null;
 export class RenderBusyError extends Error {}
 
-export async function renderBaselines(ctx: EvalContext, payload: Record<string, any>): Promise<{ root: string; skills: SkillCoverage[] }> {
+export async function renderBaselines(ctx: EvalContext, payload: Record<string, any>): Promise<BaselineCoverage> {
   const requested = Array.isArray(payload.skills) ? payload.skills.map(String) : [];
   if (!requested.length) throw new Error("no skills given to render");
-  if (rendering) throw new RenderBusyError("a baseline render is already running");
-  rendering = true;
+  if (renderingSkill !== null) throw new RenderBusyError("a baseline render is already running");
+  renderingSkill = requested.join(",");
   try {
     await renderBaselinesCommand(ctx, { skills: requested.join(","), out: BASELINE_ROOT });
-    return baselineCoverage(ctx, requested);
   } finally {
-    rendering = false;
+    renderingSkill = null;
   }
+  return baselineCoverage(ctx, requested);
 }

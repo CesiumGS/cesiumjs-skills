@@ -42,6 +42,14 @@ class ClaudeCodeDriver implements HarnessDriver {
   }
 
   async invokeStructured(spec: HarnessSpec, call: AgentCall): Promise<StructuredInvocation> {
+    // Claude Code speaks anthropic-messages only: any other provider needs
+    // the protocol adapter. Fail loudly instead of silently ignoring it.
+    if (call.provider && call.provider !== (spec.provider ?? "anthropic")) {
+      throw new Error(
+        `claude-code reaches only '${spec.provider ?? "anthropic"}' natively; ` +
+          `route provider '${call.provider}' through the protocol adapter (cesium-eval adapter) instead.`,
+      );
+    }
     const binary = this.ensureAvailable(spec);
     const workdir = path.resolve(call.cwd ?? process.cwd());
 

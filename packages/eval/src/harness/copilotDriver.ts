@@ -48,6 +48,14 @@ class CopilotDriver implements HarnessDriver {
   }
 
   async invoke(spec: HarnessSpec, call: AgentCall): Promise<string> {
+    // The Copilot CLI bills through the GitHub broker only; other providers
+    // are BYOK config, not a per-call switch. Fail loudly, never reroute.
+    if (call.provider && call.provider !== (spec.provider ?? "github-copilot")) {
+      throw new Error(
+        `copilot reaches only '${spec.provider ?? "github-copilot"}' per call; ` +
+          `provider '${call.provider}' needs its BYOK configuration or the protocol adapter.`,
+      );
+    }
     const binary = this.ensureAvailable(spec);
     const workdir = path.resolve(call.cwd ?? process.cwd());
 

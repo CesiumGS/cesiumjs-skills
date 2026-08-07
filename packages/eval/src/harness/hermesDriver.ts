@@ -34,6 +34,9 @@ class HermesDriver implements HarnessDriver {
     );
 
     const argv = ["-z", formatPrompt(call.prompt, call.system), "--usage-file", usagePath];
+    // Hermes's native provider switch (hermes --provider); models are
+    // provider-scoped, so an explicit provider pins routing.
+    if (call.provider) argv.push("--provider", call.provider);
     if (call.model) argv.push("-m", call.model);
     // variant intentionally unused: no per-call effort flag is verified for
     // hermes (registry effort_mechanism: null). addDirs/allowedTools have no

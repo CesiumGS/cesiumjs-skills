@@ -17,6 +17,8 @@ export interface AgentRequest {
   allowedTools?: string[];
   disableTools?: boolean;
   title?: string | null;
+  /** Canonical provider id serving the model (null = harness default binding). */
+  provider?: string | null;
   /** Optional flag-level overrides (already normalized: 'auto' means defer). */
   overrides?: { harness?: string; model?: string; variant?: string };
 }
@@ -86,6 +88,7 @@ export async function invokeAgent(ctx: EvalContext, role: RoleName, request: Age
     prompt: request.prompt,
     system: request.system ?? null,
     model,
+    provider: request.provider ?? null,
     variant: agent.variant,
     files: request.files,
     cwd: request.cwd,

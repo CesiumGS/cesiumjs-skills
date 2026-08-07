@@ -50,6 +50,11 @@ class CodexDriver implements HarnessDriver {
 
     const argv = ["exec", "--json", "--sandbox", "read-only", "--cd", workdir, "--output-last-message", outputPath];
     if (call.profile) argv.push("-p", call.profile);
+    // Non-native providers route via codex's model_providers config; an
+    // unknown id fails loudly in codex itself rather than silently rerouting.
+    if (call.provider && call.provider !== (spec.provider ?? "openai")) {
+      argv.push("-c", `model_provider="${call.provider}"`);
+    }
     if (call.model) argv.push("--model", call.model);
     if (call.variant) argv.push("-c", `model_reasoning_effort="${call.variant}"`);
     for (const dir of call.addDirs ?? []) argv.push("--add-dir", path.resolve(dir));

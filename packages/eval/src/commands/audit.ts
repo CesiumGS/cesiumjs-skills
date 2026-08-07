@@ -277,12 +277,20 @@ function makeJudgeCall(
   judgeHarness: string,
   model: string | undefined,
   variant: string | undefined,
+  provider?: string,
 ): { call: JudgeCall; model: string | null } {
   if (judgeHarness === "fake") return { call: fakeJudgeCall(), model: model ?? "fake" };
   const overrides = { harness: judgeHarness, model, variant };
   const described = describeAgent(ctx, "judge", overrides);
   const call: JudgeCall = async (prompt, files, addDirs) => {
-    const invocation = await invokeAgent(ctx, "judge", { prompt, files, addDirs, allowedTools: [], overrides });
+    const invocation = await invokeAgent(ctx, "judge", {
+      prompt,
+      files,
+      addDirs,
+      allowedTools: [],
+      provider: provider ?? null,
+      overrides,
+    });
     return { text: invocation.text, agent: invocation.agent };
   };
   return { call, model: described.model };
@@ -296,6 +304,9 @@ export const DEFAULT_JUDGE_CONCURRENCY = 4;
 export interface AuditOptions {
   skills?: string;
   judgeModel?: string;
+  /** Canonical provider id serving the judge model (models are only provided
+   * by providers; drivers route it natively or fail loudly). */
+  judgeProvider?: string;
   judgeVariant?: string;
   nJudges?: number;
   /** Cases judged in parallel (1-8). Default 4; set 1 for strictly sequential. */
@@ -307,6 +318,8 @@ export interface AuditOptions {
   judgeHarness?: string;
   codegenHarness?: string;
   codegenModel?: string;
+  /** Provenance stamp: the provider that served the codegen model. */
+  codegenProvider?: string;
   codegenVariant?: string;
   bundleRoot?: string;
   threshold?: number;
@@ -392,7 +405,7 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
       (item: any) => item?.status !== undefined && item?.status !== null && item?.status !== "not_reviewed",
     ).length;
   } else if (!options.noJudge) {
-    const { call, model } = makeJudgeCall(ctx, judgeHarness, options.judgeModel, options.judgeVariant);
+    const { call, model } = makeJudgeCall(ctx, judgeHarness, options.judgeModel, options.judgeVariant, options.judgeProvider);
     const concurrency = Math.max(1, Math.min(8, options.concurrency ?? DEFAULT_JUDGE_CONCURRENCY));
     const items: Array<Record<string, any>> = new Array(auditCases.length);
     const workerCount = Math.min(concurrency, auditCases.length);
@@ -514,6 +527,7 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
   // win; anything still unset is recovered from the evaluated code's meta sidecars.
   const artifacts = (scorecard.artifacts ??= {});
   if (options.codegenModel) artifacts.model = options.codegenModel;
+  if (options.codegenProvider) artifacts.model_provider = options.codegenProvider;
   if (options.codegenVariant) artifacts.model_variant = options.codegenVariant;
   const provenance = resolveCodegenProvenance(scorecard, ctx.repoRoot);
   if (provenance.model && artifacts.model === undefined) artifacts.model = provenance.model;

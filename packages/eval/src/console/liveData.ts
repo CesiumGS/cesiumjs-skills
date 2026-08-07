@@ -695,20 +695,36 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (!validJudgeHarnesses.has(judgeHarness)) {
     throw new Error(`unknown judge_harness: '${judgeHarness}' (supported: ${[...validJudgeHarnesses].sort().join(", ")})`);
   }
-  // A text-only judge cannot read screenshots, so the run would die on its
-  // first image call. Reject the launch instead of spawning a doomed process.
-  if (judge && judgeHarness !== "fake") {
+  // Multimodality is a property of the provider/model actually serving a
+  // call, not the harness alone — every harness is assumed capable here, and
+  // an image-bearing call the serving provider rejects FAILS LOUDLY at
+  // runtime instead of being pre-blocked on a stale per-harness flag.
+
+  // Provider selection: models are only provided by providers, so an explicit
+  // provider must be a canonical registry id, and the judge harness must be
+  // able to reach it natively (everything else routes via the adapter).
+  const providerIds = new Set((ctx.registry.providers ?? []).map((provider) => provider.id));
+  const providerField = (value: unknown, field: string): string | null => {
+    if (value === undefined || value === null || value === "") return null;
+    const id = String(value);
+    if (!providerIds.has(id)) {
+      throw new Error(`unknown ${field}: '${id}' (registry providers: ${[...providerIds].sort().join(", ")})`);
+    }
+    return id;
+  };
+  const judgeProvider = providerField(payload.judge_provider, "judge_provider");
+  const codegenProvider = providerField(payload.codegen_provider, "codegen_provider");
+  if (judge && judgeProvider && judgeHarness !== "fake") {
     const judgeSpec = ctx.registry.harnesses.find((harness) => harness.id === judgeHarness);
-    if (judgeSpec && !judgeSpec.multimodal) {
-      const visionCapable = ctx.registry.harnesses
-        .filter((harness) => harness.multimodal)
-        .map((harness) => harness.id)
-        .sort();
+    const reachable = new Set([
+      ...(judgeSpec?.provider ? [judgeSpec.provider] : []),
+      ...(judgeSpec?.provider_support?.native ?? []),
+      ...(judgeSpec?.provider_support?.native_3p ?? []),
+    ]);
+    if (reachable.size && !reachable.has(judgeProvider)) {
       throw new Error(
-        `judge_harness '${judgeHarness}' cannot accept image inputs; ` +
-          `pick a vision-capable judge harness (${visionCapable.join(", ")}), ` +
-          `or turn Visual Tests off in the launcher (--no-judge on the CLI) ` +
-          `to run the deterministic lane only`,
+        `judge_harness '${judgeHarness}' cannot reach provider '${judgeProvider}' natively ` +
+          `(reachable: ${[...reachable].sort().join(", ")}); route it through the protocol adapter instead`,
       );
     }
   }
@@ -810,7 +826,9 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (!judge) argv.push("--no-judge");
   if (judge && concurrency !== null && concurrency > 1) argv.push("--concurrency", String(concurrency));
   if (judgeModel) argv.push("--judge-model", judgeModel);
+  if (judgeProvider) argv.push("--judge-provider", judgeProvider);
   if (judgeVariant) argv.push("--judge-variant", judgeVariant);
+  if (codegenProvider) argv.push("--codegen-provider", codegenProvider);
   if (codegenHarness) argv.push("--codegen-harness", codegenHarness);
   if (codegenModel) argv.push("--codegen-model", codegenModel);
   if (codegenVariant) argv.push("--codegen-variant", codegenVariant);

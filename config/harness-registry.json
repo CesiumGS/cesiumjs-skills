@@ -1024,12 +1024,12 @@
         "First headless run after a fresh install can fail (observed: exit 1 at ~48s) during initialization \u2014 retry once before declaring failure",
         "Credential precedence between OPENAI_API_KEY env and stored OAuth is UNVERIFIED \u2014 provider is observable but the billing path is not"
       ],
-      "multimodal": false,
-      "vision_note": "Copilot disables the multimodal endpoint account-wide: every github-copilot/* model is text-only here even when the model is natively vision-capable. Image-bearing calls (e.g. screenshot judging) are unsupported and error \u2014 choose a vision-capable harness for that role.",
+      "multimodal": true,
+      "vision_note": "Assumed multimodal: image delivery depends on the provider/model actually serving the call, not the harness alone, so runs proceed and image-bearing calls FAIL LOUDLY at runtime if the selected provider/model rejects them.",
       "roles": [
         "proposer",
         "codegen",
-        "judge (text-only)"
+        "judge"
       ],
       "default_model": "github-copilot/gpt-5.6-sol",
       "default_effort": "low",
@@ -2415,12 +2415,12 @@
         "Reports route labels as provider strings ('openai-codex') \u2014 normalize via provider_aliases",
         "Prompt travels as an argv argument (-z), so very large prompts risk ARG_MAX limits"
       ],
-      "multimodal": false,
-      "vision_note": "Image inputs are unverified on this install \u2014 treated as text-only. Image-bearing calls (screenshot judging) error; choose a vision-capable harness for that role.",
+      "multimodal": true,
+      "vision_note": "Assumed multimodal: image delivery depends on the provider/model actually serving the call, not the harness alone, so runs proceed and image-bearing calls FAIL LOUDLY at runtime if the selected provider/model rejects them.",
       "roles": [
         "proposer",
         "codegen",
-        "judge (text-only)"
+        "judge"
       ],
       "default_model": "gpt-5.3-codex-spark",
       "default_effort": "none",
@@ -2555,12 +2555,12 @@
         "Fastest of the six (2-4s probe latency) \u2014 its floor is the wrong baseline for a global timeout",
         "Prompt travels as an argv argument, so very large prompts risk ARG_MAX limits"
       ],
-      "multimodal": false,
-      "vision_note": "Image attachment is unverified on this install \u2014 treated as text-only. Image-bearing calls (screenshot judging) error; choose a vision-capable harness for that role.",
+      "multimodal": true,
+      "vision_note": "Assumed multimodal: image delivery depends on the provider/model actually serving the call, not the harness alone, so runs proceed and image-bearing calls FAIL LOUDLY at runtime if the selected provider/model rejects them.",
       "roles": [
         "proposer",
         "codegen",
-        "judge (text-only)"
+        "judge"
       ],
       "default_model": "openai/gpt-5.5",
       "default_effort": "low",

@@ -3,6 +3,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowRight,
+  Camera,
   CheckCircle2,
   Clock,
   Copy,
@@ -33,7 +34,7 @@ import type {
   LiveTrial,
   ProbeResultDTO
 } from "../types";
-import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
+import { fmtDuration, harnessLabel, modelShort, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
 
 /* ============================================================================
    LIVE — the in-progress monitor for eval runs executing on this machine NOW.
@@ -1019,6 +1020,87 @@ function AdapterPanel() {
   );
 }
 
+/** Models are only provided by providers, so the model list follows the
+ * provider choice: the harness's own catalog for its bound provider, or the
+ * registry-wide catalog of the chosen provider (short ids) otherwise. */
+function modelsForProvider(
+  registry: ReturnType<typeof useStore>["registry"],
+  harness: HarnessSpec | undefined,
+  providerId: string
+): HarnessSpec["models"] {
+  if (!harness) return [];
+  if (!providerId || providerId === harness.provider) return harness.models;
+  const seen = new Map<string, HarnessSpec["models"][number]>();
+  for (const h of registry?.harnesses ?? []) {
+    if (h.provider !== providerId) continue;
+    for (const m of h.models) {
+      const short = modelShort(m.id);
+      if (short && !seen.has(short)) seen.set(short, { ...m, id: short });
+    }
+  }
+  return [...seen.values()];
+}
+
+/** Provider chips for one launcher section, dereferenced from the registry:
+ * the harness's bound provider (Auto) plus everything provider_support.native
+ * says it can reach. Protocol mismatches beyond that are adapter territory. */
+function ProviderPicker({
+  label,
+  flag,
+  registry,
+  harness,
+  value,
+  disabled,
+  onChange
+}: {
+  label: string;
+  flag: string;
+  registry: ReturnType<typeof useStore>["registry"];
+  harness: HarnessSpec | undefined;
+  value: string;
+  disabled: boolean;
+  onChange: (id: string) => void;
+}) {
+  if (!harness) return null;
+  const declared = new Map((registry?.providers ?? []).map((p) => [p.id, p]));
+  const name = (id: string | undefined) => (id ? declared.get(id)?.display_name ?? id : "?");
+  const others = [
+    ...new Set([...(harness.provider_support?.native ?? []), ...(harness.provider_support?.native_3p ?? [])])
+  ].filter((id) => id !== harness.provider);
+  return (
+    <div className="launch-field">
+      <div className="launch-label">
+        {label} <code className="launch-flag">{flag}</code>
+      </div>
+      <div className="launch-steppers" role="radiogroup" aria-label={label}>
+        <button
+          className={`lk-chip${value === "" ? " on" : ""}`}
+          role="radio"
+          aria-checked={value === ""}
+          disabled={disabled}
+          onClick={() => onChange("")}
+          title={`Use ${harness.name}'s bound provider, ${name(harness.provider)}`}
+        >
+          Auto · {name(harness.provider)}
+        </button>
+        {others.map((id) => (
+          <button
+            key={id}
+            className={`lk-chip${value === id ? " on" : ""}`}
+            role="radio"
+            aria-checked={value === id}
+            disabled={disabled}
+            onClick={() => onChange(id)}
+            title={`Serve the model from ${name(id)}. Models are provider-scoped, so the model list follows this choice.`}
+          >
+            {name(id)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function LaunchPanel() {
   const { launchEvalRun, liveRunning, registry } = useStore();
   const [available, setAvailable] = useState<string[]>([]);
@@ -1032,8 +1114,10 @@ function LaunchPanel() {
   const [nJudges, setNJudges] = useState(3);
   const [concurrency, setConcurrency] = useState(4);
   const [judgeModel, setJudgeModel] = useState("");
+  const [judgeProvider, setJudgeProvider] = useState("");
   const [judgeVariant, setJudgeVariant] = useState("");
   const [codegenHarness, setCodegenHarness] = useState("");
+  const [codegenProvider, setCodegenProvider] = useState("");
   const [codegenModel, setCodegenModel] = useState("");
   const [codegenVariant, setCodegenVariant] = useState("");
   const [threshold, setThreshold] = useState("");
@@ -1058,13 +1142,13 @@ function LaunchPanel() {
     registry?.harnesses.filter((h) => h.roles.includes("codegen")).map((h) => h.id) ?? fallbackHarnesses;
   const harnessSpec = (id: string) => registry?.harnesses.find((h) => h.id === id);
   const judgeHarnessSpec = harnessSpec(judgeHarness);
-  // Error prevention: a text-only judge cannot read screenshots, so the run
-  // would fail on its first image call. Block the launch rather than spend it.
-  const judgeCannotSee = judge && judgeHarnessSpec !== undefined && !judgeHarnessSpec.multimodal;
-  const judgeHarnessModels = judgeHarnessSpec?.models ?? [];
+  // Multimodality is a property of the provider/model serving the call, so
+  // every harness is offered here; a rejected image call fails loudly at
+  // runtime instead of being pre-blocked on a per-harness flag.
+  const judgeModels = modelsForProvider(registry, judgeHarnessSpec, judgeProvider);
   const judgeEffortLevels = effortLevelsFor(judgeHarnessSpec, judgeModel);
   const codegenHarnessSpec = harnessSpec(codegenHarness);
-  const codegenHarnessModels = codegenHarnessSpec?.models ?? [];
+  const codegenModels = modelsForProvider(registry, codegenHarnessSpec, codegenProvider);
   const codegenEffortLevels = effortLevelsFor(codegenHarnessSpec, codegenModel);
 
   // Coverage for the currently selected skills, refreshed when the selection
@@ -1109,6 +1193,19 @@ function LaunchPanel() {
     else if (bundleRoot && coverage && bundleRoot === coverage.root && !fullyCovered) setBundleRoot("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [judge, fullyCovered, coverage?.root]);
+
+  // While a render is running, poll coverage so the badge ticks live even
+  // inside a large skill (each screenshot lands on disk as it renders).
+  useEffect(() => {
+    if (!rendering) return;
+    const timer = setInterval(() => {
+      loadBaselineCoverage(currentSkills)
+        .then(setCoverage)
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rendering, coverageKey]);
 
   const renderMissing = async () => {
     if (!missing.length) return;
@@ -1168,9 +1265,11 @@ function LaunchPanel() {
     if (!judge) parts.push("--no-judge");
     if (judge && concurrency > 1) parts.push(`--concurrency ${concurrency}`);
     if (judge && judgeModel) parts.push(`--judge-model ${judgeModel}`);
+    if (judge && judgeProvider) parts.push(`--judge-provider ${judgeProvider}`);
     if (judge && judgeVariant) parts.push(`--judge-variant ${judgeVariant}`);
     if (codegenHarness) parts.push(`--codegen-harness ${codegenHarness}`);
     if (codegenModel) parts.push(`--codegen-model ${codegenModel}`);
+    if (codegenProvider) parts.push(`--codegen-provider ${codegenProvider}`);
     if (codegenVariant) parts.push(`--codegen-variant ${codegenVariant}`);
     if (threshold) parts.push(`--threshold ${threshold}`);
     if (bundleRoot) parts.push(`--bundle-root ${bundleRoot}`);
@@ -1183,10 +1282,12 @@ function LaunchPanel() {
     nJudges,
     judge,
     judgeModel,
+    judgeProvider,
     judgeVariant,
     concurrency,
     codegenHarness,
     codegenModel,
+    codegenProvider,
     codegenVariant,
     threshold,
     bundleRoot
@@ -1203,9 +1304,11 @@ function LaunchPanel() {
         n_judges: nJudges,
         concurrency: judge ? concurrency : undefined,
         judge_model: judge && judgeModel ? judgeModel : undefined,
+        judge_provider: judge && judgeProvider ? judgeProvider : undefined,
         judge_variant: judge && judgeVariant ? judgeVariant : undefined,
         codegen_harness: codegenHarness || undefined,
         codegen_model: codegenModel || undefined,
+        codegen_provider: codegenProvider || undefined,
         codegen_variant: codegenVariant || undefined,
         threshold: threshold ? Number(threshold) : undefined,
         bundle_root: bundleRoot || undefined
@@ -1292,6 +1395,7 @@ function LaunchPanel() {
                   aria-checked={codegenHarness === h}
                   onClick={() => {
                     setCodegenHarness(h);
+                    setCodegenProvider("");
                     setCodegenModel("");
                     setCodegenVariant("");
                   }}
@@ -1306,6 +1410,19 @@ function LaunchPanel() {
               effort default to each baseline's meta sidecar; set them below to stamp explicit values instead.
             </div>
           </div>
+
+          <ProviderPicker
+            label="Codegen Provider"
+            flag="--codegen-provider"
+            registry={registry}
+            harness={codegenHarnessSpec}
+            value={codegenProvider}
+            disabled={!codegenHarness}
+            onChange={(id) => {
+              setCodegenProvider(id);
+              setCodegenModel("");
+            }}
+          />
 
           <div className="launch-field">
             <label className="launch-model">
@@ -1324,7 +1441,7 @@ function LaunchPanel() {
                 }}
               >
                 <option value="">auto (from baseline meta)</option>
-                {codegenHarnessModels.map((m) => (
+                {codegenModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.id}
                   </option>
@@ -1412,7 +1529,6 @@ function LaunchPanel() {
             <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judge-harness-label">
               {judgeHarnesses.map((a) => {
                 const spec = harnessSpec(a);
-                const textOnly = spec ? !spec.multimodal : false;
                 return (
                   <button
                     key={a}
@@ -1422,6 +1538,7 @@ function LaunchPanel() {
                     disabled={!judge}
                     onClick={() => {
                       setJudgeHarness(a);
+                      setJudgeProvider("");
                       setJudgeModel("");
                       setJudgeVariant((v) =>
                         v && !effortLevelsFor(harnessSpec(a), "").includes(v) ? "" : v
@@ -1430,18 +1547,24 @@ function LaunchPanel() {
                     title={spec?.vision_note ?? `Run Visual Tests with the ${harnessLabel(a)} harness`}
                   >
                     {harnessLabel(a)}
-                    {textOnly && <span className="lk-chip-note">text-only</span>}
                   </button>
                 );
               })}
             </div>
-            {judge && judgeHarnessSpec && !judgeHarnessSpec.multimodal && (
-              <div className="launch-hint">
-                {harnessLabel(judgeHarness)} models are text-only here, so Visual Tests are unsupported and the run
-                will error. Choose a vision-capable judge harness.
-              </div>
-            )}
           </div>
+
+          <ProviderPicker
+            label="Visual Test Provider"
+            flag="--judge-provider"
+            registry={registry}
+            harness={judgeHarnessSpec}
+            value={judgeProvider}
+            disabled={!judge}
+            onChange={(id) => {
+              setJudgeProvider(id);
+              setJudgeModel("");
+            }}
+          />
 
           {judge && (
             <div className="launch-field launch-span">
@@ -1500,7 +1623,7 @@ function LaunchPanel() {
                 }}
               >
                 <option value="">auto (discovered)</option>
-                {judgeHarnessModels.map((m) => (
+                {judgeModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.id}
                   </option>
@@ -1651,13 +1774,11 @@ function LaunchPanel() {
             <button
               className="launch-btn"
               onClick={() => setConfirming(true)}
-              disabled={busy || selectedCount === 0 || judgeCannotSee || noVisualEvidence}
+              disabled={busy || selectedCount === 0 || noVisualEvidence}
               title={
-                judgeCannotSee
-                  ? `${harnessLabel(judgeHarness)} cannot read screenshots — pick a vision-capable judge harness or turn Visual Tests off`
-                  : noVisualEvidence
-                    ? "Visual Tests are on, but no selected skill has baseline screenshots to judge. Use Baseline Screenshots → Render above, or turn Visual Tests off."
-                    : undefined
+                noVisualEvidence
+                  ? "Visual Tests are on, but no selected skill has baseline screenshots to judge. Use Baseline Screenshots → Render above, or turn Visual Tests off."
+                  : undefined
               }
             >
               <Rocket size={13} aria-hidden />
@@ -1710,6 +1831,50 @@ function LaunchPanel() {
 }
 
 function LiveEmptyState() {
+  // Baseline rendering is real in-progress work on this machine, so it must
+  // occupy the live slot rather than sit behind an idle "nothing running"
+  // banner while screenshots are being produced a panel below.
+  const [coverage, setCoverage] = useState<BaselineCoverageDTO | null>(null);
+  useEffect(() => {
+    let disposed = false;
+    const poll = () =>
+      loadBaselineCoverage([])
+        .then((c) => {
+          if (!disposed) setCoverage(c);
+        })
+        .catch(() => {});
+    poll();
+    const timer = setInterval(poll, 3000);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  if (coverage?.rendering?.active) {
+    const withCases = coverage.skills.filter((s) => s.cases > 0);
+    const shots = withCases.reduce((n, s) => n + s.screenshots, 0);
+    const total = withCases.reduce((n, s) => n + s.cases, 0);
+    const covered = withCases.filter((s) => s.covered).length;
+    const pct = total ? Math.round((shots / total) * 100) : 0;
+    return (
+      <div className="dash-card live-empty rendering">
+        <div className="le-icon" aria-hidden>
+          <Camera size={22} />
+        </div>
+        <div className="le-title">Rendering Baseline Screenshots…</div>
+        <div className="le-sub">
+          {shots}/{total} screenshots · {covered}/{withCases.length} skills complete
+          {coverage.rendering.skill ? ` · now: ${coverage.rendering.skill.replace(/^cesiumjs-/, "")}` : ""}. Each
+          skill's baseline code runs in a headless browser; the launcher unlocks Visual Tests as coverage completes.
+        </div>
+        <div className="le-render-bar" aria-hidden>
+          <span style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dash-card live-empty">
       <div className="le-icon" aria-hidden>

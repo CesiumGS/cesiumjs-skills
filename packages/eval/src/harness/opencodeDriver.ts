@@ -141,7 +141,10 @@ class OpenCodeDriver implements HarnessDriver {
     const offset = logOffset();
 
     const argv = ["run", "--format", "json", "--dir", workdir];
-    if (call.model) argv.push("--model", call.model);
+    // OpenCode addresses models as provider/model: an explicit provider is
+    // the prefix (catalog ids may already carry one — don't double-prefix).
+    const model = call.model && call.provider && !call.model.includes("/") ? `${call.provider}/${call.model}` : call.model;
+    if (model) argv.push("--model", model);
     if (call.variant) argv.push("--variant", call.variant);
     for (const file of call.files ?? []) argv.push("--file", path.resolve(file));
     if (call.title) argv.push("--title", call.title);

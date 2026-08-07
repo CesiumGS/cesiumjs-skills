@@ -47,6 +47,9 @@ class PiDriver implements HarnessDriver {
     // Prompt travels on stdin (verified: `echo ... | pi -p` answers) to avoid
     // argv length limits on large skill-document prompts.
     const argv = ["-p", "--mode", "json"];
+    // Pi's native provider switch: models are provider-scoped, so an explicit
+    // provider pins routing instead of pi's silent credential fallback.
+    if (call.provider) argv.push("--provider", call.provider);
     if (call.model) argv.push("--model", call.model);
     const thinking = thinkingFor(spec, call);
     if (thinking) argv.push("--thinking", thinking);

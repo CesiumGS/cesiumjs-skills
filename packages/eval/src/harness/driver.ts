@@ -11,6 +11,11 @@ export interface AgentCall {
   system?: string | null;
   /** Concrete model id, or null to let the harness use its configured default. */
   model: string | null;
+  /** Canonical provider id serving the model, or null for the harness's bound
+   * default. Models are only provided by providers, so a model choice implies
+   * one; drivers route it natively (pi/hermes --provider, opencode prefix,
+   * codex model_provider) and FAIL LOUDLY when the harness cannot reach it. */
+  provider?: string | null;
   /** Reasoning-effort / variant level, or null for the harness default. */
   variant: string | null;
   files?: string[];

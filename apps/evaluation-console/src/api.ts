@@ -88,12 +88,16 @@ export interface LaunchRequest {
   /** Cases judged in parallel (audit --concurrency), 1-8. Omitted = sequential. */
   concurrency?: number | null;
   judge_model?: string | null;
+  /** Canonical provider serving the judge model (audit --judge-provider). */
+  judge_provider?: string | null;
   /** Judge reasoning effort (audit --judge-variant): "low" | "medium" | "high" | "xhigh" | "max" | … */
   judge_variant?: string | null;
   /** Codegen provenance stamp (audit --codegen-harness): the harness that produced the audited baselines. */
   codegen_harness?: string | null;
   /** Codegen model provenance stamp (audit --codegen-model). */
   codegen_model?: string | null;
+  /** Provenance stamp: the provider that served the codegen model (audit --codegen-provider). */
+  codegen_provider?: string | null;
   /** Codegen reasoning-effort provenance stamp (audit --codegen-variant). */
   codegen_variant?: string | null;
   threshold?: number | null;
