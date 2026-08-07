@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Command, HelpCircle, Moon, Sun, ChevronDown, ArrowRight, RotateCcw } from "lucide-react";
+import { Command, HelpCircle, Moon, Sun, ChevronDown, RotateCcw } from "lucide-react";
 import { useStore } from "../store";
 import type { Station, ConsoleOverlay } from "../types";
 import { pluralize } from "../lib/format";
@@ -106,23 +106,11 @@ export function TopStrip() {
 }
 
 export function Rail() {
-  const {
-    station,
-    setStation,
-    needsYouCount,
-    confirmedFlagKeys,
-    suggestedFlagCount,
-    skills,
-    live,
-    liveRunning,
-    openOverlay,
-    doExport
-  } = useStore();
+  const { station, setStation, needsYouCount, skills, live, liveRunning, openOverlay } = useStore();
   const loopRunning = liveRunning || skills.some((s) => s.running);
   const stalledCount = (live?.active ?? []).filter((r) => r.status !== "running").length;
   const decidable = skills.filter((s) => s.latest?.decision === "KEEP").length;
   const stagedCount = skills.filter((s) => s.latest?.decision === "KEEP" && s.latest?.promotion === "staged").length;
-  const flagged = confirmedFlagKeys.length;
 
   /* Badges carry information, never decoration: each one answers "how many
      things wait for me here?" or "is something running?" — and says which. */
@@ -219,33 +207,12 @@ export function Rail() {
         "Your hands on the eval CLI: configure and kick off a new study, then watch its phases, trials, and journal live.",
         "7"
       )}
-      {overlayRow("harness", "Run Browser", "Browse every run on disk; switch the focused run or set the comparison baseline.", "h")}
 
-      {/* ── Evaluate: judge the focused run (steps 1–2), then hand the
-            confirmed focus—or suggested fallback—across to the optimizer. ── */}
+      {/* ── Evaluate: judge the focused run (steps 1–2). The top-strip run
+            selector reaches the Run Browser; Optimize (step 3) is one row
+            down, so a separate handoff button here would just duplicate it. ── */}
       <div className="rail-section">Evaluate</div>
       {JUDGE_STEPS.map(step)}
-      <button
-        className={`rail-handoff${flagged || suggestedFlagCount ? " ready" : ""}`}
-        onClick={doExport}
-        disabled={!flagged && !suggestedFlagCount}
-        title={
-          flagged
-            ? `Write your ${pluralize(flagged, "confirmed flag")} to the focus set and open Optimize.`
-            : suggestedFlagCount
-              ? `Use ${pluralize(suggestedFlagCount, "machine-suggested flag")} as the focus set and open Optimize.`
-              : "Flag failing cases in Review to create an optimization focus set."
-        }
-      >
-        <span className="rh-label">
-          {flagged
-            ? `Optimize ${flagged} confirmed`
-            : suggestedFlagCount
-              ? `Optimize ${suggestedFlagCount} suggested`
-              : "Nothing flagged yet"}
-        </span>
-        <ArrowRight size={13} aria-hidden className="rh-go" />
-      </button>
 
       {/* ── Optimize: improve and ship the run you just judged (steps 3–5). ── */}
       <div className="rail-section">Optimize</div>

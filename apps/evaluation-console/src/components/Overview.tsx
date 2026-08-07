@@ -306,18 +306,32 @@ export function EvaluateOverview() {
         </div>
       </div>
 
-      {/* HERO — the verdict with its gates named, beside the score geometry. */}
+      {/* HERO — the verdict with its gates named, beside the score geometry.
+          "incomplete" (Visual Tests never ran) is neither pass nor fail. */}
       <div className="hero-card">
         <div>
-          <div className="ov-big" style={{ color: pass ? "var(--pass)" : "var(--fail)" }}>
-            {pass ? "PASS" : "FAIL"}
+          <div
+            className="ov-big"
+            style={{
+              color:
+                scorecard.overallResult === "incomplete" ? "var(--defer)" : pass ? "var(--pass)" : "var(--fail)"
+            }}
+          >
+            {scorecard.overallResult === "incomplete" ? "INCOMPLETE" : pass ? "PASS" : "FAIL"}
             <DeltaChip delta={diff?.scoreDelta ?? null} />
           </div>
           <div className="gate-chips" aria-label="Verdict composition">
             <span className={`gate-chip ${scorecard.deterministicResult === "pass" ? "ok" : "bad"}`}>
               ▣ Code Tests {scorecard.deterministicResult.toUpperCase()}
             </span>
-            {scorecard.visualReviewSupplied ? (
+            {scorecard.overallResult === "incomplete" ? (
+              <span
+                className="gate-chip neutral"
+                title="Visual Tests were requested but never ran: no baseline screenshots were available to judge. Render baselines in the launcher and rerun."
+              >
+                ◈ Visual Tests DID NOT RUN
+              </span>
+            ) : scorecard.visualReviewSupplied ? (
               <span
                 className={`gate-chip ${pass || scorecard.deterministicResult === "fail" ? (pass ? "ok" : "neutral") : "bad"}`}
                 title="The Visual Tests gate. Blocking failures fail the run even when Code Tests pass."

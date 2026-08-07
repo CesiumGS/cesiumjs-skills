@@ -14,8 +14,25 @@ import {
   XCircle
 } from "lucide-react";
 import { useStore } from "../store";
-import { adapterAction, loadAdapter, loadHarnessHealth, loadLaunchSkills, probeHarness } from "../api";
-import type { AdapterStatusDTO, HarnessHealthRow, HarnessSpec, LivePhase, LiveRun, LiveTrial, ProbeResultDTO } from "../types";
+import {
+  adapterAction,
+  loadAdapter,
+  loadBaselineCoverage,
+  loadHarnessHealth,
+  loadLaunchSkills,
+  probeHarness,
+  renderBaselines
+} from "../api";
+import type {
+  AdapterStatusDTO,
+  BaselineCoverageDTO,
+  HarnessHealthRow,
+  HarnessSpec,
+  LivePhase,
+  LiveRun,
+  LiveTrial,
+  ProbeResultDTO
+} from "../types";
 import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
 
 /* ============================================================================
@@ -369,11 +386,17 @@ function describeJournalEvent(e: Record<string, unknown>): { text: string; tone:
         text: `Scorecard written — ${titleCase(String(e.overall_result ?? "done"))}`,
         tone: e.overall_result === "pass" ? "pass" : "plain"
       };
-    case "audit_completed":
+    case "audit_completed": {
+      // "incomplete" = deterministic passed but Visual Tests never ran (no
+      // baseline screenshots). Neither green pass nor red fail: call it out.
+      const outcome = String(e.overall_result ?? "done");
+      const detail =
+        outcome === "incomplete" ? " — Visual Tests did not run (no baseline screenshots)" : "";
       return {
-        text: `Audit complete — ${titleCase(String(e.overall_result ?? "done"))}`,
-        tone: e.overall_result === "pass" ? "pass" : "fail"
+        text: `Audit complete — ${titleCase(outcome)}${detail}`,
+        tone: outcome === "pass" ? "pass" : outcome === "incomplete" ? "eye" : "fail"
       };
+    }
     case "audit_failed":
       return { text: `Audit failed — ${String(e.error ?? "unknown error")}`, tone: "fail" };
     default: {
@@ -1018,6 +1041,11 @@ function LaunchPanel() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Baseline screenshots: the Visual Tests prerequisite. Without them the
+  // judge has nothing to look at and the run completes "incomplete".
+  const [coverage, setCoverage] = useState<BaselineCoverageDTO | null>(null);
+  const [rendering, setRendering] = useState(false);
+  const [coverageErr, setCoverageErr] = useState<string | null>(null);
 
   // The registry is the single source of truth for harnesses and their model
   // catalogs. The server also accepts a hidden "fake" smoke judge, but that
@@ -1038,6 +1066,68 @@ function LaunchPanel() {
   const codegenHarnessSpec = harnessSpec(codegenHarness);
   const codegenHarnessModels = codegenHarnessSpec?.models ?? [];
   const codegenEffortLevels = effortLevelsFor(codegenHarnessSpec, codegenModel);
+
+  // Coverage for the currently selected skills, refreshed when the selection
+  // or the judge toggle changes. Only meaningful with Visual Tests on.
+  // Computed from state directly so it does not depend on `selectedSkills`,
+  // which is declared further down.
+  const currentSkills = mode === "all" ? available : [...picked];
+  const coverageKey = judge ? currentSkills.join(",") : "";
+  useEffect(() => {
+    if (!judge || !currentSkills.length) {
+      setCoverage(null);
+      return;
+    }
+    let disposed = false;
+    loadBaselineCoverage(currentSkills)
+      .then((c) => {
+        if (!disposed) setCoverage(c);
+      })
+      .catch((exc) => {
+        if (!disposed) setCoverageErr(String(exc?.message ?? exc));
+      });
+    return () => {
+      disposed = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverageKey]);
+
+  const coveredCount = coverage?.skills.filter((s) => s.covered).length ?? 0;
+  const totalWithCases = coverage?.skills.filter((s) => s.cases > 0).length ?? 0;
+  const missing = coverage?.skills.filter((s) => s.cases > 0 && !s.covered) ?? [];
+  const fullyCovered = coverage !== null && totalWithCases > 0 && coveredCount === totalWithCases;
+  // ZERO screenshots anywhere in the selection: the visual lane would judge
+  // nothing and the run lands "incomplete" — block the launch (the server
+  // rejects it too; this stops it before the doomed click).
+  const noVisualEvidence = judge && coverage !== null && !coverage.skills.some((s) => s.screenshots > 0);
+
+  // When baselines are fully rendered, point the audit at them so Visual Tests
+  // actually judge screenshots. When they are not, clear the auto value so the
+  // launch does not claim a bundle-root it cannot use.
+  useEffect(() => {
+    if (judge && fullyCovered && coverage) setBundleRoot(coverage.root);
+    else if (bundleRoot && coverage && bundleRoot === coverage.root && !fullyCovered) setBundleRoot("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [judge, fullyCovered, coverage?.root]);
+
+  const renderMissing = async () => {
+    if (!missing.length) return;
+    setRendering(true);
+    setCoverageErr(null);
+    try {
+      // One skill per request: rendering a large selection in a single POST
+      // can outlive the server's request timeout, and per-skill requests let
+      // the coverage badge tick up live as each skill finishes.
+      for (const entry of missing) {
+        await renderBaselines([entry.skill]);
+        setCoverage(await loadBaselineCoverage(currentSkills));
+      }
+    } catch (exc: any) {
+      setCoverageErr(String(exc?.message ?? exc));
+    } finally {
+      setRendering(false);
+    }
+  };
 
   useEffect(() => {
     let disposed = false;
@@ -1353,6 +1443,46 @@ function LaunchPanel() {
             )}
           </div>
 
+          {judge && (
+            <div className="launch-field launch-span">
+              <div className="launch-label">
+                Baseline Screenshots
+                {coverage && (
+                  <span className={`bl-badge${fullyCovered ? " ok" : missing.length ? " warn" : ""}`}>
+                    {coveredCount}/{totalWithCases} skills rendered
+                  </span>
+                )}
+              </div>
+              <div className="bl-row">
+                <span className="bl-note">
+                  {fullyCovered
+                    ? "Every selected skill has rendered baselines — Visual Tests will judge them."
+                    : missing.length
+                      ? `${missing.map((s) => s.skill.replace(/^cesiumjs-/, "")).join(", ")} need rendering, or Visual Tests will complete "incomplete."`
+                      : "Rendering a skill's baseline code into screenshots the judge can look at."}
+                </span>
+                <span className="spacer" />
+                <button
+                  className="lk-chip"
+                  onClick={renderMissing}
+                  disabled={rendering || !missing.length}
+                  title={
+                    missing.length
+                      ? `Render baselines for ${missing.length} skill(s) (headless browser; no Ion token needed)`
+                      : "All selected skills already have baseline screenshots"
+                  }
+                >
+                  {rendering ? "Rendering…" : missing.length ? `Render ${missing.length}` : "Rendered"}
+                </button>
+              </div>
+              {coverageErr && (
+                <div className="launch-hint">
+                  <AlertTriangle size={11} aria-hidden /> {coverageErr}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="launch-field">
             <label className="launch-model">
               <span className="launch-label">
@@ -1521,11 +1651,13 @@ function LaunchPanel() {
             <button
               className="launch-btn"
               onClick={() => setConfirming(true)}
-              disabled={busy || selectedCount === 0 || judgeCannotSee}
+              disabled={busy || selectedCount === 0 || judgeCannotSee || noVisualEvidence}
               title={
                 judgeCannotSee
                   ? `${harnessLabel(judgeHarness)} cannot read screenshots — pick a vision-capable judge harness or turn Visual Tests off`
-                  : undefined
+                  : noVisualEvidence
+                    ? "Visual Tests are on, but no selected skill has baseline screenshots to judge. Use Baseline Screenshots → Render above, or turn Visual Tests off."
+                    : undefined
               }
             >
               <Rocket size={13} aria-hidden />

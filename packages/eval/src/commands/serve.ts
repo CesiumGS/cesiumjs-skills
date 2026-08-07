@@ -16,6 +16,7 @@ import * as optimizationData from "../console/optimizationData.js";
 import * as insightsData from "../console/insightsData.js";
 import * as liveData from "../console/liveData.js";
 import * as harnessData from "../console/harnessData.js";
+import * as baselineData from "../console/baselineData.js";
 import type { EvalContext } from "../config/types.js";
 
 const scenariosRootDir = () => fromRepoRoot("optimization", "scenarios");
@@ -548,6 +549,10 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
         if (route === "/api/registry") return sendJson(res, insightsData.registry(ctx));
         if (route === "/api/harnesses") return sendJson(res, harnessData.harnessHealth(ctx));
         if (route === "/api/adapter") return sendJson(res, await harnessData.adapterStatus(ctx));
+        if (route === "/api/baselines") {
+          const skills = (url.searchParams.get("skills") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+          return sendJson(res, baselineData.baselineCoverage(ctx, skills.length ? skills : undefined));
+        }
         if (route === "/api/insights") return sendJson(res, insightsData.insights(ctx, listRuns(ctx)));
         if (route === "/api/artifact") {
           const pathValue = url.searchParams.get("path") ?? "";
@@ -632,6 +637,17 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
         }
         if (route === "/api/live/launch") return sendJson(res, liveData.launchRun(ctx, payload));
         if (route === "/api/adapter") return sendJson(res, await harnessData.adapterAction(ctx, payload));
+        if (route === "/api/baselines/render") {
+          // Synchronous: rendering a couple skills' baselines is ~seconds and
+          // the response carries the fresh coverage the launcher shows. One
+          // render at a time (409 on overlap).
+          try {
+            return sendJson(res, await baselineData.renderBaselines(ctx, payload));
+          } catch (exc) {
+            if (exc instanceof baselineData.RenderBusyError) throw new ConflictError(exc.message);
+            throw exc;
+          }
+        }
         if (route === "/api/probe") {
           // Synchronous by design: the response IS the probe result (2-40s
           // per registry latencies; the UI shows per-row progress). Probes

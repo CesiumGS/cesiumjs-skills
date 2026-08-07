@@ -4,7 +4,7 @@ import { useStore } from "../store";
 import { artifactUrl } from "../api";
 import type { CaseView, IterationSummary, RunSummary, SkillOverview, Station } from "../types";
 import { LoopBadge, Pct } from "./primitives";
-import { harnessLabel } from "../lib/format";
+import { harnessLabel, localDateTime, localDateTimeFull, relativeTime } from "../lib/format";
 import { healthFromSummary, healthPct } from "../lib/grade";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
@@ -556,7 +556,12 @@ function HarnessOverlay() {
                     audit
                   </span>
                 )}
-                <span className={`hr-result ${r.overall_result === "pass" ? "ok" : "bad"}`}>{r.overall_result || "—"}</span>
+                <span
+                  className={`hr-result ${r.overall_result === "pass" ? "ok" : r.overall_result === "incomplete" ? "warn" : "bad"}`}
+                  title={r.overall_result === "incomplete" ? "Visual Tests never ran (no baseline screenshots); Code Tests passed." : undefined}
+                >
+                  {r.overall_result || "—"}
+                </span>
                 {aggPct !== null && (
                   <span
                     className="mono"
@@ -571,11 +576,12 @@ function HarnessOverlay() {
                   </span>
                 )}
                 <span
-                  className="mono"
-                  style={{ color: "var(--text-3)", marginLeft: "auto" }}
-                  title="Run start (UTC, to the second); the part that distinguishes same-commit runs."
+                  className="hr-time"
+                  style={{ marginLeft: "auto" }}
+                  title={`Run start: ${localDateTimeFull(r.timestamp_utc)} (${relativeTime(r.timestamp_utc)}). Distinguishes same-commit runs.`}
                 >
-                  {r.timestamp_utc.slice(0, 19).replace("T", " ")}
+                  <span className="hr-time-abs">{localDateTime(r.timestamp_utc)}</span>
+                  <span className="hr-time-rel">{relativeTime(r.timestamp_utc)}</span>
                 </span>
                 {isBaseline && <span className="hr-baseline" title="The comparison baseline">Baseline</span>}
                 {loaded && (

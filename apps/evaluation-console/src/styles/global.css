@@ -4833,3 +4833,23 @@ button.chart-pt:focus-visible {
 
 /* Card titles sit beside long subtitles; never let the title itself wrap. */
 .section-title .st-label { white-space: nowrap; }
+
+/* Launcher: baseline-screenshot coverage (Visual Tests prerequisite). */
+.bl-badge {
+  margin-left: var(--sp-2); font-size: var(--fs-40);
+  border-radius: var(--r-pill); padding: 1px 8px;
+  color: var(--text-3); background: var(--surface-3);
+}
+.bl-badge.ok { color: var(--pass); background: var(--pass-bg); }
+.bl-badge.warn { color: var(--defer); background: var(--defer-bg); }
+.bl-row { display: flex; align-items: center; gap: var(--sp-3); margin-top: 4px; }
+.bl-note { font-size: var(--fs-50); color: var(--text-3); }
+
+/* Run Browser: legible local date/time per run (absolute + relative). */
+.hr-time { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.hr-time-abs { font-size: var(--fs-100); color: var(--text); font-weight: var(--fw-medium); white-space: nowrap; }
+.hr-time-rel { font-size: var(--fs-40); color: var(--text-3); white-space: nowrap; }
+
+/* Verdict chips: incomplete = Visual Tests never ran; amber, not red. */
+.rr-verdict.incomplete { color: var(--defer); background: var(--defer-bg); }
+.hr-result.warn { color: var(--defer); }

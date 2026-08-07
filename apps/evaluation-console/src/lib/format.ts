@@ -98,6 +98,55 @@ export function shortCommit(commit: string): string {
   return (commit || "").slice(0, 8) || "unknown";
 }
 
+/** Run-level verdict presentation. "incomplete" (Visual Tests requested but
+ * never ran: no baseline screenshots) is its own state — presenting it as a
+ * red FAIL misreads a setup gap as a quality failure. */
+export function verdictView(result: string | null | undefined): {
+  label: string;
+  tone: "pass" | "fail" | "incomplete";
+  hint: string | null;
+} {
+  if (result === "pass") return { label: "PASS", tone: "pass", hint: null };
+  if (result === "incomplete")
+    return {
+      label: "INCOMPLETE",
+      tone: "incomplete",
+      hint: "Code Tests passed, but Visual Tests never ran: no baseline screenshots were available to judge. Render baselines in the launcher and rerun."
+    };
+  return { label: "FAIL", tone: "fail", hint: null };
+}
+
+/** Local-time date + time for a run: "Jul 24, 10:49 PM". Run timestamps are
+ * stored in UTC; showing them in the viewer's own timezone is what makes the
+ * date/time legible (a UTC "03:49" for a 10:49 PM run reads as wrong). */
+export function localDateTime(iso: string): string {
+  if (!iso) return "";
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "";
+  return new Date(t).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+/** Full local timestamp for tooltips: date, time (with seconds), and zone. */
+export function localDateTimeFull(iso: string): string {
+  if (!iso) return "";
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "";
+  return new Date(t).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short"
+  });
+}
+
 /** "github-copilot/gpt-5.6-sol" -> "gpt-5.6-sol" (provider stays on the harness chip). */
 export function modelShort(modelId: string | null | undefined): string {
   if (!modelId) return "—";

@@ -1,6 +1,11 @@
 // ---- Raw scorecard shapes (as produced by the eval harness; two modes, see DESIGN-SPEC §0) ----
 export type GateResult = "pass" | "fail";
 
+/** Run-level verdict. "incomplete" = Code Tests passed but Visual Tests were
+ * requested and never actually ran (no baseline screenshots to judge). It is
+ * neither a green pass nor a red failure and must render as its own state. */
+export type OverallResult = "pass" | "fail" | "incomplete";
+
 // The codegen harness a run was produced with (the "tested with" id). Mirrors the
 // shared harness registry, plus the first-class "unknown" bucket for legacy
 // fieldless runs. Widened so a new harness name still types.
@@ -105,7 +110,7 @@ export interface RawScorecard {
   run_id: string;
   timestamp_utc: string;
   git_commit: string;
-  overall_result: GateResult;
+  overall_result: OverallResult;
   deterministic_result: GateResult;
   overall_score: number; // 0-1
   threshold: number;
@@ -161,7 +166,7 @@ export interface AdaptedScorecard {
   runId: string;
   gitCommit: string;
   timestampUtc: string;
-  overallResult: GateResult;
+  overallResult: OverallResult;
   deterministicResult: GateResult;
   overallScore: number;
   threshold: number;
@@ -584,6 +589,20 @@ export interface AdapterTargetDTO {
   credential_ready?: boolean | null;
   /** Actionable remediation when the credential is missing. */
   credential_hint?: string | null;
+}
+
+// ---- baseline screenshot coverage ----
+
+export interface SkillCoverageDTO {
+  skill: string;
+  cases: number;
+  screenshots: number;
+  covered: boolean;
+}
+
+export interface BaselineCoverageDTO {
+  root: string;
+  skills: SkillCoverageDTO[];
 }
 
 export interface AdapterStatusDTO {

@@ -1,5 +1,6 @@
 import type {
   AdapterStatusDTO,
+  BaselineCoverageDTO,
   ConfigDTO,
   FocusPreview,
   HarnessHealthDTO,
@@ -59,6 +60,14 @@ export const probeHarness = (harness: string, model?: string, variant?: string, 
       adapter_target: adapterTarget || undefined
     })
   });
+
+// ---- baseline screenshots (visual-study prerequisite) ----
+export const loadBaselineCoverage = (skills: string[]) =>
+  req<BaselineCoverageDTO>(`/api/baselines?skills=${encodeURIComponent(skills.join(","))}`);
+/** Render missing baseline screenshots for these skills. Synchronous: the
+ * response carries the fresh coverage (seconds for a couple skills). */
+export const renderBaselines = (skills: string[]) =>
+  req<BaselineCoverageDTO>("/api/baselines/render", { method: "POST", body: JSON.stringify({ skills }) });
 
 // ---- protocol adapter (LiteLLM) ----
 export const loadAdapter = () => req<AdapterStatusDTO>("/api/adapter");

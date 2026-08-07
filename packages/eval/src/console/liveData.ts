@@ -11,6 +11,7 @@ import { readJson, readJsonl, readJsonOrNull, writeJsonPlain } from "../lib/json
 import { fromRepoRoot, globFiles, listDirs, walkFiles } from "../lib/paths.js";
 import { parseTs } from "../lib/format.js";
 import { isFresh, journalFor, scenarioLabel } from "./optimizationData.js";
+import { baselineCoverage } from "./baselineData.js";
 import type { EvalContext } from "../config/types.js";
 
 const resultsRoot = () => fromRepoRoot("optimization", "results");
@@ -711,6 +712,20 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
       );
     }
   }
+  // Visual Tests need baseline screenshots to judge. With zero coverage
+  // across the selected skills the run would burn nothing but still land as
+  // "incomplete" — reject the launch with the remediation instead.
+  if (judge && judgeHarness !== "fake") {
+    const coverage = baselineCoverage(ctx, skills);
+    if (!coverage.skills.some((skill) => skill.screenshots > 0)) {
+      throw new Error(
+        "Visual Tests are on, but none of the selected skills has baseline screenshots to judge — " +
+          "the run would complete 'incomplete'. Render baselines in the launcher (Baseline Screenshots → Render), " +
+          "or turn Visual Tests off to run Code Tests only.",
+      );
+    }
+  }
+
   const nJudges = Number(payload.n_judges ?? ctx.config.judgePanel.size);
   if (!Number.isInteger(nJudges)) throw new Error("n_judges must be an integer");
   if (nJudges < 1 || nJudges > 5) throw new Error("n_judges must be between 1 and 5");

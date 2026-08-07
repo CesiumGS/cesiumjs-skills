@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { ArrowRight, Flag } from "lucide-react";
 import { useStore } from "../store";
-import { modelShort, pluralize, relativeTime } from "../lib/format";
+import { modelShort, pluralize, relativeTime, verdictView } from "../lib/format";
 import { healthFromSummary, healthPct } from "../lib/grade";
 import { HarnessChip, Kpi, RunTrend } from "./Compare";
 import { LiveNowBanner } from "./Live";
@@ -64,6 +64,7 @@ function RecentRuns() {
         {recent.map((r) => {
           const focused = scorecard?.runId === r.run_id;
           const pass = r.overall_result === "pass";
+          const verdict = verdictView(r.overall_result);
           const health = healthFromSummary(r);
           const aggPct = health.aggregate !== null ? healthPct(health.aggregate, pass) : null;
           const scorePct = aggPct !== null ? `${aggPct}%` : "—";
@@ -72,9 +73,9 @@ function RecentRuns() {
               <button
                 className={`rr-row${focused ? " focused" : ""}`}
                 onClick={() => void switchRun(r.run_id)}
-                title={`${r.run_id}\nClick to focus this run in every station.`}
+                title={`${r.run_id}${verdict.hint ? `\n${verdict.hint}` : ""}\nClick to focus this run in every station.`}
               >
-                <span className={`rr-verdict ${pass ? "pass" : "fail"}`}>{pass ? "PASS" : "FAIL"}</span>
+                <span className={`rr-verdict ${verdict.tone}`}>{verdict.label}</span>
                 <span
                   className="rr-score mono"
                   title={
@@ -180,12 +181,14 @@ export function DashboardStation() {
           <div className="hero-eyebrow">{scorecard ? "Focused Run" : "Blank Slate"}</div>
           {!scorecard ? (
             <div className="ov-big" style={{ color: "var(--text-2)" }}>NO RUNS YET</div>
-          ) : pass && !scorecard.visualReviewSupplied ? (
+          ) : scorecard.overallResult === "incomplete" || (pass && !scorecard.visualReviewSupplied) ? (
             <>
               <div className="ov-big" style={{ color: "var(--defer)" }}>INCOMPLETE</div>
               <div className="stage-sub" style={{ marginTop: "var(--sp-1)" }}>
                 <span style={{ color: "var(--pass)" }}>Code Tests PASS</span>
-                <span style={{ color: "var(--unknown)" }}>· Visual Tests not run</span>
+                <span style={{ color: "var(--unknown)" }}>
+                  · Visual Tests {scorecard.overallResult === "incomplete" ? "did not run — no baseline screenshots" : "not run"}
+                </span>
               </div>
             </>
           ) : (
