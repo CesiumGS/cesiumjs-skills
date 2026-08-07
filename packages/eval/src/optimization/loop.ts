@@ -452,6 +452,12 @@ async function ensureCurrentBestBaseline(ctx: EvalContext, options: LoopOptions,
   const adapterResult = await runCodegenStep(ctx, options, "baseline", currentBest);
   if (!adapterResult.success) {
     writeJournalEvent(journalPath, "baseline_generation_failed", { skill, iteration: "baseline", result: adapterResult });
+    writeJournalEvent(journalPath, "baseline_check_failed", {
+      skill,
+      iteration: "baseline",
+      step: "baseline_generation",
+      result: adapterResult,
+    });
     return { success: false, runs_dir: null, reused: false, error: adapterResult.error };
   }
   writeJournalEvent(journalPath, "baseline_generation_completed", { skill, iteration: "baseline", result: adapterResult });
@@ -460,9 +466,21 @@ async function ensureCurrentBestBaseline(ctx: EvalContext, options: LoopOptions,
   const runnerResult = await runRenderStep(ctx, options, "baseline");
   if (!runnerResult.success) {
     writeJournalEvent(journalPath, "baseline_browser_eval_failed", { skill, iteration: "baseline", result: runnerResult });
+    writeJournalEvent(journalPath, "baseline_check_failed", {
+      skill,
+      iteration: "baseline",
+      step: "baseline_browser_eval",
+      result: runnerResult,
+    });
     return { success: false, runs_dir: null, reused: false, error: runnerResult.error };
   }
   writeJournalEvent(journalPath, "baseline_browser_eval_completed", { skill, iteration: "baseline", result: runnerResult });
+  writeJournalEvent(journalPath, "baseline_check_completed", {
+    skill,
+    iteration: "baseline",
+    runs_dir: runnerResult.runs_dir,
+    reused: false,
+  });
   return { success: true, runs_dir: runnerResult.runs_dir, reused: false, error: null };
 }
 

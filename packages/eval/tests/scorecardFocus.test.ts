@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFocus, focusToDecision } from "../src/optimization/scorecardFocus.js";
+import { buildFocus, buildSelectionFocus, focusToDecision } from "../src/optimization/scorecardFocus.js";
 
 const scorecard = {
   run_id: "scorecard-x",
@@ -95,6 +95,50 @@ describe("buildFocus", () => {
     const focus = buildFocus(clean);
     expect(focus.focus_required).toBe(false);
     expect(focus.cases).toHaveLength(0);
+  });
+});
+
+describe("buildSelectionFocus", () => {
+  it("preserves an explicitly selected passing case for Optimize", () => {
+    const selected = {
+      ...scorecard,
+      category_scores: { execution_health: { score: 1 } },
+      critical_failures: [],
+      cases: [scorecard.cases[1]],
+    };
+
+    const focus = buildSelectionFocus(selected);
+
+    expect(focus.cases).toHaveLength(1);
+    expect(focus.cases[0]).toMatchObject({
+      skill: "cesiumjs-entities",
+      case_id: "eval-002",
+      failed_checks: [
+        {
+          check_id: "review_flag",
+          type: "review_decision",
+          category: "review_flag",
+          actual: "flag",
+        },
+      ],
+    });
+    expect(focus.skills).toEqual([{ skill: "cesiumjs-entities", failed_checks: 1 }]);
+    expect(focus.categories.find((item: any) => item.category === "review_flag").affected_cases).toEqual([
+      "cesiumjs-entities/eval-002",
+    ]);
+  });
+
+  it("does not add a synthetic review check when the selected case already failed", () => {
+    const selected = {
+      ...scorecard,
+      cases: [scorecard.cases[0]],
+    };
+
+    const focus = buildSelectionFocus(selected);
+
+    expect(focus.cases).toHaveLength(1);
+    expect(focus.cases[0].failed_checks.map((item: any) => item.check_id)).toEqual(["bad"]);
+    expect(focus.categories.some((item: any) => item.category === "review_flag")).toBe(false);
   });
 });
 

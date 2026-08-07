@@ -138,9 +138,9 @@ program
 
 program
   .command("render-baselines")
-  .description("Render each skill's archived baseline code into screenshots the visual audit can judge (Ion token optional).")
+  .description("Generate and render current scenario baselines into complete audit evidence bundles.")
   .option("--skills <list>", "'all' or comma-separated skill ids", "all")
-  .option("--out <dir>", "output root (repo-relative)", "evaluation/artifacts/baselines")
+  .option("--out <dir>", "output root (repo-relative)", "optimization/runs")
   .option("--only <list>", "comma-separated case ids to render")
   .option("--force", "re-render even if a screenshot already exists")
   .action((options) =>
@@ -297,6 +297,7 @@ agentSelectionOptions(
     .option("--plateau-n <n>", "consecutive ties to trigger plateau stop", parseIntArg)
     .option("--promote", "apply KEEP candidates to skills/<skill>/SKILL.md (default: stage for human review and stop)")
     .option("--continue-on-failure", "continue remaining skills after one fails")
+    .option("--concurrency <n>", "independent skill loops to run in parallel (1-8)", parseIntArg, 1)
     .option("--dry-run", "print planned runs without executing"),
   ["proposer", "codegen", "judge"],
 ).action((options) =>

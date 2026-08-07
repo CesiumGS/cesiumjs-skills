@@ -1,8 +1,9 @@
 /**
  * `cesium-eval serve` — the Skill Evaluation Console server: serves the built
  * console SPA plus the JSON API over the scorecard/optimization artifacts.
- * Artifacts stay the immutable source of truth; this server only reads them
- * and writes the human review state (review-decisions/focus/handoff).
+ * Artifacts stay the immutable source of truth; this server reads them, writes
+ * human review state (review-decisions/focus/handoff), and launches the same
+ * journaled evaluation/optimization CLI workflows exposed in the UI.
  */
 import * as fs from "node:fs";
 import * as http from "node:http";
@@ -11,7 +12,7 @@ import { URL } from "node:url";
 import { readJson, readJsonOrNull, stableStringify, writeJsonAtomic } from "../lib/json.js";
 import { fromRepoRoot, globFiles, isUnder, listDirs, repoRelative } from "../lib/paths.js";
 import { evidenceSource as classifyEvidenceSource, resolveCodegenProvenance } from "../evaluation/scorecard.js";
-import { buildFocus } from "../optimization/scorecardFocus.js";
+import { buildSelectionFocus } from "../optimization/scorecardFocus.js";
 import * as optimizationData from "../console/optimizationData.js";
 import * as insightsData from "../console/insightsData.js";
 import * as liveData from "../console/liveData.js";
@@ -282,7 +283,7 @@ function restrictedScorecard(scorecard: Record<string, any>, confirmedKeys: Set<
 
 function buildFocusPayload(state: ViewerState, confirmedCaseKeys: string[]): Record<string, any> {
   const keys = new Set(confirmedCaseKeys.map(String));
-  const focus = buildFocus(restrictedScorecard(state.scorecard, keys));
+  const focus = buildSelectionFocus(restrictedScorecard(state.scorecard, keys));
   const surviving = new Set((focus.cases ?? []).map((c: any) => `${c.skill ?? ""}/${c.case_id ?? ""}`));
   const dropped = [...keys].filter((key) => !surviving.has(key)).sort();
   const known = knownScenarioSkills();
@@ -544,6 +545,43 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
             state !== null && fs.existsSync(state.reviewDecisionsPath) ? readJson(state.reviewDecisionsPath) : null,
           );
         }
+        if (route === "/api/optimization-handoff") {
+          if (
+            state === null ||
+            !fs.existsSync(state.optimizationHandoffPath) ||
+            !fs.existsSync(state.focusPath)
+          ) {
+            return sendJson(res, null);
+          }
+          const handoff = readJson(state.optimizationHandoffPath);
+          const focus = readJson(state.focusPath);
+          const skills = (handoff.skills ?? [])
+            .map((item: any) => String(item.skill ?? ""))
+            .filter(Boolean);
+          const caseKeys = (handoff.cases ?? [])
+            .map((item: any) => `${item.skill ?? ""}/${item.case_id ?? ""}`)
+            .filter((key: string) => !key.startsWith("/") && !key.endsWith("/"));
+          const storedMode = String(handoff.selection_mode ?? "confirmed_flags");
+          const selectionMode = ["confirmed_flags", "confirmed_and_suggested"].includes(storedMode)
+            ? storedMode
+            : "confirmed_flags";
+          return sendJson(res, {
+            handoff_path: state.optimizationHandoffPath,
+            focus_path: state.focusPath,
+            command: String(handoff.command ?? ""),
+            focus_preview: {
+              focus,
+              command: String(handoff.command ?? ""),
+              skills,
+              dropped: [],
+              case_count: caseKeys.length,
+              focus_path: state.focusPath,
+            },
+            selection_mode: selectionMode,
+            created_at: String(handoff.created_at ?? ""),
+            case_keys: caseKeys,
+          });
+        }
         if (route === "/api/runs") return sendJson(res, listRuns(ctx));
         if (route === "/api/run-cases") return sendJson(res, runCases(ctx, url.searchParams.get("run_id") ?? ""));
         if (route === "/api/registry") return sendJson(res, insightsData.registry(ctx));
@@ -616,14 +654,23 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           const focused = requireFocusedState();
           const keys = [...(payload.confirmed_case_keys ?? [])];
           const selectionMode = String(payload.selection_mode ?? "confirmed_flags");
+          if (!["confirmed_flags", "confirmed_and_suggested"].includes(selectionMode)) {
+            throw new Error(`invalid optimization handoff selection_mode: '${selectionMode}'`);
+          }
           const result = buildFocusPayload(focused, keys);
+          const handoff = buildHandoffDoc(focused, result, selectionMode);
           writeJsonAtomic(focused.focusPath, result.focus);
-          writeJsonAtomic(focused.optimizationHandoffPath, buildHandoffDoc(focused, result, selectionMode));
+          writeJsonAtomic(focused.optimizationHandoffPath, handoff);
           return sendJson(res, {
             handoff_path: focused.optimizationHandoffPath,
             focus_path: focused.focusPath,
             command: result.command,
             focus_preview: result,
+            selection_mode: selectionMode,
+            created_at: handoff.created_at,
+            case_keys: (handoff.cases ?? []).map(
+              (item: Record<string, any>) => `${item.skill ?? ""}/${item.case_id ?? ""}`,
+            ),
           });
         }
         if (route === "/api/select-run") {
@@ -660,6 +707,44 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           }
         }
         if (route === "/api/live/cancel") return sendJson(res, liveData.cancelRun(payload));
+        if (route === "/api/optimization/launch") {
+          const focused = requireFocusedState();
+          if (!fs.existsSync(focused.focusPath)) {
+            throw new ConflictError("no optimization focus exists; send flagged Review cases to Optimize first");
+          }
+          const liveStatus = liveData.liveStatus(ctx);
+          const alreadyRunning = Boolean(liveStatus.optimization_launch) || (liveStatus.active ?? []).some(
+            (run: any) => run.status === "running" && (run.kind === "iteration" || run.kind === "baseline"),
+          );
+          if (alreadyRunning) throw new ConflictError("an optimization workflow is already running");
+
+          const focus = readJson(focused.focusPath);
+          const known = knownScenarioSkills();
+          let skills: string[] = (focus.skills ?? [])
+            .map((item: any) => String(item.skill ?? ""))
+            .filter((skill: string) => known.has(skill));
+          if (!skills.length) {
+            skills = (focus.cases ?? [])
+              .map((item: any) => String(item.skill ?? ""))
+              .filter((skill: string) => known.has(skill));
+          }
+          skills = [...new Set(skills)].sort();
+          if (!skills.length) {
+            throw new ConflictError("the current focus contains no skills with optimization scenarios");
+          }
+          try {
+            return sendJson(
+              res,
+              liveData.launchOptimization(ctx, {
+                focus_path: repoRelative(focused.focusPath),
+                skills,
+                concurrency: payload.concurrency,
+              }),
+            );
+          } catch (exc) {
+            throw new ConflictError(exc instanceof Error ? exc.message : String(exc));
+          }
+        }
         if (route === "/api/optimization/promote") {
           // The human promotion gate: only a candidate the loop explicitly
           // staged (PROMOTED-PENDING.md) can be applied, and the approval is

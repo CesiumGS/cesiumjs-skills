@@ -80,6 +80,8 @@ export interface OptimizeAllOptions extends Omit<LoopOptions, "skill"> {
   fromScorecard?: string;
   fromFocus?: string;
   continueOnFailure?: boolean;
+  /** Independent skill loops to run at once. Each skill owns disjoint artifacts. */
+  concurrency?: number;
   dryRun?: boolean;
 }
 
@@ -124,23 +126,40 @@ export async function optimizeAllCommand(ctx: EvalContext, options: OptimizeAllO
     }
   }
 
-  const failures: Array<[string, number]> = [];
-  for (const [index, skill] of skills.entries()) {
-    console.log(`\n=== [${index + 1}/${skills.length}] ${skill} ===`);
-    if (options.dryRun) {
-      console.log(`(dry-run) cesium-eval optimize loop ${skill}`);
-      continue;
-    }
-    const code = await loopCommand(ctx, {
-      ...options,
-      skill,
-      proposerDecisionPath: focusDecisions.get(skill),
-    });
-    if (code !== 0) {
-      failures.push([skill, code]);
-      if (!options.continueOnFailure) break;
-    }
+  const requestedConcurrency = options.concurrency ?? 1;
+  if (!Number.isInteger(requestedConcurrency) || requestedConcurrency < 1 || requestedConcurrency > 8) {
+    console.error("--concurrency must be an integer from 1 to 8");
+    return 1;
   }
+  const concurrency = Math.min(requestedConcurrency, skills.length);
+  console.log(`[optimize all] Skill concurrency: ${concurrency}`);
+
+  const failures: Array<[string, number]> = [];
+  let cursor = 0;
+  let stopScheduling = false;
+  const worker = async (): Promise<void> => {
+    while (!stopScheduling) {
+      const index = cursor;
+      if (index >= skills.length) return;
+      cursor += 1;
+      const skill = skills[index];
+      console.log(`\n=== [${index + 1}/${skills.length}] ${skill} ===`);
+      if (options.dryRun) {
+        console.log(`(dry-run) cesium-eval optimize loop ${skill}`);
+        continue;
+      }
+      const code = await loopCommand(ctx, {
+        ...options,
+        skill,
+        proposerDecisionPath: focusDecisions.get(skill),
+      });
+      if (code !== 0) {
+        failures.push([skill, code]);
+        if (!options.continueOnFailure) stopScheduling = true;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
   if (failures.length) {
     console.error("\n[optimize all] FAIL:");
