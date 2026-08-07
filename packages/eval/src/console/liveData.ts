@@ -695,6 +695,23 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (!validJudgeHarnesses.has(judgeHarness)) {
     throw new Error(`unknown judge_harness: '${judgeHarness}' (supported: ${[...validJudgeHarnesses].sort().join(", ")})`);
   }
+  // A text-only judge cannot read screenshots, so the run would die on its
+  // first image call. Reject the launch instead of spawning a doomed process.
+  if (judge && judgeHarness !== "fake") {
+    const judgeSpec = ctx.registry.harnesses.find((harness) => harness.id === judgeHarness);
+    if (judgeSpec && !judgeSpec.multimodal) {
+      const visionCapable = ctx.registry.harnesses
+        .filter((harness) => harness.multimodal)
+        .map((harness) => harness.id)
+        .sort();
+      throw new Error(
+        `judge_harness '${judgeHarness}' cannot accept image inputs; ` +
+          `pick a vision-capable judge harness (${visionCapable.join(", ")}), ` +
+          `or turn Visual Tests off in the launcher (--no-judge on the CLI) ` +
+          `to run the deterministic lane only`,
+      );
+    }
+  }
   const nJudges = Number(payload.n_judges ?? ctx.config.judgePanel.size);
   if (!Number.isInteger(nJudges)) throw new Error("n_judges must be an integer");
   if (nJudges < 1 || nJudges > 5) throw new Error("n_judges must be between 1 and 5");

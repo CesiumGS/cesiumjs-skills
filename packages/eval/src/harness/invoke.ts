@@ -1,6 +1,7 @@
 /**
- * High-level agent invocation: role resolution, live model discovery, and
- * registry-driven vision fallback. Commands call this; drivers stay dumb.
+ * High-level agent invocation: role resolution and live model discovery.
+ * Image-bearing calls must target a vision-capable agent — there is no
+ * automatic rerouting. Commands call this; drivers stay dumb.
  */
 import "./opencodeDriver.js"; // side-effect: registers built-in drivers
 import "./codexDriver.js";
@@ -39,19 +40,6 @@ export function resolveModel(agent: ResolvedAgent): string {
   return driver.discoverDefaultModel?.(agent.harness) ?? agent.harness.default_model;
 }
 
-/**
- * Map a model id onto the fallback harness's catalog: an explicit config
- * override wins; then a same-basename catalog match; then the fallback
- * harness's default model.
- */
-function fallbackModel(ctx: EvalContext, failingModel: string, fallback: HarnessSpec): string {
-  const override = ctx.config.visionFallback.model;
-  if (override) return override;
-  const basename = failingModel.includes("/") ? failingModel.split("/").slice(1).join("/") : failingModel;
-  if (fallback.models.some((model) => model.id === basename)) return basename;
-  return fallback.default_model;
-}
-
 function codexProfileFor(role: RoleName, hasImages: boolean): string | null {
   if (hasImages) return null; // image work must stay on the vision-capable account
   const prefixes: Record<RoleName, string> = { proposer: "PROPOSER", codegen: "EVAL", judge: "JUDGE" };
@@ -65,7 +53,7 @@ function codexProfileFor(role: RoleName, hasImages: boolean): string | null {
   return null;
 }
 
-/** The agent that actually handled a call (post vision-fallback rerouting). */
+/** The agent that actually handled a call, for truthful artifact provenance. */
 export interface ResolvedAgentInfo {
   harness: string;
   model: string;
@@ -74,31 +62,26 @@ export interface ResolvedAgentInfo {
 
 export interface AgentInvocation {
   text: string;
-  /** Truthful provenance: reflects any vision-fallback reroute. */
+  /** Truthful provenance: the agent that actually made the call. */
   agent: ResolvedAgentInfo;
 }
 
 /** Invoke the configured agent for a role; returns the assistant text plus
  * the agent that actually made the call (for truthful artifact provenance). */
 export async function invokeAgent(ctx: EvalContext, role: RoleName, request: AgentRequest): Promise<AgentInvocation> {
-  let agent = ctx.resolveRole(role, request.overrides ?? {});
-  let model = resolveModel(agent);
+  const agent = ctx.resolveRole(role, request.overrides ?? {});
+  const model = resolveModel(agent);
   const hasImages = Boolean(request.files?.length);
 
-  // Registry-driven vision fallback: the registry says whether this harness/
-  // model combination can see images and where image calls re-route.
-  if (hasImages && ctx.config.visionFallback.enabled && !supportsVision(agent.harness, model)) {
-    const fallbackId = agent.harness.vision_fallback_to;
-    if (fallbackId) {
-      const fallbackSpec = ctx.harness(fallbackId);
-      const rerouted = fallbackModel(ctx, model, fallbackSpec);
-      console.error(
-        `[agent] vision fallback: ${role} call carries images but ${agent.harness.id}/${model} lacks vision; ` +
-          `routing to ${fallbackId}/${rerouted}.`,
-      );
-      agent = { ...agent, harness: fallbackSpec, model: rerouted };
-      model = rerouted;
-    }
+  // Image-bearing calls must run on a vision-capable agent. We never silently
+  // reroute to another harness: if the configured agent can't see images, fail
+  // loudly so the caller picks a vision-capable harness for this role.
+  if (hasImages && !supportsVision(agent.harness, model)) {
+    throw new Error(
+      `${agent.harness.id}/${model} cannot accept image inputs ` +
+        `(${role} call carries ${request.files!.length} image(s)); ` +
+        `choose a vision-capable harness for this role.`,
+    );
   }
 
   const call: AgentCall & Partial<CodexCall> = {

@@ -245,8 +245,8 @@ export async function judgePairwise(
     const parsed = parseVerdict(response.text);
     const finalVerdict: Verdict = parsed.verdict === "TIE" ? "TIE" : labelMapping[parsed.verdict];
 
-    // Provenance: prefer what the invocation reports it actually used (vision
-    // fallback may have rerouted) over the configured judge agent.
+    // Provenance: prefer what the invocation reports it actually used over the
+    // configured judge agent.
     const actual = response.agent;
     return {
       verdict: finalVerdict,

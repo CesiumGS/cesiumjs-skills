@@ -509,8 +509,6 @@ export interface HarnessSpec {
   auth: string;
   multimodal: boolean;
   vision_note: string;
-  vision_fallback_to?: string;
-  vision_fallback_for?: string[];
   roles: string[];
   default_model: string;
   default_effort: string;

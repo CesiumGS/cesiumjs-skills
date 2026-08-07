@@ -16,12 +16,6 @@ export interface JudgePanelConfig {
   staticProtocol: string;
 }
 
-export interface VisionFallbackConfig {
-  enabled: boolean;
-  /** Override model for fallback calls; null derives from the failing model id. */
-  model: string | null;
-}
-
 export interface BrowserConfig {
   cesiumVersion: string;
   viewport: { width: number; height: number };
@@ -47,7 +41,6 @@ export interface EvalConfig {
   threshold: number;
   roles: Record<RoleName, RoleConfig>;
   judgePanel: JudgePanelConfig;
-  visionFallback: VisionFallbackConfig;
   browser: BrowserConfig;
   server: ServerConfig;
   liveness: { runningMaxAgeSeconds: number };
@@ -89,9 +82,6 @@ export interface HarnessSpec {
   /** Whether image inputs work on this harness for this account. */
   multimodal: boolean;
   vision_note?: string;
-  /** Harness id image-bearing calls re-route to when this one lacks vision. */
-  vision_fallback_to?: string;
-  vision_fallback_for?: string[];
   roles?: string[];
   default_model: string;
   default_effort: string;

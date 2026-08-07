@@ -31,7 +31,8 @@ so the lifecycle is one continuous journey instead of a tab switch:
 fide, data-only description of the agent-CLI
 harnesses: Codex CLI (OpenAI · ChatGPT subscription, fully multimodal) and
 OpenCode CLI (GitHub Copilot subscription, **text only**: the provider disables
-vision account-wide, so image-bearing calls re-route to Codex). Each entry
+vision account-wide, so image-bearing calls are unsupported and error — pick a
+vision-capable harness for screenshot judging). Each entry
 carries its model catalog with vendor, tier, a relative cost meter (Very low →
 Premium, effort-aware since reasoning bills as output tokens) backed by real
 per-M-token prices, native vision, effort levels, context window, and release

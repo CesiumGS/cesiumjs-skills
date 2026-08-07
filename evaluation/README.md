@@ -179,9 +179,11 @@ binding gate) **and** a *qualitative* static rendered-evidence lane (advisory).
 The qualitative lane is a single-render, non-pairwise judge that scores each
 baseline **0-10** against a fixed 6-dimension rubric with hard liveness/subject
 gates and named CesiumJS failure modes (see [docs/qualitative-audit-design.md](docs/qualitative-audit-design.md)).
-With OpenCode, Codex CLI, or GitHub Copilot CLI, the qualitative judge attaches
+With Codex CLI or GitHub Copilot CLI, the qualitative judge attaches
 the screenshot PNG files to each judge call and scores from direct image
-inspection.
+inspection. The OpenCode harness is text-only (the provider disables vision
+account-wide), so it cannot serve this lane — an image-bearing call to it is an
+error, never a silent reroute.
 Screenshot-quality checks, programmatic checks, console output, scene state,
 and scenario requirements remain supporting evidence for auditability and
 failure diagnosis.
@@ -197,10 +199,8 @@ fan-out both call the same module via one runner:
 # Deterministic lane only (fast, no LLM) — the CI PR gate:
 node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
 
-# Both lanes (qualitative screenshot judge, 3-judge median panel):
-node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness opencode --judge-model auto --n-judges 3
-
-# Same qualitative lane through Codex CLI:
+# Both lanes (qualitative screenshot judge, 3-judge median panel).
+# The judge must be vision-capable; codex is the configured default:
 node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness codex --judge-model auto --n-judges 3
 
 # Same qualitative lane through GitHub Copilot CLI:

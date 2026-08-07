@@ -5,17 +5,13 @@
   "roles": {
     "proposer": { "harness": "opencode", "model": "auto", "variant": "auto" },
     "codegen": { "harness": "opencode", "model": "auto", "variant": "auto" },
-    "judge": { "harness": "opencode", "model": "auto", "variant": "auto" }
+    "judge": { "harness": "codex", "model": "auto", "variant": "auto" }
   },
   "judgePanel": {
     "size": 3,
     "seeds": [42, 123, 789],
     "pairwiseProtocol": "pairwise-v1",
     "staticProtocol": "static-visual-v1"
-  },
-  "visionFallback": {
-    "enabled": true,
-    "model": null
   },
   "browser": {
     "cesiumVersion": "1.142",

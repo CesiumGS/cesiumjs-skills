@@ -627,7 +627,8 @@ function LaunchPanel() {
   const [mode, setMode] = useState<"all" | "custom">("all");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [judge, setJudge] = useState(true);
-  const [judgeHarness, setJudgeHarness] = useState<string>("opencode");
+  // Visual Tests attach screenshots, so the judge default must be vision-capable.
+  const [judgeHarness, setJudgeHarness] = useState<string>("codex");
   const [nJudges, setNJudges] = useState(3);
   const [concurrency, setConcurrency] = useState(4);
   const [judgeModel, setJudgeModel] = useState("");
@@ -652,6 +653,9 @@ function LaunchPanel() {
     registry?.harnesses.filter((h) => h.roles.includes("codegen")).map((h) => h.id) ?? fallbackHarnesses;
   const harnessSpec = (id: string) => registry?.harnesses.find((h) => h.id === id);
   const judgeHarnessSpec = harnessSpec(judgeHarness);
+  // Error prevention: a text-only judge cannot read screenshots, so the run
+  // would fail on its first image call. Block the launch rather than spend it.
+  const judgeCannotSee = judge && judgeHarnessSpec !== undefined && !judgeHarnessSpec.multimodal;
   const judgeHarnessModels = judgeHarnessSpec?.models ?? [];
   const judgeEffortLevels = effortLevelsFor(judgeHarnessSpec, judgeModel);
   const codegenHarnessSpec = harnessSpec(codegenHarness);
@@ -966,8 +970,8 @@ function LaunchPanel() {
             </div>
             {judge && judgeHarnessSpec && !judgeHarnessSpec.multimodal && (
               <div className="launch-hint">
-                {harnessLabel(judgeHarness)} models are text-only here, so Visual Tests reroute each image call
-                to {harnessLabel(judgeHarnessSpec.vision_fallback_to ?? "codex")} automatically.
+                {harnessLabel(judgeHarness)} models are text-only here, so Visual Tests are unsupported and the run
+                will error. Choose a vision-capable judge harness.
               </div>
             )}
           </div>
@@ -1140,7 +1144,12 @@ function LaunchPanel() {
             <button
               className="launch-btn"
               onClick={() => setConfirming(true)}
-              disabled={busy || selectedCount === 0}
+              disabled={busy || selectedCount === 0 || judgeCannotSee}
+              title={
+                judgeCannotSee
+                  ? `${harnessLabel(judgeHarness)} cannot read screenshots — pick a vision-capable judge harness or turn Visual Tests off`
+                  : undefined
+              }
             >
               <Rocket size={13} aria-hidden />
               {`Review & Launch · ${selectedCount} ${selectedCount === 1 ? "Skill" : "Skills"}`}

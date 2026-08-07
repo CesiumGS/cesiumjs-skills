@@ -175,7 +175,7 @@ describe("judgePanel", () => {
     }
   });
 
-  it("stamps the agent the call actually used (vision-fallback provenance)", async () => {
+  it("stamps the agent the call actually used (truthful provenance)", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "cesium-eval-panel-"));
     tempDirs.push(root);
     const baseline = makeBundle(root, "base");
@@ -184,7 +184,7 @@ describe("judgePanel", () => {
     fs.mkdirSync(promptsDir);
     fs.writeFileSync(path.join(promptsDir, "pairwise-v1.txt"), "Compare {scenario_id}");
     const result = await judgePanel(scenario, { path: baseline }, { path: candidate }, {
-      // Simulates invokeAgent rerouting to a vision-capable fallback.
+      // The invocation reports the agent that actually handled the call.
       call: async () => ({
         text: '{"verdict": "TIE", "rationale": "same"}',
         agent: { harness: "codex", model: "gpt-5.2", variant: "high" },

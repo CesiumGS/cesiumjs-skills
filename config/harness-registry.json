@@ -18,15 +18,10 @@
       "auth": "ChatGPT OAuth (codex login)",
       "multimodal": true,
       "vision_note": "Fully multimodal. Image-bearing calls (screenshot judging) run natively.",
-      "vision_fallback_for": [
-        "copilot",
-        "opencode"
-      ],
       "roles": [
         "proposer",
         "codegen",
-        "judge",
-        "vision-fallback"
+        "judge"
       ],
       "default_model": "gpt-5.6-sol",
       "default_effort": "low",
@@ -186,8 +181,7 @@
       "provider_label": "GitHub Copilot subscription",
       "auth": "GitHub device-flow OAuth (opencode auth login)",
       "multimodal": false,
-      "vision_note": "Copilot disables the multimodal endpoint account-wide: every github-copilot/* model is text-only here even when the model is natively vision-capable. Image-bearing calls re-route to Codex (AGENT_VISION_FALLBACK).",
-      "vision_fallback_to": "codex",
+      "vision_note": "Copilot disables the multimodal endpoint account-wide: every github-copilot/* model is text-only here even when the model is natively vision-capable. Image-bearing calls (e.g. screenshot judging) are unsupported and error — choose a vision-capable harness for that role.",
       "roles": [
         "proposer",
         "codegen",
@@ -749,8 +743,7 @@
       "provider_label": "GitHub Copilot subscription",
       "auth": "GitHub OAuth (copilot login)",
       "multimodal": true,
-      "vision_note": "Fully multimodal through the first-party CLI: --attachment sends images natively, so image-bearing calls (screenshot judging) run on the Copilot subscription without rerouting. Text-only models (mai-code) still re-route via AGENT_VISION_FALLBACK.",
-      "vision_fallback_to": "codex",
+      "vision_note": "Fully multimodal through the first-party CLI: --attachment sends images natively, so image-bearing calls (screenshot judging) run on the Copilot subscription. Text-only models (mai-code) cannot accept images and will error — choose a vision-capable model or harness for that role.",
       "roles": [
         "proposer",
         "codegen",

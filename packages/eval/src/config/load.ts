@@ -4,9 +4,8 @@
  *
  * Environment variables keep the operational surface the pipeline has always
  * had: `<ROLE>_HARNESS` / `AGENT_HARNESS`, `<HARNESS>_<ROLE>_MODEL`,
- * `<HARNESS>_MODEL`, `<HARNESS>_<ROLE>_VARIANT`, `<HARNESS>_VARIANT`, and
- * `AGENT_VISION_FALLBACK{,_MODEL}` — all uppercase, harness/role interpolated
- * from config rather than hardcoded.
+ * `<HARNESS>_MODEL`, `<HARNESS>_<ROLE>_VARIANT`, `<HARNESS>_VARIANT` — all
+ * uppercase, harness/role interpolated from config rather than hardcoded.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -28,8 +27,8 @@ const DEFAULT_TIMEOUT_SECONDS = 600;
 
 /** Structural fallbacks only — every operational choice should live in eval.config.json. */
 function builtinDefaults(): EvalConfig {
-  const role = (): RoleConfig => ({
-    harness: "opencode",
+  const role = (harness = "opencode"): RoleConfig => ({
+    harness,
     model: "auto",
     variant: "auto",
     timeoutSeconds: DEFAULT_TIMEOUT_SECONDS,
@@ -37,9 +36,10 @@ function builtinDefaults(): EvalConfig {
   return {
     registry: "config/harness-registry.json",
     threshold: 0.95,
-    roles: { proposer: role(), codegen: role(), judge: role() },
+    // The judge reads screenshots, so its default harness must be vision-capable:
+    // image-bearing calls to a text-only harness are an error, not a reroute.
+    roles: { proposer: role(), codegen: role(), judge: role("codex") },
     judgePanel: { size: 3, seeds: [42, 123, 789], pairwiseProtocol: "pairwise-v1", staticProtocol: "static-visual-v1" },
-    visionFallback: { enabled: true, model: null },
     browser: {
       cesiumVersion: "1.142",
       viewport: { width: 1280, height: 720 },
@@ -124,14 +124,7 @@ function applyEnvOverlay(config: EvalConfig): EvalConfig {
     roles[role] = current;
   }
 
-  const fallbackEnabled = env("AGENT_VISION_FALLBACK");
-  const visionFallback = { ...config.visionFallback };
-  if (fallbackEnabled !== undefined) {
-    visionFallback.enabled = !["0", "off", "false", "no"].includes(fallbackEnabled.trim().toLowerCase());
-  }
-  visionFallback.model = env("AGENT_VISION_FALLBACK_MODEL") ?? visionFallback.model;
-
-  return { ...config, roles, visionFallback };
+  return { ...config, roles };
 }
 
 // ---------------------------------------------------------------------------
