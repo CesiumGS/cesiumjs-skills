@@ -20,7 +20,8 @@ concurrency:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner labels).
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
 
     steps:
       - name: Check out source repo

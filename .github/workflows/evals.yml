@@ -30,7 +30,8 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner labels).
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
 
     steps:
       - name: Check out source repo
@@ -40,8 +41,16 @@ jobs:
 
       - name: Install gitleaks
         run: |
-          wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz
-          tar -xzf gitleaks_8.18.2_linux_x64.tar.gz
+          GITLEAKS_VERSION=8.18.2
+          # Runner architecture varies (hosted runners are x64; a self-hosted
+          # pool may be ARM64), so the asset is selected rather than hardcoded.
+          case "$(uname -m)" in
+            x86_64) GITLEAKS_ARCH=x64 ;;
+            aarch64 | arm64) GITLEAKS_ARCH=arm64 ;;
+            *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${GITLEAKS_ARCH}.tar.gz"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_${GITLEAKS_ARCH}.tar.gz"
           sudo mv gitleaks /usr/local/bin/
           gitleaks version
 
