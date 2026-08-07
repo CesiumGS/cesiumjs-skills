@@ -599,8 +599,21 @@ export interface AdapterStatusDTO {
   advisory: string;
 }
 
+/** A canonical model provider: the entity that serves and bills a call.
+ * Models belong to providers, not harnesses — several harnesses can reach the
+ * same provider, which is why the catalog is keyed this way. */
+export interface ProviderSpec {
+  id: string;
+  display_name: string;
+  kind: "first_party" | "broker" | "aggregator" | "cloud_platform" | "local_runtime";
+  protocols_served: string[];
+  first_party_vendor?: string | null;
+  notes?: string[];
+}
+
 export interface RegistryDTO {
   schema_version: string;
+  providers?: ProviderSpec[];
   harnesses: HarnessSpec[];
 }
 

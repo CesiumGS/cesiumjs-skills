@@ -4830,3 +4830,6 @@ button.chart-pt:focus-visible {
 }
 .hh-actions { justify-content: flex-end; }
 .hh-route.missing { color: var(--defer); background: var(--defer-bg); }
+
+/* Card titles sit beside long subtitles; never let the title itself wrap. */
+.section-title .st-label { white-space: nowrap; }

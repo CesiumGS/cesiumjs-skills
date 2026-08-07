@@ -820,7 +820,9 @@ function HarnessHealthPanel() {
 function AdapterPanel() {
   const [state, setState] = useState<AdapterStatusDTO | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [probeResult, setProbeResult] = useState<ProbeResultDTO | null>(null);
+  // Keyed BY TARGET: results accumulate so probing one target never clears
+  // another's verdict (a single result slot silently blanked the other row).
+  const [probeResults, setProbeResults] = useState<Record<string, ProbeResultDTO>>({});
   const [error, setError] = useState<string | null>(null);
 
   const refresh = () =>
@@ -847,12 +849,12 @@ function AdapterPanel() {
   const probeVia = async (target: string) => {
     setBusy(`probe:${target}`);
     setError(null);
-    setProbeResult(null);
     try {
       // Claude Code is the base_url_override harness — the one the adapter
       // can redirect purely via env. Others need config-surface changes
       // (documented in the registry) and are not yet automated.
-      setProbeResult(await probeHarness("claude-code", undefined, undefined, target));
+      const result = await probeHarness("claude-code", undefined, undefined, target);
+      setProbeResults((prev) => ({ ...prev, [target]: result }));
     } catch (exc: any) {
       setError(String(exc?.message ?? exc));
     } finally {
@@ -870,9 +872,8 @@ function AdapterPanel() {
       <div className="section-title">
         <ArrowRight size={13} aria-hidden /> Protocol Adapter
         <span className="section-sub">
-          Translates between wire protocols for harness × provider pairs that don't share one (e.g. Claude Code →
-          Azure/Foundry). {state.display_name}, pinned <code className="mono">=={state.version_pin}</code>, launched on
-          demand — nothing global to keep patched.
+          Translates between wire protocols for harness × provider pairs that don't share one, so a harness can reach a
+          provider it couldn't speak to directly (e.g. Claude Code → Azure/Foundry).
         </span>
         <span className="spacer" />
         <span className={`hh-verdict ${stateTone}`} title={state.pid ? `pid ${state.pid}` : undefined}>
@@ -886,7 +887,7 @@ function AdapterPanel() {
             state.running
               ? "Stop the adapter proxy"
               : state.configured
-                ? "Generate config from targets and launch the pinned proxy"
+                ? "Generate config from targets and launch the adapter"
                 : "No targets configured — run `cesium-eval adapter init`, then edit the local targets file"
           }
         >
@@ -903,7 +904,7 @@ function AdapterPanel() {
       <div className="hh-rows">
         {state.targets.map((target) => {
           const isProbing = busy === `probe:${target.name}`;
-          const result = probeResult?.adapter?.target === target.name ? probeResult : null;
+          const result = probeResults[target.name] ?? null;
           const tone = result ? probeVerdictTone(result.verdict) : null;
           // A missing credential is a SETUP state, not a failure: name it,
           // link the remediation, and disable the probe rather than letting
@@ -991,9 +992,6 @@ function AdapterPanel() {
         )}
       </div>
 
-      <div className="launch-note" title={state.advisory}>
-        Supply-chain note: LiteLLM {state.version_pin} is pinned deliberately — releases 1.82.7/1.82.8 were compromised.
-      </div>
     </div>
   );
 }
