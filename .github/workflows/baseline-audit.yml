@@ -108,7 +108,7 @@ jobs:
       # evaluation/artifacts/ tree.
       BUNDLE_ROOT: evaluation/artifacts/baselines
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # A contents: read installation token otherwise sits in
@@ -218,7 +218,7 @@ jobs:
         # just failed to clean. Still runs when the loop itself failed, because a
         # failed run's artifacts are the diagnostic material.
         if: always() && steps.sanitize.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: baseline-audit-qualitative-${{ github.run_number }}
           path: |
