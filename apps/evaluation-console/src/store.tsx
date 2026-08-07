@@ -25,6 +25,7 @@ import {
   loadScorecard,
   loadSkills,
   promoteCandidate,
+  reviewCandidate,
   saveReviewDecisions,
   selectRun
 } from "./api";
@@ -192,6 +193,7 @@ export interface Store {
   startOptimization: (concurrency?: number) => Promise<boolean>;
   launchEvalRun: (payload: LaunchRequest) => Promise<LaunchRecord | null>;
   cancelLiveRun: (launchId: string) => Promise<void>;
+  reviewSkillCandidate: (skill: string, iteration: string, decision: "approve" | "reject") => Promise<boolean>;
   promoteSkillCandidate: (skill: string, iteration: string) => Promise<boolean>;
   switchRun: (runId: string) => Promise<void>;
   setActiveHarness: (h: Harness | null) => void;
@@ -957,19 +959,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const showHandoff = useCallback(() => setHandoffPanelVisible(true), []);
 
   const doExport = useCallback(async () => {
-    // The explicit bulk action approves every case currently carrying the
-    // Flagged status. Preserve whether the set is purely human-confirmed or
-    // also contains machine suggestions in the handoff provenance.
+    // Machine suggestions remain triage hints. Only cases explicitly confirmed
+    // by a human may cross the Review -> Optimize boundary.
     const confirmedFlags = caseViews.filter((v) => v.decision === "flag" && v.source === "human");
-    const suggestedFlags = caseViews.filter((v) => v.decision === "flag" && v.source !== "human");
-    const flags = [...confirmedFlags, ...suggestedFlags];
-    const selectionMode: SelectionMode =
-      suggestedFlags.length > 0 ? "confirmed_and_suggested" : "confirmed_flags";
+    const flags = confirmedFlags;
+    const selectionMode: SelectionMode = "confirmed_flags";
     if (!flags.length) {
-      pushToast("No flagged cases to hand off yet.", "bad");
+      pushToast("Confirm at least one suggested flag in Review before handoff.", "bad");
       return;
     }
     try {
+      const cfg = configRef.current;
+      const sc = scorecardRef.current;
+      if (!cfg || !sc) throw new Error("no focused scorecard is loaded");
+      const reviewDoc: ReviewDecisionDoc = {
+        schema_version: "1.0",
+        run_id: sc.runId,
+        scorecard_path: cfg.scorecard_path ?? undefined,
+        updated_at: nowIso(),
+        decisions: decisionsRef.current,
+      };
+      // Persist immediately so the backend can independently verify that every
+      // selected key is a human-authored flag from this run.
+      await saveReviewDecisions(reviewDoc);
+      setSaveStatus("saved");
       const keys = flags.map((v) => v.key);
       const sk = [...new Set(flags.map((v) => v.skill))].sort();
       const res = await exportHandoff(keys, selectionMode);
@@ -979,9 +992,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           `${missing.length} flagged ${missing.length === 1 ? "case was" : "cases were"} not accepted: ${missing.join(", ")}`,
         );
       }
-      const sourceLabel = suggestedFlags.length
-        ? `${confirmedFlags.length} confirmed + ${suggestedFlags.length} suggested`
-        : `${confirmedFlags.length} confirmed`;
+      const sourceLabel = `${confirmedFlags.length} confirmed`;
       setLastHandoff({
         ...res,
         at: res.created_at || nowIso(),
@@ -1106,6 +1117,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [pushToast]
   );
 
+  // Decide records human authority separately from Promote's live-file write.
+  const reviewSkillCandidate = useCallback(
+    async (skill: string, iteration: string, decision: "approve" | "reject"): Promise<boolean> => {
+      try {
+        await reviewCandidate(skill, iteration, decision);
+        const [skillList, detail] = await Promise.all([loadSkills(), loadIteration(skill, iteration)]);
+        setSkills(skillList);
+        if (selectedSkillLiveRef.current === skill && selectedIterationLiveRef.current === iteration) {
+          setIterationDetail(detail);
+        }
+        const verb = decision === "approve" ? "approved for Promote" : "rejected";
+        pushToast(`Candidate ${skill} ${iteration} ${verb}.`, decision === "approve" ? "good" : "info");
+        setLiveMessage(`Human review ${decision} recorded for ${skill} ${iteration}.`);
+        return true;
+      } catch (err) {
+        pushToast(`Candidate review failed: ${err instanceof Error ? err.message : String(err)}`, "bad");
+        return false;
+      }
+    },
+    [pushToast]
+  );
+
   const switchRun = useCallback(
     async (runId: string) => {
       try {
@@ -1206,6 +1239,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCaseScope,
     launchEvalRun,
     cancelLiveRun,
+    reviewSkillCandidate,
     promoteSkillCandidate,
     reload: boot
   };

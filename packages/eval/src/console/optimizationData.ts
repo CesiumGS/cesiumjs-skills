@@ -20,15 +20,33 @@ const candidatesRoot = () => fromRepoRoot("optimization", "candidates");
 const historyRoot = () => fromRepoRoot("optimization", "history");
 
 /**
- * Post-promotion-gate state of a KEEP candidate:
- *  - "staged":   PROMOTED-PENDING.md awaits human approval (skills/ untouched)
+ * Human-review and promotion state of a KEEP candidate:
+ *  - "staged":   PROMOTED-PENDING.md awaits a Decide review
+ *  - "approved": Decide approved the candidate for the separate Promote gate
+ *  - "rejected": Decide rejected the candidate; skills/ remains untouched
  *  - "promoted": updateCurrentBest ran (backup exists), SKILL.md was updated
  *  - "unknown":  KEEP with neither marker (should not happen; stay honest)
  */
-export function promotionState(skill: string, iteration: string): string {
-  if (fs.existsSync(path.join(candidatesRoot(), skill, iteration, "PROMOTED-PENDING.md"))) return "staged";
-  if (fs.existsSync(path.join(historyRoot(), skill, `iteration-${iteration}`, "current-best-before.md"))) return "promoted";
+export function classifyPromotionState(input: {
+  pending: boolean;
+  promoted: boolean;
+  reviewDecision: unknown;
+}): string {
+  if (input.promoted) return "promoted";
+  if (input.pending && input.reviewDecision === "approve") return "approved";
+  if (input.pending && input.reviewDecision === "reject") return "rejected";
+  if (input.pending) return "staged";
   return "unknown";
+}
+
+export function promotionState(skill: string, iteration: string): string {
+  const candidateDir = path.join(candidatesRoot(), skill, iteration);
+  const review = readJsonOrNull(path.join(candidateDir, "candidate-review.json"));
+  return classifyPromotionState({
+    pending: fs.existsSync(path.join(candidateDir, "PROMOTED-PENDING.md")),
+    promoted: fs.existsSync(path.join(historyRoot(), skill, `iteration-${iteration}`, "current-best-before.md")),
+    reviewDecision: review?.decision,
+  });
 }
 
 /** A non-terminal journal older than this is stalled, not running. */

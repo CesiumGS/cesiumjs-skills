@@ -139,6 +139,7 @@ export function Rail() {
     setStation,
     needsYouCount,
     counts,
+    confirmedFlagKeys,
     skills,
     studyRuns,
     optimizationRuns,
@@ -151,9 +152,13 @@ export function Rail() {
   const stalledStudyCount = studyRuns.filter((run) => run.status === "stalled").length;
   const failedOptimizationCount = optimizationRuns.filter((run) => run.status === "failed").length;
   const stalledOptimizationCount = optimizationRuns.filter((run) => run.status === "stalled").length;
-  const decidable = skills.filter((s) => s.latest?.decision === "KEEP").length;
-  const stagedCount = skills.filter((s) => s.latest?.decision === "KEEP" && s.latest?.promotion === "staged").length;
-  const flagged = counts.flag;
+  const decidable = skills.filter(
+    (s) => s.latest?.decision === "KEEP" && s.latest?.promotion === "staged"
+  ).length;
+  const stagedCount = skills.filter(
+    (s) => s.latest?.decision === "KEEP" && s.latest?.promotion === "approved"
+  ).length;
+  const flagged = confirmedFlagKeys.length;
 
   /* Badges carry information, never decoration: each one answers "how many
      things wait for me here?" or "is something running?" — and says which. */
@@ -266,12 +271,14 @@ export function Rail() {
         disabled={!flagged}
         title={
           flagged
-            ? `Transfer all ${pluralize(flagged, "flagged case")} into the optimization focus, then open Optimize.`
-            : "Flag cases in Review to create an optimization focus."
+            ? `Transfer all ${pluralize(flagged, "human-confirmed flag")} into the optimization focus, then open Optimize.`
+            : counts.flag > 0
+              ? "Confirm suggested flags in Review before sending them to Optimize."
+              : "Flag cases in Review to create an optimization focus."
         }
       >
         <span className="rh-label">
-          {flagged ? `Send ${flagged} ${flagged === 1 ? "flag" : "flags"} to Optimize` : "No flags ready"}
+          {flagged ? `Send ${flagged} confirmed ${flagged === 1 ? "flag" : "flags"} to Optimize` : "No confirmed flags ready"}
         </span>
         <ArrowRight size={13} aria-hidden className="rh-go" />
       </button>

@@ -236,6 +236,20 @@ function skillsWithProvenance(ctx: EvalContext): Array<Record<string, any>> {
 // ---------------------------------------------------------------------------
 const caseKeyOf = (caseRow: Record<string, any>): string => `${caseRow.skill ?? ""}/${caseRow.case_id ?? ""}`;
 
+/** Only persisted, human-authored flags may cross the Review -> Optimize
+ * boundary. The server rechecks this instead of trusting browser labels. */
+export function confirmedHumanFlagKeys(reviewDoc: Record<string, any> | null, runId: string): Set<string> {
+  if (!reviewDoc || String(reviewDoc.run_id ?? "") !== runId) return new Set();
+  const confirmed = new Set<string>();
+  for (const decision of Object.values(reviewDoc.decisions ?? {}) as Array<Record<string, any>>) {
+    if (decision.decision !== "flag" || decision.source !== "human") continue;
+    const skill = String(decision.skill ?? "");
+    const caseId = String(decision.case_id ?? "");
+    if (skill && caseId) confirmed.add(`${skill}/${caseId}`);
+  }
+  return confirmed;
+}
+
 function restrictedScorecard(scorecard: Record<string, any>, confirmedKeys: Set<string>): Record<string, any> {
   const cases: Array<Record<string, any>> = [];
   for (const original of scorecard.cases ?? []) {
@@ -654,8 +668,18 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           const focused = requireFocusedState();
           const keys = [...(payload.confirmed_case_keys ?? [])];
           const selectionMode = String(payload.selection_mode ?? "confirmed_flags");
-          if (!["confirmed_flags", "confirmed_and_suggested"].includes(selectionMode)) {
-            throw new Error(`invalid optimization handoff selection_mode: '${selectionMode}'`);
+          if (selectionMode !== "confirmed_flags") {
+            throw new Error("optimization handoff requires selection_mode 'confirmed_flags'");
+          }
+          const reviewDoc = fs.existsSync(focused.reviewDecisionsPath)
+            ? readJson(focused.reviewDecisionsPath)
+            : null;
+          const confirmed = confirmedHumanFlagKeys(reviewDoc, focused.runId);
+          const unconfirmed = keys.filter((key: string) => !confirmed.has(String(key)));
+          if (unconfirmed.length) {
+            throw new ConflictError(
+              `handoff contains ${unconfirmed.length} case(s) without a persisted human flag: ${unconfirmed.join(", ")}`,
+            );
           }
           const result = buildFocusPayload(focused, keys);
           const handoff = buildHandoffDoc(focused, result, selectionMode);
@@ -745,6 +769,33 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
             throw new ConflictError(exc instanceof Error ? exc.message : String(exc));
           }
         }
+        if (route === "/api/optimization/review") {
+          const skill = String(payload.skill ?? "");
+          const iteration = String(payload.iteration ?? "");
+          const decision = String(payload.decision ?? "");
+          if (!/^[a-z0-9-]+$/.test(skill) || !/^\d{3}$/.test(iteration)) {
+            throw new Error("candidate review requires a skill id and a NNN iteration id");
+          }
+          if (!["approve", "reject"].includes(decision)) {
+            throw new Error("candidate review decision must be 'approve' or 'reject'");
+          }
+          const candidateDir = fromRepoRoot("optimization", "candidates", skill, iteration);
+          const pending = path.join(candidateDir, "PROMOTED-PENDING.md");
+          if (!fs.existsSync(pending)) {
+            throw new NotFoundError(`no staged candidate for ${skill}/${iteration} to review`);
+          }
+          const review = {
+            schema_version: "1.0",
+            skill,
+            iteration,
+            decision,
+            source: "human",
+            via: "console",
+            reviewed_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+          };
+          writeJsonAtomic(path.join(candidateDir, "candidate-review.json"), review);
+          return sendJson(res, { ok: true, ...review });
+        }
         if (route === "/api/optimization/promote") {
           // The human promotion gate: only a candidate the loop explicitly
           // staged (PROMOTED-PENDING.md) can be applied, and the approval is
@@ -757,6 +808,12 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           const pending = fromRepoRoot("optimization", "candidates", skill, iteration, "PROMOTED-PENDING.md");
           if (!fs.existsSync(pending)) {
             throw new NotFoundError(`no staged candidate for ${skill}/${iteration} — nothing awaits promotion`);
+          }
+          const review = readJsonOrNull(
+            fromRepoRoot("optimization", "candidates", skill, iteration, "candidate-review.json"),
+          );
+          if (review?.decision !== "approve" || review?.source !== "human") {
+            throw new ConflictError(`candidate ${skill}/${iteration} has not been approved in Decide`);
           }
           const { promoteCommand } = await import("./optimize.js");
           const code = await promoteCommand({ skill, iteration, via: "console" });

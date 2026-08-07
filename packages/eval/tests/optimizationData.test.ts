@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentJournalAttempt, journalLifecycle } from "../src/console/optimizationData.js";
+import { classifyPromotionState, currentJournalAttempt, journalLifecycle } from "../src/console/optimizationData.js";
 
 const ts = "2099-01-01T00:00:00.000Z";
 
@@ -56,5 +56,17 @@ describe("optimization journal lifecycle", () => {
 
     expect(currentJournalAttempt("baseline", journal)).toEqual(journal.slice(2));
     expect(journalLifecycle("baseline", journal, 60).status).toBe("baseline");
+  });
+});
+
+describe("candidate review state", () => {
+  it("requires Decide approval before a staged candidate is promotable", () => {
+    expect(classifyPromotionState({ pending: true, promoted: false, reviewDecision: null })).toBe("staged");
+    expect(classifyPromotionState({ pending: true, promoted: false, reviewDecision: "approve" })).toBe("approved");
+    expect(classifyPromotionState({ pending: true, promoted: false, reviewDecision: "reject" })).toBe("rejected");
+  });
+
+  it("treats an applied candidate as promoted regardless of its earlier review record", () => {
+    expect(classifyPromotionState({ pending: false, promoted: true, reviewDecision: "approve" })).toBe("promoted");
   });
 });

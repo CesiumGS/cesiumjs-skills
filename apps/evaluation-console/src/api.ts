@@ -151,6 +151,16 @@ export const promoteCandidate = (skill: string, iteration: string) =>
     body: JSON.stringify({ skill, iteration })
   });
 
+/** Record the human Decide verdict without mutating the live skill. */
+export const reviewCandidate = (skill: string, iteration: string, decision: "approve" | "reject") =>
+  req<{ ok: boolean; skill: string; iteration: string; decision: "approve" | "reject" }>(
+    "/api/optimization/review",
+    {
+      method: "POST",
+      body: JSON.stringify({ skill, iteration, decision })
+    }
+  );
+
 export const saveReviewDecisions = (doc: ReviewDecisionDoc) =>
   req<ReviewDecisionDoc>("/api/review-decisions", { method: "PUT", body: JSON.stringify(doc) });
 

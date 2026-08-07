@@ -354,8 +354,8 @@ export interface IterationSummary {
   decision: LoopDecision;
   rule_fired: string | null;
   rationale: string | null;
-  /** Post-promotion-gate state of a KEEP: staged (awaits human), promoted, or unknown. */
-  promotion?: "promoted" | "staged" | "unknown" | null;
+  /** Human-review and promotion state of a KEEP candidate. */
+  promotion?: "promoted" | "approved" | "rejected" | "staged" | "unknown" | null;
   counts: IterationCounts;
   scores: IterationScores;
   started_utc: string | null;

@@ -456,6 +456,8 @@ export function PromotePanel() {
 
   const withKeep = skills.filter((s) => s.latest?.decision === "KEEP");
   const staged = withKeep.filter((s) => s.latest?.promotion === "staged");
+  const approved = withKeep.filter((s) => s.latest?.promotion === "approved");
+  const rejected = withKeep.filter((s) => s.latest?.promotion === "rejected");
   const promoted = withKeep.filter((s) => s.latest?.promotion === "promoted");
   const unknown = withKeep.filter((s) => !s.latest?.promotion || s.latest?.promotion === "unknown");
 
@@ -503,17 +505,38 @@ export function PromotePanel() {
       <div className="section-title" style={{ marginTop: 0 }}>
         Promote
         <span className="section-sub">
-          The human gate: a KEEP candidate is only <em>staged</em> by the loop; nothing touches a live SKILL.md until you
-          promote it here (or run the CLI command). The current version is archived first.
+          A KEEP candidate must first be approved in Decide. Promote is the separate live-file mutation; the current
+          version is archived before it changes.
         </span>
       </div>
 
-      <div className="section-title">Pending promotion</div>
+      <div className="section-title">Awaiting Decide review</div>
       {staged.length === 0 ? (
-        <div className="empty-note">Nothing staged. KEEP candidates appear here awaiting your approval.</div>
+        <div className="empty-note">No unreviewed KEEP candidates.</div>
       ) : (
         <div className="skill-grid">
           {staged.map((s) => {
+            const it = s.latest!;
+            return card(
+              s,
+              <div style={{ marginTop: "var(--sp-2)", fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
+                Inspect candidate <span className="mono">{it.iteration}</span> in Decide and record an explicit human
+                approve or reject decision. The live skill is untouched.
+                <div style={{ marginTop: "var(--sp-3)" }}>
+                  <Pill tone="human">awaiting Decide review</Pill>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="section-title">Pending promotion</div>
+      {approved.length === 0 ? (
+        <div className="empty-note">Nothing approved. Candidates appear here only after Decide approval.</div>
+      ) : (
+        <div className="skill-grid">
+          {approved.map((s) => {
             const it = s.latest!;
             const cmd = `node packages/eval/bin/cesium-eval.js optimize promote ${s.skill} ${it.iteration}`;
             const key = `${s.skill}/${it.iteration}`;
@@ -521,7 +544,7 @@ export function PromotePanel() {
               s,
               <div style={{ marginTop: "var(--sp-2)" }}>
                 <div style={{ fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
-                  Staged candidate <span className="mono">{it.iteration}</span> awaits your approval
+                  Approved candidate <span className="mono">{it.iteration}</span> awaits promotion
                   {it.finished_utc ? ` (won ${relativeTime(it.finished_utc)})` : ""}. The live{" "}
                   <span className="mono">skills/{s.skill}/SKILL.md</span> is untouched.
                 </div>
@@ -534,12 +557,31 @@ export function PromotePanel() {
                   </button>
                 </div>
                 <div style={{ marginTop: "var(--sp-2)" }}>
-                  <Pill tone="human">awaiting your approval</Pill>
+                  <Pill tone="human">approved in Decide</Pill>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {rejected.length > 0 && (
+        <>
+          <div className="section-title">Rejected in Decide</div>
+          <div className="skill-grid">
+            {rejected.map((s) =>
+              card(
+                s,
+                <div style={{ marginTop: "var(--sp-2)", fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
+                  Human review rejected this candidate. It remains archived for evidence and cannot be promoted from the console.
+                  <div style={{ marginTop: "var(--sp-3)" }}>
+                    <Pill tone="neutral">rejected</Pill>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </>
       )}
 
       <div className="section-title">Promoted</div>
