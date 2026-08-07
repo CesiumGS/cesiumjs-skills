@@ -239,7 +239,10 @@ gg / G          top (worst) / bottom                     Esc     up one altitude
 **REVIEW verbs:** `a` accept · `f` flag for Optimize · `d` defer · `u` undo (toast) · `q` focus quant band · `◈`(`w`) focus qual band · `1-4` cardinal angle · `space` cycle angles · `z` zoom render.
 **OPTIMIZE verbs:** `o` start loop on focused focus-skill (gated) · `space` pause · `a` abort (confirm) · `l` journal.
 **DECIDE verbs:** `x` swipe-diff (hold/drag) · `X` blink-compare · `k` keep-override · `r` reject(agree) · `Enter` trust machine · `[`/`]` scenario · `l` jump to LOSS scenarios.
-**PROMOTE:** `P` (uppercase = mutates live `SKILL.md`; **guarded**: Enter-to-confirm + 5s undo toast `Z`, *not* a typed-name ceremony — tuned for the solo trusted user per the judges' confirm-fatigue note).
+**PROMOTE:** Decide records an explicit human approve/reject verdict without
+touching `SKILL.md`. The separate Promote station enables its mutation button
+only for an approved staged candidate; promotion archives the current file
+before applying the candidate.
 **Global a11y:** `M` flatten any overlay → plain semantic list.
 
 **Affordance convention (Norman):** lowercase = safe/reversible, uppercase = consequential. The action bar always prints the live verbs (self-documenting). `d` means Defer in Review and is unused in Decide (Decide uses `x` for diff) — **no key is overloaded across a shared Stage** (resolves Cadence's flagged `d` collision).
@@ -269,11 +272,11 @@ gg / G          top (worst) / bottom                     Esc     up one altitude
 
 **Today's reality (verified):** `focus.json` is rich (`source_run_id`, `threshold`, `focus_required`, `categories[]`, `skills[]`, `cases[].failed_checks[]`) but is **auto-generated from the scorecard's critical failures** — human review does NOT write it. **Skill Evaluation Console makes the human the author.**
 
-1. **Flag:** `f` marks a Review case Flagged while preserving whether the decision is human-confirmed or machine-suggested.
-2. **Hand off:** The explicit rail affordance **"Send N flags to Optimize"** transfers every currently flagged case. The server writes `focus.json` in the exact existing schema and stamps `source_run_id` to guard against a stale run.
-3. **Gate:** Handoff is disabled when no flagged cases exist. Optimize then shows a separate, explicit **Start optimization** action; the exact CLI command remains visible as a terminal fallback.
+1. **Flag:** `f` records a human-confirmed Review flag. Machine auto-flags remain visible suggestions until explicitly confirmed.
+2. **Hand off:** The explicit rail affordance **"Send N confirmed flags to Optimize"** transfers only persisted human flags. The server independently revalidates the selected keys, writes `focus.json` in the existing schema, and stamps `source_run_id` to guard against a stale run.
+3. **Gate:** Handoff is disabled when no human-confirmed flags exist. Optimize then shows a separate, explicit **Start optimization** action; the exact CLI command remains visible as a terminal fallback.
 4. **Stream:** Start POSTs the validated focus and known skills to the optimization dispatcher. The server tails `journal.jsonl` and watches artifacts; Optimize owns the resulting animation and live badge independently of Run.
-5. **Review & promote:** When `decision.json` lands, `Enter` carries you to Decide. The **CHASING bar** and **"authorized by: ⚑flag"** trace every iteration back to the human flag that triggered it (`g→origin`). `P` writes the candidate `SKILL.md` over the live one (with diff preview + 5s undo), archives to `optimization-snapshot-*`, and records the promotion on the rail's PROMOTE station. `rebaseline_required[]` from `decision.json` surfaces as an explicit warning row.
+5. **Review & promote:** When `decision.json` lands, `Enter` carries you to Decide. The **CHASING bar** and **"authorized by: ⚑flag"** trace every iteration back to the human flag that triggered it (`g→origin`). Decide records `approve` or `reject` in `candidate-review.json` without mutating the live skill. Promote accepts only an approved `PROMOTED-PENDING.md`, archives the previous skill to `optimization/history/<skill>/iteration-<id>/current-best-before.md`, applies the candidate, and writes `promotion.json`. `rebaseline_required[]` from `decision.json` surfaces as an explicit warning row.
 
 > **Honesty note baked into the build:** the loop is **skill-scoped** (`run-loop.py` regenerates all ~14 scenarios per iteration) and eval-case IDs ≠ optimization-scenario IDs. So the CHASING bar reads *"optimizing **cesiumjs-camera**, seeded by your flags: eval-113, eval-104"* — skill-level honesty, not a fabricated per-case lock (resolves the Atlas-editorial fatal flaw).
 

@@ -200,7 +200,7 @@ The qualitative score can only *downgrade* a deterministically-passing baseline
 (a blocking failure flag → fail/needs_review); it can never upgrade a deterministic
 failure. The deterministic lane stays TypeScript-owned and binding.
 
-The judge lives in `packages/eval/src/evaluation/staticJudge.ts`
+The judge lives in `packages/eval/src/evaluation/judge/staticJudge.ts`
 (`judgeRender` + the `static-visual-v1` prompts). CI and the local
 fan-out both call the same module via one runner:
 

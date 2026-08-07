@@ -2,11 +2,11 @@
 
 ## 1. Introduction / Overview
 
-The Cesium AI Evaluation Framework measures how effectively AI coding agents generate, revise, and reason about CesiumJS code when guided by skill documents. It exists to (a) catch regressions whenever a skill, prompt, model, or example changes, and (b) drive a **fully autonomous** improvement loop that proposes skill changes, evaluates them, and decides whether to keep them — without requiring a maintainer in the loop.
+The Cesium AI Evaluation Framework measures how effectively AI coding agents generate, revise, and reason about CesiumJS code when guided by skill documents. It exists to (a) catch regressions whenever a skill, prompt, model, or example changes, and (b) autonomously propose and evaluate candidate skill changes while keeping live-skill mutation behind an explicit human promotion gate.
 
 The framework's first concrete target is the `CesiumGS/cesiumjs-skills` repository. Skill evaluations execute generated JavaScript in a browser-backed Cesium scene, capture evidence, run deterministic checks, and use a three-judge pairwise A/B/TIE protocol for visual comparison. The architecture preserves a clean extension point for future MCP/tool-call evaluations.
 
-A maintainer **may** opt in to review specific decisions, but routine operation requires no human gate. Tie outcomes, regressions, and accept/reject decisions all resolve deterministically.
+Candidate generation, browser execution, judging, and the machine decision require no interactive input. A maintainer must still approve a winning staged candidate before the console can promote it. Ties and regressions resolve deterministically without creating a promotable candidate.
 
 ## 2. Goals
 
@@ -85,15 +85,15 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 - [ ] Failure to obtain three verdicts marks scenario as `judge_unavailable`, not as a loss.
 
 ### US-008: Autonomous decision engine
-**Description:** As the framework, I need a rule-based engine that decides keep/reject for a candidate without human intervention, even on ties.
+**Description:** As the framework, I need a rule-based engine that decides KEEP, REJECT, or TIE without human intervention and reserves KEEP for an explicit candidate win.
 
 **Acceptance Criteria:**
 - [ ] Decision rules applied in order:
-  1. Any `programmatic_checks` failure on a `regression_critical: true` scenario → **REJECT**.
+  1. Any non-environment `programmatic_checks` failure → **REJECT**.
   2. Any judge loss on a `regression_critical: true` scenario → **REJECT**.
   3. Aggregate candidate wins > baseline wins across non-critical scenarios → **KEEP**.
   4. Aggregate baseline wins > candidate wins → **REJECT**.
-  5. Aggregate tie → **KEEP CURRENT BEST** (no maintainer required; default rule applies).
+  5. Aggregate tie → **TIE** and retain the current best; the candidate is not eligible for promotion.
 - [ ] Optional maintainer override is supported but **not required**: a CLI flag `--override` with a written rationale flips the decision and records the rationale.
 - [ ] Decision record written to `optimization/results/<skill>/<iteration>/decision.json` with rule that fired, win/loss/tie counts, and rationale if overridden.
 
@@ -139,10 +139,10 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 **Acceptance Criteria:**
 - [ ] CLI: `optimization/scripts/run-loop.py <skill> --max-iterations N --stop-on <plateau|regression|max>`.
 - [ ] Loop sequence per iteration: proposer → adapter (all scenarios) → runner → checks → judges → decision → report → write history.
-- [ ] If decision is KEEP: candidate becomes new current best and next iteration starts.
-- [ ] If decision is REJECT: candidate is discarded; next proposer call sees the rejection and rationale.
+- [ ] If decision is KEEP: stage the winning candidate for human review by default; only an explicit promotion action may update the current best.
+- [ ] If decision is REJECT or TIE: preserve the candidate evidence and rationale while leaving the current best unchanged.
 - [ ] Loop terminates on: max iterations reached, plateau (N consecutive ties), unrecoverable runner error, or operator signal.
-- [ ] No prompt for confirmation, no maintainer-blocking gate, no interactive pause anywhere in the loop.
+- [ ] Proposal through machine decision has no interactive pause; live-skill promotion is deliberately outside that autonomous loop.
 - [ ] Full iteration history persisted as ignored local output and uploaded as a workflow artifact when run in CI.
 
 ### US-014: PR CI workflow (deterministic gates only)
@@ -193,7 +193,7 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 - **FR-2**: The system MUST execute generated CesiumJS code in a browser-backed Cesium environment with a fixed viewport, capturing screenshots at scenario-defined timings, console messages, page errors, and scene state.
 - **FR-3**: The system MUST run deterministic checks (`code_runs`, `no_console_errors`, `pattern_present`, `pattern_absent`, `schema_match`, `api_present`) independently of any LLM judgment, with reproducible pass/fail outputs.
 - **FR-4**: The system MUST run pairwise A/B/TIE visual comparison using three independent LLM judges per scenario, with randomized position labels and majority-vote aggregation.
-- **FR-5**: The system MUST apply a deterministic decision policy in this order: (1) critical programmatic-check fail → REJECT, (2) critical judge loss → REJECT, (3) candidate wins > baseline wins → KEEP, (4) baseline wins > candidate wins → REJECT, (5) tie → KEEP CURRENT BEST. All five rules MUST resolve without human input.
+- **FR-5**: The system MUST apply a deterministic decision policy in this order: (1) any non-environment programmatic-check fail → REJECT, (2) regression-critical judge loss → REJECT, (3) candidate wins > baseline wins → KEEP, (4) baseline wins > candidate wins → REJECT, (5) tie → TIE and retain current best. All five machine rules resolve without human input; only KEEP is eligible for the separate promotion gate.
 - **FR-6**: The system MUST support optional maintainer override via an explicit CLI flag plus written rationale, but MUST NOT require maintainer input during routine operation.
 - **FR-7**: The system MUST run an autonomous iteration loop where the Optimization Proposer reads prior history, proposes a candidate skill change, the runner evaluates it, the decision engine decides, and the next iteration starts — with no interactive pauses.
 - **FR-8**: The system MUST persist a complete reproducibility metadata record (scenario hash, candidate hash, runner commit, model id, temperature, judge protocol version, viewport) with every run.
@@ -251,7 +251,7 @@ A maintainer **may** opt in to review specific decisions, but routine operation 
 
 ## 8. Success Metrics
 
-- **Autonomy**: The optimization loop can run for 10+ iterations on a single skill with no human input and produce a defensible decision trail.
+- **Autonomy**: Proposal, generation, browser evaluation, judging, and machine decision can run without human input and produce a defensible trail. Promotion of a winning candidate remains an explicit human action.
 - **Reproducibility**: Any maintainer can clone, install, set a token, and reproduce a published decision on the same scenario in under 15 minutes.
 - **PR feedback latency**: PR CI workflow completes in under 2 minutes for deterministic gates.
 - **Regression catch rate**: Every intentionally injected regression in a `regression_critical` scenario is caught and rejected in the next iteration (verified by a test harness).

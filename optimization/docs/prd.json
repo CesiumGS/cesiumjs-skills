@@ -1,7 +1,7 @@
 {
   "project": "cesiumjs-skills",
   "branchName": "feat/eval-and-optimization",
-  "description": "Cesium AI Evaluation Framework - fully autonomous loop that proposes skill changes, evaluates generated CesiumJS code in a browser-backed runner, runs deterministic checks plus three-judge pairwise A/B/TIE visual comparison, and applies a rule-based keep/reject decision with no required human gate.",
+  "description": "Cesium AI Evaluation Framework - an autonomous proposal and evaluation loop that generates CesiumJS in a browser-backed runner, runs deterministic checks plus three-judge pairwise A/B/TIE visual comparison, and applies a rule-based KEEP/REJECT/TIE decision. Candidate generation and machine decision require no interactive input; changing the live SKILL.md is a separate, explicit human promotion gate.",
   "userStories": [
     {
       "id": "US-001",
@@ -166,12 +166,12 @@
     },
     {
       "id": "US-011",
-      "title": "Implement autonomous decision engine",
-      "description": "As the framework, I need a rule-based keep/reject engine that resolves all outcomes deterministically without human input.",
+      "title": "Implement autonomous candidate decision engine",
+      "description": "As the framework, I need a rule-based KEEP/REJECT/TIE engine that resolves candidate outcomes deterministically without conflating a tie with a candidate win.",
       "acceptanceCriteria": [
-        "Create optimization/framework/decision/engine.py with a pure function decide(check_results, judge_results, scenario_meta) returning { decision: 'KEEP' | 'REJECT', rule_fired: str, counts: {wins, losses, ties, critical_failures}, rationale: str }",
-        "Rules applied in order: (1) any programmatic_checks fail on regression_critical scenario -> REJECT, (2) any judge loss on regression_critical scenario -> REJECT, (3) candidate wins > baseline wins -> KEEP, (4) baseline wins > candidate wins -> REJECT, (5) tie -> KEEP CURRENT BEST",
-        "All five rules resolve without prompting; no interactive input anywhere",
+        "The TypeScript decision engine returns { decision: 'KEEP' | 'REJECT' | 'TIE', rule_fired, counts: {wins, losses, ties, critical_failures}, rationale }",
+        "Rules applied in order: (1) any non-environment programmatic check failure -> REJECT, (2) any judge loss on a regression-critical scenario -> REJECT, (3) candidate wins > baseline wins -> KEEP, (4) baseline wins > candidate wins -> REJECT, (5) tie -> TIE and retain current best",
+        "All five machine rules resolve without prompting; KEEP alone means the candidate explicitly won and is eligible for human review",
         "Optional --override flag with rationale string is supported on a wrapper CLI but never required",
         "Writes decision.json to optimization/results/<skill>/<iteration>/",
         "Tests pass exercising each of the five rules and the override path",
@@ -232,14 +232,14 @@
     },
     {
       "id": "US-015",
-      "title": "Implement autonomous iteration loop",
-      "description": "As an operator, I want to start the loop and have it run iteration after iteration until a stopping condition, with no interactive pauses.",
+      "title": "Implement autonomous iteration loop with guarded promotion",
+      "description": "As an operator, I want candidate generation and evaluation to run without interactive pauses while live-skill mutation remains separately approval-gated.",
       "acceptanceCriteria": [
         "Create optimization/scripts/run-loop.py with CLI: <skill> --max-iterations N --stop-on plateau|regression|max --plateau-n M",
         "Each iteration: proposer -> skills adapter (all scenarios) -> browser runner -> deterministic checks -> three-judge panel -> decision engine -> report generator -> append to optimization/history/<skill>/iteration-NNN/",
-        "On KEEP: candidate becomes new current best for next iteration. On REJECT: candidate is preserved under history but current best unchanged",
+        "On KEEP: stage the candidate as PROMOTED-PENDING.md by default and stop for human review; only --promote or optimize promote may apply it. On REJECT or TIE: preserve history and leave current best unchanged",
         "Stops on: max iterations, M consecutive ties, unrecoverable runner error, SIGINT",
-        "No prompt for confirmation, no maintainer-blocking gate, no interactive input anywhere in the loop",
+        "No interactive input occurs inside proposal, generation, rendering, judging, or machine decision; promotion is a separate explicit action",
         "Tests pass for stopping conditions using mocked subcomponents",
         "Typecheck passes"
       ],

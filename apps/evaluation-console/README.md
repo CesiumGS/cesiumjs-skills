@@ -103,7 +103,23 @@ local checkouts cannot silently share evaluation data. The server reads the
 scorecard and `optimization/` artifacts and serves screenshots only from inside
 the repository root.
 
-Dev with hot reload: `npm run dev` (Vite at 127.0.0.1:5174, proxying `/api` to 8933).
+Dev with hot reload: `npm run dev` (Vite at 127.0.0.1:5174, proxying `/api` to the
+backend configured in `eval.config.json`, currently 127.0.0.1:8934).
+
+### Preparing visual baselines from a clean checkout
+
+Raw generated JavaScript and screenshots are intentionally Git-ignored, so a
+fresh checkout begins with 83 scenario manifests but no baseline evidence. In
+the Run station, **Prepare** first calls the canonical `optimize
+generate-baselines` implementation with the selected codegen agent, then renders
+those sources into `evaluation/artifacts/baselines`, the exact bundle root read
+by `audit`. Existing sources and screenshots are cached, so retrying resumes.
+
+Code generation requires working agent authentication. `CESIUM_ION_TOKEN` is
+optional for this baseline renderer; when absent, token-backed imagery or
+terrain will be incomplete, while scenarios with their own public imagery can
+still render. The full optimization browser runner requires a valid token and
+fails its launch preflight when one is unavailable.
 
 ## Launching runs & progress journals
 
@@ -139,15 +155,22 @@ required, and the terminal event tells you whether to collect the scorecard.
 
 ## The optimization bridge
 
-`f` (flag) in Review marks a case for optimization. The rail's bulk **Send N
-flags to Optimize** action transfers every currently flagged case and writes
-`focus.json` via `buildFocus`, preserving whether each decision was human
-confirmed or machine suggested. Optimize then exposes an explicit **Start
-optimization** action and a terminal fallback:
+`f` (flag) in Review records a human-confirmed case for optimization. Machine
+auto-flags remain triage suggestions until the reviewer confirms them. The
+rail's bulk **Send N confirmed flags to Optimize** action writes `focus.json`
+via `buildFocus`; the server revalidates every selected key against the
+persisted human decisions before accepting the handoff. Optimize then exposes
+an explicit **Start optimization** action and a terminal fallback:
 
 ```bash
 node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --skills <auto> --continue-on-failure
 ```
+
+A winning candidate is staged as `PROMOTED-PENDING.md`. Decide records a
+separate human `approve` or `reject` verdict in `candidate-review.json` without
+editing the live skill. Only an approved candidate appears as promotable in the
+console. Promote then archives the current skill, applies the candidate, and
+records `promotion.json`.
 
 ## Keyboard
 
@@ -162,5 +185,9 @@ node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --s
 | File | Purpose |
 |---|---|
 | `review-decisions.json` | Audit trail of grades + human overrides. |
-| `focus.json` | Every Flagged Review case, with confirmed/suggested provenance, for `cesium-eval optimize all --from-focus`. |
+| `focus.json` | Human-confirmed Review flags for `cesium-eval optimize all --from-focus`. |
 | `optimization-handoff.json` | Human-readable hand-off summary. |
+
+Candidate-local state under `optimization/candidates/<skill>/<iteration>/`
+includes `PROMOTED-PENDING.md` and `candidate-review.json`; successful promotion
+is recorded beside the archived previous skill in `optimization/history/`.
