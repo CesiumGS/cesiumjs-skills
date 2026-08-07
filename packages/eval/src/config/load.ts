@@ -172,6 +172,8 @@ function applyEnvOverlay(config: EvalConfig): EvalConfig {
 export interface LoadContextOptions {
   /** Explicit config file path (CLI --config). */
   configPath?: string;
+  /** Load `<repo>/.env`. Tests and other hermetic callers should disable it. */
+  loadDotEnv?: boolean;
 }
 
 /**
@@ -202,7 +204,7 @@ export function loadDotEnv(root: string): void {
 
 export function loadContext(options: LoadContextOptions = {}): EvalContext {
   const root = findRepoRoot();
-  loadDotEnv(root);
+  if (options.loadDotEnv !== false) loadDotEnv(root);
 
   let config = builtinDefaults();
   const configPath = options.configPath

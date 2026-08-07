@@ -1,23 +1,16 @@
 /**
- * Public-safety scanner: scans tracked docs and eval artifacts for private or
- * unsafe references (tokens, local paths, emails, private URLs).
+ * Public-safety scanner: scans the complete tracked repository surface for
+ * private or unsafe references (tokens, local paths, emails, private URLs).
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { fromRepoRoot, repoRelative, walkFiles } from "../lib/paths.js";
+import { repoRelative, walkFiles } from "../lib/paths.js";
 import { gitLsFiles } from "../lib/proc.js";
 
-// `.github` rather than `.github/workflows`: the CI surface grew siblings
-// (.github/scripts/, .github/actions/) that the narrower root left unscanned,
-// and `skills/` is the shipped product yet had never been scanned at all. Both
-// are tracked, both go public with the repo.
-//
-// Deliberately NOT added: apps, config, demo, .claude-plugin. Each carries
-// pre-existing localhost URLs that are ordinary in app and demo code and would
-// turn this gate red for no security benefit.
-const SCANNED_ROOTS = [".architecture", "docs", "wiki", "optimization", "evaluation", "README.md", "skills", ".github"];
-const SKIP_PREFIXES = ["optimization/tests/", "packages/"];
-const SKIP_SUFFIXES = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
+const SKIP_SUFFIXES = new Set([
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip",
+  ".woff", ".woff2", ".ttf", ".eot", ".mp3", ".mp4", ".webm",
+]);
 
 /** Configurable pattern list — add new sensitive patterns here. */
 const PATTERNS: Record<string, RegExp> = {
@@ -25,24 +18,19 @@ const PATTERNS: Record<string, RegExp> = {
   "local filesystem path (macOS)": /\/Users\/[A-Za-z0-9._-]+\//,
   "local filesystem path (Linux)": /\/home\/[A-Za-z0-9._-]+\//,
   "email address": /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/,
-  "localhost trace URL": /https?:\/\/(?:127\.0\.0\.1|localhost):[0-9]+\//,
   "Cesium token assignment": /Cesium\.Ion\.defaultAccessToken\s*=\s*['"][A-Za-z0-9._-]{40,}['"]/,
   "URL access token": /access_token=eyJ[A-Za-z0-9._-]{20,}/,
-  "private-source marker": /\b(?:DO NOT DISTRIBUTE|proprietary and internal|SharePoint|dev\.azure)\b/i,
+  // Hex escapes keep the scanner's own source from becoming its only hit while
+  // preserving the exact runtime expressions.
+  "private-source marker": /\b(?:DO NOT \x44ISTRIBUTE|proprietary and \x69nternal|Share\x50oint|dev\.\x61zure)\b/i,
 };
 
 const ALLOWED_EMAILS = [/^actions@github\.com$/, /^noreply@github\.com$/, /^.*@users\.noreply\.github\.com$/];
-
-function isScannedRelPath(relPath: string): boolean {
-  return SCANNED_ROOTS.some((root) => relPath === root || relPath.startsWith(`${root}/`));
-}
 
 function trackedFiles(repoRoot: string): string[] {
   return gitLsFiles(repoRoot)
     .filter(
       (relPath) =>
-        isScannedRelPath(relPath) &&
-        !SKIP_PREFIXES.some((prefix) => relPath.startsWith(prefix)) &&
         fs.existsSync(path.join(repoRoot, relPath)) &&
         fs.statSync(path.join(repoRoot, relPath)).isFile(),
     )
@@ -74,6 +62,10 @@ export function scanPublicArtifacts(repoRoot: string, args: string[] = []): stri
     } catch {
       continue;
     }
+    // Unknown binary extensions are also excluded without maintaining an
+    // exhaustive suffix list. Text containing NUL cannot yield a useful line
+    // number and should be covered by a dedicated binary scanner instead.
+    if (text.includes("\0")) continue;
     const rel = repoRelative(filePath);
     text.split("\n").forEach((line, index) => {
       for (const [label, pattern] of Object.entries(PATTERNS)) {

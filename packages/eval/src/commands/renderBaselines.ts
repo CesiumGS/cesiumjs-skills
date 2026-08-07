@@ -84,6 +84,8 @@ export interface PlanOptions {
   only?: Set<string> | null;
   force?: boolean;
   regenerate?: boolean;
+  /** Override source discovery for hermetic planning and tests. */
+  readSource?: (scenario: BaselineScenario) => string | null;
 }
 
 /**
@@ -93,12 +95,13 @@ export interface PlanOptions {
  */
 export function planBaselineWork(skills: string[], options: PlanOptions): BaselineWorkItem[] {
   const force = Boolean(options.force || options.regenerate);
+  const readSource = options.readSource ?? readGeneratedCode;
   const items: BaselineWorkItem[] = [];
   for (const skill of skills) {
     for (const scenario of baselineScenarios(skill)) {
       if (options.only && !options.only.has(scenario.id)) continue;
       const bundleDir = resolveBundleDir(scenario, options.bundleRoot);
-      const hasCode = readGeneratedCode(scenario) !== null;
+      const hasCode = readSource(scenario) !== null;
       let state: BaselineWorkState;
       if (!force && isBundleFullyRendered(bundleDir)) state = "complete";
       else if (!hasCode || options.regenerate) state = "generate";
@@ -126,6 +129,13 @@ export interface BaselineBootstrapSummary {
   /** Scenarios whose source was (re)generated in this run. */
   generated: number;
   failures: BaselineFailure[];
+}
+
+/** Side-effect seams used by tests; production callers use the real commands. */
+export interface BaselineBootstrapDependencies {
+  readSource?: typeof readGeneratedCode;
+  generate?: typeof generateBaselinesCommand;
+  render?: typeof renderCommand;
 }
 
 /** A bad invocation (unknown skill, empty selection, unusable --out): exit 2,
@@ -173,7 +183,11 @@ const bySkill = (items: BaselineWorkItem[]): Map<string, BaselineWorkItem[]> => 
 export async function runBaselineBootstrap(
   ctx: EvalContext,
   options: RenderBaselinesOptions,
+  dependencies: BaselineBootstrapDependencies = {},
 ): Promise<BaselineBootstrapSummary> {
+  const readSource = dependencies.readSource ?? readGeneratedCode;
+  const generate = dependencies.generate ?? generateBaselinesCommand;
+  const render = dependencies.render ?? renderCommand;
   if (options.skipCodegen && options.regenerate) {
     throw new BaselineUsageError("--skip-codegen and --regenerate contradict each other: one forbids codegen, the other requires it");
   }
@@ -191,6 +205,7 @@ export async function runBaselineBootstrap(
     only: parseOnly(options.only),
     force: options.force,
     regenerate: options.regenerate,
+    readSource,
   });
   if (!items.length) throw new BaselineUsageError(`no baseline scenarios selected (skills=${skills.join(",")}${options.only ? `, only=${options.only}` : ""})`);
 
@@ -219,7 +234,7 @@ export async function runBaselineBootstrap(
       console.log(`[render-baselines] ${skill}: generating baseline source for ${skillItems.length} scenario(s)`);
       // A non-zero exit means SOME scenario failed, not all: which ones is
       // recovered below by looking at what actually landed on disk.
-      await generateBaselinesCommand(ctx, {
+      await generate(ctx, {
         skill,
         iteration: "baseline",
         only: skillItems.map((item) => item.caseId).join(","),
@@ -231,7 +246,7 @@ export async function runBaselineBootstrap(
       });
     }
     for (const item of needCode) {
-      if (readGeneratedCode(item.scenario) !== null) generated += 1;
+      if (readSource(item.scenario) !== null) generated += 1;
       else addFailure(item, `codegen produced no source at ${repoRelative(generatedCodePath(item.scenario))}`);
     }
   }
@@ -245,7 +260,7 @@ export async function runBaselineBootstrap(
       // directory layout the audit resolves, so a rendered bundle is always
       // the one judged.
       const renderFailures: RenderFailure[] = [];
-      const code = await renderCommand(ctx, {
+      const code = await render(ctx, {
         skill,
         iteration: "baseline",
         outputDir: repoRelative(path.join(outAbs, skill, "baseline")),

@@ -23,18 +23,37 @@ npx playwright install chromium
 Export required tokens for full pipeline execution:
 
 ```bash
-opencode auth login --provider github-copilot
-codex login
+npm i -g @github/copilot@1.0.78
 copilot login
 export CESIUM_ION_TOKEN="<your-cesium-ion-token>"
-export AGENT_HARNESS="opencode"  # or "codex", or "copilot"
-# Defaults to github-copilot/gpt-5.6-sol (opencode) or gpt-5.6-sol (codex,
-# copilot) at "low" reasoning effort; override with OPENCODE_MODEL/
-# OPENCODE_VARIANT, CODEX_MODEL/CODEX_VARIANT, or COPILOT_MODEL/COPILOT_VARIANT
-# (and role-specific variants, e.g. OPENCODE_PROPOSER_VARIANT) if needed.
+export AGENT_HARNESS="copilot"
+export COPILOT_MODEL="gpt-5.6-sol"
+export COPILOT_VARIANT="low"
 ```
 
-**Note:** OpenCode, Codex CLI, and GitHub Copilot CLI each handle authentication through their local login state. Deterministic checks and the browser runner work without model access.
+**Note:** GitHub Copilot CLI uses local login state for developer runs. In
+GitHub Actions, the equivalent `COPILOT_GITHUB_TOKEN` is an Environment secret;
+never place it in `.env` or a tracked file. Deterministic checks and the browser
+runner work without model access.
+
+The pre-merge live gate deliberately splits those responsibilities: candidate
+skill documents enter a protected codegen job as data, while generated code is
+executed only by a later secret-free GitHub-hosted job. Local reproduction can
+use the same split:
+
+```bash
+node packages/eval/bin/cesium-eval.js optimize generate-baselines \
+  --skill cesiumjs-camera --skill-root skills --iteration baseline --force \
+  --codegen-harness copilot --codegen-model gpt-5.6-sol --codegen-variant low
+unset COPILOT_GITHUB_TOKEN
+node packages/eval/bin/cesium-eval.js render-baselines \
+  --skills cesiumjs-camera --skip-codegen --force \
+  --out evaluation/artifacts/pr-skill-eval
+node packages/eval/bin/cesium-eval.js audit \
+  --skills cesiumjs-camera --no-judge \
+  --bundle-root evaluation/artifacts/pr-skill-eval \
+  --output-dir evaluation/artifacts/pr-skill-scorecard
+```
 
 ## Validate Public Artifacts
 
@@ -162,29 +181,18 @@ node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera --max-iterat
 # Stop immediately on first regression (REJECT)
 node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera --max-iterations 10 --stop-on regression
 
-# Configure harnesses, model, reasoning variants, and temperature.
+# Pin the same harness, model, and effort used by the protected CI lanes.
 node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera \
-  --proposer-harness opencode \
-  --proposer-model auto \
-  --proposer-variant high \
+  --proposer-harness copilot \
+  --proposer-model gpt-5.6-sol \
+  --proposer-variant low \
   --proposer-temperature 1.0 \
-  --eval-harness opencode \
-  --eval-model auto \
-  --eval-variant medium \
-  --eval-temperature 1.0 \
-  --judge-harness opencode \
-  --judge-model auto \
-  --judge-variant medium
-
-# Run the same proposal, codegen, and judge phases through Codex CLI agents.
-node packages/eval/bin/cesium-eval.js optimize loop cesiumjs-camera \
-  --max-iterations 1 \
-  --proposer-harness codex \
-  --eval-harness codex \
-  --judge-harness codex \
-  --proposer-model auto \
-  --eval-model auto \
-  --judge-model auto
+  --codegen-harness copilot \
+  --codegen-model gpt-5.6-sol \
+  --codegen-variant low \
+  --judge-harness copilot \
+  --judge-model gpt-5.6-sol \
+  --judge-variant low
 ```
 
 ### Loop Stopping Conditions

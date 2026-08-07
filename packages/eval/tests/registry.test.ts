@@ -9,7 +9,7 @@ import { loadContext } from "../src/config/load.js";
 import { driverFor, registeredDrivers } from "../src/harness/driver.js";
 import "../src/harness/drivers.js"; // side-effect: registers built-in drivers
 
-const context = loadContext();
+const context = loadContext({ loadDotEnv: false });
 
 describe("harness registry v2", () => {
   it("declares a driver for every harness entry", () => {

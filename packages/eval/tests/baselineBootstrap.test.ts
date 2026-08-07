@@ -16,7 +16,8 @@ import { planBaselineWork, runBaselineBootstrap } from "../src/commands/renderBa
 import { BUNDLE_ARTIFACTS, baselineScenarios, bundleDirFor, isBundleFullyRendered } from "../src/evaluation/baselines.js";
 import { resolveOptionalIonToken } from "../src/optimization/browserRunner.js";
 
-const ctx = loadContext();
+// Never ingest a developer's local `.env` into a unit-test process.
+const ctx = loadContext({ loadDotEnv: false });
 const SKILL = "cesiumjs-camera";
 
 let root: string;
@@ -57,7 +58,7 @@ describe("planBaselineWork", () => {
   const first = scenarios[0];
 
   it("plans work for every scenario of the selected skill", () => {
-    const plan = planBaselineWork([SKILL], { bundleRoot: root });
+    const plan = planBaselineWork([SKILL], { bundleRoot: root, readSource: () => null });
     expect(plan.map((item) => item.caseId)).toEqual(scenarios.map((s) => s.id));
     // Nothing is rendered under a fresh root, so nothing can be complete.
     expect(plan.every((item) => item.state !== "complete")).toBe(true);
@@ -65,25 +66,25 @@ describe("planBaselineWork", () => {
 
   it("treats a complete bundle as done and an incomplete one as work", () => {
     completeBundle(bundleDirFor(first, root));
-    const done = planBaselineWork([SKILL], { bundleRoot: root }).find((item) => item.caseId === first.id);
+    const done = planBaselineWork([SKILL], { bundleRoot: root, readSource: () => null }).find((item) => item.caseId === first.id);
     expect(done?.state).toBe("complete");
 
     fs.rmSync(path.join(bundleDirFor(first, root), "console.json"));
-    const partial = planBaselineWork([SKILL], { bundleRoot: root }).find((item) => item.caseId === first.id);
+    const partial = planBaselineWork([SKILL], { bundleRoot: root, readSource: () => null }).find((item) => item.caseId === first.id);
     expect(partial?.state).not.toBe("complete");
   });
 
   it("re-does complete bundles under --force and --regenerate", () => {
     completeBundle(bundleDirFor(first, root));
-    const forced = planBaselineWork([SKILL], { bundleRoot: root, force: true }).find((item) => item.caseId === first.id);
+    const forced = planBaselineWork([SKILL], { bundleRoot: root, force: true, readSource: () => null }).find((item) => item.caseId === first.id);
     expect(forced?.state).not.toBe("complete");
     // --regenerate implies --force, and always goes back through codegen.
-    const regenerated = planBaselineWork([SKILL], { bundleRoot: root, regenerate: true }).find((item) => item.caseId === first.id);
+    const regenerated = planBaselineWork([SKILL], { bundleRoot: root, regenerate: true, readSource: () => null }).find((item) => item.caseId === first.id);
     expect(regenerated?.state).toBe("generate");
   });
 
   it("honours the --only case filter", () => {
-    const plan = planBaselineWork([SKILL], { bundleRoot: root, only: new Set([first.id]) });
+    const plan = planBaselineWork([SKILL], { bundleRoot: root, only: new Set([first.id]), readSource: () => null });
     expect(plan).toHaveLength(1);
     expect(plan[0].caseId).toBe(first.id);
   });
@@ -106,15 +107,21 @@ describe("a stale bundle never counts as a fresh render", () => {
     const scenario = baselineScenarios(SKILL)[0];
     completeBundle(bundleDirFor(scenario, outAbs));
     try {
-      // --force asks for a re-render; --skip-codegen makes it fail (no source).
-      // The directory on disk is still complete, so verifying by disk alone
-      // would report 1/1 complete and exit 0 on a run that produced nothing.
+      // --force asks for a re-render. Injected source discovery and rendering
+      // make this unit test independent of ignored generated code, browsers,
+      // network access, and developer credentials.
       const summary = await runBaselineBootstrap(ctx, {
         skills: SKILL,
         only: scenario.id,
         out: outRoot,
         force: true,
         skipCodegen: true,
+      }, {
+        readSource: () => "generated baseline source",
+        render: async (_context, renderOptions) => {
+          renderOptions.failures?.push({ scenario_id: scenario.id, error: "synthetic render failure" });
+          return 1;
+        },
       });
       expect(summary.total).toBe(1);
       expect(summary.complete).toBe(0);

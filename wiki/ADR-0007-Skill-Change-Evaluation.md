@@ -1,4 +1,4 @@
-# ADR-0007: Evaluate Skill Changes in Two Tiers
+# ADR-0007: Evaluate Skill Changes Across Three Trust Tiers
 
 ## Context
 
@@ -18,7 +18,7 @@ language model in the loop, so it is specific rather than sensitive.
 
 ## Decision
 
-Evaluate a skill change in two tiers, with different properties on purpose.
+Evaluate a skill change in three tiers, with different properties on purpose.
 
 **Tier 1 — the skill contract.** `cesium-eval check skills` decides what can be
 decided by reading the file: frontmatter shape, `name` matching the directory, a
@@ -33,22 +33,38 @@ every pull request including forks, consumes no secrets, and costs milliseconds.
 Its symbol registry fails closed below a count floor, because an under-parsed
 registry would pass every skill silently.
 
-**Tier 2 — the live lane.** For each changed skill that has scenarios, the edited
-`SKILL.md` goes into the codegen prompt, the returned code renders in headless
-Chromium, and `audit --no-judge` scores the fresh bundles. The visual judge stays
-out of it, so a red in this lane is always mechanical.
+**Tier 2 — base-controlled pre-merge live evaluation.** For a changed skill
+that has trusted scenarios, `pr-skill-eval-gate.yml` runs after PR Gate via
+`workflow_run`. GitHub therefore loads the workflow and evaluator from the
+default branch, not the pull request. The candidate SKILL.md and bounded text
+support files are fetched as data. A protected GitHub-hosted job gives that data
+to Copilot with tools disabled and writes generated JavaScript; it does not
+execute the result. A second GitHub-hosted job receives no secrets, executes
+the generated code in Chromium, and applies `audit --no-judge`. A Check Run
+named `Skill Eval Gate` is written to the pull-request head.
 
-The live lane is scoped to changed skills, refuses to run on a fork, and reports
-a loud skip rather than a false green when its credential is absent.
+This split is load-bearing. Candidate prompt text can influence model output,
+so the process holding `COPILOT_GITHUB_TOKEN` must not give the model filesystem
+or shell tools and must not execute the output. Conversely, the browser job may
+execute hostile generated JavaScript only because it is ephemeral and receives
+no Copilot, Ion, repository, or OIDC credential.
+
+**Tier 3 — post-merge live evidence.** `skill-eval.yml` repeats the live path
+after code reaches `main`, or through explicit main-branch dispatch. It is
+advisory drift detection, not the merge decision.
 
 ## Consequences
 
 - Every skill edit gets an immediate, free, deterministic answer, and fork
   contributors get real feedback rather than a lane that cannot run for them.
-- The expensive lane runs only where the diff says it is warranted.
-- A skill change merged from a fork has not been evaluated live. The skip is
-  announced in the job summary, and a maintainer is expected to dispatch the lane
-  before merging.
+- The expensive pre-merge tier runs only for changed skills with trusted
+  scenarios and requires an approved Environment release.
+- Supporting/reference files ship in the candidate prompt bundle, so a change
+  outside SKILL.md cannot inherit a false green from the old entrypoint text.
+- A skill without trusted scenarios remains contract-only. New scenarios must
+  first become trusted evaluator data; a pull request cannot weaken or invent
+  the checks used to grade itself.
+- The ruleset, not workflow prose, makes `Skill Eval Gate` merge-blocking.
 - Tier 2 does not catch every bad wording change. A strong codegen model follows
   the scenario prompt and often ignores a subtly wrong aside; what it reliably
   catches is wording that genuinely misdirects an agent — a wrong deprecation

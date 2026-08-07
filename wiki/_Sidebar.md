@@ -17,6 +17,7 @@
 
 * [[Run Skill Evaluations Locally|Run-Skill-Evaluations-Locally]]
 * [[Add an Evaluation Scenario|Add-Evaluation-Scenario]]
+* [[Configure the Required Skill Eval Gate|Configure-Skill-Eval-Gate]]
 
 ## Architecture Decision Records
 

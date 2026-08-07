@@ -484,6 +484,8 @@ export async function coverageCommand(): Promise<number> {
 // ---------------------------------------------------------------------------
 export interface GenerateBaselinesOptions {
   skill?: string;
+  /** Root containing candidate skill directories (defaults to tracked skills/). */
+  skillRoot?: string;
   iteration?: string;
   harness?: string;
   provider?: string;
@@ -513,7 +515,7 @@ export async function generateBaselinesCommand(ctx: EvalContext, options: Genera
   let skipped = 0;
   let failed = 0;
   for (const skill of skills) {
-    const skillPath = fromRepoRoot("skills", skill, "SKILL.md");
+    const skillPath = fromRepoRoot(options.skillRoot ?? "skills", skill, "SKILL.md");
     if (!fs.existsSync(skillPath)) {
       console.error(`[generate-baselines] skip ${skill}: no SKILL.md`);
       continue;

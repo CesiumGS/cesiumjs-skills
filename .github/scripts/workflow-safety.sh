@@ -216,6 +216,79 @@ if [ -d packages/eval/src/evaluation ]; then
   fi
 fi
 
+# RULE 9: the Copilot credential is an Environment secret, never a general
+# repository secret available to an arbitrary job. Check at JOB scope: merely
+# having one protected job elsewhere in the same file must not excuse an
+# unprotected preflight or helper job that also references the token.
+for f in "${workflows[@]}"; do
+  [ -e "$f" ] || continue
+  if ! code_lines "$f" | grep -q 'secrets\.COPILOT_GITHUB_TOKEN'; then
+    continue
+  fi
+
+  if code_lines "$f" | grep -qE '^[[:space:]]{2}(pull_request|pull_request_target|merge_group):'; then
+    note "$f" "Copilot secret reachable from untrusted code" \
+      "A workflow that references COPILOT_GITHUB_TOKEN must not have a pull-request or merge-group trigger. Run credentialed evaluation only from trusted main-branch state."
+  fi
+  if ! code_lines "$f" | grep -q 'refs/heads/main'; then
+    if code_lines "$f" | grep -qE '^[[:space:]]{2}workflow_run:'; then
+      if ! code_lines "$f" | grep -qE 'workflows:[[:space:]]*\["PR Gate"\]'; then
+        note "$f" "Privileged workflow_run has no trusted prerequisite" \
+          "A Copilot workflow_run lane must be triggered only by the default-branch PR Gate workflow."
+      fi
+      if ! code_lines "$f" | grep -q 'ref:.*github\.event\.repository\.default_branch'; then
+        note "$f" "Privileged workflow_run does not check out the default branch" \
+          "The evaluator must come from the trusted default branch; the pull-request head is data, never executable code."
+      fi
+      if code_lines "$f" | grep -q 'ref:.*workflow_run\..*head'; then
+        note "$f" "Privileged workflow_run checks out pull-request code" \
+          "Never check out workflow_run.head_sha in a secret-bearing workflow; fetch bounded candidate documents as data instead."
+      fi
+    else
+      note "$f" "Copilot workflow is not main-bound" \
+        "A workflow that references COPILOT_GITHUB_TOKEN must run on refs/heads/main or through the base-controlled PR Gate workflow_run lane."
+    fi
+  fi
+
+  while IFS='|' read -r job has_secret protected hosted readiness; do
+    [ "$has_secret" = 1 ] || continue
+    if [ "$protected" != 1 ]; then
+      note "$f" "Copilot secret outside protected Environment" \
+        "Job '$job' references COPILOT_GITHUB_TOKEN but does not declare job-level environment: copilot-inference."
+    fi
+    if [ "$hosted" != 1 ]; then
+      note "$f" "Copilot secret on a non-ephemeral runner" \
+        "Job '$job' references COPILOT_GITHUB_TOKEN but is not pinned to runs-on: ubuntu-latest."
+    fi
+    if [ "$readiness" != 1 ]; then
+      note "$f" "Copilot environment lacks an explicit readiness guard" \
+        "Job '$job' must remain skipped until COPILOT_INFERENCE_READY is true, so a workflow cannot auto-create an unprotected Environment."
+    fi
+  done < <(awk '
+    function emit() {
+      if (job != "") printf "%s|%d|%d|%d|%d\n", job, has_secret, protected, hosted, readiness
+    }
+    /^jobs:[[:space:]]*$/ { in_jobs=1; next }
+    /^[^[:space:]#]/      { if (in_jobs) emit(); in_jobs=0; job="" }
+    in_jobs && /^  [A-Za-z_][A-Za-z0-9_-]*:[[:space:]]*$/ {
+      emit()
+      job=$0
+      sub(/^[[:space:]]+/, "", job)
+      sub(/:[[:space:]]*$/, "", job)
+      has_secret=0
+      protected=0
+      hosted=0
+      readiness=0
+      next
+    }
+    in_jobs && job != "" && /secrets\.COPILOT_GITHUB_TOKEN/ { has_secret=1 }
+    in_jobs && job != "" && /^    environment:[[:space:]]*copilot-inference[[:space:]]*$/ { protected=1 }
+    in_jobs && job != "" && /^    runs-on:[[:space:]]*ubuntu-latest[[:space:]]*$/ { hosted=1 }
+    in_jobs && job != "" && /COPILOT_INFERENCE_READY/ { readiness=1 }
+    END { if (in_jobs) emit() }
+  ' "$f")
+done
+
 if [ "$fail" -ne 0 ]; then
   printf '[workflow-safety] FAIL\n'
   exit 1

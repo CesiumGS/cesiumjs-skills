@@ -19,17 +19,9 @@ on:
         required: false
         default: 'all'
       judge_model:
-        description: 'Judge model id/alias (blank uses harness default)'
+        description: 'GitHub Copilot judge model id'
         required: false
-        default: ''
-      agent_harness:
-        description: 'Agent CLI harness for qualitative audit'
-        required: false
-        default: 'opencode'
-        type: choice
-        options:
-          - opencode
-          - codex
+        default: 'gpt-5.6-sol'
       n_judges:
         description: 'Panel size'
         required: false
@@ -71,18 +63,9 @@ jobs:
         id: check
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
-          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
         run: |
           missing=()
           [ -n "$CESIUM_ION_TOKEN" ] || missing+=(CESIUM_ION_TOKEN)
-          # OpenCode still uses a repository secret. Codex auth is intentionally
-          # environment-scoped and therefore cannot be inspected by this
-          # unprotected preflight; the protected job validates it after review.
-          case "$AGENT_HARNESS" in
-            opencode) [ -n "$OPENCODE_AUTH_CONTENT" ] || missing+=(OPENCODE_AUTH_CONTENT) ;;
-            codex)    ;;
-          esac
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             {
@@ -103,14 +86,13 @@ jobs:
   # ----- Lane 2: qualitative (nightly / dispatch, advisory) -----
   qualitative:
     needs: [deterministic, preflight]
-    if: github.ref == 'refs/heads/main' && needs.preflight.outputs.ready == 'true'
-    environment: codex-inference
-    # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner
-    # labels). CODEX_RUNNER_LABELS narrows further to the one runner holding
-    # the codex credential: this lane can select the codex harness, and codex
-    # sessions must not be refreshed from two machines (see
-    # setup-agent-harness/action.yml).
-    runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      needs.preflight.outputs.ready == 'true' &&
+      vars.COPILOT_INFERENCE_READY == 'true'
+    environment: copilot-inference
+    # Secret-bearing model calls never use the persistent runner pool.
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
       # Single source of truth for the bundle layout. `render-baselines --out`
@@ -118,14 +100,11 @@ jobs:
       # the two must always be given the same value. It is under the gitignored
       # evaluation/artifacts/ tree.
       BUNDLE_ROOT: evaluation/artifacts/baselines
-      # Live play-by-play from the agent CLI. Every driver streams the
-      # harness's own JSON event feed (dispatch, reasoning, each tool call and
-      # its outcome, token spend) to stdout as it arrives, plus a heartbeat
-      # while a model call is in flight. Without it an agent step is one silent
-      # block for minutes and a wedged run is indistinguishable from a slow
-      # one. 'full' prints reasoning at length; set the EVAL_HARNESS_STREAM
-      # repository variable to 'status' for one-line gists or 'off' to silence
-      # it, without editing this workflow.
+      # Live progress from the agent CLI. Copilot's silent mode emits assistant
+      # prose rather than structured reasoning/tool events; the shared reporter
+      # still adds dispatch, completion, and heartbeat lines so a long request
+      # is distinguishable from a hang. Set EVAL_HARNESS_STREAM to 'status' for
+      # one-line gists or 'off' to silence it without editing this workflow.
       EVAL_HARNESS_STREAM: ${{ vars.EVAL_HARNESS_STREAM || 'full' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -140,18 +119,19 @@ jobs:
       - run: |
           npm run build --workspace @cesiumjs-skills/eval
           npx playwright install --with-deps chromium
-      # Installs the CLI AND writes its credential to the path the CLI reads.
-      # This step used to install the binary and separately assert the secret was
-      # non-empty, which is not the same thing: nothing ever wrote
-      # ~/.local/share/opencode/auth.json, and opencode does not read its
-      # credential from the environment, so this lane reached its first model
-      # call unauthenticated. The action also shape-checks the credential, which
-      # is what the old "Validate secrets" step was reaching for.
+      # Install before releasing the credential: npm lifecycle code never sees
+      # COPILOT_GITHUB_TOKEN. The token is injected only into model-call steps.
       - uses: ./.github/actions/setup-agent-harness
-        with:
-          harness: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          codex-auth-json-b64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
-          opencode-auth-content: ${{ secrets.OPENCODE_AUTH_CONTENT }}
+
+      - name: Validate the Copilot token
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error title=Missing secret::COPILOT_GITHUB_TOKEN is not configured in the copilot-inference Environment."
+            exit 1
+          fi
+          echo "COPILOT_GITHUB_TOKEN is present"
       - uses: ./.github/actions/install-gitleaks
       - name: Validate the Ion token
         env:
@@ -174,6 +154,7 @@ jobs:
       - name: Render current-best baselines (gitignored; needed for the visual lane)
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           # Free-form inputs are passed through the environment, never
           # interpolated into the shell text of a run block, so a crafted input
           # value cannot become shell syntax.
@@ -181,6 +162,9 @@ jobs:
         run: |
           node packages/eval/bin/cesium-eval.js render-baselines \
             --skills "$SKILLS" \
+            --codegen-harness copilot \
+            --codegen-model gpt-5.6-sol \
+            --codegen-variant low \
             --out "$BUNDLE_ROOT"
       # No continue-on-error. A lane expresses advisory-ness by not being a
       # required check, never by suppressing its own failures: this workflow is
@@ -191,32 +175,22 @@ jobs:
         id: audit
         shell: bash
         env:
-          AGENT_HARNESS: ${{ github.event.inputs.agent_harness || vars.AGENT_HARNESS || 'opencode' }}
-          # Model ids and reasoning-effort levels are CONFIGURATION, not
-          # credentials, so they resolve from inputs, then repository variables,
-          # then a literal default. A `secrets.*` tier used to sit before the
-          # default; it is deliberately gone. Routing non-secret config through
-          # the secrets namespace inflates the apparent credential surface (it
-          # made this pipeline look like it held a dozen secrets when it holds
-          # one), hides the effective value from anyone reading the settings
-          # page, and buys nothing: a model id is not sensitive.
-          OPENCODE_MODEL: ${{ github.event.inputs.judge_model || vars.OPENCODE_MODEL || 'openai/gpt-5.5' }}
-          OPENCODE_JUDGE_MODEL: ${{ vars.OPENCODE_JUDGE_MODEL || 'openai/gpt-5.5' }}
-          OPENCODE_JUDGE_VARIANT: ${{ vars.OPENCODE_JUDGE_VARIANT || 'medium' }}
-          OPENCODE_AUTH_CONTENT: ${{ secrets.OPENCODE_AUTH_CONTENT }}
-          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          COPILOT_MODEL: ${{ github.event.inputs.judge_model || 'gpt-5.6-sol' }}
           SKILLS: ${{ github.event.inputs.skills || 'all' }}
           N_JUDGES: ${{ github.event.inputs.n_judges || '3' }}
         run: |
           CMD=(node packages/eval/bin/cesium-eval.js audit
             --skills "$SKILLS"
-            --judge-harness "$AGENT_HARNESS"
+            --judge-harness copilot
+            --judge-model "$COPILOT_MODEL"
+            --judge-variant low
+            --codegen-harness copilot
+            --codegen-model gpt-5.6-sol
+            --codegen-variant low
             --n-judges "$N_JUDGES"
             --bundle-root "$BUNDLE_ROOT"
             --output-dir evaluation/artifacts/audits/ci)
-          if [ "$AGENT_HARNESS" = "opencode" ] && [ -n "$OPENCODE_MODEL" ]; then
-            CMD+=(--judge-model "$OPENCODE_MODEL")
-          fi
           "${CMD[@]}"
       # Ordering matters: delete the token-bearing HTML FIRST, then scan, then
       # upload. `check public-artifacts` and `check-secrets.sh` both scan only

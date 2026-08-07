@@ -129,8 +129,10 @@ optimization_code=$?
 # scenario is missed precisely when it is introduced.
 #
 # The semantic half of the question — does the edited wording still make an
-# agent produce working code — is not decidable here. That runs in
-# skill-eval.yml, which needs credentials this lane must never hold.
+# agent produce working code — is not decidable here. The base-controlled
+# pr-skill-eval-gate.yml workflow_run lane answers it with protected codegen and
+# secret-free rendering; skill-eval.yml repeats it post-merge. This first-stage
+# pull-request lane remains credential-free.
 run_stage "skill-contract" "check the skill contract" "${CESIUM_EVAL[@]}" check skills --output "$SKILL_REPORT"
 skills_code=$?
 case "$skills_code" in

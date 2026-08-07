@@ -3,9 +3,9 @@
   "registry": "config/harness-registry.json",
   "threshold": 0.95,
   "roles": {
-    "proposer": { "harness": "opencode", "model": "auto", "variant": "auto" },
-    "codegen": { "harness": "opencode", "model": "auto", "variant": "auto" },
-    "judge": { "harness": "codex", "model": "auto", "variant": "auto" }
+    "proposer": { "harness": "copilot", "model": "gpt-5.6-sol", "variant": "low" },
+    "codegen": { "harness": "copilot", "model": "gpt-5.6-sol", "variant": "low" },
+    "judge": { "harness": "copilot", "model": "gpt-5.6-sol", "variant": "low" }
   },
   "judgePanel": {
     "size": 3,

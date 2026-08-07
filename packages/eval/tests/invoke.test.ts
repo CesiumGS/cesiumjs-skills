@@ -11,7 +11,7 @@ import { loadContext } from "../src/config/load.js";
 import { invokeAgent } from "../src/harness/invoke.js";
 import { generateScenarioCode } from "../src/optimization/skillsAdapter.js";
 
-const ctx = loadContext();
+const ctx = loadContext({ loadDotEnv: false });
 
 describe("invokeAgent provider-attribution guards", () => {
   it("rejects a provider override with an auto model (codex has no discovery)", async () => {

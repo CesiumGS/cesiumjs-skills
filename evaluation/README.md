@@ -214,11 +214,8 @@ node packages/eval/bin/cesium-eval.js render-baselines --skills all
 node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
 
 # Both lanes (qualitative screenshot judge, 3-judge median panel).
-# The judge must be vision-capable; codex is the configured default:
-node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness codex --judge-model auto --n-judges 3
-
-# Same qualitative lane through GitHub Copilot CLI:
-node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness copilot --judge-model auto --n-judges 3
+# GitHub Copilot CLI with gpt-5.6-sol/low is the configured default:
+node packages/eval/bin/cesium-eval.js audit --skills all --n-judges 3
 
 # Review results in the evaluation console:
 node packages/eval/bin/cesium-eval.js serve evaluation/artifacts/audits/<run_id>/scorecard.json --open
@@ -232,15 +229,20 @@ not a usable baseline. `--out <dir>` writes the same layout elsewhere (it must
 stay inside the repository — the eval page is served from the repo root) and is
 what `audit --bundle-root <dir>` then reads. Local fan-out helpers can run the
 same judge module across all baselines concurrently; in CI the blocking
-deterministic gate is `.github/workflows/pr-gate.yml`, the per-skill live lane is
-`.github/workflows/skill-eval.yml`, and `.github/workflows/baseline-audit.yml`
-runs the qualitative lane nightly (rendering baselines first).
+deterministic gate is `.github/workflows/pr-gate.yml`,
+`.github/workflows/pr-skill-eval-gate.yml` publishes the protected pre-merge
+live scorecard,
+`.github/workflows/skill-eval.yml` runs the post-merge per-skill live lane, and
+`.github/workflows/baseline-audit.yml` runs the Copilot-backed qualitative lane
+nightly (rendering baselines first). Credentialed jobs are controlled by trusted
+default-branch workflows, pinned to GitHub-hosted runners, and enter the
+approval-gated `copilot-inference` Environment.
 
 ## What Happens When a Skill Changes
 
-A skill file is a prompt, so editing its wording changes program behaviour. Two
-lanes answer two different questions about that edit, and both run automatically
-on the pull request.
+A skill file is a prompt, so editing its wording changes program behaviour. The
+pipeline separates cheap structural proof, protected pre-merge behavioral
+evidence, and post-merge monitoring.
 
 **Tier 1 — the skill contract (hermetic, blocking, free).** `cesium-eval check
 skills` reads `skills/<id>/SKILL.md` directly and decides what can be decided by
@@ -261,18 +263,35 @@ node packages/eval/bin/cesium-eval.js check skills
 node packages/eval/bin/cesium-eval.js check skills --skills cesiumjs-camera
 ```
 
-**Tier 2 — the live lane (`skill-eval.yml`, blocking, costs money).** For each
-skill the pull request touched, it re-runs the real path: the edited `SKILL.md`
-goes into the codegen system prompt, the returned code renders in headless
-Chromium, and the fresh bundles are scored by the same deterministic checks the
-nightly audit uses.
+**Tier 2 — protected pre-merge live evaluation (blocking when configured,
+costs money).** `pr-skill-eval-gate.yml` is triggered by completion of PR Gate
+through `workflow_run`, so GitHub loads its definition from the trusted default
+branch. It never checks out the pull-request revision. Instead it copies the
+changed skill's bounded UTF-8 entrypoint/supporting files as data, generates
+scenario output with GitHub Copilot and no tools, then passes the generated
+JavaScript to a separate GitHub-hosted job with no secrets. That job renders the
+output and runs `audit --no-judge`. The workflow publishes a Check Run named
+`Skill Eval Gate` on the pull-request head SHA.
+
+The repository ruleset must require `Skill Eval Gate` for it to block a merge;
+see [Configure Skill Eval Gate](../wiki/Configure-Skill-Eval-Gate.md). Until the
+protected Environment, secret, readiness variable, and ruleset exist, the lane
+fails closed rather than silently claiming coverage.
+
+**Tier 3 — post-merge evidence (advisory).** After a changed skill reaches
+`main`, or through an explicit main-branch dispatch, `skill-eval.yml` repeats
+the real generation/render/audit path. This catches environment or integration
+drift after merge but is not represented as a pre-merge result.
 
 ```bash
 node packages/eval/bin/cesium-eval.js render-baselines \
   --skills cesiumjs-primitives --force --regenerate \
-  --codegen-harness codex --out evaluation/artifacts/skill-eval
+  --codegen-harness copilot --codegen-model gpt-5.6-sol \
+  --codegen-variant low --out evaluation/artifacts/skill-eval
 node packages/eval/bin/cesium-eval.js audit \
   --skills cesiumjs-primitives --no-judge \
+  --codegen-harness copilot --codegen-model gpt-5.6-sol \
+  --codegen-variant low \
   --bundle-root evaluation/artifacts/skill-eval
 ```
 
@@ -286,9 +305,15 @@ Scope and limits worth knowing before relying on it:
 - Only skills with `optimization/scenarios/<id>/` are evaluated live; that
   directory is the work list. A skill without scenarios (the orientation skill,
   or a new domain whose scenarios have not landed) is covered by Tier 1 only.
-- It needs `CODEX_AUTH_CONTENT`, so it cannot run on a fork pull request. Forks
-  get a loud "did not run" notice in the job summary; a maintainer should
-  dispatch the lane before merging such a change.
+- GitHub Actions receives only a fine-grained token with the `Copilot Requests`
+  account permission, stored as `COPILOT_GITHUB_TOKEN` in the protected
+  `copilot-inference` Environment. Secret-bearing jobs are pinned to ephemeral
+  GitHub-hosted runners and remain skipped until `COPILOT_INFERENCE_READY=true`.
+  No Codex/ChatGPT account-session file is copied, uploaded, refreshed, or
+  persisted on a runner.
+- Candidate skill text is untrusted prompt data. The token-bearing job disables
+  all model tools and never launches a browser. Generated JavaScript crosses an
+  artifact boundary and executes only in the later secret-free hosted job.
 - `CESIUM_ION_TOKEN` is optional. The public scenario suite is built to render
   without ion entitlements.
 - There is a model in the loop, which makes this lane specific rather than

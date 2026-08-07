@@ -9,12 +9,12 @@
  * skill was therefore indistinguishable, to CI, from a pull request that
  * changed nothing: the gate went green because the gate was never looking.
  *
- * The live lane (skill-eval.yml) closes the semantic half of that hole by
- * re-generating code from the edited skill and scoring what the browser
- * actually did. It cannot close the whole hole, because it costs money, needs
- * credentials a fork does not get, and has a language model in the loop. This
- * command is the half that is free, hermetic, fork-safe and repeatable: the
- * properties of a skill that can be decided by reading it.
+ * A maintainer-run local live evaluation can probe the semantic half of that
+ * hole by re-generating code from the edited skill and scoring what the browser
+ * actually did. It cannot close the whole hole, because it costs money and has
+ * a language model in the loop. This command is the half that is free,
+ * hermetic, fork-safe and repeatable: the properties of a skill that can be
+ * decided by reading it.
  *
  * The rules, and the wording change each one catches:
  *

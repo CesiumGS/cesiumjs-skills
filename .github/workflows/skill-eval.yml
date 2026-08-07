@@ -16,7 +16,7 @@ name: Skill Eval (live)
 # skills and why the hermetic half of the contract lives in pr-gate.yml instead,
 # where it runs on every pull request for free. The credentialed lane never
 # executes pull-request code; pushes and explicit dispatches on main are its
-# only entry points, and the codex-inference environment limits secret scope.
+# only entry points, and the copilot-inference environment limits secret scope.
 #
 # NO path: filter, for the reason pr-gate.yml documents at length: GitHub never
 # reports a conclusion for a skipped workflow, so a path-filtered workflow can
@@ -125,23 +125,16 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref }}
-          CODEX_RUNNER_LABELS_VAR: ${{ vars.CODEX_RUNNER_LABELS }}
         run: |
           set -uo pipefail
           eligible=true
           reason=""
           if [ "$REF_NAME" != "refs/heads/main" ]; then
             eligible=false
-            reason="privileged Codex evaluation only runs from refs/heads/main"
+            reason="privileged Copilot evaluation only runs from refs/heads/main"
           elif [ "$EVENT_NAME" != "push" ] && [ "$EVENT_NAME" != "workflow_dispatch" ]; then
             eligible=false
             reason="unsupported event: $EVENT_NAME"
-          elif [ -z "${CODEX_RUNNER_LABELS_VAR:-}" ]; then
-            # A configuration gap is not an evaluation regression: without a
-            # provisioned codex runner the live lane cannot authenticate, so
-            # skip cleanly instead of burning five minutes to fail at seeding.
-            eligible=false
-            reason="no codex runner is configured (set the CODEX_RUNNER_LABELS repository variable and provision the credential)"
           fi
           echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
@@ -158,17 +151,17 @@ jobs:
   live:
     name: Live eval (${{ needs.discover.outputs.skills }})
     needs: discover
-    if: needs.discover.outputs.count != '0' && needs.discover.outputs.eligible == 'true'
-    environment: codex-inference
+    if: >-
+      needs.discover.outputs.count != '0' &&
+      needs.discover.outputs.eligible == 'true' &&
+      vars.COPILOT_INFERENCE_READY == 'true'
+    environment: copilot-inference
     # This expensive credentialed job runs only after code has reached main or
     # an explicit main-branch dispatch enters the environment boundary.
-    #
-    # CODEX_RUNNER_LABELS narrows the pool to the ONE runner that holds the
-    # codex credential. The CLI rotates its refresh token in place on the
-    # runner (see setup-agent-harness/action.yml), so two runners refreshing
-    # copies of the same session invalidate each other; every codex-capable
-    # lane must therefore land on the same machine.
-    runs-on: ${{ fromJSON(vars.CODEX_RUNNER_LABELS || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    # Copilot uses an environment-scoped fine-grained token, so it needs no
+    # persistent runner or refreshable account-session file.
+    # Secret-bearing model calls never use the persistent runner pool.
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
       # render-baselines --out and audit --bundle-root must be given the same
@@ -176,14 +169,11 @@ jobs:
       # evaluation/artifacts/ tree, so nothing tracked is ever touched.
       BUNDLE_ROOT: evaluation/artifacts/skill-eval
       SCORECARD_DIR: evaluation/artifacts/skill-eval-scorecard
-      # Live play-by-play from the agent CLI. Every driver streams the
-      # harness's own JSON event feed (dispatch, reasoning, each tool call and
-      # its outcome, token spend) to stdout as it arrives, plus a heartbeat
-      # while a model call is in flight. Without it an agent step is one silent
-      # block for minutes and a wedged run is indistinguishable from a slow
-      # one. 'full' prints reasoning at length; set the EVAL_HARNESS_STREAM
-      # repository variable to 'status' for one-line gists or 'off' to silence
-      # it, without editing this workflow.
+      # Live progress from the agent CLI. Copilot's silent mode emits assistant
+      # prose rather than structured reasoning/tool events; the shared reporter
+      # still adds dispatch, completion, and heartbeat lines so a long request
+      # is distinguishable from a hang. Set EVAL_HARNESS_STREAM to 'status' for
+      # one-line gists or 'off' to silence it without editing this workflow.
       EVAL_HARNESS_STREAM: ${{ vars.EVAL_HARNESS_STREAM || 'full' }}
     steps:
       # Independent of the job's `if:` and of the discover job's eligibility
@@ -196,7 +186,7 @@ jobs:
           REF_NAME: ${{ github.ref }}
         run: |
           if [ "$REF_NAME" != "refs/heads/main" ]; then
-            echo "::error title=Refusing to run::privileged Codex evaluation only runs from refs/heads/main."
+            echo "::error title=Refusing to run::privileged Copilot evaluation only runs from refs/heads/main."
             exit 1
           fi
           if [ "$EVENT_NAME" != "push" ] && [ "$EVENT_NAME" != "workflow_dispatch" ]; then
@@ -219,9 +209,16 @@ jobs:
           npx playwright install --with-deps chromium
 
       - uses: ./.github/actions/setup-agent-harness
-        with:
-          harness: codex
-          codex-auth-json-b64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
+
+      - name: Validate the Copilot token
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error title=Missing secret::COPILOT_GITHUB_TOKEN is not configured in the copilot-inference Environment."
+            exit 1
+          fi
+          echo "COPILOT_GITHUB_TOKEN is present"
 
       # Generate from the EDITED skill, then render. The skill file is read at
       # codegen time and hashed into the meta sidecar, so the scorecard records
@@ -234,11 +231,14 @@ jobs:
       - name: Render baselines from the changed skills
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           SKILLS: ${{ needs.discover.outputs.skills }}
         run: |
           node packages/eval/bin/cesium-eval.js render-baselines \
             --skills "$SKILLS" \
-            --codegen-harness codex \
+            --codegen-harness copilot \
+            --codegen-model gpt-5.6-sol \
+            --codegen-variant low \
             --force \
             --regenerate \
             --out "$BUNDLE_ROOT"
@@ -260,7 +260,9 @@ jobs:
           node packages/eval/bin/cesium-eval.js audit \
             --skills "$SKILLS" \
             --no-judge \
-            --codegen-harness codex \
+            --codegen-harness copilot \
+            --codegen-model gpt-5.6-sol \
+            --codegen-variant low \
             --bundle-root "$BUNDLE_ROOT" \
             --output-dir "$SCORECARD_DIR"
           code=$?

@@ -8,12 +8,25 @@ workflow surface.
 
 ## Quick Start
 
-### OpenCode
+### GitHub Copilot CLI
 
-Install OpenCode and run it from a checkout of this repository:
+The evaluation and optimization roles default to GitHub Copilot CLI with
+`gpt-5.6-sol` at low reasoning effort:
 
 ```bash
-npm i -g opencode-ai@latest
+npm i -g @github/copilot@1.0.78
+copilot login
+```
+
+Run evaluation commands from this checkout; role defaults live in
+[`eval.config.json`](eval.config.json).
+
+### OpenCode
+
+OpenCode remains an optional alternative harness:
+
+```bash
+npm i -g opencode-ai@1.18.15
 opencode
 ```
 
@@ -96,21 +109,31 @@ job goes red.
 
 ### Changing a skill
 
-Editing `skills/<id>/SKILL.md` changes agent behaviour, so it gets its own CI
-path on top of the gate above:
+Editing `skills/<id>/SKILL.md` changes agent behaviour, so it gets an additional
+contract check inside the gate above:
 
 - **`cesium-eval check skills`** runs inside the gate on every pull request. It
   reads the skill file itself — frontmatter, the `Use when ...` activation
   clause, code fences that must parse, and CesiumJS symbols that must exist in
   [Domain Mapping](wiki/Domain-Mapping.md). Free, hermetic, works on forks.
-- **[`skill-eval.yml`](.github/workflows/skill-eval.yml)** re-runs the real path
-  for each changed skill that has scenarios: the edited wording goes into the
-  codegen prompt, the result renders in headless Chromium, and the deterministic
-  checks score it. Needs the `CODEX_AUTH_CONTENT` secret, so it does not run on
-  forks.
+- **[`pr-skill-eval-gate.yml`](.github/workflows/pr-skill-eval-gate.yml)** is the
+  protected pre-merge stage. After the secret-free PR Gate completes, trusted
+  default-branch code fetches only the candidate skill documents as bounded
+  data. Copilot generates with tools disabled; a separate secret-free hosted
+  job executes the generated JavaScript, renders evidence, and applies the
+  deterministic 95%/critical-failure scorecard. It publishes `Skill Eval Gate`
+  on the pull-request head for the repository ruleset to require.
+- **[`skill-eval.yml`](.github/workflows/skill-eval.yml)** repeats the live path
+  after a change reaches `main`, or through an explicit main-branch dispatch,
+  as post-merge evidence.
 
-See [ADR-0007](wiki/ADR-0007-Skill-Change-Evaluation.md) for why it is split in
-two and what each tier does not catch.
+The pre-merge check is fail-closed until an administrator completes
+[the GitHub guardrail setup](wiki/Configure-Skill-Eval-Gate.md). Workflow code
+alone does not make a check merge-blocking; the protected Environment, readiness
+variable, and required-check ruleset must all be active.
+
+See [ADR-0007](wiki/ADR-0007-Skill-Change-Evaluation.md) for the trust boundary
+and what each tier does not catch.
 
 Three parts of CI are not reproduced by the list above: `actionlint` (needs the
 pinned binary the workflow installs), the full-history `gitleaks` scan, and
@@ -123,12 +146,12 @@ For local browser-backed optimization scenario reproduction, place generated Jav
 node packages/eval/bin/cesium-eval.js optimize render cesiumjs-camera --iteration candidate --only eval-001
 ```
 
-For the full autonomous optimization loop across every skill scenario group, use `cesium-eval optimize all --skills all --max-iterations 1` after configuring an agent CLI harness and setting `CESIUM_ION_TOKEN`. Role defaults (harness, model, reasoning effort) live in [`eval.config.json`](eval.config.json) and the harness/model catalog in [`config/harness-registry.json`](config/harness-registry.json); command-line flags and environment variables override them. To run the same phases through Codex CLI agents, pass `--proposer-harness codex --codegen-harness codex --judge-harness codex`; for GitHub Copilot CLI agents, use `copilot` as the harness id.
+For the full autonomous optimization loop across every skill scenario group, use `cesium-eval optimize all --skills all --max-iterations 1` after authenticating GitHub Copilot CLI and setting `CESIUM_ION_TOKEN`. The tracked defaults run proposer, codegen, and judge through `copilot` with `gpt-5.6-sol` at low effort. Role defaults live in [`eval.config.json`](eval.config.json), and the harness/model catalog lives in [`config/harness-registry.json`](config/harness-registry.json); command-line flags and environment variables can override them deliberately.
 Raw generated code, HTML, screenshots, and run traces under `optimization/generated/` and `optimization/runs/` are local-only and gitignored by default.
 
 ### Watching an agent run
 
-Agent calls narrate themselves as they happen, locally and in CI: the dispatch, the model's reasoning, each tool call and how it settled, token spend, and a heartbeat while a model call is in flight so a long think is distinguishable from a hang.
+Agent calls narrate themselves as they happen, locally and in CI: every run reports its dispatch and a heartbeat while the model is in flight, then streams whatever progress detail the selected harness exposes. Structured harnesses can also report reasoning, tool outcomes, and token usage; Copilot reports assistant prose as it is generated.
 
 How much detail arrives depends on what the underlying CLI emits, which differs by harness:
 

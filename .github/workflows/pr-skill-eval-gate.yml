@@ -1,0 +1,382 @@
+name: Skill Eval Gate (pre-merge)
+
+# Privileged second stage for pull requests that change skills.
+#
+# Security boundary:
+#   - workflow_run loads THIS workflow from the trusted default branch.
+#   - pull-request code is never checked out or executed.
+#   - the candidate skill's bounded UTF-8 documents are fetched as data.
+#   - the Copilot-secret job performs code generation only, with tools disabled.
+#   - generated JavaScript is executed later on an ephemeral GitHub-hosted
+#     runner that receives no Copilot, Ion, repository, or OIDC credential.
+#   - a Check Run named "Skill Eval Gate" is written to the PR head SHA so a
+#     repository ruleset can make the live scorecard merge-blocking.
+on:
+  workflow_run:
+    workflows: ["PR Gate"]
+    types: [completed]
+
+concurrency:
+  # One live evaluation per triggering PR Gate run. Do not cancel an older run:
+  # cancellation could strand its explicit Check Run in_progress forever.
+  group: skill-eval-gate-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    name: Prepare trusted candidate data
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      checks: write
+      contents: read
+      pull-requests: read
+    outputs:
+      check_id: ${{ steps.check.outputs.check-id }}
+      pr_number: ${{ steps.check.outputs.pr-number }}
+      head_sha: ${{ steps.check.outputs.head-sha }}
+      eligible: ${{ steps.candidate.outputs.eligible }}
+      count: ${{ steps.candidate.outputs.count }}
+      skills: ${{ steps.candidate.outputs.skills }}
+      contract_only: ${{ steps.candidate.outputs.contract_only }}
+      reason: ${{ steps.candidate.outputs.reason }}
+      upstream_conclusion: ${{ github.event.workflow_run.conclusion }}
+    steps:
+      - name: Start the required Check Run on the pull-request head
+        id: check
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            let link = run.pull_requests?.[0] ?? null;
+            if (!link) {
+              const associated = await github.request(
+                'GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls',
+                { owner: context.repo.owner, repo: context.repo.repo, commit_sha: run.head_sha,
+                  headers: { accept: 'application/vnd.github+json' } },
+              );
+              link = associated.data.find((pr) => pr.state === 'open') ?? associated.data[0] ?? null;
+            }
+            if (!link?.number) {
+              core.setFailed(`PR Gate run ${run.id} has no associated pull request`);
+              return;
+            }
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: link.number,
+            });
+            if (!pr.head?.sha || !pr.head?.repo?.full_name) {
+              core.setFailed(`pull request ${link.number} has no resolvable head revision`);
+              return;
+            }
+            const detailsUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const { data: check } = await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Skill Eval Gate',
+              head_sha: pr.head.sha,
+              status: 'in_progress',
+              started_at: new Date().toISOString(),
+              details_url: detailsUrl,
+              external_id: `pr-${pr.number}-workflow-run-${run.id}`,
+              output: {
+                title: 'Candidate skill evaluation queued',
+                summary: 'Waiting for trusted candidate preparation and deterministic live scoring.',
+              },
+            });
+            core.setOutput('check-id', String(check.id));
+            core.setOutput('pr-number', String(pr.number));
+            core.setOutput('head-sha', pr.head.sha);
+            core.setOutput('head-repository', pr.head.repo.full_name);
+            core.setOutput('base-ref', pr.base.ref);
+
+      # Explicit default-branch ref: workflow_run is privileged and must never
+      # inherit the upstream pull request's head revision.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch candidate skill documents as bounded data
+        id: candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.check.outputs.pr-number }}
+          HEAD_REPOSITORY: ${{ steps.check.outputs.head-repository }}
+          HEAD_SHA: ${{ steps.check.outputs.head-sha }}
+          BASE_REF: ${{ steps.check.outputs.base-ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          CANDIDATE_ROOT: evaluation/artifacts/pr-skill-candidate
+        run: node .github/scripts/prepare-pr-skill-eval.mjs
+
+      - name: Upload candidate skill-data artifact
+        if: steps.candidate.outputs.count != '0' && steps.candidate.outputs.count != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pr-skill-candidate-${{ github.run_id }}
+          path: evaluation/artifacts/pr-skill-candidate
+          if-no-files-found: error
+          retention-days: 2
+
+  codegen:
+    name: Generate with protected Copilot
+    needs: prepare
+    if: >-
+      needs.prepare.result == 'success' &&
+      needs.prepare.outputs.eligible == 'true' &&
+      needs.prepare.outputs.count != '0' &&
+      needs.prepare.outputs.count != '' &&
+      vars.COPILOT_INFERENCE_READY == 'true'
+    environment: copilot-inference
+    # The token-bearing model process runs on an ephemeral hosted runner, even
+    # when the repository configures a persistent pool for ordinary CI.
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      actions: read
+      contents: read
+    env:
+      EVAL_HARNESS_STREAM: ${{ vars.EVAL_HARNESS_STREAM || 'status' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-eval
+
+      - name: Build trusted evaluator
+        run: npm run build --workspace @cesiumjs-skills/eval
+
+      # npm and download lifecycle code run before the Copilot credential is
+      # released to the single model-call step.
+      - uses: ./.github/actions/setup-agent-harness
+      - uses: ./.github/actions/install-gitleaks
+
+      - name: Download candidate skill-data artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: pr-skill-candidate-${{ github.run_id }}
+          path: evaluation/artifacts/pr-skill-candidate
+
+      - name: Validate the protected Copilot token
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error title=Missing secret::COPILOT_GITHUB_TOKEN is not configured in copilot-inference."
+            exit 1
+          fi
+          echo "COPILOT_GITHUB_TOKEN is present"
+
+      - name: Generate candidate outputs without tools or code execution
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          SKILLS: ${{ needs.prepare.outputs.skills }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra requested <<< "$SKILLS"
+          for skill in "${requested[@]}"; do
+            if [[ ! "$skill" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+              echo "::error title=Invalid skill id::$skill"
+              exit 1
+            fi
+            node packages/eval/bin/cesium-eval.js optimize generate-baselines \
+              --skill "$skill" \
+              --skill-root evaluation/artifacts/pr-skill-candidate/skills \
+              --iteration baseline \
+              --force \
+              --codegen-harness copilot \
+              --codegen-model gpt-5.6-sol \
+              --codegen-variant low
+          done
+
+      - name: Scan generated source before it crosses the secret boundary
+        run: gitleaks detect --redact --no-git --source optimization/generated
+
+      - name: Upload generated source for secret-free execution
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pr-skill-generated-${{ github.run_id }}
+          path: optimization/generated
+          if-no-files-found: error
+          retention-days: 2
+
+  deterministic:
+    name: Render and score without secrets
+    needs: [prepare, codegen]
+    if: needs.codegen.result == 'success'
+    # Generated JavaScript is untrusted model output. Execute it only on an
+    # ephemeral hosted runner with no environment/repository/Ion/OIDC secret.
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-eval
+
+      - name: Build trusted evaluator and install Chromium
+        run: |
+          npm run build --workspace @cesiumjs-skills/eval
+          npx playwright install --with-deps chromium
+
+      - name: Download generated source
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: pr-skill-generated-${{ github.run_id }}
+          path: optimization/generated
+
+      - name: Render candidate outputs
+        env:
+          SKILLS: ${{ needs.prepare.outputs.skills }}
+          BUNDLE_ROOT: evaluation/artifacts/pr-skill-eval
+        run: |
+          node packages/eval/bin/cesium-eval.js render-baselines \
+            --skills "$SKILLS" \
+            --skip-codegen \
+            --force \
+            --out "$BUNDLE_ROOT"
+
+      - name: Apply the deterministic scorecard gate
+        env:
+          SKILLS: ${{ needs.prepare.outputs.skills }}
+          BUNDLE_ROOT: evaluation/artifacts/pr-skill-eval
+          SCORECARD_DIR: evaluation/artifacts/pr-skill-scorecard
+        run: |
+          node packages/eval/bin/cesium-eval.js audit \
+            --skills "$SKILLS" \
+            --no-judge \
+            --codegen-harness copilot \
+            --codegen-model gpt-5.6-sol \
+            --codegen-variant low \
+            --bundle-root "$BUNDLE_ROOT" \
+            --output-dir "$SCORECARD_DIR"
+
+      - name: Publish scorecard to the workflow summary
+        if: always()
+        run: |
+          if [ -f evaluation/artifacts/pr-skill-scorecard/scorecard.md ]; then
+            cat evaluation/artifacts/pr-skill-scorecard/scorecard.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No live scorecard was produced; inspect the failed render/audit step." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Remove executable HTML before artifact upload
+        id: sanitize
+        if: always()
+        run: |
+          find evaluation/artifacts/pr-skill-eval -name '*.html' -delete 2>/dev/null || true
+          if find evaluation/artifacts/pr-skill-eval -name '*.html' 2>/dev/null | grep -q .; then
+            echo "::error title=Sanitization failed::HTML survived the delete pass."
+            exit 1
+          fi
+
+      - name: Upload live deterministic scorecard and evidence
+        if: always() && steps.sanitize.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pr-skill-scorecard-${{ github.run_id }}
+          path: |
+            evaluation/artifacts/pr-skill-scorecard/**
+            evaluation/artifacts/pr-skill-eval/**/programmatic-checks.json
+            evaluation/artifacts/pr-skill-eval/**/console.json
+            evaluation/artifacts/pr-skill-eval/**/metadata.json
+            evaluation/artifacts/pr-skill-eval/**/*.png
+          if-no-files-found: warn
+          retention-days: 14
+
+  report:
+    name: Publish required skill-eval conclusion
+    needs: [prepare, codegen, deterministic]
+    if: always() && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      checks: write
+      contents: read
+    steps:
+      - name: Complete the Check Run on the pull-request head
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          CHECK_ID: ${{ needs.prepare.outputs.check_id }}
+          PREPARE_RESULT: ${{ needs.prepare.result }}
+          UPSTREAM_CONCLUSION: ${{ needs.prepare.outputs.upstream_conclusion }}
+          ELIGIBLE: ${{ needs.prepare.outputs.eligible }}
+          PREPARE_REASON: ${{ needs.prepare.outputs.reason }}
+          SKILLS: ${{ needs.prepare.outputs.skills }}
+          COUNT: ${{ needs.prepare.outputs.count }}
+          CONTRACT_ONLY: ${{ needs.prepare.outputs.contract_only }}
+          CODEGEN_RESULT: ${{ needs.codegen.result }}
+          DETERMINISTIC_RESULT: ${{ needs.deterministic.result }}
+          COPILOT_READY: ${{ vars.COPILOT_INFERENCE_READY || 'false' }}
+        with:
+          script: |
+            const checkId = Number(process.env.CHECK_ID);
+            if (!Number.isSafeInteger(checkId)) {
+              core.setFailed('prepare did not create a valid Skill Eval Gate check run');
+              return;
+            }
+            let conclusion = 'success';
+            let title = 'Skill evaluation passed';
+            let summary = '';
+            if (process.env.PREPARE_RESULT !== 'success') {
+              conclusion = 'failure';
+              title = 'Candidate preparation failed';
+              summary = 'The trusted preparation job failed before live evaluation.';
+            } else if (process.env.UPSTREAM_CONCLUSION !== 'success') {
+              conclusion = 'failure';
+              title = 'PR Gate failed';
+              summary = `The prerequisite PR Gate concluded ${process.env.UPSTREAM_CONCLUSION}.`;
+            } else if (process.env.ELIGIBLE !== 'true') {
+              conclusion = 'neutral';
+              title = 'Live evaluation not applicable';
+              summary = process.env.PREPARE_REASON || 'This pull request does not target the default branch.';
+            } else if ((process.env.COUNT || '0') === '0') {
+              title = 'No live scenarios required';
+              summary = process.env.CONTRACT_ONLY
+                ? `Contract-only skill changes: ${process.env.CONTRACT_ONLY}. The secret-free PR Gate remains authoritative.`
+                : 'No skill files changed; the secret-free PR Gate remains authoritative.';
+            } else if (process.env.COPILOT_READY !== 'true') {
+              conclusion = 'failure';
+              title = 'Copilot environment is not ready';
+              summary = 'An administrator must protect copilot-inference, set COPILOT_GITHUB_TOKEN, then set COPILOT_INFERENCE_READY=true.';
+            } else if (process.env.CODEGEN_RESULT !== 'success') {
+              conclusion = 'failure';
+              title = 'Protected code generation failed';
+              summary = `Copilot code generation concluded ${process.env.CODEGEN_RESULT}.`;
+            } else if (process.env.DETERMINISTIC_RESULT !== 'success') {
+              conclusion = 'failure';
+              title = 'Deterministic live scorecard failed';
+              summary = `Generated outputs for ${process.env.SKILLS} did not pass rendering and deterministic scoring.`;
+            } else {
+              summary = `Generated outputs for ${process.env.SKILLS} passed the deterministic live scorecard.`;
+            }
+            const detailsUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: checkId,
+              status: 'completed',
+              conclusion,
+              completed_at: new Date().toISOString(),
+              details_url: detailsUrl,
+              output: { title, summary },
+            });
+            if (conclusion === 'failure') core.setFailed(summary);

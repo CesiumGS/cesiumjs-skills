@@ -63,7 +63,21 @@ class CopilotDriver implements HarnessDriver {
     // Piped stdin puts the CLI in non-interactive mode; --silent restricts
     // stdout to the assistant response. The prompt travels on stdin (not -p)
     // to avoid argv length limits on large skill-document prompts.
-    const argv = ["--silent", "--no-color", "--no-ask-user", "--log-level", "none", "-C", workdir];
+    // Keep the pinned CI surface deterministic and prevent read-only tools from
+    // inspecting unrelated files left in the shared system temp directory.
+    // Copilot already restricts paths to the checkout by default; this removes
+    // its one implicit outside-worktree exception.
+    const argv = [
+      "--silent",
+      "--no-color",
+      "--no-ask-user",
+      "--no-auto-update",
+      "--disallow-temp-dir",
+      "--log-level",
+      "none",
+      "-C",
+      workdir,
+    ];
     if (call.model) argv.push("--model", call.model);
     const effort = effortFor(spec, call);
     if (effort) argv.push("--effort", effort);

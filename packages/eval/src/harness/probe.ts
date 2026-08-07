@@ -156,6 +156,10 @@ export async function runProbe(ctx: EvalContext, harnessId: string, options: Pro
       cwd: fixtureDir,
       timeoutSeconds: Math.ceil(timeoutMs / 1000),
       env: adapterEnv,
+      // A capability probe needs exactly one tool. Keeping this explicit also
+      // prevents tool-rich CLIs from exposing shell or network access merely
+      // because a new probe ran with their defaults.
+      allowedTools: ["Read"],
       // Probes are the first thing run against a fresh runner and the first
       // thing to hang when a credential is wrong, so they get the same live
       // commentary as pipeline calls.

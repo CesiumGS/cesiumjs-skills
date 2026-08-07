@@ -1,235 +1,24 @@
-name: Set up agent harness
-description: >-
-  Install an agent CLI and write its credential to the path the CLI actually
-  reads. Consumes a secret; never use this in a lane reachable by a fork.
+name: Set up GitHub Copilot harness
+description: Install the pinned GitHub Copilot CLI used by protected live-evaluation jobs
 
-# WHY THIS EXISTS
-#
-# Two workflows already passed OPENCODE_AUTH_CONTENT into the environment and
-# checked that it was non-empty, and a third would have done the same for codex.
-# Nothing anywhere ever wrote it to disk. Neither CLI reads its credential from
-# the environment: codex reads $CODEX_HOME/auth.json (default ~/.codex), and
-# opencode reads ~/.local/share/opencode/auth.json. So the secret was validated,
-# logged as present, and then ignored, and every live lane would have failed at
-# the first model call with an authentication error that named nothing.
-#
-# The materialization belongs here rather than in each workflow so there is one
-# place that knows each CLI's credential path.
-
-# WHY BOTH CREDENTIALS ARE SEPARATE INPUTS
-#
-# The callers choose their harness at runtime from an input or a repository
-# variable, so the obvious single-input form is a ternary:
-#
-#   auth-content: ${{ env.AGENT_HARNESS == 'codex' && secrets.CODEX_AUTH_JSON_B64
-#                     || secrets.OPENCODE_AUTH_CONTENT }}
-#
-# which is a trap. GitHub's `&&`/`||` returns the RIGHT operand whenever the left
-# is falsy, and an unset secret is the empty string, so a missing
-# CODEX_AUTH_JSON_B64 silently yields the OpenCode credential — written to
-# ~/.codex/auth.json, where it fails as a corrupt codex login rather than as the
-# missing secret it is. Passing both and selecting inside the action removes the
-# expression entirely.
-
-# WHY THE CODEX CREDENTIAL IS SEEDED ONLY WHEN MISSING
-#
-# The codex credential is a ChatGPT-subscription OAuth pair, and the CLI
-# refreshes it in place: when the session nears staleness (roughly eight days
-# from last_refresh) or a call returns 401, codex obtains a new pair, ROTATES
-# the refresh token server-side, and rewrites auth.json on the runner. From
-# that moment the runner-resident file is the live credential and the
-# repository secret holds a superseded lineage. Overwriting the file from the
-# secret on every run therefore discards the rotated pair and resurrects one
-# the server may already have invalidated, which surfaces days later as an
-# invalid_grant / refresh_token_reused lockout that only a human `codex login`
-# can clear. OpenAI's CI guidance is explicit on this point:
-# https://developers.openai.com/codex/auth/ci-cd-auth
-#
-# So for codex the secret is bootstrap material: it is written only when the
-# runner has no parseable auth.json (first run on a fresh runner, or after a
-# force-reseed). The corollary is that every codex job must land on the same
-# persistent runner (see CODEX_RUNNER_LABELS in the calling workflows): two
-# runners refreshing copies of one session invalidate each other.
-#
-# The opencode credential is a static API key with no rotation, so it keeps
-# the simpler overwrite-every-run behavior.
-#
-# RESEED RUNBOOK, for when the live lane fails with 401 / invalid_grant:
-#   1. `codex login` on a trusted machine
-#   2. Update CODEX_AUTH_JSON_B64 in the codex-inference environment
-#   3. Dispatch "Provision Codex Auth" with force_reseed: true and approve it
-inputs:
-  harness:
-    description: "Agent CLI to install: codex or opencode"
-    required: true
-  codex-auth-json-b64:
-    description: >-
-      Base64-encoded ~/.codex/auth.json from a machine where `codex login` has
-      run (auth_mode "chatgpt" for the ChatGPT subscription route). Used only
-      to bootstrap or explicitly reseed the dedicated runner; ordinary jobs
-      reuse its resident credential.
-    required: false
-    default: ''
-  opencode-auth-content:
-    description: >-
-      Contents of ~/.local/share/opencode/auth.json. Required when harness is
-      opencode. Same handling as the codex credential.
-    required: false
-    default: ''
-  force-reseed:
-    description: >-
-      When 'true' and the harness is codex, delete any runner-resident
-      auth.json before materializing, so the repository secret wins. Use only
-      right after re-running `codex login` and updating CODEX_AUTH_JSON_B64;
-      at that point the resident file holds the revoked lineage and keeping
-      it would be the bug.
-    required: false
-    default: 'false'
+# Authentication is intentionally not an action input. The calling workflow
+# releases COPILOT_GITHUB_TOKEN only to the individual steps that make model
+# requests, after the copilot-inference Environment has been approved. Keeping
+# the install step credential-free also prevents npm lifecycle code from seeing
+# the token.
 
 runs:
   using: composite
   steps:
-    - name: Install the agent CLI
+    - name: Install pinned GitHub Copilot CLI
       shell: bash
-      env:
-        HARNESS: ${{ inputs.harness }}
       run: |
         set -euo pipefail
-        case "$HARNESS" in
-          codex)
-            npm install -g @openai/codex@0.146.1
-            codex --version
-            ;;
-          opencode)
-            npm install -g opencode-ai@latest
-            opencode --version
-            ;;
-          *)
-            echo "::error title=Unknown harness::'$HARNESS' is not one of: codex, opencode"
-            exit 1
-            ;;
-        esac
-
-    # The credential reaches the shell ONLY through the environment. Writing it
-    # as ${{ inputs.*-auth-content }} inside the run text would splice the value
-    # into a shell program, where a backtick or $(...) in a re-issued credential
-    # becomes a command; an environment variable is inert whatever it contains.
-    - name: Materialize the harness credential
-      shell: bash
-      env:
-        HARNESS: ${{ inputs.harness }}
-        CODEX_AUTH_JSON_B64_IN: ${{ inputs.codex-auth-json-b64 }}
-        OPENCODE_AUTH_CONTENT_IN: ${{ inputs.opencode-auth-content }}
-        FORCE_RESEED: ${{ inputs.force-reseed }}
-      run: |
-        set -euo pipefail
-        case "$HARNESS" in
-          codex)
-            auth_path="${CODEX_HOME:-$HOME/.codex}/auth.json"
-            AUTH_CONTENT_B64="${CODEX_AUTH_JSON_B64_IN:-}"
-            secret_name=CODEX_AUTH_JSON_B64
-            ;;
-          opencode)
-            auth_path="$HOME/.local/share/opencode/auth.json"
-            AUTH_CONTENT="${OPENCODE_AUTH_CONTENT_IN:-}"
-            secret_name=OPENCODE_AUTH_CONTENT
-            ;;
-        esac
-
-        # Codex only: prefer the runner-resident file over the secret. See the
-        # header comment for why (the CLI rotates the refresh token in place,
-        # so the resident file is the live credential and the secret is only
-        # bootstrap material). The shape gate below is the same test the verify
-        # step applies, so a half-written file loses to a reseed rather than
-        # being kept because it merely exists.
-        if [ "$HARNESS" = "codex" ]; then
-          if [ "${FORCE_RESEED:-false}" = "true" ] && [ -f "$auth_path" ]; then
-            rm -f "$auth_path"
-            echo "force-reseed: discarded the runner-resident auth.json"
-          fi
-          if [ -f "$auth_path" ] && node -e '
-            const fs = require("node:fs");
-            try {
-              const doc = JSON.parse(fs.readFileSync(process.argv[1], "utf-8"));
-              const tokens = doc.tokens ?? {};
-              process.exit(tokens.access_token && tokens.refresh_token ? 0 : 1);
-            } catch { process.exit(1); }
-          ' "$auth_path"; then
-            echo "reusing runner-resident $auth_path (codex refreshes it in place; the secret is bootstrap-only)"
-            exit 0
-          fi
-        fi
-
-        if [ "$HARNESS" = "codex" ] && [ -z "${AUTH_CONTENT_B64:-}" ]; then
-          echo "::error title=Missing credential::No valid runner-resident Codex credential exists and ${secret_name} was not supplied. Dispatch the protected Provision Codex Auth workflow."
-          exit 1
-        elif [ "$HARNESS" != "codex" ] && [ -z "${AUTH_CONTENT:-}" ]; then
-          echo "::error title=Missing credential::harness is '$HARNESS' but no credential was supplied for it. Configure the ${secret_name} repository secret."
+        version=1.0.78
+        npm install --global "@github/copilot@${version}"
+        actual="$(copilot --version 2>&1 | sed -nE 's/^GitHub Copilot CLI ([0-9]+\.[0-9]+\.[0-9]+)\..*/\1/p' | head -n 1)"
+        if [ "$actual" != "$version" ]; then
+          echo "::error title=Unexpected Copilot version::expected ${version}; got ${actual:-unparseable}"
           exit 1
         fi
-        mkdir -p "$(dirname "$auth_path")"
-        chmod 700 "$(dirname "$auth_path")"
-        # umask before creation, not chmod after: a chmod leaves a window in
-        # which the credential is world-readable on a shared runner.
-        if [ "$HARNESS" = "codex" ]; then
-          tmp_path=$(mktemp "${auth_path}.new.XXXXXX")
-          chmod 600 "$tmp_path"
-          if ! printf '%s' "$AUTH_CONTENT_B64" | base64 --decode > "$tmp_path"; then
-            rm -f "$tmp_path"
-            echo "::error title=Codex credential invalid::${secret_name} is not valid base64."
-            exit 1
-          fi
-          node -e '
-            const fs = require("node:fs");
-            const doc = JSON.parse(fs.readFileSync(process.argv[1], "utf-8"));
-            const tokens = doc.tokens ?? {};
-            if (doc.auth_mode !== "chatgpt" || !tokens.access_token || !tokens.refresh_token) process.exit(1);
-          ' "$tmp_path" || {
-            rm -f "$tmp_path"
-            echo "::error title=Codex credential invalid::Decoded ${secret_name} is not managed ChatGPT auth.json."
-            exit 1
-          }
-          mv "$tmp_path" "$auth_path"
-        else
-          (umask 077; printf '%s\n' "$AUTH_CONTENT" > "$auth_path")
-        fi
-        echo "wrote $auth_path ($(wc -c < "$auth_path") bytes)"
-
-    # A credential that is present but malformed fails later, inside a model
-    # call, as an opaque harness error. Shape-check it here, where the message
-    # can name the secret that needs re-issuing. Only structure is inspected;
-    # no value is printed.
-    - name: Verify the credential is well-formed
-      shell: bash
-      env:
-        HARNESS: ${{ inputs.harness }}
-      run: |
-        set -euo pipefail
-        case "$HARNESS" in
-          codex)   auth_path="${CODEX_HOME:-$HOME/.codex}/auth.json" ;;
-          opencode) auth_path="$HOME/.local/share/opencode/auth.json" ;;
-        esac
-        node -e '
-          const fs = require("node:fs");
-          const harness = process.env.HARNESS;
-          const target = process.argv[1];
-          let doc;
-          try {
-            doc = JSON.parse(fs.readFileSync(target, "utf-8"));
-          } catch (exc) {
-            console.log(`::error title=Credential is not JSON::${target} did not parse (${exc.message}). Re-copy the file verbatim into the secret.`);
-            process.exit(1);
-          }
-          if (harness === "codex") {
-            const tokens = doc.tokens ?? {};
-            const missing = ["access_token", "refresh_token"].filter((key) => !tokens[key]);
-            if (missing.length) {
-              console.log(`::error title=Codex credential incomplete::auth.json has no ${missing.join(", ")}. Re-run "codex login" and copy the fresh ~/.codex/auth.json.`);
-              process.exit(1);
-            }
-            console.log(`codex credential OK (auth_mode=${doc.auth_mode ?? "unset"})`);
-          } else if (!Object.keys(doc).length) {
-            console.log("::error title=OpenCode credential empty::auth.json parsed to an empty object.");
-            process.exit(1);
-          }
-        ' "$auth_path"
+        echo "GitHub Copilot CLI ${actual} installed"

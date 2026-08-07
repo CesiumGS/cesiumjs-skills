@@ -387,6 +387,7 @@ agentSelectionOptions(
     .command("generate-baselines")
     .description("Generate baseline JS for all scenarios against the current best skills.")
     .option("--skill <id>", "only generate for this skill")
+    .option("--skill-root <dir>", "candidate skill root (defaults to tracked skills/)")
     .option("--iteration <id>", "output iteration label", "baseline")
     .option("--force", "re-generate even if the .js exists")
     .option("--only <list>", "comma-separated scenario ids"),

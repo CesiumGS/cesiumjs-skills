@@ -25,7 +25,7 @@ import {
   resolveBundleDir,
 } from "../src/evaluation/baselines.js";
 
-const ctx = loadContext();
+const ctx = loadContext({ loadDotEnv: false });
 
 // Scratch bundle roots live under the gitignored artifacts tree so a test root
 // is never mistaken for a real one.
