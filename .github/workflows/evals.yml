@@ -75,12 +75,9 @@ jobs:
       - name: Validate eval manifests (evaluation + optimization lanes)
         run: node packages/eval/bin/cesium-eval.js validate --suite all
 
-      - name: Run deterministic baseline audit
-        run: |
-          node packages/eval/bin/cesium-eval.js audit \
-            --skills all \
-            --no-judge \
-            --output-dir evaluation/artifacts/audits/ci-smoke
+      # The baseline audit needs rendered bundles (gitignored optimization/runs/),
+      # so it runs in the render-then-audit jobs of baseline-audit.yml — there is
+      # no tracked evidence to audit in a bare checkout.
 
       - name: Check canonical eval surface
         run: node packages/eval/bin/cesium-eval.js check canonical-surface
