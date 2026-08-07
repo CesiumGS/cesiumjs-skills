@@ -35,15 +35,17 @@ jobs:
             echo "::error title=Wrong runner::Codex auth may only be provisioned on the dedicated persistent self-hosted runner."
             exit 1
           fi
+          for tool in node npm; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "::error title=Runner prerequisite missing::$tool must be preinstalled on the dedicated persistent runner."
+              exit 1
+            fi
+          done
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
           persist-credentials: false
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version-file: .nvmrc
 
       - uses: ./.github/actions/setup-agent-harness
         with:
