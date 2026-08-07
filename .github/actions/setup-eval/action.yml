@@ -17,9 +17,9 @@ runs:
       uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
       with:
         node-version-file: .nvmrc
-        # Deliberately uncached. This workspace has only 119 locked packages,
-        # while cache restore/save on the ephemeral self-hosted pool has taken
-        # 8-14 minutes and can outlive the build and tests it is meant to speed up.
+        # setup-node v5 auto-enables the lockfile-keyed npm cache here (the
+        # package.json declares packageManager), which is the right call on an
+        # ephemeral hosted runner that starts with a cold cache every time.
 
     - name: Set up Node (self-hosted with runner-local npm cache)
       if: runner.environment == 'self-hosted'
