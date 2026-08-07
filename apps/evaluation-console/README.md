@@ -87,11 +87,19 @@ npm run build
 # From the repo root: serve a scorecard in the console
 node packages/eval/bin/cesium-eval.js serve \
   evaluation/artifacts/audits/full-merged-20260605T2000Z/scorecard.json \
-  --state-dir /tmp/eval-console-state --port 8933 --open
+  --state-dir /tmp/eval-console-state --open
+
+# Or serve an honest blank slate when this checkout has no runs yet
+node packages/eval/bin/cesium-eval.js serve
 ```
 
-The server binds `127.0.0.1:8933` by default. It reads the scorecard and the
-`optimization/` artifacts and serves screenshots only from inside the repository root.
+The server binds the host and port declared in this checkout's `eval.config.json`.
+With no scorecard argument it focuses the newest run on disk, or serves the
+zero-run state when the checkout is blank. The Vite development client rejects
+an API whose reported repository root does not match its own checkout, so two
+local checkouts cannot silently share evaluation data. The server reads the
+scorecard and `optimization/` artifacts and serves screenshots only from inside
+the repository root.
 
 Dev with hot reload: `npm run dev` (Vite at 127.0.0.1:5174, proxying `/api` to 8933).
 

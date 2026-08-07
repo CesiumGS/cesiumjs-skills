@@ -294,8 +294,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     undoStack.current = [];
     try {
-      const [cfg, raw, decDoc, runList, skillList, reg, ins] = await Promise.all([
-        loadConfig(),
+      const cfg = await loadConfig();
+      const expectedRoot = __EXPECTED_REPO_ROOT__.replace(/\/+$/, "");
+      const actualRoot = cfg.repo_root.replace(/\/+$/, "");
+      if (expectedRoot && actualRoot !== expectedRoot) {
+        throw new Error(
+          `API checkout mismatch: this console belongs to ${expectedRoot}, but the backend serves ${actualRoot}.`,
+        );
+      }
+      const [raw, decDoc, runList, skillList, reg, ins] = await Promise.all([
         loadScorecard(),
         loadReviewDecisions().catch(() => null),
         loadRuns().catch(() => [] as RunSummary[]),
@@ -303,16 +310,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         loadRegistry().catch(() => null),
         loadInsights().catch(() => null)
       ]);
-      const adapted = adaptScorecard(raw);
+      const adapted = raw ? adaptScorecard(raw) : null;
       // The scorecard carries no path, so a legacy fieldless run adapts to "unknown".
       // The server is the sole inference site — backfill its resolved value here so the
       // label/lens reflect the real harness before the scorecard is committed to state.
-      if (adapted.harness === "unknown" && typeof cfg.harness === "string" && cfg.harness.trim()) {
+      if (adapted?.harness === "unknown" && typeof cfg.harness === "string" && cfg.harness.trim()) {
         adapted.harness = cfg.harness.trim();
       }
       setConfig(cfg);
       setScorecard(adapted);
-      setActiveHarness(adapted.harness);
+      setActiveHarness(adapted?.harness ?? null);
       setRuns(runList);
       setSkills(skillList);
       setRegistry(reg);
@@ -321,11 +328,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Default comparison baseline: the most recent run strictly older than the
       // loaded run — same harness when one exists, else any harness. The user can
       // repoint it from the run list ("b"). No older run => honest "no baseline".
-      const loadedTs = adapted.timestampUtc;
+      const loadedTs = adapted?.timestampUtc ?? "";
       const older = runList
-        .filter((r) => r.run_id !== adapted.runId && r.timestamp_utc && r.timestamp_utc < loadedTs)
+        .filter((r) => adapted && r.run_id !== adapted.runId && r.timestamp_utc && r.timestamp_utc < loadedTs)
         .sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc));
-      const sameHarness = older.filter((r) => (r.harness ?? "unknown") === adapted.harness);
+      const sameHarness = older.filter((r) => (r.harness ?? "unknown") === adapted?.harness);
       const defaultBaseline = (sameHarness[0] ?? older[0])?.run_id ?? null;
       setBaselineRunId(defaultBaseline);
       setBaselineCases(null);
@@ -333,7 +340,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const seeded = decDoc?.decisions ?? {};
       decisionsRef.current = seeded;
       setDecisions(seeded);
-      const views = adapted.cases.map((c) => toView(c, seeded[c.key]));
+      const views = (adapted?.cases ?? []).map((c) => toView(c, seeded[c.key]));
       const ordered = worstFirstSort(views);
       setSelectedKey(ordered[0]?.key ?? "");
       const firstSkill = skillList.find((s) => s.iteration_count > 0) ?? skillList[0] ?? null;
@@ -496,7 +503,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const doc: ReviewDecisionDoc = {
         schema_version: "1.0",
         run_id: sc.runId,
-        scorecard_path: cfg.scorecard_path,
+        scorecard_path: cfg.scorecard_path ?? undefined,
         updated_at: nowIso(),
         decisions: next
       };

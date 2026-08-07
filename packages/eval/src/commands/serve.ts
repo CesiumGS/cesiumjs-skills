@@ -367,6 +367,7 @@ function buildHandoffDoc(state: ViewerState, focusPayload: Record<string, any>, 
 class NotFoundError extends Error {}
 class ForbiddenError extends Error {}
 class PayloadTooLargeError extends Error {}
+class ConflictError extends Error {}
 
 function resolveRepoArtifact(ctx: EvalContext, pathText: string): string {
   const resolved = path.isAbsolute(pathText) ? path.resolve(pathText) : path.resolve(ctx.repoRoot, pathText);
@@ -414,6 +415,7 @@ function sendError(res: http.ServerResponse, exc: unknown): void {
   if (exc instanceof NotFoundError) status = 404;
   else if (exc instanceof ForbiddenError) status = 403;
   else if (exc instanceof PayloadTooLargeError) status = 413;
+  else if (exc instanceof ConflictError) status = 409;
   else if (exc instanceof SyntaxError) status = 400;
   const error = exc instanceof Error ? exc : new Error(String(exc));
   sendJson(res, { error: error.message, type: error.constructor.name }, status);
@@ -447,7 +449,7 @@ async function readBody(req: http.IncomingMessage): Promise<any> {
 // serve command
 // ---------------------------------------------------------------------------
 export interface ServeOptions {
-  scorecard: string;
+  scorecard?: string;
   stateDir?: string;
   host?: string;
   port?: number;
@@ -456,7 +458,31 @@ export interface ServeOptions {
 
 export async function serveCommand(ctx: EvalContext, options: ServeOptions): Promise<number> {
   const stateDirOverride = options.stateDir ? path.resolve(options.stateDir) : null;
-  let state = new ViewerState(ctx, path.resolve(options.scorecard), stateDirOverride ?? undefined);
+  const initialScorecard =
+    options.scorecard !== undefined
+      ? path.resolve(options.scorecard)
+      : (listRuns(ctx)[0]?.scorecard_path as string | undefined);
+  let state: ViewerState | null = initialScorecard
+    ? new ViewerState(ctx, initialScorecard, stateDirOverride ?? undefined)
+    : null;
+  const requireFocusedState = (): ViewerState => {
+    if (state === null) {
+      throw new ConflictError("no evaluation run is loaded; create or select a run first");
+    }
+    return state;
+  };
+  const config = (): Record<string, unknown> =>
+    state?.config() ?? {
+      repo_root: ctx.repoRoot,
+      scorecard_path: null,
+      review_decisions_path: null,
+      optimization_handoff_path: null,
+      focus_path: null,
+      run_id: null,
+      harness: null,
+      source: null,
+      harness_judge: null,
+    };
 
   const host = options.host ?? ctx.config.server.host;
   const port = options.port ?? ctx.config.server.port;
@@ -476,6 +502,12 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
     const hostHeader = req.headers.host ?? "";
     if (!allowedHostnames.has(hostnameOf(hostHeader))) {
       throw new ForbiddenError(`untrusted Host header: '${hostHeader}'`);
+    }
+    const claimedRoot = req.headers["x-cesium-skills-root"];
+    if (typeof claimedRoot === "string" && path.resolve(claimedRoot) !== path.resolve(ctx.repoRoot)) {
+      throw new ConflictError(
+        `checkout mismatch: client belongs to '${path.resolve(claimedRoot)}', server belongs to '${ctx.repoRoot}'`,
+      );
     }
     if (method !== "GET" && method !== "HEAD") {
       const origin = req.headers.origin;
@@ -502,10 +534,13 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
       rejectUntrusted(req, method);
 
       if (method === "GET") {
-        if (route === "/api/config") return sendJson(res, state.config());
-        if (route === "/api/scorecard") return sendJson(res, state.scorecard);
+        if (route === "/api/config") return sendJson(res, config());
+        if (route === "/api/scorecard") return sendJson(res, state?.scorecard ?? null);
         if (route === "/api/review-decisions") {
-          return sendJson(res, fs.existsSync(state.reviewDecisionsPath) ? readJson(state.reviewDecisionsPath) : null);
+          return sendJson(
+            res,
+            state !== null && fs.existsSync(state.reviewDecisionsPath) ? readJson(state.reviewDecisionsPath) : null,
+          );
         }
         if (route === "/api/runs") return sendJson(res, listRuns(ctx));
         if (route === "/api/run-cases") return sendJson(res, runCases(ctx, url.searchParams.get("run_id") ?? ""));
@@ -562,21 +597,23 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
       if (method === "PUT" || method === "POST") {
         const payload = await readBody(req);
         if (route === "/api/review-decisions") {
-          writeJsonAtomic(state.reviewDecisionsPath, payload);
+          const focused = requireFocusedState();
+          writeJsonAtomic(focused.reviewDecisionsPath, payload);
           return sendJson(res, payload);
         }
         if (route === "/api/focus-preview") {
-          return sendJson(res, buildFocusPayload(state, [...(payload.confirmed_case_keys ?? [])]));
+          return sendJson(res, buildFocusPayload(requireFocusedState(), [...(payload.confirmed_case_keys ?? [])]));
         }
         if (route === "/api/optimization-handoff") {
+          const focused = requireFocusedState();
           const keys = [...(payload.confirmed_case_keys ?? [])];
           const selectionMode = String(payload.selection_mode ?? "confirmed_flags");
-          const result = buildFocusPayload(state, keys);
-          writeJsonAtomic(state.focusPath, result.focus);
-          writeJsonAtomic(state.optimizationHandoffPath, buildHandoffDoc(state, result, selectionMode));
+          const result = buildFocusPayload(focused, keys);
+          writeJsonAtomic(focused.focusPath, result.focus);
+          writeJsonAtomic(focused.optimizationHandoffPath, buildHandoffDoc(focused, result, selectionMode));
           return sendJson(res, {
-            handoff_path: state.optimizationHandoffPath,
-            focus_path: state.focusPath,
+            handoff_path: focused.optimizationHandoffPath,
+            focus_path: focused.focusPath,
             command: result.command,
             focus_preview: result,
           });
@@ -588,7 +625,7 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           const next = new ViewerState(ctx, target);
           if (stateDirOverride !== null) next.setStateDir(path.join(stateDirOverride, next.runId));
           state = next;
-          return sendJson(res, state.config());
+          return sendJson(res, config());
         }
         if (route === "/api/live/launch") return sendJson(res, liveData.launchRun(ctx, payload));
         if (route === "/api/live/cancel") return sendJson(res, liveData.cancelRun(payload));
@@ -627,9 +664,13 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
   });
   const boundPort = (server.address() as { port: number }).port;
   const url = `http://${host}:${boundPort}/`;
-  console.log(`Skill Evaluation Console serving ${state.scorecardPath}`);
-  console.log(`Review grades:      ${state.reviewDecisionsPath}`);
-  console.log(`Optimization focus: ${state.focusPath}`);
+  if (state) {
+    console.log(`Skill Evaluation Console serving ${state.scorecardPath}`);
+    console.log(`Review grades:      ${state.reviewDecisionsPath}`);
+    console.log(`Optimization focus: ${state.focusPath}`);
+  } else {
+    console.log(`Skill Evaluation Console serving ${ctx.repoRoot} (no runs on disk)`);
+  }
   console.log(url);
   if (options.open) {
     const { exec } = await import("node:child_process");

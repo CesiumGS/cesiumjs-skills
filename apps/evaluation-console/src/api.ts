@@ -34,7 +34,7 @@ export function artifactUrl(path: string | null | undefined): string {
 
 // ---- evaluate / review ----
 export const loadConfig = () => req<ConfigDTO>("/api/config");
-export const loadScorecard = () => req<RawScorecard>("/api/scorecard");
+export const loadScorecard = () => req<RawScorecard | null>("/api/scorecard");
 export const loadReviewDecisions = () => req<ReviewDecisionDoc | null>("/api/review-decisions");
 export const loadRuns = () => req<RunSummary[]>("/api/runs");
 export const loadRunCases = (runId: string) =>

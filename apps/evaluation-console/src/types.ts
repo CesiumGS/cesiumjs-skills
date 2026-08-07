@@ -202,14 +202,14 @@ export interface ReviewDecisionDoc {
 // ---- Server DTOs ----
 export interface ConfigDTO {
   repo_root: string;
-  scorecard_path: string;
-  review_decisions_path: string;
-  optimization_handoff_path: string;
-  focus_path: string;
-  run_id: string;
-  harness?: string;        // server-resolved codegen harness (sole inference site)
-  harness_judge?: string;  // qualitative-judge harness, for provenance disclosure
-  source?: "agent" | "fixtures" | "mixed"; // evidence source of the loaded run
+  scorecard_path: string | null;
+  review_decisions_path: string | null;
+  optimization_handoff_path: string | null;
+  focus_path: string | null;
+  run_id: string | null;
+  harness?: string | null;        // server-resolved codegen harness (sole inference site)
+  harness_judge?: string | null;  // qualitative-judge harness, for provenance disclosure
+  source?: "agent" | "fixtures" | "mixed" | null; // evidence source of the loaded run
 }
 
 export interface RunSummary {

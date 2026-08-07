@@ -160,9 +160,11 @@ export function DashboardStation() {
           </div>
         </div>
         <span className="spacer" />
-        <span className={`fresh-chip${fresh.stale ? " stale" : ""}`} title="Timestamp of the newest scorecard run on disk.">
-          Latest Data {fresh.label}
-          {fresh.stale && " · Stale"}
+        <span
+          className={`fresh-chip${latestRun && fresh.stale ? " stale" : ""}`}
+          title={latestRun ? "Timestamp of the newest scorecard run on disk." : "No scorecard runs exist in this repository."}
+        >
+          {latestRun ? `Latest Data ${fresh.label}${fresh.stale ? " · Stale" : ""}` : "No run data yet"}
         </span>
       </div>
 
@@ -175,8 +177,10 @@ export function DashboardStation() {
           A det-only run must not read as a full PASS: the visual gate never ran. */}
       <div className="hero-card dashboard-hero">
         <div>
-          <div className="hero-eyebrow">Focused Run</div>
-          {scorecard && pass && !scorecard.visualReviewSupplied ? (
+          <div className="hero-eyebrow">{scorecard ? "Focused Run" : "Blank Slate"}</div>
+          {!scorecard ? (
+            <div className="ov-big" style={{ color: "var(--text-2)" }}>NO RUNS YET</div>
+          ) : pass && !scorecard.visualReviewSupplied ? (
             <>
               <div className="ov-big" style={{ color: "var(--defer)" }}>INCOMPLETE</div>
               <div className="stage-sub" style={{ marginTop: "var(--sp-1)" }}>
@@ -190,13 +194,20 @@ export function DashboardStation() {
             </div>
           )}
           <div className="stage-sub" style={{ marginTop: "var(--sp-2)" }}>
-            <span className="mono">{scorecard?.runId ?? "no run loaded"}</span>
+            <span className={scorecard ? "mono" : undefined}>
+              {scorecard?.runId ?? "This repository has no evaluation data yet."}
+            </span>
             {scorecard && <span style={{ color: "var(--text-3)" }}>{relativeTime(scorecard.timestampUtc)}</span>}
           </div>
         </div>
         <div className="hero-right">
-          <button className={`review-cta${needsYouCount > 0 ? " hot" : ""}`} onClick={() => setStation("evaluate")}>
-            {needsYouCount > 0 ? (
+          <button
+            className={`review-cta${needsYouCount > 0 ? " hot" : ""}`}
+            onClick={() => setStation(scorecard ? "evaluate" : "live")}
+          >
+            {!scorecard ? (
+              <>Start the first run → Run Studies</>
+            ) : needsYouCount > 0 ? (
               <>
                 <Flag size={12} aria-hidden /> {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your
                 eyes → Evaluate (1)

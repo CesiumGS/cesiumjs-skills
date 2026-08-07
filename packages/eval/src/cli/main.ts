@@ -179,7 +179,7 @@ program
 program
   .command("serve")
   .description("Serve the Skill Evaluation Console (SPA + JSON API) over the artifacts.")
-  .argument("<scorecard>", "path to the focused run's scorecard.json")
+  .argument("[scorecard]", "path to the focused run's scorecard.json (defaults to newest run; optional for a blank repo)")
   .option("--state-dir <dir>", "directory for review-decisions.json / focus.json")
   .option("--host <host>", "bind host")
   .option("--port <port>", "bind port (0 for ephemeral)", parseIntArg)
