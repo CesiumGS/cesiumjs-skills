@@ -2,6 +2,7 @@
   "name": "cesiumjs-skills",
   "private": true,
   "description": "CesiumJS Agent Skills with a TypeScript evaluation and self-optimization platform.",
+  "packageManager": "npm@12.0.2",
   "workspaces": [
     "packages/*",
     "apps/evaluation-console"
@@ -12,6 +13,6 @@
     "eval": "node packages/eval/bin/cesium-eval.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }
