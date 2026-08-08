@@ -17,6 +17,7 @@ import { computeScores, generateSummaryMarkdown, updatePublicStatus } from "./re
 import { scanPublicArtifacts } from "./publicArtifacts.js";
 import { proposeCommand } from "./proposer.js";
 import { describeAgent, invokeAgent } from "../harness/invoke.js";
+import { isBundleFullyRendered } from "../evaluation/baselines.js";
 import { loadScenario } from "./types.js";
 import type { CheckResultEntry, JudgeResultEntry, ScenarioMetaEntry } from "./types.js";
 import type { EvalContext } from "../config/types.js";
@@ -164,13 +165,10 @@ export function expectedBundleCount(skill: string): number {
 
 export function evidenceDirComplete(runsDir: string, expectedCount: number): boolean {
   if (expectedCount === 0 || !fs.existsSync(runsDir)) return false;
-  const required = ["console.json", "programmatic-checks.json", "scene-state.json", "metadata.json", "screenshot-quality.json"];
-  let complete = 0;
-  for (const bundleName of listDirs(runsDir)) {
-    const bundle = path.join(runsDir, bundleName);
-    const hasScreenshot = globFiles(bundle, "screenshot", ".png").length > 0;
-    if (hasScreenshot && required.every((name) => fs.existsSync(path.join(bundle, name)))) complete += 1;
-  }
+  // One definition of "complete bundle", shared with the baseline bootstrap
+  // and the audit, so the loop and the audit can never disagree about whether
+  // a render actually produced usable evidence.
+  const complete = listDirs(runsDir).filter((name) => isBundleFullyRendered(path.join(runsDir, name))).length;
   return complete >= expectedCount;
 }
 
@@ -452,6 +450,12 @@ async function ensureCurrentBestBaseline(ctx: EvalContext, options: LoopOptions,
   const adapterResult = await runCodegenStep(ctx, options, "baseline", currentBest);
   if (!adapterResult.success) {
     writeJournalEvent(journalPath, "baseline_generation_failed", { skill, iteration: "baseline", result: adapterResult });
+    writeJournalEvent(journalPath, "baseline_check_failed", {
+      skill,
+      iteration: "baseline",
+      step: "baseline_generation",
+      result: adapterResult,
+    });
     return { success: false, runs_dir: null, reused: false, error: adapterResult.error };
   }
   writeJournalEvent(journalPath, "baseline_generation_completed", { skill, iteration: "baseline", result: adapterResult });
@@ -460,9 +464,21 @@ async function ensureCurrentBestBaseline(ctx: EvalContext, options: LoopOptions,
   const runnerResult = await runRenderStep(ctx, options, "baseline");
   if (!runnerResult.success) {
     writeJournalEvent(journalPath, "baseline_browser_eval_failed", { skill, iteration: "baseline", result: runnerResult });
+    writeJournalEvent(journalPath, "baseline_check_failed", {
+      skill,
+      iteration: "baseline",
+      step: "baseline_browser_eval",
+      result: runnerResult,
+    });
     return { success: false, runs_dir: null, reused: false, error: runnerResult.error };
   }
   writeJournalEvent(journalPath, "baseline_browser_eval_completed", { skill, iteration: "baseline", result: runnerResult });
+  writeJournalEvent(journalPath, "baseline_check_completed", {
+    skill,
+    iteration: "baseline",
+    runs_dir: runnerResult.runs_dir,
+    reused: false,
+  });
   return { success: true, runs_dir: runnerResult.runs_dir, reused: false, error: null };
 }
 

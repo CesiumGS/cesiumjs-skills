@@ -1,8 +1,9 @@
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useStore } from "../store";
 import { artifactUrl } from "../api";
 import type { AdaptedDimension, CaseView, RawCheck } from "../types";
 import { dimensionShortLabel, humanize } from "../lib/adapt";
-import { dimToneClass } from "../lib/dimtone";
+import { visualScoreTone } from "../lib/dimtone";
 import {
   DecisionChip,
   MetaTag,
@@ -11,6 +12,22 @@ import {
   StatusGlyph,
   UnknownChip
 } from "./primitives";
+
+const REVIEW_SPLIT_KEY = "ec-review-evidence-split";
+const REVIEW_SPLIT_DEFAULT = 42;
+const REVIEW_SPLIT_MIN = 25;
+const REVIEW_SPLIT_MAX = 75;
+
+function savedReviewSplit(): number {
+  try {
+    const saved = Number(localStorage.getItem(REVIEW_SPLIT_KEY));
+    return Number.isFinite(saved) && saved >= REVIEW_SPLIT_MIN && saved <= REVIEW_SPLIT_MAX
+      ? saved
+      : REVIEW_SPLIT_DEFAULT;
+  } catch {
+    return REVIEW_SPLIT_DEFAULT;
+  }
+}
 
 function jsonInline(v: unknown): string {
   if (v === null || v === undefined) return "—";
@@ -46,6 +63,113 @@ function checkLabel(c: RawCheck): string {
   return humanize(stripOrdinal(c.check_id || c.type));
 }
 
+/** Regex source → readable text: drop escapes so `Cesium3DTileset\.fromUrl`
+ * reads as `Cesium3DTileset.fromUrl` for a non-regex-literate reader. */
+function prettyPattern(p: string): string {
+  return p.replace(/\\(.)/g, "$1");
+}
+
+/** A token is showable as an API name if it still reads like code after
+ * cleaning — has letters and carries no leftover regex metacharacters. */
+function isShowableToken(t: string): boolean {
+  return /[A-Za-z]/.test(t) && !/[\\^$*+?{}[\]()|]/.test(t) && !t.includes("(?");
+}
+
+interface PatternShape {
+  tokens: string[];
+  /** Every token reads like a plain API name — safe to show as code chips. */
+  showable: boolean;
+  /** Every token is numeric — a coordinate/value assertion, not an API name. */
+  numeric: boolean;
+}
+
+/** Best-effort humanization of a source-check regex: collapse simple
+ * non-capturing groups, split the alternation, and classify the result so the
+ * rationale can show clean API chips, describe a coordinate/value match, or
+ * fall back to generic prose for genuinely complex regex. */
+function patternShape(raw: string): PatternShape {
+  const collapsed = raw
+    .replace(/\(\?:([^()|]*)\)\?/g, "$1") // (?:X)? -> X
+    .replace(/\(\?:([^()|]*)\)/g, "$1"); // (?:X)  -> X
+  const tokens = collapsed
+    .split("|")
+    .map((part) =>
+      prettyPattern(
+        part
+          .trim()
+          .replace(/^\(\?:/, "") // group open left over from splitting an alternation
+          .replace(/\)$/, "") // group close left over from splitting
+          .replace(/^\^/, "")
+          .replace(/\$$/, "")
+      ).trim()
+    )
+    .filter(Boolean);
+  const showable = tokens.length > 0 && tokens.every(isShowableToken);
+  const numeric = tokens.length > 0 && tokens.every((t) => /^[-\d.\s,]+$/.test(t));
+  return { tokens, showable, numeric };
+}
+
+/** Render pattern tokens as a comma-separated run of code chips. */
+function tokenChips(tokens: string[]): ReactNode {
+  return tokens.map((t, i) => (
+    <span key={t}>
+      {i > 0 ? ", " : ""}
+      <code>{t}</code>
+    </span>
+  ));
+}
+
+/** Plain-English explanation of what a code test verifies and why. Rendered
+ * directly under each row so a non-expert reads the deterministic intent before
+ * the raw expected/actual values. Interpolates the concrete API pattern for
+ * source checks; falls back to a category-aware sentence for unmapped types. */
+function checkRationale(c: RawCheck): ReactNode {
+  const pattern = patternValue(c.expected) ?? patternValue(c.actual);
+  const shape = pattern ? patternShape(pattern) : null;
+  switch (c.type) {
+    case "code_runs":
+      return "Runs the generated snippet in a real headless browser and requires it to finish without throwing. The floor check: proof the code actually executes, not just that it looks plausible.";
+    case "no_runtime_errors":
+      return "Watches the browser console during that run and requires zero errors. Catches failures that don't halt execution but still break the scene, like a rejected tile load or a bad API call.";
+    case "pattern_present": {
+      if (shape?.showable) {
+        return shape.tokens.length === 1 ? (
+          <>Requires the generated source to contain {tokenChips(shape.tokens)} — the deterministic fingerprint that the intended CesiumJS API was actually called.</>
+        ) : (
+          <>Requires the generated source to call at least one of {tokenChips(shape.tokens)} — the deterministic fingerprint that the intended CesiumJS API was used rather than approximated.</>
+        );
+      }
+      if (shape?.numeric) {
+        return "Requires the generated source to reference the specific coordinates or numeric values the scenario expects — proof the scene was aimed at the right place, not an arbitrary one.";
+      }
+      return "Requires the generated source to match the API pattern the scenario expects (shown below) — the deterministic fingerprint that the intended CesiumJS call was used.";
+    }
+    case "pattern_absent": {
+      if (shape?.showable) {
+        return (
+          <>Requires the source to use none of {tokenChips(shape.tokens)} — a guardrail against a shortcut the scenario forbids, such as an Ion-only asset where a public one is required.</>
+        );
+      }
+      return "Requires the source to avoid the forbidden pattern shown below — a guardrail against a shortcut the scenario explicitly disallows.";
+    }
+    case "artifact_text_absent":
+      return "Requires a specific string to be absent from the run's output text, usually an error marker or a disallowed fallback.";
+    case "camera_target_view":
+      return "Checks the camera came to rest aimed at the expected target within tolerance — proof the view was framed on the subject instead of left at the default globe.";
+    case "collection_count":
+      return "Counts the objects in a collection after the run and requires the expected number — proof the right quantity was created, not zero and not duplicated.";
+    case "entity_exists":
+      return "Requires a specific named entity to be present in the scene once the run settles.";
+    case "entity_translation_delta":
+      return "Measures how far an entity moved between two time samples and compares it against the expected distance — proof of time-dynamic motion.";
+    case "json_value_equals":
+    case "json_value_compare":
+      return "Reads a specific value out of the run's structured output and compares it against the expected value within tolerance.";
+    default:
+      return `Deterministic ${humanize(c.category || "source contract").toLowerCase()} check: compares the observed result against the expected value.`;
+  }
+}
+
 function shouldShowExpectedActual(c: RawCheck): boolean {
   if (c.expected === undefined && c.actual === undefined) return false;
   if (
@@ -72,6 +196,7 @@ function DeterministicCheckRow({ c }: { c: RawCheck }) {
           </span>
           {!passed && c.critical && <span className="det-check-critical">Critical</span>}
         </div>
+        <div className="det-check-rationale">{checkRationale(c)}</div>
         <div className="det-check-meta">
           <span>{c.type}</span>
           {c.category && <span>{humanize(c.category)}</span>}
@@ -89,7 +214,7 @@ function DeterministicCheckRow({ c }: { c: RawCheck }) {
 
 function DeterministicBreakdown({ checks }: { checks: RawCheck[] }) {
   if (checks.length === 0) {
-    return <div className="empty-note">No deterministic checks recorded.</div>;
+    return <div className="empty-note">No Code Tests recorded.</div>;
   }
   return (
     <div className="det-check-list">
@@ -105,7 +230,7 @@ function CheckLedgerHero({ v }: { v: CaseView }) {
     <div className="hero">
       <div className="ledger">
         <div className="ledger-head">
-          ▣ deterministic check ledger · no render captured
+          ▣ Code Test ledger · no render captured
         </div>
         <DeterministicBreakdown checks={v.checks} />
       </div>
@@ -152,11 +277,11 @@ function QuantBand({ v }: { v: CaseView }) {
   return (
     <div className="band machine">
       <div className="band-head">
-        ▣ deterministic · machine <span className="bh-score"><Score01 value={v.score} /></span>
+        ▣ Code Tests <span className="bh-score"><Score01 value={v.score} /></span>
       </div>
       <div className="band-body">
         <div style={{ fontSize: "var(--fs-100)", color: "var(--text-2)", marginBottom: "var(--sp-2)" }}>
-          {passing}/{v.checks.length} checks pass
+          {passing}/{v.checks.length} Code Tests pass
           {v.criticalFailedChecks.length > 0 && (
             <span style={{ color: "var(--crit)" }}> · {v.criticalFailedChecks.length} critical ✗</span>
           )}
@@ -179,17 +304,26 @@ function DimRow({ d }: { d: AdaptedDimension }) {
       </div>
     );
   }
-  const pct = Math.round((d.score! / 10) * 100);
+  const score = Math.max(0, Math.min(10, d.score!));
+  const pct = Math.round((score / 10) * 100);
   return (
-    <div className={`dim-row ${dimToneClass(d.status)}`}>
+    <div className={`dim-row ${visualScoreTone(score)}`}>
       <span className="dim-name" title={d.label}>
         {dimensionShortLabel(d.key)}
       </span>
-      <span className="dim-bar">
+      <span
+        className="dim-bar"
+        role="progressbar"
+        aria-label={d.label}
+        aria-valuemin={0}
+        aria-valuemax={10}
+        aria-valuenow={score}
+      >
         <span className="dim-bar-fill" style={{ width: `${pct}%` }} />
       </span>
-      <span className="mono" style={{ fontSize: "var(--fs-50)", color: "var(--ink-eye)" }}>
-        {d.score!.toFixed(0)}
+      <span className="dim-score">
+        {score.toFixed(1)}
+        <span className="dim-score-max">/10</span>
       </span>
       {d.note && <span className="dim-note">{d.note}</span>}
     </div>
@@ -201,15 +335,15 @@ function QualBand({ v }: { v: CaseView }) {
   return (
     <div className="band eye">
       <div className="band-head">
-        ◈ visual judge · eye{" "}
+        ◈ Visual Tests{" "}
         <span className="bh-score">
-          {v.visualScore !== null ? <Score10 value={v.visualScore} /> : <UnknownChip small text="not reviewed" />}
+          {v.visualScore !== null ? <Score10 value={v.visualScore} /> : <UnknownChip small text="not run" />}
         </span>
       </div>
       <div className="band-body">
         {!reviewed && (
           <div className="empty-note" style={{ padding: "var(--sp-2)" }}>
-            Not visually reviewed; the deterministic ledger is the evidence.
+            Visual Tests were not run; the Code Test ledger is the evidence.
           </div>
         )}
         {v.dimensions.map((d) => (
@@ -293,11 +427,111 @@ export function ReviewStage() {
 
 export function ReviewInspector() {
   const { selectedView: v } = useStore();
-  if (!v) return <aside className="inspector col" />;
+  const gridRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+  const [split, setSplit] = useState(savedReviewSplit);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(REVIEW_SPLIT_KEY, String(split));
+    } catch {
+      // Storage can be unavailable in hardened browser profiles; resizing
+      // remains fully functional for the current session.
+    }
+  }, [split]);
+
+  const resizeAt = useCallback((clientY: number) => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const rect = grid.getBoundingClientRect();
+    const handleHeight = 12;
+    const usable = Math.max(1, rect.height - handleHeight);
+    const next = ((clientY - rect.top - handleHeight / 2) / usable) * 100;
+    setSplit(Math.max(REVIEW_SPLIT_MIN, Math.min(REVIEW_SPLIT_MAX, next)));
+  }, []);
+
+  useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      if (draggingRef.current) resizeAt(event.clientY);
+    };
+    const onMouseMove = (event: MouseEvent) => {
+      if (draggingRef.current) resizeAt(event.clientY);
+    };
+    const stop = () => {
+      draggingRef.current = false;
+    };
+    // Pointer events cover mouse, pen, and touch. Mouse events are retained as
+    // a compatibility fallback for embedded/webview drag synthesizers.
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", stop);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", stop);
+    };
+  }, [resizeAt]);
+
+  if (!v) return <aside className="inspector col review-inspector" />;
   return (
-    <aside className="inspector col" aria-label="Evidence inspector">
-      <QuantBand v={v} />
-      <QualBand v={v} />
+    <aside className="inspector col review-inspector" aria-label="Evidence inspector">
+      <div
+        ref={gridRef}
+        className="review-evidence-grid"
+        style={{
+          gridTemplateRows: `minmax(64px, ${split}fr) 12px minmax(64px, ${100 - split}fr)`
+        }}
+      >
+        <div className="review-evidence-pane">
+          <QuantBand v={v} />
+        </div>
+        <div
+          className="review-evidence-resizer"
+          role="separator"
+          tabIndex={0}
+          aria-label="Resize Code Tests and Visual Tests panels"
+          aria-orientation="horizontal"
+          aria-valuemin={REVIEW_SPLIT_MIN}
+          aria-valuemax={REVIEW_SPLIT_MAX}
+          aria-valuenow={Math.round(split)}
+          title="Drag to resize Code Tests and Visual Tests. Double-click to reset."
+          onPointerDown={(event) => {
+            event.preventDefault();
+            draggingRef.current = true;
+            resizeAt(event.clientY);
+          }}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            draggingRef.current = true;
+            resizeAt(event.clientY);
+          }}
+          onDoubleClick={() => setSplit(REVIEW_SPLIT_DEFAULT)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setSplit((value) => Math.max(REVIEW_SPLIT_MIN, value - 3));
+            } else if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setSplit((value) => Math.min(REVIEW_SPLIT_MAX, value + 3));
+            } else if (event.key === "Home") {
+              event.preventDefault();
+              setSplit(REVIEW_SPLIT_MIN);
+            } else if (event.key === "End") {
+              event.preventDefault();
+              setSplit(REVIEW_SPLIT_MAX);
+            }
+          }}
+        >
+          <span aria-hidden />
+        </div>
+        <div className="review-evidence-pane">
+          <QualBand v={v} />
+        </div>
+      </div>
     </aside>
   );
 }

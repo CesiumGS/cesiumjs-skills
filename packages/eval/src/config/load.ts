@@ -4,9 +4,8 @@
  *
  * Environment variables keep the operational surface the pipeline has always
  * had: `<ROLE>_HARNESS` / `AGENT_HARNESS`, `<HARNESS>_<ROLE>_MODEL`,
- * `<HARNESS>_MODEL`, `<HARNESS>_<ROLE>_VARIANT`, `<HARNESS>_VARIANT`, and
- * `AGENT_VISION_FALLBACK{,_MODEL}` — all uppercase, harness/role interpolated
- * from config rather than hardcoded.
+ * `<HARNESS>_MODEL`, `<HARNESS>_<ROLE>_VARIANT`, `<HARNESS>_VARIANT` — all
+ * uppercase, harness/role interpolated from config rather than hardcoded.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -28,8 +27,8 @@ const DEFAULT_TIMEOUT_SECONDS = 600;
 
 /** Structural fallbacks only — every operational choice should live in eval.config.json. */
 function builtinDefaults(): EvalConfig {
-  const role = (): RoleConfig => ({
-    harness: "opencode",
+  const role = (harness = "opencode"): RoleConfig => ({
+    harness,
     model: "auto",
     variant: "auto",
     timeoutSeconds: DEFAULT_TIMEOUT_SECONDS,
@@ -37,9 +36,10 @@ function builtinDefaults(): EvalConfig {
   return {
     registry: "config/harness-registry.json",
     threshold: 0.95,
-    roles: { proposer: role(), codegen: role(), judge: role() },
+    // The judge reads screenshots, so its default harness must be vision-capable:
+    // image-bearing calls to a text-only harness are an error, not a reroute.
+    roles: { proposer: role(), codegen: role(), judge: role("codex") },
     judgePanel: { size: 3, seeds: [42, 123, 789], pairwiseProtocol: "pairwise-v1", staticProtocol: "static-visual-v1" },
-    visionFallback: { enabled: true, model: null },
     browser: {
       cesiumVersion: "1.142",
       viewport: { width: 1280, height: 720 },
@@ -81,7 +81,7 @@ function validateConfigFile(configPath: string, raw: unknown, root: string): voi
   }
 }
 
-function validateRegistry(registry: HarnessRegistry, registryPath: string): void {
+function validateRegistry(registry: HarnessRegistry, registryPath: string, root: string): void {
   if (!Array.isArray(registry.harnesses) || registry.harnesses.length === 0) {
     throw new Error(`${registryPath}: registry must declare at least one harness`);
   }
@@ -89,6 +89,45 @@ function validateRegistry(registry: HarnessRegistry, registryPath: string): void
     for (const field of ["id", "binary", "default_model", "default_effort"] as const) {
       if (typeof harness[field] !== "string" || !harness[field]) {
         throw new Error(`${registryPath}: harness entry missing required field '${field}'`);
+      }
+    }
+  }
+
+  // Full JSON-Schema validation (config/harness-registry.schema.json), same
+  // pattern as eval.config.json: skipped only when the schema file is absent.
+  const schemaPath = path.join(root, "config", "harness-registry.schema.json");
+  if (fs.existsSync(schemaPath)) {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(readJson(schemaPath));
+    if (!validate(registry)) {
+      const details = (validate.errors ?? [])
+        .map((error) => `  ${error.instancePath || "<root>"}: ${error.message}`)
+        .join("\n");
+      throw new Error(`${registryPath} failed schema validation:\n${details}`);
+    }
+  }
+
+  // Referential integrity across the registry's own axes. Providers are the
+  // canonical entities; every harness/alias reference must resolve to one.
+  const providerIds = new Set((registry.providers ?? []).map((provider) => provider.id));
+  if (providerIds.size) {
+    for (const harness of registry.harnesses) {
+      if (harness.provider && !providerIds.has(harness.provider)) {
+        throw new Error(`${registryPath}: harness '${harness.id}' references unknown provider '${harness.provider}'`);
+      }
+      const support = harness.provider_support;
+      for (const ref of [...(support?.native ?? []), ...(support?.native_3p ?? [])]) {
+        if (!providerIds.has(ref)) {
+          throw new Error(`${registryPath}: harness '${harness.id}' provider_support references unknown provider '${ref}'`);
+        }
+      }
+      if (!harness.models.some((model) => model.id === harness.default_model)) {
+        throw new Error(`${registryPath}: harness '${harness.id}' default_model '${harness.default_model}' is not in its catalog`);
+      }
+    }
+    for (const [alias, spec] of Object.entries(registry.provider_aliases ?? {})) {
+      if (!providerIds.has(spec.provider_id)) {
+        throw new Error(`${registryPath}: provider_aliases['${alias}'] references unknown provider '${spec.provider_id}'`);
       }
     }
   }
@@ -124,14 +163,7 @@ function applyEnvOverlay(config: EvalConfig): EvalConfig {
     roles[role] = current;
   }
 
-  const fallbackEnabled = env("AGENT_VISION_FALLBACK");
-  const visionFallback = { ...config.visionFallback };
-  if (fallbackEnabled !== undefined) {
-    visionFallback.enabled = !["0", "off", "false", "no"].includes(fallbackEnabled.trim().toLowerCase());
-  }
-  visionFallback.model = env("AGENT_VISION_FALLBACK_MODEL") ?? visionFallback.model;
-
-  return { ...config, roles, visionFallback };
+  return { ...config, roles };
 }
 
 // ---------------------------------------------------------------------------
@@ -140,10 +172,39 @@ function applyEnvOverlay(config: EvalConfig): EvalConfig {
 export interface LoadContextOptions {
   /** Explicit config file path (CLI --config). */
   configPath?: string;
+  /** Load `<repo>/.env`. Tests and other hermetic callers should disable it. */
+  loadDotEnv?: boolean;
+}
+
+/**
+ * Fold `<repo>/.env` into the environment, for the credentials the pipeline
+ * needs but must never track (CESIUM_ION_TOKEN, harness auth). Already-set
+ * variables WIN: an explicit `FOO=bar cesium-eval ...` or a CI secret must not
+ * be silently overridden by a stale file on someone's laptop.
+ *
+ * Deliberately minimal: `KEY=value` lines, `#` comments, optional surrounding
+ * quotes. Anything richer belongs in a real config file, not a secret store.
+ */
+export function loadDotEnv(root: string): void {
+  const envPath = path.join(root, ".env");
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, "utf-8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const name = trimmed.slice(0, eq).trim();
+    if (process.env[name] !== undefined) continue;
+    process.env[name] = trimmed
+      .slice(eq + 1)
+      .trim()
+      .replace(/^(['"])(.*)\1$/, "$2");
+  }
 }
 
 export function loadContext(options: LoadContextOptions = {}): EvalContext {
   const root = findRepoRoot();
+  if (options.loadDotEnv !== false) loadDotEnv(root);
 
   let config = builtinDefaults();
   const configPath = options.configPath
@@ -160,7 +221,7 @@ export function loadContext(options: LoadContextOptions = {}): EvalContext {
 
   const registryPath = path.isAbsolute(config.registry) ? config.registry : path.join(root, config.registry);
   const registry = readJson(registryPath) as HarnessRegistry;
-  validateRegistry(registry, registryPath);
+  validateRegistry(registry, registryPath, root);
 
   const byId = new Map<string, HarnessSpec>(registry.harnesses.map((harness) => [harness.id, harness]));
 

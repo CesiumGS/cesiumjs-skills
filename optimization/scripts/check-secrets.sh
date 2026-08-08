@@ -25,8 +25,28 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-echo "[check-secrets] Mode 1/2: git history scan across all refs (gitleaks detect --log-opts=--all)"
-gitleaks detect --redact --log-opts="--all" --report-format json --report-path /tmp/gitleaks-history.json
+# The report path is parameterized so CI can place it inside a directory it can
+# upload, and so concurrent jobs on a shared runner pool cannot race on one
+# fixed /tmp path.
+: "${GITLEAKS_REPORT:=${RUNNER_TEMP:-/tmp}/gitleaks-history.json}"
+
+# Scope: full history across all refs by default. CI narrows this to the pull
+# request range on pull_request events, which keeps the check cheap and stops a
+# rule-set update from red-lining every open pull request at once.
+: "${GITLEAKS_LOG_OPTS:=--all}"
+
+# gitleaks is invoked directly under `set -euo pipefail`, so an absent binary
+# dies with a bare 127 that is indistinguishable from a real finding. On a
+# multi-node pool where one node lacks it, that presents as flake tied to runner
+# assignment. Exit 3 is distinct from 1 (a leak was found).
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "[check-secrets] gitleaks is not on PATH. Install it (.github/actions/install-gitleaks) before running this script." >&2
+  exit 3
+fi
+
+echo "[check-secrets] Mode 1/2: git history scan (gitleaks detect --log-opts=$GITLEAKS_LOG_OPTS)"
+gitleaks detect --redact --log-opts="$GITLEAKS_LOG_OPTS" \
+  --report-format json --report-path "$GITLEAKS_REPORT"
 
 echo "[check-secrets] Mode 2/2: project-specific patterns on tracked content (git grep)"
 PATTERNS=(

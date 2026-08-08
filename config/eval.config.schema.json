@@ -44,17 +44,6 @@
         "staticProtocol": { "type": "string" }
       }
     },
-    "visionFallback": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "model": {
-          "type": ["string", "null"],
-          "description": "Override model for vision-fallback calls; null derives it from the failing model id."
-        }
-      }
-    },
     "browser": {
       "type": "object",
       "additionalProperties": false,

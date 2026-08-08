@@ -99,6 +99,14 @@ function visualScore(scorecard: Record<string, any>): number {
   return passed / required;
 }
 
+function focusCaseCompare(a: Record<string, any>, b: Record<string, any>): number {
+  const critA = (a.failed_checks ?? []).filter((check: Record<string, any>) => check.critical).length;
+  const critB = (b.failed_checks ?? []).filter((check: Record<string, any>) => check.critical).length;
+  if (critB !== critA) return critB - critA;
+  if (a.skill !== b.skill) return a.skill < b.skill ? -1 : 1;
+  return a.case_id < b.case_id ? -1 : a.case_id > b.case_id ? 1 : 0;
+}
+
 export function buildFocus(scorecard: Record<string, any>): Record<string, any> {
   const threshold = Number(scorecard.threshold ?? 0.95);
   const categoryFails = categoryFailures(scorecard);
@@ -153,13 +161,7 @@ export function buildFocus(scorecard: Record<string, any>): Record<string, any> 
       })),
     });
   }
-  cases.sort((a, b) => {
-    const critA = a.failed_checks.filter((check: Record<string, any>) => check.critical).length;
-    const critB = b.failed_checks.filter((check: Record<string, any>) => check.critical).length;
-    if (critB !== critA) return critB - critA;
-    if (a.skill !== b.skill) return a.skill < b.skill ? -1 : 1;
-    return a.case_id < b.case_id ? -1 : a.case_id > b.case_id ? 1 : 0;
-  });
+  cases.sort(focusCaseCompare);
 
   const categoryToCases: Record<string, Set<string>> = {};
   for (const caseRow of cases) {
@@ -185,6 +187,85 @@ export function buildFocus(scorecard: Record<string, any>): Record<string, any> 
       .map(([skill, failedCount]) => ({ skill, failed_checks: failedCount })),
     cases,
   };
+}
+
+/**
+ * Build focus from an explicit Review selection. buildFocus intentionally
+ * omits passing cases because scorecard-only focus is failure-driven. A human
+ * can still flag a passing case, though, and an explicit workflow handoff must
+ * not silently drop it. Such cases receive a transparent review_flag check so
+ * every selected scorecard row reaches Optimize with an actionable reason.
+ */
+export function buildSelectionFocus(scorecard: Record<string, any>): Record<string, any> {
+  const focus = buildFocus(scorecard);
+  const existing = new Set(
+    (focus.cases ?? []).map((caseRow: Record<string, any>) => `${caseRow.skill ?? ""}/${caseRow.case_id ?? ""}`),
+  );
+  const reviewFlagged: Array<Record<string, any>> = [];
+
+  for (const caseRow of scorecard.cases ?? []) {
+    const skill = String(caseRow.skill ?? "");
+    const caseId = String(caseRow.case_id ?? "");
+    const key = `${skill}/${caseId}`;
+    if (!skill || !caseId || existing.has(key)) continue;
+    reviewFlagged.push({
+      skill,
+      case_id: caseId,
+      case_name: caseRow.case_name ?? "",
+      task: caseRow.task ?? "",
+      evidence_path: caseRow.evidence_path ?? "",
+      score: caseRow.score ?? 0,
+      failed_checks: [
+        {
+          check_id: "review_flag",
+          type: "review_decision",
+          category: "review_flag",
+          critical: false,
+          actual: "flag",
+          expected: "accept",
+          tolerance: null,
+          detail: "Explicitly selected in Review for optimization.",
+        },
+      ],
+    });
+  }
+
+  if (!reviewFlagged.length) return focus;
+
+  focus.cases = [...(focus.cases ?? []), ...reviewFlagged].sort(focusCaseCompare);
+
+  const skillCounts = new Map<string, number>();
+  for (const caseRow of focus.cases) {
+    const skill = String(caseRow.skill ?? "");
+    skillCounts.set(skill, (skillCounts.get(skill) ?? 0) + (caseRow.failed_checks ?? []).length);
+  }
+  focus.skills = [...skillCounts.entries()]
+    .sort(([skillA, countA], [skillB, countB]) => countB - countA || (skillA < skillB ? -1 : 1))
+    .map(([skill, failedCount]) => ({ skill, failed_checks: failedCount }));
+
+  const affectedCases = reviewFlagged
+    .map((caseRow) => `${caseRow.skill}/${caseRow.case_id}`)
+    .sort();
+  const threshold = Number(focus.threshold ?? scorecard.threshold ?? 0.95);
+  focus.categories = [
+    ...(focus.categories ?? []),
+    {
+      category: "review_flag",
+      score: 0,
+      threshold,
+      failed_checks: reviewFlagged.length,
+      critical_failures: 0,
+      priority: reviewFlagged.length * 10 + threshold,
+      affected_cases: affectedCases,
+    },
+  ].sort(
+    (a: Record<string, any>, b: Record<string, any>) =>
+      Number(b.priority ?? 0) - Number(a.priority ?? 0) ||
+      String(a.category ?? "").localeCompare(String(b.category ?? "")),
+  );
+  focus.focus_required = true;
+
+  return focus;
 }
 
 function markdownValue(value: unknown, maxLength = 140): string {

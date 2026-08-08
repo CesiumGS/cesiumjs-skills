@@ -8,17 +8,19 @@ import * as path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { readJson, readJsonl, readJsonOrNull, writeJsonPlain } from "../lib/json.js";
-import { fromRepoRoot, globFiles, listDirs, walkFiles } from "../lib/paths.js";
+import { fromRepoRoot, globFiles, listDirs, repoRelative, walkFiles } from "../lib/paths.js";
 import { parseTs } from "../lib/format.js";
-import { isFresh, journalFor, scenarioLabel } from "./optimizationData.js";
+import { currentJournalAttempt, isFresh, journalFor, scenarioLabel } from "./optimizationData.js";
+import { BASELINE_ROOT, baselineCoverage, normalizeBundleRoot } from "./baselineData.js";
+import { resolveIonToken } from "../optimization/browserRunner.js";
 import type { EvalContext } from "../config/types.js";
 
 const resultsRoot = () => fromRepoRoot("optimization", "results");
 const runsRoot = () => fromRepoRoot("optimization", "runs");
 const generatedRoot = () => fromRepoRoot("optimization", "generated");
 const scenariosRoot = () => fromRepoRoot("optimization", "scenarios");
+const optimizationLaunchesRoot = () => fromRepoRoot("optimization", "tmp", "console-launches");
 const auditsRoot = () => fromRepoRoot("evaluation", "artifacts", "audits");
-const fixturesRoot = () => fromRepoRoot("evaluation", "fixtures");
 
 const BUNDLE_REQUIRED = ["console.json", "programmatic-checks.json", "scene-state.json", "metadata.json", "screenshot-quality.json"];
 
@@ -41,8 +43,15 @@ const BASELINE_PHASES: Array<[string, string, number]> = [
 const ITER_TERMINAL = new Set(["iteration_completed", "iteration_failed"]);
 const BASELINE_TERMINAL = new Set([
   "baseline_check_completed",
+  "baseline_check_failed",
   "baseline_generation_failed",
   "baseline_browser_eval_completed",
+  "baseline_browser_eval_failed",
+]);
+const OPTIMIZATION_FAILURES = new Set([
+  "iteration_failed",
+  "baseline_check_failed",
+  "baseline_generation_failed",
   "baseline_browser_eval_failed",
 ]);
 const AUDIT_TERMINAL = new Set(["audit_completed", "audit_failed", "audit_cancelled"]);
@@ -212,19 +221,13 @@ function liveRun(
   const kind = iteration === "baseline" ? "baseline" : "iteration";
 
   // Only the segment after the most recent start event describes this attempt.
-  let journal = journalIn;
-  const startEvents = kind === "baseline" ? new Set(["baseline_check_started"]) : new Set(["iteration_started"]);
-  for (let idx = journal.length - 1; idx >= 0; idx--) {
-    if (startEvents.has(String(journal[idx].event ?? ""))) {
-      journal = journal.slice(idx);
-      break;
-    }
-  }
+  const journal = currentJournalAttempt(iteration, journalIn);
 
   const last = journal[journal.length - 1];
   const lastEvent = String(last.event ?? "");
   const terminal = kind === "baseline" ? BASELINE_TERMINAL : ITER_TERMINAL;
-  if (terminal.has(lastEvent)) return null;
+  const failed = OPTIMIZATION_FAILURES.has(lastEvent);
+  if (terminal.has(lastEvent) && !failed) return null;
 
   const phases = phaseStates(journal, kind === "baseline" ? BASELINE_PHASES : ITER_PHASES, kind);
   if (kind === "iteration" && journal.some((e) => e.step === "promote_current_best")) {
@@ -240,15 +243,27 @@ function liveRun(
   const candidates = [journalTs, artifactTs].filter((ts): ts is Date => ts !== null);
   const lastActivity = candidates.length ? new Date(Math.max(...candidates.map((ts) => ts.getTime()))) : null;
 
-  const status = lastActivity !== null && isFresh(lastActivity.toISOString(), maxAgeSeconds) ? "running" : "stalled";
-  const active = phases.find((p) => p.state === "active" || p.state === "failed") ?? null;
+  const status = failed
+    ? "failed"
+    : lastActivity !== null && isFresh(lastActivity.toISOString(), maxAgeSeconds)
+      ? "running"
+      : "stalled";
+  const active =
+    [...phases].reverse().find((p) => p.state === "failed") ??
+    [...phases].reverse().find((p) => p.state === "active") ??
+    null;
   const doneCount = phases.filter((p) => p.state === "done").length;
+  const error =
+    (typeof last.error === "string" && last.error) ||
+    (last.result && typeof last.result.error === "string" && last.result.error) ||
+    (failed ? `${kind === "baseline" ? "Baseline preparation" : "Optimization round"} failed` : null);
 
   return {
     skill,
     iteration,
     kind,
     status,
+    error,
     started_utc: startedTs?.toISOString() ?? null,
     last_activity_utc: lastActivity?.toISOString() ?? null,
     elapsed_s: startedTs !== null ? Math.max(0, Math.floor((Date.now() - startedTs.getTime()) / 1000)) : null,
@@ -599,6 +614,7 @@ function auditLiveRuns(maxAgeSeconds: number): Array<Record<string, any>> {
 // ---------------------------------------------------------------------------
 export function liveStatus(ctx: EvalContext): Record<string, any> {
   const maxAge = ctx.config.liveness.runningMaxAgeSeconds;
+  const optimizationLaunch = activeOptimizationLaunch();
   const active: Array<Record<string, any>> = [];
   if (fs.existsSync(resultsRoot())) {
     for (const skill of listDirs(resultsRoot())) {
@@ -617,15 +633,116 @@ export function liveStatus(ctx: EvalContext): Record<string, any> {
   });
   return {
     generated_at: new Date().toISOString(),
-    running: active.some((run) => run.status === "running"),
+    running: optimizationLaunch !== null || active.some((run) => run.status === "running"),
     poll_ms: ctx.config.server.pollMs,
     max_age_s: maxAge,
     active,
+    optimization_launch: optimizationLaunch,
   };
 }
 
 export function availableSkills(): string[] {
-  return listDirs(fixturesRoot());
+  return listDirs(scenariosRoot());
+}
+
+function availableOptimizationSkills(): string[] {
+  return listDirs(scenariosRoot()).filter(
+    (skill) => globFiles(path.join(scenariosRoot(), skill), "eval-", ".json").length > 0,
+  );
+}
+
+/** A detached Optimize launch can exist briefly before its first iteration
+ * journal appears. Keep that launch record outside results/ (so it cannot be
+ * mistaken for a skill) and use the pid as the duplicate-launch guard. */
+function activeOptimizationLaunch(): Record<string, any> | null {
+  for (const launchId of listDirs(optimizationLaunchesRoot()).reverse()) {
+    const record = readJsonOrNull(path.join(optimizationLaunchesRoot(), launchId, LAUNCH_META_NAME));
+    if (record && pidAlive(record.pid)) return record;
+  }
+  return null;
+}
+
+/**
+ * Start the scorecard-seeded optimization dispatcher from the console.
+ *
+ * The review handoff remains a separate, reversible step. This function only
+ * accepts the already-written repo-relative focus file and known scenario
+ * skills, then runs the same CLI command shown to the user. KEEP candidates
+ * remain staged for the Promote gate because --promote is intentionally absent.
+ */
+export function launchOptimization(ctx: EvalContext, payload: Record<string, any>): Record<string, any> {
+  if (activeOptimizationLaunch()) {
+    throw new Error("an optimization launch from this console is already running");
+  }
+
+  const focusRel = String(payload.focus_path ?? "");
+  if (!focusRel || path.isAbsolute(focusRel) || focusRel.split(/[\\/]/).includes("..")) {
+    throw new Error("focus_path must be a repo-relative path");
+  }
+  const focusPath = fromRepoRoot(focusRel);
+  if (!fs.existsSync(focusPath) || !fs.statSync(focusPath).isFile()) {
+    throw new Error(`optimization focus does not exist: ${focusRel}`);
+  }
+
+  if (!Array.isArray(payload.skills)) throw new Error("skills must be a non-empty list");
+  const skills = [...new Set(payload.skills.map(String))].sort();
+  const known = new Set(availableOptimizationSkills());
+  const unknown = skills.filter((skill) => !known.has(skill));
+  if (!skills.length) throw new Error("no optimization skills were selected");
+  if (unknown.length) throw new Error(`unknown optimization skill(s): ${unknown.join(", ")}`);
+  const concurrency = Number(payload.concurrency ?? 1);
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) {
+    throw new Error("optimization concurrency must be an integer from 1 to 8");
+  }
+
+  // The browser runner requires this before any skill can finish its baseline.
+  // Fail synchronously while the HTTP caller can still show the real reason,
+  // instead of accepting a multi-skill launch that will fail one skill at a
+  // time in the background.
+  resolveIonToken();
+
+  const launchId = "opt-" + new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const outDir = path.join(optimizationLaunchesRoot(), launchId);
+  const logPath = path.join(outDir, "launch.log");
+  const cliEntry = path.resolve(fileURLToPath(import.meta.url), "..", "..", "cli", "main.js");
+  const argv = [
+    cliEntry,
+    "optimize",
+    "all",
+    "--from-focus",
+    focusRel,
+    "--skills",
+    skills.join(","),
+    "--concurrency",
+    String(concurrency),
+    "--continue-on-failure",
+  ];
+
+  fs.mkdirSync(outDir, { recursive: true });
+  const logFd = fs.openSync(logPath, "w");
+  const child = spawn(process.execPath, argv, {
+    cwd: ctx.repoRoot,
+    stdio: ["ignore", logFd, logFd],
+    detached: true,
+  });
+  child.unref();
+  fs.closeSync(logFd);
+
+  const record = {
+    launch_id: launchId,
+    kind: "optimization",
+    pid: child.pid ?? -1,
+    skills,
+    concurrency,
+    focus_path: focusRel,
+    command: `cesium-eval optimize all --from-focus ${focusRel} --skills ${skills.join(",")} --concurrency ${concurrency} --continue-on-failure`,
+    argv: [process.execPath, ...argv],
+    log: repoRelative(logPath),
+    output_dir: repoRelative(outDir),
+    started_utc: new Date().toISOString(),
+  };
+  writeJsonPlain(path.join(outDir, LAUNCH_META_NAME), record);
+  return record;
 }
 
 /** Flags the installed `audit` command actually accepts, read from its own
@@ -695,6 +812,68 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (!validJudgeHarnesses.has(judgeHarness)) {
     throw new Error(`unknown judge_harness: '${judgeHarness}' (supported: ${[...validJudgeHarnesses].sort().join(", ")})`);
   }
+  // Multimodality is a property of the provider/model actually serving a
+  // call, not the harness alone — every harness is assumed capable here, and
+  // an image-bearing call the serving provider rejects FAILS LOUDLY at
+  // runtime instead of being pre-blocked on a stale per-harness flag.
+
+  // Provider selection: models are only provided by providers, so an explicit
+  // provider must be a canonical registry id, and the judge harness must be
+  // able to reach it natively (everything else routes via the adapter).
+  const providerIds = new Set((ctx.registry.providers ?? []).map((provider) => provider.id));
+  const providerField = (value: unknown, field: string): string | null => {
+    if (value === undefined || value === null || value === "") return null;
+    const id = String(value);
+    if (!providerIds.has(id)) {
+      throw new Error(`unknown ${field}: '${id}' (registry providers: ${[...providerIds].sort().join(", ")})`);
+    }
+    return id;
+  };
+  const judgeProvider = providerField(payload.judge_provider, "judge_provider");
+  const codegenProvider = providerField(payload.codegen_provider, "codegen_provider");
+  if (judge && judgeProvider && judgeHarness !== "fake") {
+    const judgeSpec = ctx.registry.harnesses.find((harness) => harness.id === judgeHarness);
+    const reachable = new Set([
+      ...(judgeSpec?.provider ? [judgeSpec.provider] : []),
+      ...(judgeSpec?.provider_support?.native ?? []),
+      ...(judgeSpec?.provider_support?.native_3p ?? []),
+    ]);
+    if (reachable.size && !reachable.has(judgeProvider)) {
+      throw new Error(
+        `judge_harness '${judgeHarness}' cannot reach provider '${judgeProvider}' natively ` +
+          `(reachable: ${[...reachable].sort().join(", ")}); route it through the protocol adapter instead`,
+      );
+    }
+  }
+  // Resolve the bundle root before the coverage guard, and resolve it exactly
+  // once: an omitted bundle_root means the console's own baseline root, never
+  // the CLI's fallback. The guard below and the `--bundle-root` the child audit
+  // receives are then guaranteed to be the same directory — measuring one root
+  // while judging another is how a passing guard produced an empty run.
+  const bundleRoot = normalizeBundleRoot(payload.bundle_root);
+  const customRoot = bundleRoot !== BASELINE_ROOT;
+  // A hand-typed root must already exist; the default one may legitimately be
+  // absent on a clean checkout, where the guard below explains how to fill it.
+  if (customRoot && !fs.existsSync(path.join(ctx.repoRoot, bundleRoot))) {
+    throw new Error(`bundle_root does not exist: ${bundleRoot}`);
+  }
+
+  // Visual Tests need baseline screenshots to judge. With zero coverage the run
+  // would burn nothing but still land as "incomplete" — reject with remediation.
+  if (judge && judgeHarness !== "fake") {
+    const coverage = baselineCoverage(ctx, skills, bundleRoot);
+    if (!coverage.skills.some((skill) => skill.screenshots > 0)) {
+      throw new Error(
+        `Visual Tests are on, but none of the selected skills has baseline screenshots under ${bundleRoot} — ` +
+          "the run would complete 'incomplete'. " +
+          (customRoot
+            ? "Point --bundle-root at a rendered bundle directory, clear it to use the console's baseline root, "
+            : "Render baselines in the launcher (Baseline Screenshots → Render), ") +
+          "or turn Visual Tests off to run Code Tests only.",
+      );
+    }
+  }
+
   const nJudges = Number(payload.n_judges ?? ctx.config.judgePanel.size);
   if (!Number.isInteger(nJudges)) throw new Error("n_judges must be an integer");
   if (nJudges < 1 || nJudges > 5) throw new Error("n_judges must be between 1 and 5");
@@ -745,14 +924,6 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
     threshold = Number(payload.threshold);
     if (!Number.isFinite(threshold) || threshold <= 0 || threshold > 1) throw new Error("threshold must be in (0, 1]");
   }
-  let bundleRoot: string | null = null;
-  if (payload.bundle_root !== undefined && payload.bundle_root !== null && payload.bundle_root !== "") {
-    bundleRoot = String(payload.bundle_root);
-    if (path.isAbsolute(bundleRoot) || bundleRoot.split(/[\\/]/).includes("..")) {
-      throw new Error("bundle_root must be a repo-relative path");
-    }
-    if (!fs.existsSync(path.join(ctx.repoRoot, bundleRoot))) throw new Error(`bundle_root does not exist: ${bundleRoot}`);
-  }
 
   const launchId = "live-" + new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const outDir = path.join(auditsRoot(), launchId);
@@ -779,12 +950,16 @@ export function launchRun(ctx: EvalContext, payload: Record<string, any>): Recor
   if (!judge) argv.push("--no-judge");
   if (judge && concurrency !== null && concurrency > 1) argv.push("--concurrency", String(concurrency));
   if (judgeModel) argv.push("--judge-model", judgeModel);
+  if (judgeProvider) argv.push("--judge-provider", judgeProvider);
   if (judgeVariant) argv.push("--judge-variant", judgeVariant);
+  if (codegenProvider) argv.push("--codegen-provider", codegenProvider);
   if (codegenHarness) argv.push("--codegen-harness", codegenHarness);
   if (codegenModel) argv.push("--codegen-model", codegenModel);
   if (codegenVariant) argv.push("--codegen-variant", codegenVariant);
   if (threshold !== null) argv.push("--threshold", String(threshold));
-  if (bundleRoot) argv.push("--bundle-root", bundleRoot);
+  // Always explicit: the audit judges the root the guard just measured instead
+  // of falling back to its own default.
+  argv.push("--bundle-root", bundleRoot);
 
   // Fail the request, not the run: an argv the CLI would reject leaves no
   // half-born run folder behind.

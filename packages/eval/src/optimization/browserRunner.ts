@@ -9,7 +9,7 @@ import * as http from "node:http";
 import * as zlib from "node:zlib";
 import { AddressInfo } from "node:net";
 import { readJson, canonicalStringify, writeJsonPlain } from "../lib/json.js";
-import { fromRepoRoot, globFiles, repoRelative } from "../lib/paths.js";
+import { fromRepoRoot, globFiles, isUnder, repoRelative } from "../lib/paths.js";
 import { gitCommit, sha256File, sha256Text } from "../lib/proc.js";
 import { runChecks } from "./checksEngine.js";
 import type { BrowserConfig, EvalContext } from "../config/types.js";
@@ -35,6 +35,20 @@ export function resolveIonToken(): string {
   throw new Error(
     "Set CESIUM_ION_TOKEN (or CESIUM_ACCESS_TOKEN) before running browser evals. Get one at https://ion.cesium.com/tokens",
   );
+}
+
+/**
+ * The Ion token when one is configured, null when none is.
+ *
+ * A token that IS set but malformed still throws: a typo'd token has to fail
+ * loudly rather than silently degrade every render into a token-less one. Only
+ * the "no token at all" case is permitted to continue, and only for callers
+ * that opt in (baseline bootstrapping, where scenarios bringing their own
+ * imagery render fine and Ion-dependent ones still produce a globe).
+ */
+export function resolveOptionalIonToken(): string | null {
+  const configured = ["CESIUM_ION_TOKEN", "CESIUM_ACCESS_TOKEN"].some((name) => Boolean(process.env[name]));
+  return configured ? resolveIonToken() : null;
 }
 
 /** Sanity-check the Ion token against the live API before launching scenarios. */
@@ -63,7 +77,11 @@ export async function preflightIon(ionToken: string, assetId: number, allowSkip:
 // ---------------------------------------------------------------------------
 // eval page
 // ---------------------------------------------------------------------------
-function renderHtml(cesiumVersion: string, ionToken: string, generatedCode: string): string {
+function renderHtml(cesiumVersion: string, ionToken: string | null, generatedCode: string): string {
+  // The assignment is emitted only when a token exists: assigning an empty
+  // token makes every Ion request fail with a confusing 401 instead of simply
+  // rendering without Ion.
+  const tokenLine = ionToken !== null ? `Cesium.Ion.defaultAccessToken = ${JSON.stringify(ionToken)};` : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -91,7 +109,7 @@ function renderHtml(cesiumVersion: string, ionToken: string, generatedCode: stri
     window.addEventListener("unhandledrejection", event => {
       window.__CESIUM_EVAL_ERRORS__.push({ message: String(event.reason) });
     });
-    Cesium.Ion.defaultAccessToken = ${JSON.stringify(ionToken)};
+    ${tokenLine}
     (async () => {
       try {
 ${generatedCode}
@@ -603,6 +621,19 @@ export interface RenderOptions {
   outputDir?: string;
   only?: string;
   timeoutMs?: number;
+  /** Render without Ion when no token is configured, instead of refusing to
+   * run. Opt-in: the optimization loop still demands a token so its trials
+   * stay comparable. A configured-but-invalid token always fails. */
+  allowMissingIonToken?: boolean;
+  /** Sink for per-scenario render failures. The exit code says only THAT
+   * something failed; a caller re-rendering over existing bundles needs to know
+   * WHICH scenarios, or it will mistake a stale bundle for a fresh one. */
+  failures?: RenderFailure[];
+}
+
+export interface RenderFailure {
+  scenario_id: string;
+  error: string;
 }
 
 export function loadRuns(options: RenderOptions): ScenarioRun[] {
@@ -663,10 +694,24 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
     console.error("No runnable scenarios selected");
     return 2;
   }
+  // The eval page is served from the repo root, so a run directory outside it
+  // is unreachable: the page 404s, Cesium never loads, and every bundle looks
+  // mysteriously broken. Refuse up front instead.
+  const outside = runs.filter((run) => !isUnder(run.runDir, ctx.repoRoot));
+  if (outside.length) {
+    console.error(
+      `Output directory must live inside the repository (the eval page is served from the repo root): ${outside[0].runDir}`,
+    );
+    return 2;
+  }
 
   const browserConfig: BrowserConfig = ctx.config.browser;
-  const ionToken = resolveIonToken();
-  await preflightIon(ionToken, browserConfig.ionPreflightAssetId, process.env.EVAL_SKIP_ION_PREFLIGHT === "1");
+  const ionToken = options.allowMissingIonToken ? resolveOptionalIonToken() : resolveIonToken();
+  if (ionToken === null) {
+    console.warn("[render] No Ion token configured — rendering without Ion imagery/terrain. Set CESIUM_ION_TOKEN to render those faithfully.");
+  } else {
+    await preflightIon(ionToken, browserConfig.ionPreflightAssetId, process.env.EVAL_SKIP_ION_PREFLIGHT === "1");
+  }
 
   const commit = gitCommit(ctx.repoRoot);
   const timestampUtc = new Date().toISOString();
@@ -680,223 +725,261 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
     .then((pkg: any) => pkg.default?.version ?? pkg.version ?? "unknown")
     .catch(() => "unknown");
 
+  // One scenario's failure (a navigation timeout, a page crash) used to abort
+  // the whole render, throwing away every bundle still queued behind it. Each
+  // run is isolated instead: failures are named, the rest still render, and a
+  // non-zero exit reports that the set is incomplete.
+  const failures: RenderFailure[] = [];
   try {
     for (const run of runs) {
-      const generatedCode = fs.readFileSync(run.codePath, "utf-8");
-      fs.mkdirSync(run.runDir, { recursive: true });
-      const htmlPath = path.join(run.runDir, "eval.html");
-      fs.writeFileSync(htmlPath, renderHtml(browserConfig.cesiumVersion, ionToken, generatedCode));
+      let openPage: { close(): Promise<void> } | null = null;
+      try {
+        const generatedCode = fs.readFileSync(run.codePath, "utf-8");
+        fs.mkdirSync(run.runDir, { recursive: true });
+        const htmlPath = path.join(run.runDir, "eval.html");
+        fs.writeFileSync(htmlPath, renderHtml(browserConfig.cesiumVersion, ionToken, generatedCode));
 
-      const consoleMessages: Array<Record<string, any>> = [];
-      const networkFailures: Array<Record<string, any>> = [];
-      const page = await browser.newPage({ viewport: browserConfig.viewport });
-      page.on("console", (msg) => consoleMessages.push({ type: msg.type(), text: msg.text() }));
-      page.on("response", (response) => {
-        if (response.status() >= 400) {
-          networkFailures.push({ url: sanitizeUrl(response.url()), status: response.status(), status_text: response.statusText() });
-        }
-      });
-      page.on("requestfailed", (request) => {
-        networkFailures.push({ url: sanitizeUrl(request.url()), failure: request.failure()?.errorText ?? null });
-      });
-
-      // "load" rather than "networkidle": streaming scenes never reach idle.
-      await page.goto(`${server.baseUrl}/${repoRelative(htmlPath)}`, { waitUntil: "load", timeout: timeoutMs });
-
-      const specs = screenshotSpecsFor(run.scenario);
-      const screenshotsTaken: Array<Record<string, any>> = [];
-      const screenshotQuality: Array<Record<string, any>> = [];
-      const settleOptions: SettleOptions = {
-        timeoutMs: browserConfig.tileSettleTimeoutMs,
-        pollMs: browserConfig.tileSettlePollMs,
-        quietPolls: browserConfig.tileSettleQuietPolls,
-      };
-
-      for (let i = 0; i < specs.length; i++) {
-        const spec = specs[i];
-        const delayMs = Number(spec.delay_ms ?? 1000);
-        await page.waitForTimeout(i === 0 ? delayMs : delayMs - Number(specs[i - 1].delay_ms ?? 0));
-        if (spec.cardinal_panorama) {
-          await invokePageFunction(page, ORBIT_PANORAMA_JS, {
-            headingDegrees: Number(spec.heading_degrees ?? 0),
-            index: Number(spec.index ?? i),
-          });
-          await page.waitForTimeout(250);
-        }
-        // Safeguard against partial-load captures: the fixed delay is only a
-        // floor. Before the shutter fires, wait until the globe and every 3D
-        // tileset report their tile streams finished (camera moves — panorama
-        // included — restart streaming). Timeouts are recorded, never hidden.
-        let settle: SettleResult | null = null;
-        if (shouldWaitForTiles(spec, run.scenario)) {
-          settle = await waitForSceneSettled(page, settleOptions);
-          if (settle.timed_out) {
-            console.warn(
-              `[render] ${run.scenario.id} shot ${i}: tiles still loading after ${settle.waited_ms}ms — capturing anyway and flagging`,
-            );
+        const consoleMessages: Array<Record<string, any>> = [];
+        const networkFailures: Array<Record<string, any>> = [];
+        const page = await browser.newPage({ viewport: browserConfig.viewport });
+        openPage = page;
+        page.on("console", (msg) => consoleMessages.push({ type: msg.type(), text: msg.text() }));
+        page.on("response", (response) => {
+          if (response.status() >= 400) {
+            networkFailures.push({ url: sanitizeUrl(response.url()), status: response.status(), status_text: response.statusText() });
           }
-        }
-        const filename = specs.length > 1 ? `screenshot-${i}.png` : "screenshot.png";
-        const screenshotPath = path.join(run.runDir, filename);
-        await page.screenshot({ path: screenshotPath, fullPage: true, timeout: browserConfig.screenshotTimeoutMs });
-        screenshotsTaken.push({
-          index: i,
-          timing: spec.timing ?? `screenshot-${i}`,
-          delay_ms: delayMs,
-          description: spec.description ?? "",
-          filename,
-          tile_settle: settle
-            ? {
-                settled: settle.settled,
-                timed_out: settle.timed_out,
-                viewer_unavailable: settle.viewer_unavailable,
-                waited_ms: settle.waited_ms,
-                last_probe: settle.last_probe,
-              }
-            : { skipped: true },
         });
-        const quality = analyzeScreenshot(screenshotPath, browserConfig.viewport.width, browserConfig.viewport.height);
-        applySettleToQuality(quality, settle);
-        screenshotQuality.push(quality);
-      }
+        page.on("requestfailed", (request) => {
+          networkFailures.push({ url: sanitizeUrl(request.url()), failure: request.failure()?.errorText ?? null });
+        });
 
-      if (specs.some((spec) => spec.cardinal_panorama)) {
-        try {
-          await invokePageFunction(page, ORBIT_RESTORE_JS);
-          await page.waitForTimeout(100);
-        } catch {
-          // camera restore is best-effort
-        }
-      }
+        // "load" rather than "networkidle": streaming scenes never reach idle.
+        await page.goto(`${server.baseUrl}/${repoRelative(htmlPath)}`, { waitUntil: "load", timeout: timeoutMs });
 
-      const errors: Array<Record<string, any>> = (await page.evaluate("window.__CESIUM_EVAL_ERRORS__ || []")) as any;
-      const cesiumRenderError = await page.evaluate(`
-        (() => {
-          const panel = document.querySelector('.cesium-widget-errorPanel');
-          const bodyText = document.body ? document.body.innerText || '' : '';
-          if (panel || bodyText.includes('An error occurred while rendering. Rendering has stopped')) {
-            return {
-              message: bodyText.includes('An error occurred while rendering. Rendering has stopped')
-                ? 'Cesium render error panel detected'
-                : 'Cesium render error panel detected without body text',
-              source: 'cesium-widget-errorPanel'
-            };
-          }
-          return null;
-        })()
-      `);
-      if (cesiumRenderError) errors.push(cesiumRenderError as Record<string, any>);
+        const specs = screenshotSpecsFor(run.scenario);
+        const screenshotsTaken: Array<Record<string, any>> = [];
+        const screenshotQuality: Array<Record<string, any>> = [];
+        // Failures of the harness's own page helpers, folded into the bundle's
+        // error list so they are evidence rather than a lost run.
+        const harnessErrors: Array<Record<string, any>> = [];
+        const settleOptions: SettleOptions = {
+          timeoutMs: browserConfig.tileSettleTimeoutMs,
+          pollMs: browserConfig.tileSettlePollMs,
+          quietPolls: browserConfig.tileSettleQuietPolls,
+        };
 
-      let sceneState: Record<string, any>;
-      try {
-        sceneState = (await page.evaluate(`
-          (() => {
-            if (typeof viewer === 'undefined' || !viewer || !viewer.scene) {
-              return { available: false };
+        for (let i = 0; i < specs.length; i++) {
+          const spec = specs[i];
+          const delayMs = Number(spec.delay_ms ?? 1000);
+          await page.waitForTimeout(i === 0 ? delayMs : delayMs - Number(specs[i - 1].delay_ms ?? 0));
+          if (spec.cardinal_panorama) {
+            try {
+              await invokePageFunction(page, ORBIT_PANORAMA_JS, {
+                headingDegrees: Number(spec.heading_degrees ?? 0),
+                index: Number(spec.index ?? i),
+              });
+            } catch (exc: any) {
+              // The orbit helper needs Cesium on the page; when the library
+              // itself failed to load it throws. Losing the whole bundle to
+              // that would also lose the console log that explains it, so the
+              // capture continues and the reason is recorded as an error.
+              const message = exc?.message ?? String(exc);
+              console.warn(`[render] ${run.scenario.id} shot ${i}: panorama orbit failed: ${message}`);
+              harnessErrors.push({ message: `panorama orbit failed: ${message}`, source: "harness" });
             }
-            const scene = viewer.scene;
-            const camera = viewer.camera;
-            return {
-              available: true,
-              camera: {
-                position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-                heading: camera.heading,
-                pitch: camera.pitch,
-                roll: camera.roll
-              },
-              entity_count: viewer.entities ? viewer.entities.values.length : 0,
-              imagery_layer_count: viewer.imageryLayers ? viewer.imageryLayers.length : 0,
-              primitive_count: scene.primitives ? scene.primitives.length : 0
-            };
-          })()
-        `)) as Record<string, any>;
-      } catch {
-        sceneState = { available: false, error: "Failed to extract scene state" };
-      }
+            await page.waitForTimeout(250);
+          }
+          // Safeguard against partial-load captures: the fixed delay is only a
+          // floor. Before the shutter fires, wait until the globe and every 3D
+          // tileset report their tile streams finished (camera moves — panorama
+          // included — restart streaming). Timeouts are recorded, never hidden.
+          let settle: SettleResult | null = null;
+          if (shouldWaitForTiles(spec, run.scenario)) {
+            settle = await waitForSceneSettled(page, settleOptions);
+            if (settle.timed_out) {
+              console.warn(
+                `[render] ${run.scenario.id} shot ${i}: tiles still loading after ${settle.waited_ms}ms — capturing anyway and flagging`,
+              );
+            }
+          }
+          const filename = specs.length > 1 ? `screenshot-${i}.png` : "screenshot.png";
+          const screenshotPath = path.join(run.runDir, filename);
+          await page.screenshot({ path: screenshotPath, fullPage: true, timeout: browserConfig.screenshotTimeoutMs });
+          screenshotsTaken.push({
+            index: i,
+            timing: spec.timing ?? `screenshot-${i}`,
+            delay_ms: delayMs,
+            description: spec.description ?? "",
+            filename,
+            tile_settle: settle
+              ? {
+                  settled: settle.settled,
+                  timed_out: settle.timed_out,
+                  viewer_unavailable: settle.viewer_unavailable,
+                  waited_ms: settle.waited_ms,
+                  last_probe: settle.last_probe,
+                }
+              : { skipped: true },
+          });
+          const quality = analyzeScreenshot(screenshotPath, browserConfig.viewport.width, browserConfig.viewport.height);
+          applySettleToQuality(quality, settle);
+          screenshotQuality.push(quality);
+        }
 
-      let webglRenderer: string | null = null;
-      try {
-        webglRenderer = (await page.evaluate(`
+        if (specs.some((spec) => spec.cardinal_panorama)) {
+          try {
+            await invokePageFunction(page, ORBIT_RESTORE_JS);
+            await page.waitForTimeout(100);
+          } catch {
+            // camera restore is best-effort
+          }
+        }
+
+        const errors: Array<Record<string, any>> = [
+          ...((await page.evaluate("window.__CESIUM_EVAL_ERRORS__ || []")) as Array<Record<string, any>>),
+          ...harnessErrors,
+        ];
+        const cesiumRenderError = await page.evaluate(`
           (() => {
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-            if (!gl) return null;
-            const ext = gl.getExtension('WEBGL_debug_renderer_info');
-            return String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+            const panel = document.querySelector('.cesium-widget-errorPanel');
+            const bodyText = document.body ? document.body.innerText || '' : '';
+            if (panel || bodyText.includes('An error occurred while rendering. Rendering has stopped')) {
+              return {
+                message: bodyText.includes('An error occurred while rendering. Rendering has stopped')
+                  ? 'Cesium render error panel detected'
+                  : 'Cesium render error panel detected without body text',
+                source: 'cesium-widget-errorPanel'
+              };
+            }
+            return null;
           })()
-        `)) as string | null;
-      } catch {
-        webglRenderer = null;
+        `);
+        if (cesiumRenderError) errors.push(cesiumRenderError as Record<string, any>);
+
+        let sceneState: Record<string, any>;
+        try {
+          sceneState = (await page.evaluate(`
+            (() => {
+              if (typeof viewer === 'undefined' || !viewer || !viewer.scene) {
+                return { available: false };
+              }
+              const scene = viewer.scene;
+              const camera = viewer.camera;
+              return {
+                available: true,
+                camera: {
+                  position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+                  heading: camera.heading,
+                  pitch: camera.pitch,
+                  roll: camera.roll
+                },
+                entity_count: viewer.entities ? viewer.entities.values.length : 0,
+                imagery_layer_count: viewer.imageryLayers ? viewer.imageryLayers.length : 0,
+                primitive_count: scene.primitives ? scene.primitives.length : 0
+              };
+            })()
+          `)) as Record<string, any>;
+        } catch {
+          sceneState = { available: false, error: "Failed to extract scene state" };
+        }
+
+        let webglRenderer: string | null = null;
+        try {
+          webglRenderer = (await page.evaluate(`
+            (() => {
+              const canvas = document.createElement('canvas');
+              const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+              if (!gl) return null;
+              const ext = gl.getExtension('WEBGL_debug_renderer_info');
+              return String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+            })()
+          `)) as string | null;
+        } catch {
+          webglRenderer = null;
+        }
+
+        await page.close();
+        openPage = null;
+
+        const consoleJsonPath = path.join(run.runDir, "console.json");
+        writeJsonPlain(consoleJsonPath, {
+          scenario_id: run.scenario.id,
+          console_messages: consoleMessages,
+          errors,
+          network_failures: networkFailures,
+          screenshots: screenshotsTaken,
+        });
+
+        const sceneStatePath = path.join(run.runDir, "scene-state.json");
+        writeJsonPlain(sceneStatePath, sceneState);
+
+        const qualityPath = path.join(run.runDir, "screenshot-quality.json");
+        const qualityReport = {
+          scenario_id: run.scenario.id,
+          screenshots: screenshotQuality,
+          all_passed: screenshotQuality.every((item) => item.passed),
+        };
+        writeJsonPlain(qualityPath, qualityReport);
+
+        const checksPath = path.join(run.runDir, "programmatic-checks.json");
+        writeJsonPlain(
+          checksPath,
+          addScreenshotQualityChecks(
+            runProgrammaticChecks(run.scenario, generatedCode, errors, sceneState, consoleMessages, networkFailures),
+            qualityReport,
+          ),
+        );
+
+        const metaPath = run.codePath.replace(/\.js$/, ".meta.json");
+        const generationMeta = fs.existsSync(metaPath) ? readJson(metaPath) : {};
+        const scenarioHash = sha256Text(canonicalStringify(run.scenario));
+
+        const artifactHashes: Record<string, any> = {
+          console: sha256File(consoleJsonPath),
+          programmatic_checks: sha256File(checksPath),
+          scene_state: sha256File(sceneStatePath),
+          screenshot_quality: sha256File(qualityPath),
+        };
+        const screenshotHashes = screenshotsTaken
+          .filter((info) => fs.existsSync(path.join(run.runDir, info.filename)))
+          .map((info) => ({ filename: info.filename, hash: sha256File(path.join(run.runDir, info.filename)) }));
+        if (screenshotHashes.length) artifactHashes.screenshots = screenshotHashes;
+
+        const metadata: Record<string, any> = {
+          scenario_version_hash: scenarioHash,
+          candidate_skill_hash: generationMeta.skill_content_hash ?? sha256Text(generatedCode),
+          runner_git_commit: commit,
+          model_id: generationMeta.model_id ?? "unknown",
+          temperature: generationMeta.temperature ?? 1.0,
+          judge_protocol_version: ctx.config.judgePanel.pairwiseProtocol,
+          browser_viewport: browserConfig.viewport,
+          playwright_version: playwrightVersion,
+          chromium_version: chromiumVersion,
+          webgl_renderer: webglRenderer,
+          timestamp_utc: timestampUtc,
+          artifact_hashes: artifactHashes,
+        };
+        if ("seed" in generationMeta) metadata.seed = generationMeta.seed;
+        writeJsonPlain(path.join(run.runDir, "metadata.json"), metadata);
+
+        console.log(`[render] wrote ${repoRelative(run.runDir)}`);
+      } catch (exc: any) {
+        const message = exc?.message ?? String(exc);
+        const failure: RenderFailure = { scenario_id: run.scenario.id, error: message };
+        failures.push(failure);
+        options.failures?.push(failure);
+        console.error(`[render] ${run.scenario.id} FAILED: ${message}`);
+      } finally {
+        await openPage?.close().catch(() => undefined);
       }
-
-      await page.close();
-
-      const consoleJsonPath = path.join(run.runDir, "console.json");
-      writeJsonPlain(consoleJsonPath, {
-        scenario_id: run.scenario.id,
-        console_messages: consoleMessages,
-        errors,
-        network_failures: networkFailures,
-        screenshots: screenshotsTaken,
-      });
-
-      const sceneStatePath = path.join(run.runDir, "scene-state.json");
-      writeJsonPlain(sceneStatePath, sceneState);
-
-      const qualityPath = path.join(run.runDir, "screenshot-quality.json");
-      const qualityReport = {
-        scenario_id: run.scenario.id,
-        screenshots: screenshotQuality,
-        all_passed: screenshotQuality.every((item) => item.passed),
-      };
-      writeJsonPlain(qualityPath, qualityReport);
-
-      const checksPath = path.join(run.runDir, "programmatic-checks.json");
-      writeJsonPlain(
-        checksPath,
-        addScreenshotQualityChecks(
-          runProgrammaticChecks(run.scenario, generatedCode, errors, sceneState, consoleMessages, networkFailures),
-          qualityReport,
-        ),
-      );
-
-      const metaPath = run.codePath.replace(/\.js$/, ".meta.json");
-      const generationMeta = fs.existsSync(metaPath) ? readJson(metaPath) : {};
-      const scenarioHash = sha256Text(canonicalStringify(run.scenario));
-
-      const artifactHashes: Record<string, any> = {
-        console: sha256File(consoleJsonPath),
-        programmatic_checks: sha256File(checksPath),
-        scene_state: sha256File(sceneStatePath),
-        screenshot_quality: sha256File(qualityPath),
-      };
-      const screenshotHashes = screenshotsTaken
-        .filter((info) => fs.existsSync(path.join(run.runDir, info.filename)))
-        .map((info) => ({ filename: info.filename, hash: sha256File(path.join(run.runDir, info.filename)) }));
-      if (screenshotHashes.length) artifactHashes.screenshots = screenshotHashes;
-
-      const metadata: Record<string, any> = {
-        scenario_version_hash: scenarioHash,
-        candidate_skill_hash: generationMeta.skill_content_hash ?? sha256Text(generatedCode),
-        runner_git_commit: commit,
-        model_id: generationMeta.model_id ?? "unknown",
-        temperature: generationMeta.temperature ?? 1.0,
-        judge_protocol_version: ctx.config.judgePanel.pairwiseProtocol,
-        browser_viewport: browserConfig.viewport,
-        playwright_version: playwrightVersion,
-        chromium_version: chromiumVersion,
-        webgl_renderer: webglRenderer,
-        timestamp_utc: timestampUtc,
-        artifact_hashes: artifactHashes,
-      };
-      if ("seed" in generationMeta) metadata.seed = generationMeta.seed;
-      writeJsonPlain(path.join(run.runDir, "metadata.json"), metadata);
-
-      console.log(`[render] wrote ${repoRelative(run.runDir)}`);
     }
   } finally {
     await browser.close().catch(() => undefined);
     await server.close();
+  }
+  if (failures.length) {
+    console.error(`[render] ${failures.length}/${runs.length} scenario(s) failed to render: ${failures.map((f) => f.scenario_id).join(", ")}`);
+    return 1;
   }
   return 0;
 }

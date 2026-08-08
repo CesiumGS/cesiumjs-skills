@@ -154,9 +154,11 @@ export function updatePublicStatus(
 
   skillEntry.scenario_count = scenarios.length;
   const counts = decisionResult.counts;
+  const decisionStatus =
+    decisionResult.decision === "KEEP" ? "keep" : decisionResult.decision === "REJECT" ? "reject" : "tie";
   skillEntry.latest_reviewed_decision = {
     iteration,
-    status: decisionResult.decision === "KEEP" ? "keep" : "reject",
+    status: decisionStatus,
     compared_to: "baseline",
     methodology: "3-parallel-independent-judges, majority vote per eval",
     tally: { wins: counts.wins, losses: counts.losses, ties: counts.ties },
@@ -176,7 +178,7 @@ export function updatePublicStatus(
       methodology: "3-parallel-independent-judges",
       timestamp: new Date().toISOString(),
     };
-  } else if (skillEntry.current_best?.iteration === iteration) {
+  } else if (decisionResult.decision === "REJECT" && skillEntry.current_best?.iteration === iteration) {
     // A rejected regeneration must not leave a stale current_best pointer.
     skillEntry.current_best = {};
   }

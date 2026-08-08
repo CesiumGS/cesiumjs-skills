@@ -1,6 +1,6 @@
 ---
 name: using-cesiumjs-skills
-description: Use when starting any conversation involving CesiumJS development - provides orientation on available domain skills and how they activate
+description: Use when a conversation begins with a CesiumJS development request - maps the 14 domain skills on offer and explains how passive activation selects between them
 ---
 
 # CesiumJS Skills Orientation

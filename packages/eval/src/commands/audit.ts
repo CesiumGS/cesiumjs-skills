@@ -1,7 +1,12 @@
 /**
- * `cesium-eval audit` — run BOTH evaluation lanes (deterministic checks and
- * the visual judge panel) over the skills' rendered baselines and assemble
- * one combined scorecard under evaluation/artifacts/audits/<run_id>/.
+ * `cesium-eval audit` — run BOTH evaluation lanes (deterministic execution
+ * health and the visual judge panel) over the skills' rendered baselines and
+ * assemble one combined scorecard under evaluation/artifacts/audits/<run_id>/.
+ *
+ * The work list is derived live: one case per tracked scenario manifest
+ * (optimization/scenarios/<skill>/), scored against the rendered bundle the
+ * optimization loop wrote for it (optimization/runs/<skill>/baseline/), so the
+ * audit always judges the CURRENT baselines — nothing is frozen in git.
  *
  * Emits the same JSONL progress-journal events the optimization loop uses, so
  * the console's Live station and CI log collectors can stream progress.
@@ -9,7 +14,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { readJson, writeJsonPlain } from "../lib/json.js";
-import { fromRepoRoot, globFiles, listDirs, repoRelative } from "../lib/paths.js";
+import { fromRepoRoot, globFiles, repoRelative } from "../lib/paths.js";
 import { gitCommit } from "../lib/proc.js";
 import { nowIsoSeconds } from "../lib/format.js";
 import { runCase } from "../evaluation/runner.js";
@@ -21,32 +26,30 @@ import {
   writeScorecard,
 } from "../evaluation/scorecard.js";
 import { loadScorecardValidator, loadVisualReviewValidator } from "../evaluation/schema.js";
+import {
+  baselineScenarios,
+  baselineSkills,
+  generatedCodePath,
+  resolveBundleDir,
+  type BaselineScenario,
+} from "../evaluation/baselines.js";
 import { JudgeCall, fakeJudgeCall, judgeRender } from "../evaluation/judge/staticJudge.js";
 import { describeAgent, invokeAgent } from "../harness/invoke.js";
 import type { EvalContext } from "../config/types.js";
 
-const BASELINE_CASE_RE = /^eval-1[0-9]{2}$/;
-
-const casesRoot = () => fromRepoRoot("evaluation", "cases");
-const fixturesRoot = () => fromRepoRoot("evaluation", "fixtures");
 const auditsRoot = () => fromRepoRoot("evaluation", "artifacts", "audits");
 const judgePromptsDir = () => fromRepoRoot("evaluation", "prompts", "judge");
 
 export function allSkills(): string[] {
-  return listDirs(fixturesRoot()).filter((name) => !name.startsWith("."));
+  return baselineSkills();
 }
 
-function selectBaselineFixtures(skill: string): string[] {
-  return globFiles(path.join(fixturesRoot(), skill), "eval-1", "-baseline-observed.evidence.json").filter(
-    (fixturePath) => BASELINE_CASE_RE.test(String(readJson(fixturePath).case_id ?? "")),
-  );
-}
-
-function findCaseManifest(skill: string, caseId: string): string | null {
-  const matches = globFiles(path.join(casesRoot(), skill), `${caseId}-`, ".json");
-  if (matches.length) return matches[0];
-  const exact = path.join(casesRoot(), skill, `${caseId}.json`);
-  return fs.existsSync(exact) ? exact : null;
+function readJsonIfExists(filePath: string): Record<string, any> | null {
+  try {
+    return fs.existsSync(filePath) ? readJson(filePath) : null;
+  } catch {
+    return null;
+  }
 }
 
 function evidenceSummaryFor(evidence: Record<string, any>, evidencePath: string, bundleDir: string | null): Record<string, any> {
@@ -63,17 +66,88 @@ function evidenceSummaryFor(evidence: Record<string, any>, evidencePath: string,
   };
 }
 
-function bundleDirFor(evidence: Record<string, any>, bundleRoot: string | null): string | null {
-  const rel = evidence.run_artifact_path;
-  if (!rel) return null;
-  let bundlePath = String(rel);
-  if (bundleRoot !== null) {
-    const parts = bundlePath.split(/[\\/]/);
-    const baselineIndex = parts.indexOf("baseline");
-    bundlePath =
-      baselineIndex > 0 ? path.join(bundleRoot, ...parts.slice(baselineIndex - 1)) : path.join(bundleRoot, path.basename(bundlePath));
-  }
-  return path.isAbsolute(bundlePath) ? bundlePath : fromRepoRoot(bundlePath);
+/** Execution-health contract every rendered baseline must satisfy. */
+const BASELINE_HEALTH_CHECKS: Array<Record<string, any>> = [
+  {
+    id: "code_runs_00",
+    type: "code_runs",
+    category: "execution_health",
+    critical: true,
+    description: "Rendered baseline bundle exists and the generated code executed",
+  },
+  {
+    id: "no_runtime_errors_01",
+    type: "no_runtime_errors",
+    category: "execution_health",
+    critical: true,
+    description: "No runtime errors captured in the rendered baseline",
+  },
+  {
+    id: "programmatic_checks_02",
+    type: "json_value_equals",
+    path: "/after/values/programmatic_summary/failed",
+    expected: 0,
+    category: "execution_health",
+    critical: true,
+    description: "All of the scenario's in-browser programmatic checks passed",
+  },
+];
+
+function caseDocFor(scenario: BaselineScenario): Record<string, any> {
+  const { doc } = scenario;
+  return {
+    schema_version: "1.0",
+    id: scenario.id,
+    name: scenario.name,
+    skill: scenario.skill,
+    category: "baseline_health",
+    critical: Boolean(doc.regression_critical ?? true),
+    description: doc.description ?? "",
+    prompt: doc.prompt ?? "",
+    preflight: {
+      expected_behaviors: doc.expected_behaviors ?? null,
+      visual_expectations: doc.visual_expectations ?? null,
+      screenshot_mode: doc.screenshot_mode ?? null,
+    },
+    checks: BASELINE_HEALTH_CHECKS,
+  };
+}
+
+function evidenceFor(scenario: BaselineScenario, bundleDir: string | null): Record<string, any> {
+  const checksDoc = bundleDir !== null ? readJsonIfExists(path.join(bundleDir, "programmatic-checks.json")) : null;
+  const consoleDoc = bundleDir !== null ? readJsonIfExists(path.join(bundleDir, "console.json")) : null;
+  const { skill, id: scenarioId } = scenario;
+  const codePath = generatedCodePath(scenario);
+  const hasCode = fs.existsSync(codePath);
+  // A bundle without parseable console evidence is an incomplete render, not a
+  // clean one — surface it as an error so the health checks cannot pass it.
+  const errors =
+    bundleDir === null
+      ? ["baseline bundle not rendered (run the optimization loop or pass --bundle-root)"]
+      : !Array.isArray(consoleDoc?.errors)
+        ? ["console.json missing or unreadable in the rendered bundle; re-render the baseline"]
+        : consoleDoc!.errors;
+  // summary.failed is 1 when the bundle is missing so the programmatic check
+  // fails with a value mismatch instead of aborting on an unresolvable pointer.
+  const summary = checksDoc?.summary ?? { total: 0, passed: 0, failed: 1, pass_rate: 0 };
+  return {
+    schema_version: "1.0",
+    case_id: scenarioId,
+    case_name: scenario.name,
+    skill,
+    source: "baseline-run",
+    expected_result: "pass",
+    before: { entities: {}, values: {} },
+    after: { entities: {}, values: { programmatic_summary: summary, source_scenario_id: scenarioId } },
+    errors,
+    execution: {
+      success: checksDoc !== null,
+      observed_from: bundleDir !== null ? repoRelative(path.join(bundleDir, "programmatic-checks.json")) : null,
+    },
+    generated_code: hasCode ? fs.readFileSync(codePath, "utf-8") : "",
+    source_path: hasCode ? repoRelative(codePath) : null,
+    run_artifact_path: bundleDir !== null ? repoRelative(bundleDir) : null,
+  };
 }
 
 function screenshotPathsFor(bundleDir: string | null, evidence: Record<string, any>): string[] {
@@ -103,28 +177,54 @@ interface AuditCase {
   bundleDir: string | null;
 }
 
+/** The exact command that produces what this audit is missing. */
+function renderHint(skills: string[], bundleRoot: string | null): string {
+  const out = bundleRoot !== null ? ` --out ${repoRelative(bundleRoot)}` : "";
+  return `cesium-eval render-baselines --skills ${skills.join(",")}${out}`;
+}
+
 function collectCases(skills: string[], bundleRoot: string | null): AuditCase[] {
   const collected: AuditCase[] = [];
   for (const skill of skills) {
-    for (const evidencePath of selectBaselineFixtures(skill)) {
-      const evidence = readJson(evidencePath);
-      const caseId = String(evidence.case_id ?? "");
-      const casePath = findCaseManifest(skill, caseId);
-      if (casePath === null) {
-        throw new Error(`${repoRelative(evidencePath)}: no case manifest for ${skill}/${caseId}`);
-      }
+    for (const scenario of baselineScenarios(skill)) {
+      const bundleDir = resolveBundleDir(scenario, bundleRoot);
+      const evidence = evidenceFor(scenario, bundleDir);
       collected.push({
         skill,
-        caseId,
-        casePath,
-        caseDoc: readJson(casePath),
-        evidencePath,
+        caseId: scenario.id,
+        casePath: scenario.scenarioPath,
+        caseDoc: caseDocFor(scenario),
+        evidencePath: bundleDir !== null ? path.join(bundleDir, "programmatic-checks.json") : scenario.scenarioPath,
         evidence,
-        bundleDir: bundleDirFor(evidence, bundleRoot),
+        bundleDir,
       });
     }
   }
-  if (!collected.length) throw new Error("no baseline-observed fixtures selected for audit");
+  if (!collected.length) throw new Error("no scenarios selected for audit");
+
+  // Name the root actually searched: reporting the default while judging a
+  // caller-supplied root sends the operator to the wrong directory.
+  const searched = bundleRoot !== null ? `${repoRelative(bundleRoot)}/<skill>/baseline` : "optimization/runs/<skill>/baseline";
+  const missing = collected.filter((auditCase) => auditCase.bundleDir === null);
+  if (missing.length === collected.length) {
+    // Nothing to audit at all is a setup problem, not an evaluation result:
+    // name the one command that fixes it rather than leaving the operator to
+    // reverse-engineer the layout.
+    throw new Error(
+      `no rendered baseline bundles found under ${searched}. Render them first:\n  ${renderHint(skills, bundleRoot)}`,
+    );
+  }
+  if (missing.length) {
+    // A partial set IS auditable — the missing cases score as failures, which
+    // is the honest outcome — but say so, so a half-rendered root is never
+    // mistaken for a genuine regression.
+    console.error(
+      `[audit] ${missing.length}/${collected.length} case(s) have no rendered bundle under ${searched} and will score as failures: ` +
+        `${missing.slice(0, 5).map((auditCase) => `${auditCase.skill}/${auditCase.caseId}`).join(", ")}` +
+        `${missing.length > 5 ? `, +${missing.length - 5} more` : ""}`,
+    );
+    console.error(`[audit] render them with: ${renderHint(skills, bundleRoot)}`);
+  }
   return collected;
 }
 
@@ -194,12 +294,20 @@ function makeJudgeCall(
   judgeHarness: string,
   model: string | undefined,
   variant: string | undefined,
+  provider?: string,
 ): { call: JudgeCall; model: string | null } {
   if (judgeHarness === "fake") return { call: fakeJudgeCall(), model: model ?? "fake" };
   const overrides = { harness: judgeHarness, model, variant };
   const described = describeAgent(ctx, "judge", overrides);
   const call: JudgeCall = async (prompt, files, addDirs) => {
-    const invocation = await invokeAgent(ctx, "judge", { prompt, files, addDirs, allowedTools: [], overrides });
+    const invocation = await invokeAgent(ctx, "judge", {
+      prompt,
+      files,
+      addDirs,
+      allowedTools: [],
+      provider: provider ?? null,
+      overrides,
+    });
     return { text: invocation.text, agent: invocation.agent };
   };
   return { call, model: described.model };
@@ -213,6 +321,9 @@ export const DEFAULT_JUDGE_CONCURRENCY = 4;
 export interface AuditOptions {
   skills?: string;
   judgeModel?: string;
+  /** Canonical provider id serving the judge model (models are only provided
+   * by providers; drivers route it natively or fail loudly). */
+  judgeProvider?: string;
   judgeVariant?: string;
   nJudges?: number;
   /** Cases judged in parallel (1-8). Default 4; set 1 for strictly sequential. */
@@ -224,6 +335,8 @@ export interface AuditOptions {
   judgeHarness?: string;
   codegenHarness?: string;
   codegenModel?: string;
+  /** Provenance stamp: the provider that served the codegen model. */
+  codegenProvider?: string;
   codegenVariant?: string;
   bundleRoot?: string;
   threshold?: number;
@@ -301,7 +414,7 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
   let judgedCount = 0;
 
   if (options.visualReview) {
-    visualReview = readJson(options.visualReview);
+    visualReview = readJson(fromRepoRoot(options.visualReview));
     visualReview!.schema_version ??= "1.0";
     visualReview!.reviewer ??= "screenshot-visual-judge";
     visualReview!.run_id ??= runId;
@@ -309,7 +422,7 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
       (item: any) => item?.status !== undefined && item?.status !== null && item?.status !== "not_reviewed",
     ).length;
   } else if (!options.noJudge) {
-    const { call, model } = makeJudgeCall(ctx, judgeHarness, options.judgeModel, options.judgeVariant);
+    const { call, model } = makeJudgeCall(ctx, judgeHarness, options.judgeModel, options.judgeVariant, options.judgeProvider);
     const concurrency = Math.max(1, Math.min(8, options.concurrency ?? DEFAULT_JUDGE_CONCURRENCY));
     const items: Array<Record<string, any>> = new Array(auditCases.length);
     const workerCount = Math.min(concurrency, auditCases.length);
@@ -431,6 +544,7 @@ async function runAudit(ctx: EvalContext, options: AuditOptions, run: AuditRun):
   // win; anything still unset is recovered from the evaluated code's meta sidecars.
   const artifacts = (scorecard.artifacts ??= {});
   if (options.codegenModel) artifacts.model = options.codegenModel;
+  if (options.codegenProvider) artifacts.model_provider = options.codegenProvider;
   if (options.codegenVariant) artifacts.model_variant = options.codegenVariant;
   const provenance = resolveCodegenProvenance(scorecard, ctx.repoRoot);
   if (provenance.model && artifacts.model === undefined) artifacts.model = provenance.model;

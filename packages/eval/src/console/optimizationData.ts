@@ -20,15 +20,33 @@ const candidatesRoot = () => fromRepoRoot("optimization", "candidates");
 const historyRoot = () => fromRepoRoot("optimization", "history");
 
 /**
- * Post-promotion-gate state of a KEEP candidate:
- *  - "staged":   PROMOTED-PENDING.md awaits human approval (skills/ untouched)
+ * Human-review and promotion state of a KEEP candidate:
+ *  - "staged":   PROMOTED-PENDING.md awaits a Decide review
+ *  - "approved": Decide approved the candidate for the separate Promote gate
+ *  - "rejected": Decide rejected the candidate; skills/ remains untouched
  *  - "promoted": updateCurrentBest ran (backup exists), SKILL.md was updated
  *  - "unknown":  KEEP with neither marker (should not happen; stay honest)
  */
-export function promotionState(skill: string, iteration: string): string {
-  if (fs.existsSync(path.join(candidatesRoot(), skill, iteration, "PROMOTED-PENDING.md"))) return "staged";
-  if (fs.existsSync(path.join(historyRoot(), skill, `iteration-${iteration}`, "current-best-before.md"))) return "promoted";
+export function classifyPromotionState(input: {
+  pending: boolean;
+  promoted: boolean;
+  reviewDecision: unknown;
+}): string {
+  if (input.promoted) return "promoted";
+  if (input.pending && input.reviewDecision === "approve") return "approved";
+  if (input.pending && input.reviewDecision === "reject") return "rejected";
+  if (input.pending) return "staged";
   return "unknown";
+}
+
+export function promotionState(skill: string, iteration: string): string {
+  const candidateDir = path.join(candidatesRoot(), skill, iteration);
+  const review = readJsonOrNull(path.join(candidateDir, "candidate-review.json"));
+  return classifyPromotionState({
+    pending: fs.existsSync(path.join(candidateDir, "PROMOTED-PENDING.md")),
+    promoted: fs.existsSync(path.join(historyRoot(), skill, `iteration-${iteration}`, "current-best-before.md")),
+    reviewDecision: review?.decision,
+  });
 }
 
 /** A non-terminal journal older than this is stalled, not running. */
@@ -93,30 +111,91 @@ export function journalFor(skill: string, iteration: string): Array<Record<strin
   return readJsonl(path.join(resultsRoot(), skill, iteration, "journal.jsonl"));
 }
 
-export function iterationSummary(skill: string, iteration: string, runningMaxAgeSeconds: number): Record<string, any> {
-  const decision = readJsonOrNull(path.join(resultsRoot(), skill, iteration, "decision.json")) ?? {};
-  const scores = parseScores(path.join(resultsRoot(), skill, iteration, "summary.md"));
-  const journal = journalFor(skill, iteration);
-  const started = journal.find((e) => e.event === "iteration_started")?.timestamp_utc ?? null;
-  const finished = [...journal].reverse().find((e) => e.event === "iteration_completed")?.timestamp_utc ?? null;
-  const counts = decision.counts ?? {};
+/**
+ * A baseline can be retried in place, so its journal may contain several
+ * attempts. Only events after the latest start describe the current state.
+ * Candidate iterations are immutable in normal operation, but applying the
+ * same rule there also makes interrupted/retried development runs honest.
+ */
+export function currentJournalAttempt(
+  iteration: string,
+  journal: Array<Record<string, any>>,
+): Array<Record<string, any>> {
+  const startEvent = iteration === "baseline" ? "baseline_check_started" : "iteration_started";
+  for (let index = journal.length - 1; index >= 0; index -= 1) {
+    if (journal[index]?.event === startEvent) return journal.slice(index);
+  }
+  return journal;
+}
+
+function eventError(event: Record<string, any> | undefined): string | null {
+  if (!event) return null;
+  if (typeof event.error === "string" && event.error.trim()) return event.error.trim();
+  if (event.result && typeof event.result.error === "string" && event.result.error.trim()) {
+    return event.result.error.trim();
+  }
+  return null;
+}
+
+/** Pure journal-to-lifecycle projection shared by the API and regression tests. */
+export function journalLifecycle(
+  iteration: string,
+  journalIn: Array<Record<string, any>>,
+  runningMaxAgeSeconds: number,
+): Record<string, any> {
+  const journal = currentJournalAttempt(iteration, journalIn);
+  const started =
+    journal.find((e) => e.event === (iteration === "baseline" ? "baseline_check_started" : "iteration_started"))
+      ?.timestamp_utc ?? null;
+  const failedEvent = [...journal]
+    .reverse()
+    .find((e) => e.event === "iteration_failed" || String(e.event ?? "").endsWith("_failed"));
+  const completedEvent = [...journal]
+    .reverse()
+    .find(
+      (e) =>
+        e.event === "iteration_completed" ||
+        e.event === "baseline_check_completed" ||
+        e.event === "baseline_browser_eval_completed",
+    );
   const events = new Set(journal.map((e) => e.event));
 
   let status: string;
-  if (iteration === "baseline") status = "baseline";
-  else if (events.has("iteration_completed")) status = "completed";
-  else if (events.has("iteration_failed")) status = "failed";
+  if (failedEvent) status = "failed";
+  else if (
+    iteration === "baseline" &&
+    (events.has("baseline_check_completed") || events.has("baseline_browser_eval_completed"))
+  ) {
+    status = "baseline";
+  } else if (events.has("iteration_completed")) status = "completed";
   else if (journal.length) {
     status = isFresh(journal[journal.length - 1]?.timestamp_utc, runningMaxAgeSeconds) ? "running" : "stalled";
   } else status = "empty";
 
-  const failedStep = [...journal].reverse().find((e) => e.event === "iteration_failed")?.step ?? null;
+  return {
+    journal,
+    status,
+    started_utc: started,
+    finished_utc: (failedEvent ?? completedEvent)?.timestamp_utc ?? null,
+    failed_step:
+      failedEvent?.step ??
+      (typeof failedEvent?.event === "string" ? failedEvent.event.replace(/_failed$/, "") : null),
+    error: eventError(failedEvent),
+  };
+}
+
+export function iterationSummary(skill: string, iteration: string, runningMaxAgeSeconds: number): Record<string, any> {
+  const decision = readJsonOrNull(path.join(resultsRoot(), skill, iteration, "decision.json")) ?? {};
+  const scores = parseScores(path.join(resultsRoot(), skill, iteration, "summary.md"));
+  const lifecycle = journalLifecycle(iteration, journalFor(skill, iteration), runningMaxAgeSeconds);
+  const counts = decision.counts ?? {};
 
   return {
     iteration,
     is_baseline: iteration === "baseline",
-    status,
-    failed_step: failedStep,
+    status: lifecycle.status,
+    failed_step: lifecycle.failed_step,
+    error: lifecycle.error,
     decision: decision.decision ?? null,
     rule_fired: decision.rule_fired ?? null,
     rationale: decision.rationale ?? null,
@@ -129,8 +208,8 @@ export function iterationSummary(skill: string, iteration: string, runningMaxAge
       check_failures: counts.check_failures ?? 0,
     },
     scores,
-    started_utc: started,
-    finished_utc: finished,
+    started_utc: lifecycle.started_utc,
+    finished_utc: lifecycle.finished_utc,
     has_runs: fs.existsSync(path.join(runsRoot(), skill, iteration)),
   };
 }
@@ -157,7 +236,14 @@ function scenarioDetail(skill: string, iteration: string, scenarioDir: string): 
   const dirname = path.basename(scenarioDir);
   const [scenarioId, label] = scenarioLabel(dirname);
   const verdicts = readJsonOrNull(path.join(scenarioDir, "judge-verdicts.json")) ?? {};
-  const baselineBundle = path.join(runsRoot(), skill, "baseline", dirname);
+  // Same id-prefix fallback as evaluation/baselines.ts resolveBundleDir: a
+  // bundle rendered under an older scenario name still resolves after a rename.
+  let baselineBundle = path.join(runsRoot(), skill, "baseline", dirname);
+  if (!fs.existsSync(baselineBundle)) {
+    const base = path.join(runsRoot(), skill, "baseline");
+    const fallback = listDirs(base).find((name) => name.startsWith(`${scenarioId}-`));
+    if (fallback) baselineBundle = path.join(base, fallback);
+  }
   return {
     scenario_id: scenarioId,
     label,
@@ -186,7 +272,7 @@ export function iterationDetail(skill: string, iteration: string, runningMaxAgeS
     if (name.startsWith("eval-")) scenarios.push(scenarioDetail(skill, iteration, path.join(runsDir, name)));
   }
   summary.scenarios = scenarios;
-  summary.journal = journalFor(skill, iteration);
+  summary.journal = currentJournalAttempt(iteration, journalFor(skill, iteration));
   // Proposer seed provenance: was this candidate seeded by a human-confirmed
   // scorecard focus (explicit decision path), or machine-initiated?
   const proposerMeta = readJsonOrNull(path.join(candidatesRoot(), skill, iteration, "proposer-metadata.json"));
@@ -220,7 +306,7 @@ export function skillOverview(skill: string, runningMaxAgeSeconds: number): Reco
     kept,
     rejected,
     latest,
-    running: nonBaseline.some((h) => h.status === "running"),
+    running: history.some((h) => h.status === "running"),
     history,
     skill_md: skillMdMeta(skill),
   };
@@ -236,7 +322,15 @@ export function listSkills(runningMaxAgeSeconds: number): Array<Record<string, a
 // ---------------------------------------------------------------------------
 // live-run detection (disk-level signal)
 // ---------------------------------------------------------------------------
-const TERMINAL_EVENTS = new Set(["iteration_completed", "iteration_failed", "baseline_check_completed"]);
+const TERMINAL_EVENTS = new Set([
+  "iteration_completed",
+  "iteration_failed",
+  "baseline_check_completed",
+  "baseline_check_failed",
+  "baseline_generation_failed",
+  "baseline_browser_eval_completed",
+  "baseline_browser_eval_failed",
+]);
 
 export function activeRuns(): Array<Record<string, any>> {
   const live: Array<Record<string, any>> = [];

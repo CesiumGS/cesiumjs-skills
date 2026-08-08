@@ -1,7 +1,8 @@
 # Skill Evaluation Console
 
-**One console for the whole CesiumJS skill-quality lifecycle** (evaluate → review →
-optimize → decide → promote) in a single, keyboard-first, dark-by-default surface.
+**One console for the whole CesiumJS skill-quality lifecycle** (run → evaluate →
+review → optimize → decide → promote) in a single, keyboard-first,
+dark-by-default surface.
 
 Skill Evaluation Console is a ground-up redesign that unifies what used to live in three separate,
 weaker tools (legacy `audit-viewer`, `evaluation-review`, and the static
@@ -16,14 +17,14 @@ so the lifecycle is one continuous journey instead of a tab switch:
 
 | Station | What you do |
 |---|---|
-| **1 Evaluate** | Land on the run's health: verdict **with its gates named** (deterministic ▣ vs visual ◈), score-vs-threshold bar, Δ vs the **comparison baseline**, changed-vs-baseline drill cards (regressed / fixed / still failing / new / removed / incomplete → the exact cases), and a **provenance & reproduce** card. |
-| **2 Review** | Worst-first triage. The machine pre-graded everything; agreeing is a keystroke (`j`). The render is the hero when present; the deterministic **check ledger** is the hero when it is not. `f` flags a case straight into the focus set that seeds optimization. |
-| **3 Optimize** | Watch the self-optimization loop per skill: a git-style iteration commit log, the pipeline train driven 1:1 by the real journal (red on `step_failed`), the per-scenario WIN/LOSS/TIE board, plus each iteration's **recorded codegen provenance** (harness / model / effort, or an honest "unrecorded"). |
-| **4 Decide** | Candidate-vs-baseline **visual diff** (swipe `x` / blink `X`), the lit 5-rule decision cascade, and the three de-aliased judges. |
-| **5 Promote** | The guarded hand-off of a KEEP candidate to the live `SKILL.md`. |
-| **6 Models** | Its own **Insights** rail station beside the lifecycle. KPI tiles (models available and exercised, pipeline default, best qualified win rate, iterations), the observed model-performance table (keep rate, win rate ± σ stability, average wall clock, recency, drill into Optimize), the per-skill optimization trend, and the declared model catalog per harness: grouped by vendor and sorted newest-release-first, with effort-aware cost meters, per-harness vision truth (a single banner carries the provider kill-switch), release dates and context windows, an exercised/never-run filter, and an Observed column that joins each row back to the optimization evidence on disk. |
-| **8 Harnesses** | The second **Insights** station. KPI tiles (harness count, runs, pass rate, average score, multimodal coverage), registry capability cards, and the runs-by-harness leaderboard. |
-| **7 Live** | Real-time progress of eval runs **while they are still running** — and the place to **launch** one. The server tails each run's progress journal (`journal.jsonl` for optimization loops, `progress.jsonl` for baseline audits) and counts artifacts on disk, so the animated progress bar, phase pipeline, and per-case board reflect only what has verifiably happened — agent phases earn credit at completion, never by guess. The **Launch an Eval Run** panel mirrors the real `cesium-eval audit` flag surface, grouped by role: skills (`--skills`), a Code Generation group (`--codegen-harness` provenance stamp; the codegen model is recovered from each baseline's meta sidecar, since audit has no model flag), and a Visual Judging group (`--no-judge` toggle, `--judge-harness`, `--judge-model`, `--n-judges`), with visual judging **on by default** (deterministic-only is an explicit downgrade with a warning) and a live command preview of the exact CLI invocation. It then POSTs to the server which spawns `cesium-eval audit --journal` detached. The UI polls every 2.5 s while a run is active; the Dashboard grows a "happening now" banner, the top strip shows a live pill, and the rail badge pulses. When a run finishes, a toast fires and the console refreshes so it lands in Recent Runs automatically. Runs quiet for 30 min are demoted to "stalled". |
+| **1 Run** | Configure, launch, and watch evaluation studies. Progress comes from the audit journal and artifacts on disk, so the animated bar, phase pipeline, and case board advance only when work verifiably happens. |
+| **2 Evaluate** | Land on the run's health: verdict **with its gates named** (code ▣ vs visual ◈), score-vs-threshold bar, Δ vs the **comparison baseline**, changed-vs-baseline drill cards (regressed / fixed / still failing / new / removed / incomplete → the exact cases), and a **provenance & reproduce** card. |
+| **3 Review** | Worst-first triage. The machine pre-graded everything; agreeing is a keystroke (`j`). The render is the hero when present; the deterministic **check ledger** is the hero when it is not. Code Tests and Visual Tests share a keyboard-accessible resize divider. `f` flags a case for the bulk optimization handoff. |
+| **4 Optimize** | Start the transferred focus and watch the self-optimization workflow in its own live lane: dispatcher state, journal-driven progress, phase animation, a git-style iteration log, and the per-scenario WIN/LOSS/TIE board. |
+| **5 Decide** | Candidate-vs-baseline **visual diff** (swipe `x` / blink `X`), the lit 5-rule decision cascade, and the three de-aliased judges. |
+| **6 Promote** | The guarded hand-off of a KEEP candidate to the live `SKILL.md`. |
+| **7 Models** | Its own **Analyze** rail station beside the lifecycle. KPI tiles (models available and exercised, pipeline default, best qualified win rate, iterations), the observed model-performance table (keep rate, win rate ± σ stability, average wall clock, recency, drill into Optimize), the per-skill optimization trend, and the declared model catalog per harness. |
+| **8 Harnesses** | The second **Analyze** station. KPI tiles (harness count, runs, pass rate, average score, multimodal coverage), registry capability cards, and the runs-by-harness leaderboard. |
 
 ## The harness/model registry
 
@@ -31,7 +32,8 @@ so the lifecycle is one continuous journey instead of a tab switch:
 fide, data-only description of the agent-CLI
 harnesses: Codex CLI (OpenAI · ChatGPT subscription, fully multimodal) and
 OpenCode CLI (GitHub Copilot subscription, **text only**: the provider disables
-vision account-wide, so image-bearing calls re-route to Codex). Each entry
+vision account-wide, so image-bearing calls are unsupported and error — pick a
+vision-capable harness for screenshot judging). Each entry
 carries its model catalog with vendor, tier, a relative cost meter (Very low →
 Premium, effort-aware since reasoning bills as output tokens) backed by real
 per-M-token prices, native vision, effort levels, context window, and release
@@ -87,17 +89,41 @@ npm run build
 # From the repo root: serve a scorecard in the console
 node packages/eval/bin/cesium-eval.js serve \
   evaluation/artifacts/audits/full-merged-20260605T2000Z/scorecard.json \
-  --state-dir /tmp/eval-console-state --port 8933 --open
+  --state-dir /tmp/eval-console-state --open
+
+# Or serve an honest blank slate when this checkout has no runs yet
+node packages/eval/bin/cesium-eval.js serve
 ```
 
-The server binds `127.0.0.1:8933` by default. It reads the scorecard and the
-`optimization/` artifacts and serves screenshots only from inside the repository root.
+The server binds the host and port declared in this checkout's `eval.config.json`.
+With no scorecard argument it focuses the newest run on disk, or serves the
+zero-run state when the checkout is blank. The Vite development client rejects
+an API whose reported repository root does not match its own checkout, so two
+local checkouts cannot silently share evaluation data. The server reads the
+scorecard and `optimization/` artifacts and serves screenshots only from inside
+the repository root.
 
-Dev with hot reload: `npm run dev` (Vite at 127.0.0.1:5174, proxying `/api` to 8933).
+Dev with hot reload: `npm run dev` (Vite at 127.0.0.1:5174, proxying `/api` to the
+backend configured in `eval.config.json`, currently 127.0.0.1:8934).
+
+### Preparing visual baselines from a clean checkout
+
+Raw generated JavaScript and screenshots are intentionally Git-ignored, so a
+fresh checkout begins with 83 scenario manifests but no baseline evidence. In
+the Run station, **Prepare** first calls the canonical `optimize
+generate-baselines` implementation with the selected codegen agent, then renders
+those sources into `evaluation/artifacts/baselines`, the exact bundle root read
+by `audit`. Existing sources and screenshots are cached, so retrying resumes.
+
+Code generation requires working agent authentication. `CESIUM_ION_TOKEN` is
+optional for this baseline renderer; when absent, token-backed imagery or
+terrain will be incomplete, while scenarios with their own public imagery can
+still render. The full optimization browser runner requires a valid token and
+fails its launch preflight when one is unavailable.
 
 ## Launching runs & progress journals
 
-The Live station can start a baseline audit from the browser. `POST /api/live/launch`
+The Run station can start a baseline audit from the browser. `POST /api/live/launch`
 (`{"kind": "audit", "skills": [...], "judge": true, "n_judges": 3, "judge_harness": "opencode"}`)
 validates against the skills on disk (`GET /api/live/skills`), then spawns
 
@@ -129,18 +155,27 @@ required, and the terminal event tells you whether to collect the scorecard.
 
 ## The optimization bridge
 
-`f` (flag) in Review appends a case to the focus set. **Optimize** in the rail
-hands it off, and the server writes `focus.json` via `buildFocus`. Human-confirmed
-flags take precedence; when none exist, the rail can explicitly hand off the
-machine-suggested flags as a reviewable starting set:
+`f` (flag) in Review records a human-confirmed case for optimization. Machine
+auto-flags remain triage suggestions until the reviewer confirms them. The
+rail's bulk **Send N confirmed flags to Optimize** action writes `focus.json`
+via `buildFocus`; the server revalidates every selected key against the
+persisted human decisions before accepting the handoff. Optimize then exposes
+an explicit **Start optimization** action and a terminal fallback:
 
 ```bash
-node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --skills <auto>
+node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --skills <auto> --continue-on-failure
 ```
+
+A winning candidate is staged as `PROMOTED-PENDING.md`. Decide records a
+separate human `approve` or `reject` verdict in `candidate-review.json` without
+editing the live skill. Only an approved candidate appears as promotable in the
+console. Promote then archives the current skill, applies the candidate, and
+records `promotion.json`.
 
 ## Keyboard
 
-`1`–`7` stations (`7` = Live) · `j`/`k` move · `gg`/`G` ends · `a`/`f`/`d` accept/flag/defer ·
+`1`–`6` lifecycle (`Run`, `Evaluate`, `Review`, `Optimize`, `Decide`, `Promote`) ·
+`7` Models · `8` Harnesses · `j`/`k` move · `gg`/`G` ends · `a`/`f`/`d` accept/flag/defer ·
 `e` confirm+advance · `u` undo · `space` details · `z` lightbox · `[`/`]` shots/scenarios ·
 `x` swipe · `X` blink · `m` Skill × Category Matrix · `t` trends · `h` Run Browser · `b` set baseline (in the Run Browser) ·
 `⌘K` palette · `T` theme · `?` help · `Esc` close.
@@ -150,5 +185,9 @@ node packages/eval/bin/cesium-eval.js optimize all --from-focus <focus.json> --s
 | File | Purpose |
 |---|---|
 | `review-decisions.json` | Audit trail of grades + human overrides. |
-| `focus.json` | Confirmed-flag or explicit suggested-fallback focus set for `cesium-eval optimize all --from-focus`. |
+| `focus.json` | Human-confirmed Review flags for `cesium-eval optimize all --from-focus`. |
 | `optimization-handoff.json` | Human-readable hand-off summary. |
+
+Candidate-local state under `optimization/candidates/<skill>/<iteration>/`
+includes `PROMOTED-PENDING.md` and `candidate-review.json`; successful promotion
+is recorded beside the archived previous skill in `optimization/history/`.

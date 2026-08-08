@@ -1,21 +1,57 @@
 /** Shared subprocess plumbing for harness drivers. */
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
+import type { HarnessSpec } from "../config/types.js";
 
 /**
  * Secrets that must never reach an agent-CLI subprocess (API-key billing must
- * not silently replace subscription auth).
+ * not silently replace subscription auth). A harness whose registry entry
+ * DECLARES api-key billing (credential.env_passthrough) re-grants a var
+ * explicitly — deliberate is fine, silent is not.
  */
 export const DISALLOWED_ENV_VARS = ["OPENAI_API_KEY"] as const;
 
-export function cleanSubprocessEnv(): Record<string, string> {
+export function cleanSubprocessEnv(allow: string[] = []): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined) env[key] = value;
   }
-  for (const name of DISALLOWED_ENV_VARS) delete env[name];
+  for (const name of DISALLOWED_ENV_VARS) {
+    if (!allow.includes(name)) delete env[name];
+  }
   return env;
+}
+
+function expandHome(candidate: string): string {
+  return candidate.startsWith("~/") ? path.join(os.homedir(), candidate.slice(2)) : candidate;
+}
+
+/**
+ * Resolve a harness binary: registry-declared absolute candidates first
+ * (install scripts often wire PATH via .zshrc, invisible to non-interactive
+ * shells), then PATH lookup. Throws HarnessNotFoundError with install help.
+ */
+export function resolveBinary(spec: HarnessSpec): string {
+  for (const candidate of spec.binary_candidates ?? []) {
+    const expanded = expandHome(candidate);
+    try {
+      fs.accessSync(expanded, fs.constants.X_OK);
+      return expanded;
+    } catch {
+      // keep looking
+    }
+  }
+  const binary = which(spec.binary);
+  if (!binary) {
+    throw new HarnessNotFoundError(
+      `'${spec.binary}' CLI not found on PATH` +
+        (spec.binary_candidates?.length ? ` (also tried: ${spec.binary_candidates.join(", ")})` : "") +
+        `. Install ${spec.name ?? spec.id} and authenticate (${spec.auth ?? "see registry"}).`,
+    );
+  }
+  return binary;
 }
 
 /** Wrap a system instruction + task into a single stdin prompt. */
@@ -55,6 +91,53 @@ export interface SubprocessOptions {
   cwd?: string;
   env?: Record<string, string>;
   maxBuffer?: number;
+  /**
+   * Called with each complete stdout line AS IT ARRIVES, before the process
+   * exits. This is what makes a live play-by-play possible: agent CLIs emit
+   * one JSON event per line for the whole turn, and waiting for exit throws
+   * away the timing that made them useful. The full stdout is still
+   * accumulated and returned, so end-of-run parsing is unaffected.
+   *
+   * A throwing callback must never take down the run — a formatting bug in the
+   * commentary is not a reason to fail an eval — so callers are invoked inside
+   * a try/catch here.
+   */
+  onStdoutLine?: (line: string) => void;
+  /** Same contract, for stderr (harnesses log rate-limit/retry notices there). */
+  onStderrLine?: (line: string) => void;
+}
+
+/**
+ * Feed a chunked stream to a per-line sink. Chunk boundaries fall anywhere,
+ * including mid-JSON-object, so a naive split-per-chunk would hand the parser
+ * fragments; the remainder is held until its newline arrives.
+ */
+function lineSink(sink: (line: string) => void): { push(chunk: string): void; flush(): void } {
+  let pending = "";
+  const deliver = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    try {
+      sink(trimmed);
+    } catch {
+      // Commentary is best-effort; never let it fail the call.
+    }
+  };
+  return {
+    push(chunk: string) {
+      pending += chunk;
+      let index = pending.indexOf("\n");
+      while (index >= 0) {
+        deliver(pending.slice(0, index));
+        pending = pending.slice(index + 1);
+        index = pending.indexOf("\n");
+      }
+    },
+    flush() {
+      deliver(pending);
+      pending = "";
+    },
+  };
 }
 
 export interface SubprocessResult {
@@ -86,14 +169,18 @@ export function runSubprocess(binary: string, argv: string[], options: Subproces
       () => fail(new Error(`subprocess timed out after ${Math.round(options.timeoutMs / 1000)}s: ${binary}`)),
       options.timeoutMs,
     );
+    const stdoutLines = options.onStdoutLine ? lineSink(options.onStdoutLine) : null;
+    const stderrLines = options.onStderrLine ? lineSink(options.onStderrLine) : null;
     child.stdout.setEncoding("utf-8");
     child.stderr.setEncoding("utf-8");
     child.stdout.on("data", (chunk: string) => {
       stdout += chunk;
+      stdoutLines?.push(chunk);
       if (stdout.length > limit) fail(new Error(`subprocess stdout exceeded ${limit} bytes: ${binary}`));
     });
     child.stderr.on("data", (chunk: string) => {
       stderr += chunk;
+      stderrLines?.push(chunk);
       if (stderr.length > limit) fail(new Error(`subprocess stderr exceeded ${limit} bytes: ${binary}`));
     });
     child.on("error", fail);
@@ -101,6 +188,10 @@ export function runSubprocess(binary: string, argv: string[], options: Subproces
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      // A harness that exits without a trailing newline still has one event
+      // worth reporting — usually the terminal one that explains the exit.
+      stdoutLines?.flush();
+      stderrLines?.flush();
       resolve({ status: code, stdout, stderr });
     });
     if (options.input !== undefined) child.stdin.write(options.input);

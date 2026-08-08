@@ -1,0 +1,24 @@
+name: Set up GitHub Copilot harness
+description: Install the pinned GitHub Copilot CLI used by protected live-evaluation jobs
+
+# Authentication is intentionally not an action input. The calling workflow
+# releases COPILOT_GITHUB_TOKEN only to the individual steps that make model
+# requests, after the copilot-inference Environment has been approved. Keeping
+# the install step credential-free also prevents npm lifecycle code from seeing
+# the token.
+
+runs:
+  using: composite
+  steps:
+    - name: Install pinned GitHub Copilot CLI
+      shell: bash
+      run: |
+        set -euo pipefail
+        version=1.0.78
+        npm install --global "@github/copilot@${version}"
+        actual="$(copilot --version 2>&1 | sed -nE 's/^GitHub Copilot CLI ([0-9]+\.[0-9]+\.[0-9]+)\..*/\1/p' | head -n 1)"
+        if [ "$actual" != "$version" ]; then
+          echo "::error title=Unexpected Copilot version::expected ${version}; got ${actual:-unparseable}"
+          exit 1
+        fi
+        echo "GitHub Copilot CLI ${actual} installed"

@@ -1,6 +1,11 @@
 // ---- Raw scorecard shapes (as produced by the eval harness; two modes, see DESIGN-SPEC §0) ----
 export type GateResult = "pass" | "fail";
 
+/** Run-level verdict. "incomplete" = Code Tests passed but Visual Tests were
+ * requested and never actually ran (no baseline screenshots to judge). It is
+ * neither a green pass nor a red failure and must render as its own state. */
+export type OverallResult = "pass" | "fail" | "incomplete";
+
 // The codegen harness a run was produced with (the "tested with" id). Mirrors the
 // shared harness registry, plus the first-class "unknown" bucket for legacy
 // fieldless runs. Widened so a new harness name still types.
@@ -105,7 +110,7 @@ export interface RawScorecard {
   run_id: string;
   timestamp_utc: string;
   git_commit: string;
-  overall_result: GateResult;
+  overall_result: OverallResult;
   deterministic_result: GateResult;
   overall_score: number; // 0-1
   threshold: number;
@@ -161,7 +166,7 @@ export interface AdaptedScorecard {
   runId: string;
   gitCommit: string;
   timestampUtc: string;
-  overallResult: GateResult;
+  overallResult: OverallResult;
   deterministicResult: GateResult;
   overallScore: number;
   threshold: number;
@@ -202,14 +207,14 @@ export interface ReviewDecisionDoc {
 // ---- Server DTOs ----
 export interface ConfigDTO {
   repo_root: string;
-  scorecard_path: string;
-  review_decisions_path: string;
-  optimization_handoff_path: string;
-  focus_path: string;
-  run_id: string;
-  harness?: string;        // server-resolved codegen harness (sole inference site)
-  harness_judge?: string;  // qualitative-judge harness, for provenance disclosure
-  source?: "agent" | "fixtures" | "mixed"; // evidence source of the loaded run
+  scorecard_path: string | null;
+  review_decisions_path: string | null;
+  optimization_handoff_path: string | null;
+  focus_path: string | null;
+  run_id: string | null;
+  harness?: string | null;        // server-resolved codegen harness (sole inference site)
+  harness_judge?: string | null;  // qualitative-judge harness, for provenance disclosure
+  source?: "agent" | "fixtures" | "mixed" | null; // evidence source of the loaded run
 }
 
 export interface RunSummary {
@@ -297,7 +302,8 @@ export interface CaseView extends AdaptedCase {
 // ============================================================================
 // Skill Evaluation Console — optimization-lifecycle shapes (mirror packages/eval/src/console/optimizationData.ts)
 // ============================================================================
-export type LoopDecision = "KEEP" | "REJECT" | null;
+/** KEEP is an explicit candidate win; TIE retains the existing current best. */
+export type LoopDecision = "KEEP" | "REJECT" | "TIE" | null;
 export type IterationStatus = "baseline" | "completed" | "failed" | "running" | "stalled" | "empty";
 export type ScenarioVerdict = "CANDIDATE" | "BASELINE" | "TIE" | null; // WIN / LOSS / TIE
 
@@ -343,11 +349,13 @@ export interface IterationSummary {
   is_baseline: boolean;
   status: IterationStatus;
   failed_step: string | null;
+  /** Recorded terminal failure from the current attempt, when present. */
+  error?: string | null;
   decision: LoopDecision;
   rule_fired: string | null;
   rationale: string | null;
-  /** Post-promotion-gate state of a KEEP: staged (awaits human), promoted, or unknown. */
-  promotion?: "promoted" | "staged" | "unknown" | null;
+  /** Human-review and promotion state of a KEEP candidate. */
+  promotion?: "promoted" | "approved" | "rejected" | "staged" | "unknown" | null;
   counts: IterationCounts;
   scores: IterationScores;
   started_utc: string | null;
@@ -470,12 +478,28 @@ export interface LiveRun {
   journal_tail: JournalEvent[];
 }
 
+/** Detached Optimize dispatcher. It can be alive briefly before (and between)
+ * individual iteration journals, so it is tracked separately from LiveRun. */
+export interface OptimizationLaunchRecord {
+  launch_id: string;
+  kind: "optimization";
+  pid: number;
+  skills: string[];
+  concurrency: number;
+  focus_path: string;
+  command: string;
+  log: string;
+  output_dir: string;
+  started_utc: string;
+}
+
 export interface LiveStatusDTO {
   generated_at: string;
   running: boolean;
   poll_ms: number;
   max_age_s: number;
   active: LiveRun[];
+  optimization_launch: OptimizationLaunchRecord | null;
 }
 
 // ============================================================================
@@ -504,25 +528,141 @@ export interface HarnessSpec {
   id: string;
   name: string;
   binary: string;
+  /** Canonical provider id from the registry's providers[] (v2). */
   provider: string;
+  /** How calls are authed/billed: api_key | oauth_subscription | codex_subscription | broker_subscription | … */
+  credential_route?: string | null;
   provider_label: string;
   auth: string;
   multimodal: boolean;
   vision_note: string;
-  vision_fallback_to?: string;
-  vision_fallback_for?: string[];
   roles: string[];
   default_model: string;
   default_effort: string;
-  effort_mechanism: string;
+  effort_mechanism: string | null;
   catalog_source: string;
   catalog_as_of: string;
   defaults_source?: string;
   models: ModelSpec[];
+  /** Providers this harness can reach natively (registry v2). Models are only
+   * provided by providers, so choosing one scopes the model options. */
+  provider_support?: { native: string[]; native_note?: string; native_3p?: string[] };
+  quirks?: string[];
+  docs_url?: string;
+}
+
+// ---- harness health + binding probes (registry v2) ----
+
+export interface ProbeResultDTO {
+  probe_id: string;
+  harness: string;
+  /** Set when the probe ran through a protocol adapter. */
+  adapter?: { id: string; target: string; provider_id: string; model: string } | null;
+  requested: { model: string | null; variant: string | null };
+  verdict: "pass" | "pass_provider_unverified" | "fail_capability" | "attribution_mismatch" | "error";
+  latency_ms: number;
+  started_utc: string;
+  capability: { tool_use_asserted: boolean; error: string | null };
+  attribution: {
+    method: string | null;
+    observed: boolean;
+    provider: { value: string | null; raw: string | null; source: string };
+    model: { value: string | null; source: string };
+    credential_route: string | null;
+  };
+  binary: { path: string | null; version: string | null };
+}
+
+export interface HarnessHealthRow {
+  id: string;
+  name: string;
+  provider: string | null;
+  provider_label: string | null;
+  credential_route: string | null;
+  auth: string | null;
+  roles: string[];
+  multimodal: boolean;
+  vision_note: string | null;
+  default_model: string;
+  driver_registered: boolean;
+  available: boolean;
+  availability_error: string | null;
+  attribution_method: string | null;
+  attribution_observed_by_driver: boolean;
+  probe_timeout_ms: number | null;
+  quirks: string[];
+  docs_url: string | null;
+  last_probe: ProbeResultDTO | null;
+}
+
+export interface HarnessHealthDTO {
+  harnesses: HarnessHealthRow[];
+}
+
+// ---- protocol adapter (LiteLLM) ----
+
+export interface AdapterTargetDTO {
+  name: string;
+  provider_id: string;
+  model: string;
+  params?: Record<string, string>;
+  credential_env?: string;
+  /** true = credential present at launch; false = missing; null = adapter not running. */
+  credential_ready?: boolean | null;
+  /** Actionable remediation when the credential is missing. */
+  credential_hint?: string | null;
+}
+
+// ---- baseline screenshot coverage ----
+
+export interface SkillCoverageDTO {
+  skill: string;
+  cases: number;
+  /** Scenario JS already generated for the current-best baseline. */
+  generated: number;
+  screenshots: number;
+  /** Bundles holding every artifact the audit reads, not just a screenshot. */
+  auditable: number;
+  covered: boolean;
+}
+
+export interface BaselineCoverageDTO {
+  /** The root these counts were measured at — the one a launch will judge. */
+  root: string;
+  skills: SkillCoverageDTO[];
+  /** Live render activity: lets the console show rendering as work in
+   * progress instead of claiming nothing is running. */
+  rendering?: { active: boolean; skill: string | null };
+}
+
+export interface AdapterStatusDTO {
+  id: string;
+  display_name: string;
+  configured: boolean;
+  running: boolean;
+  healthy: boolean;
+  pid: number | null;
+  port: number;
+  version_pin: string;
+  targets: AdapterTargetDTO[];
+  advisory: string;
+}
+
+/** A canonical model provider: the entity that serves and bills a call.
+ * Models belong to providers, not harnesses — several harnesses can reach the
+ * same provider, which is why the catalog is keyed this way. */
+export interface ProviderSpec {
+  id: string;
+  display_name: string;
+  kind: "first_party" | "broker" | "aggregator" | "cloud_platform" | "local_runtime";
+  protocols_served: string[];
+  first_party_vendor?: string | null;
+  notes?: string[];
 }
 
 export interface RegistryDTO {
   schema_version: string;
+  providers?: ProviderSpec[];
   harnesses: HarnessSpec[];
 }
 

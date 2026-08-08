@@ -1,8 +1,9 @@
 /**
  * `cesium-eval serve` — the Skill Evaluation Console server: serves the built
  * console SPA plus the JSON API over the scorecard/optimization artifacts.
- * Artifacts stay the immutable source of truth; this server only reads them
- * and writes the human review state (review-decisions/focus/handoff).
+ * Artifacts stay the immutable source of truth; this server reads them, writes
+ * human review state (review-decisions/focus/handoff), and launches the same
+ * journaled evaluation/optimization CLI workflows exposed in the UI.
  */
 import * as fs from "node:fs";
 import * as http from "node:http";
@@ -11,10 +12,12 @@ import { URL } from "node:url";
 import { readJson, readJsonOrNull, stableStringify, writeJsonAtomic } from "../lib/json.js";
 import { fromRepoRoot, globFiles, isUnder, listDirs, repoRelative } from "../lib/paths.js";
 import { evidenceSource as classifyEvidenceSource, resolveCodegenProvenance } from "../evaluation/scorecard.js";
-import { buildFocus } from "../optimization/scorecardFocus.js";
+import { buildSelectionFocus } from "../optimization/scorecardFocus.js";
 import * as optimizationData from "../console/optimizationData.js";
 import * as insightsData from "../console/insightsData.js";
 import * as liveData from "../console/liveData.js";
+import * as harnessData from "../console/harnessData.js";
+import * as baselineData from "../console/baselineData.js";
 import type { EvalContext } from "../config/types.js";
 
 const scenariosRootDir = () => fromRepoRoot("optimization", "scenarios");
@@ -28,6 +31,15 @@ function knownScenarioSkills(): Set<string> {
 // ---------------------------------------------------------------------------
 // viewer context (focused run + review-state paths)
 // ---------------------------------------------------------------------------
+/**
+ * Review state under a `--state-dir` override lives in one per-run
+ * subdirectory. Both the initial boot and `/api/select-run` resolve through
+ * here, so a re-selected run always reads the grades it wrote.
+ */
+export function stateDirFor(override: string, runId: string): string {
+  return path.join(override, runId);
+}
+
 class ViewerState {
   scorecardPath: string;
   scorecard: Record<string, any>;
@@ -233,6 +245,20 @@ function skillsWithProvenance(ctx: EvalContext): Array<Record<string, any>> {
 // ---------------------------------------------------------------------------
 const caseKeyOf = (caseRow: Record<string, any>): string => `${caseRow.skill ?? ""}/${caseRow.case_id ?? ""}`;
 
+/** Only persisted, human-authored flags may cross the Review -> Optimize
+ * boundary. The server rechecks this instead of trusting browser labels. */
+export function confirmedHumanFlagKeys(reviewDoc: Record<string, any> | null, runId: string): Set<string> {
+  if (!reviewDoc || String(reviewDoc.run_id ?? "") !== runId) return new Set();
+  const confirmed = new Set<string>();
+  for (const decision of Object.values(reviewDoc.decisions ?? {}) as Array<Record<string, any>>) {
+    if (decision.decision !== "flag" || decision.source !== "human") continue;
+    const skill = String(decision.skill ?? "");
+    const caseId = String(decision.case_id ?? "");
+    if (skill && caseId) confirmed.add(`${skill}/${caseId}`);
+  }
+  return confirmed;
+}
+
 function restrictedScorecard(scorecard: Record<string, any>, confirmedKeys: Set<string>): Record<string, any> {
   const cases: Array<Record<string, any>> = [];
   for (const original of scorecard.cases ?? []) {
@@ -280,7 +306,7 @@ function restrictedScorecard(scorecard: Record<string, any>, confirmedKeys: Set<
 
 function buildFocusPayload(state: ViewerState, confirmedCaseKeys: string[]): Record<string, any> {
   const keys = new Set(confirmedCaseKeys.map(String));
-  const focus = buildFocus(restrictedScorecard(state.scorecard, keys));
+  const focus = buildSelectionFocus(restrictedScorecard(state.scorecard, keys));
   const surviving = new Set((focus.cases ?? []).map((c: any) => `${c.skill ?? ""}/${c.case_id ?? ""}`));
   const dropped = [...keys].filter((key) => !surviving.has(key)).sort();
   const known = knownScenarioSkills();
@@ -367,6 +393,7 @@ function buildHandoffDoc(state: ViewerState, focusPayload: Record<string, any>, 
 class NotFoundError extends Error {}
 class ForbiddenError extends Error {}
 class PayloadTooLargeError extends Error {}
+class ConflictError extends Error {}
 
 function resolveRepoArtifact(ctx: EvalContext, pathText: string): string {
   const resolved = path.isAbsolute(pathText) ? path.resolve(pathText) : path.resolve(ctx.repoRoot, pathText);
@@ -414,6 +441,7 @@ function sendError(res: http.ServerResponse, exc: unknown): void {
   if (exc instanceof NotFoundError) status = 404;
   else if (exc instanceof ForbiddenError) status = 403;
   else if (exc instanceof PayloadTooLargeError) status = 413;
+  else if (exc instanceof ConflictError) status = 409;
   else if (exc instanceof SyntaxError) status = 400;
   const error = exc instanceof Error ? exc : new Error(String(exc));
   sendJson(res, { error: error.message, type: error.constructor.name }, status);
@@ -447,7 +475,7 @@ async function readBody(req: http.IncomingMessage): Promise<any> {
 // serve command
 // ---------------------------------------------------------------------------
 export interface ServeOptions {
-  scorecard: string;
+  scorecard?: string;
   stateDir?: string;
   host?: string;
   port?: number;
@@ -456,7 +484,33 @@ export interface ServeOptions {
 
 export async function serveCommand(ctx: EvalContext, options: ServeOptions): Promise<number> {
   const stateDirOverride = options.stateDir ? path.resolve(options.stateDir) : null;
-  let state = new ViewerState(ctx, path.resolve(options.scorecard), stateDirOverride ?? undefined);
+  const initialScorecard =
+    options.scorecard !== undefined
+      ? path.resolve(options.scorecard)
+      : (listRuns(ctx)[0]?.scorecard_path as string | undefined);
+  let state: ViewerState | null = null;
+  if (initialScorecard) {
+    state = new ViewerState(ctx, initialScorecard);
+    if (stateDirOverride !== null) state.setStateDir(stateDirFor(stateDirOverride, state.runId));
+  }
+  const requireFocusedState = (): ViewerState => {
+    if (state === null) {
+      throw new ConflictError("no evaluation run is loaded; create or select a run first");
+    }
+    return state;
+  };
+  const config = (): Record<string, unknown> =>
+    state?.config() ?? {
+      repo_root: ctx.repoRoot,
+      scorecard_path: null,
+      review_decisions_path: null,
+      optimization_handoff_path: null,
+      focus_path: null,
+      run_id: null,
+      harness: null,
+      source: null,
+      harness_judge: null,
+    };
 
   const host = options.host ?? ctx.config.server.host;
   const port = options.port ?? ctx.config.server.port;
@@ -476,6 +530,21 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
     const hostHeader = req.headers.host ?? "";
     if (!allowedHostnames.has(hostnameOf(hostHeader))) {
       throw new ForbiddenError(`untrusted Host header: '${hostHeader}'`);
+    }
+    const claimedRoot = req.headers["x-cesium-skills-root"];
+    // realpath, not resolve: /tmp vs /private/tmp style symlink aliases are
+    // the same checkout and must not read as a mismatch.
+    const canonicalRoot = (value: string): string => {
+      try {
+        return fs.realpathSync(value);
+      } catch {
+        return path.resolve(value);
+      }
+    };
+    if (typeof claimedRoot === "string" && canonicalRoot(claimedRoot) !== canonicalRoot(ctx.repoRoot)) {
+      throw new ConflictError(
+        `checkout mismatch: client belongs to '${canonicalRoot(claimedRoot)}', server belongs to '${ctx.repoRoot}'`,
+      );
     }
     if (method !== "GET" && method !== "HEAD") {
       const origin = req.headers.origin;
@@ -502,14 +571,60 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
       rejectUntrusted(req, method);
 
       if (method === "GET") {
-        if (route === "/api/config") return sendJson(res, state.config());
-        if (route === "/api/scorecard") return sendJson(res, state.scorecard);
+        if (route === "/api/config") return sendJson(res, config());
+        if (route === "/api/scorecard") return sendJson(res, state?.scorecard ?? null);
         if (route === "/api/review-decisions") {
-          return sendJson(res, fs.existsSync(state.reviewDecisionsPath) ? readJson(state.reviewDecisionsPath) : null);
+          return sendJson(
+            res,
+            state !== null && fs.existsSync(state.reviewDecisionsPath) ? readJson(state.reviewDecisionsPath) : null,
+          );
+        }
+        if (route === "/api/optimization-handoff") {
+          if (
+            state === null ||
+            !fs.existsSync(state.optimizationHandoffPath) ||
+            !fs.existsSync(state.focusPath)
+          ) {
+            return sendJson(res, null);
+          }
+          const handoff = readJson(state.optimizationHandoffPath);
+          const focus = readJson(state.focusPath);
+          const skills = (handoff.skills ?? [])
+            .map((item: any) => String(item.skill ?? ""))
+            .filter(Boolean);
+          const caseKeys = (handoff.cases ?? [])
+            .map((item: any) => `${item.skill ?? ""}/${item.case_id ?? ""}`)
+            .filter((key: string) => !key.startsWith("/") && !key.endsWith("/"));
+          const storedMode = String(handoff.selection_mode ?? "confirmed_flags");
+          const selectionMode = ["confirmed_flags", "confirmed_and_suggested"].includes(storedMode)
+            ? storedMode
+            : "confirmed_flags";
+          return sendJson(res, {
+            handoff_path: state.optimizationHandoffPath,
+            focus_path: state.focusPath,
+            command: String(handoff.command ?? ""),
+            focus_preview: {
+              focus,
+              command: String(handoff.command ?? ""),
+              skills,
+              dropped: [],
+              case_count: caseKeys.length,
+              focus_path: state.focusPath,
+            },
+            selection_mode: selectionMode,
+            created_at: String(handoff.created_at ?? ""),
+            case_keys: caseKeys,
+          });
         }
         if (route === "/api/runs") return sendJson(res, listRuns(ctx));
         if (route === "/api/run-cases") return sendJson(res, runCases(ctx, url.searchParams.get("run_id") ?? ""));
         if (route === "/api/registry") return sendJson(res, insightsData.registry(ctx));
+        if (route === "/api/harnesses") return sendJson(res, harnessData.harnessHealth(ctx));
+        if (route === "/api/adapter") return sendJson(res, await harnessData.adapterStatus(ctx));
+        if (route === "/api/baselines") {
+          const skills = (url.searchParams.get("skills") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+          return sendJson(res, baselineData.baselineCoverage(ctx, skills.length ? skills : undefined));
+        }
         if (route === "/api/insights") return sendJson(res, insightsData.insights(ctx, listRuns(ctx)));
         if (route === "/api/artifact") {
           const pathValue = url.searchParams.get("path") ?? "";
@@ -562,23 +677,44 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
       if (method === "PUT" || method === "POST") {
         const payload = await readBody(req);
         if (route === "/api/review-decisions") {
-          writeJsonAtomic(state.reviewDecisionsPath, payload);
+          const focused = requireFocusedState();
+          writeJsonAtomic(focused.reviewDecisionsPath, payload);
           return sendJson(res, payload);
         }
         if (route === "/api/focus-preview") {
-          return sendJson(res, buildFocusPayload(state, [...(payload.confirmed_case_keys ?? [])]));
+          return sendJson(res, buildFocusPayload(requireFocusedState(), [...(payload.confirmed_case_keys ?? [])]));
         }
         if (route === "/api/optimization-handoff") {
+          const focused = requireFocusedState();
           const keys = [...(payload.confirmed_case_keys ?? [])];
           const selectionMode = String(payload.selection_mode ?? "confirmed_flags");
-          const result = buildFocusPayload(state, keys);
-          writeJsonAtomic(state.focusPath, result.focus);
-          writeJsonAtomic(state.optimizationHandoffPath, buildHandoffDoc(state, result, selectionMode));
+          if (selectionMode !== "confirmed_flags") {
+            throw new Error("optimization handoff requires selection_mode 'confirmed_flags'");
+          }
+          const reviewDoc = fs.existsSync(focused.reviewDecisionsPath)
+            ? readJson(focused.reviewDecisionsPath)
+            : null;
+          const confirmed = confirmedHumanFlagKeys(reviewDoc, focused.runId);
+          const unconfirmed = keys.filter((key: string) => !confirmed.has(String(key)));
+          if (unconfirmed.length) {
+            throw new ConflictError(
+              `handoff contains ${unconfirmed.length} case(s) without a persisted human flag: ${unconfirmed.join(", ")}`,
+            );
+          }
+          const result = buildFocusPayload(focused, keys);
+          const handoff = buildHandoffDoc(focused, result, selectionMode);
+          writeJsonAtomic(focused.focusPath, result.focus);
+          writeJsonAtomic(focused.optimizationHandoffPath, handoff);
           return sendJson(res, {
-            handoff_path: state.optimizationHandoffPath,
-            focus_path: state.focusPath,
+            handoff_path: focused.optimizationHandoffPath,
+            focus_path: focused.focusPath,
             command: result.command,
             focus_preview: result,
+            selection_mode: selectionMode,
+            created_at: handoff.created_at,
+            case_keys: (handoff.cases ?? []).map(
+              (item: Record<string, any>) => `${item.skill ?? ""}/${item.case_id ?? ""}`,
+            ),
           });
         }
         if (route === "/api/select-run") {
@@ -586,12 +722,119 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           const target = findRunScorecard(ctx, runId);
           if (target === null || !fs.existsSync(target)) throw new NotFoundError(`run not found: ${runId}`);
           const next = new ViewerState(ctx, target);
-          if (stateDirOverride !== null) next.setStateDir(path.join(stateDirOverride, next.runId));
+          if (stateDirOverride !== null) next.setStateDir(stateDirFor(stateDirOverride, next.runId));
           state = next;
-          return sendJson(res, state.config());
+          return sendJson(res, config());
         }
         if (route === "/api/live/launch") return sendJson(res, liveData.launchRun(ctx, payload));
+        if (route === "/api/adapter") return sendJson(res, await harnessData.adapterAction(ctx, payload));
+        if (route === "/api/baselines/render") {
+          // Synchronous: rendering a couple skills' baselines is ~seconds and
+          // the response carries the fresh coverage the launcher shows. One
+          // render at a time (409 on overlap).
+          try {
+            return sendJson(res, await baselineData.renderBaselines(ctx, payload));
+          } catch (exc) {
+            if (exc instanceof baselineData.RenderBusyError) throw new ConflictError(exc.message);
+            throw exc;
+          }
+        }
+        if (route === "/api/baselines/prepare") {
+          try {
+            return sendJson(res, await baselineData.prepareBaselines(ctx, payload));
+          } catch (exc) {
+            if (exc instanceof baselineData.RenderBusyError) throw new ConflictError(exc.message);
+            throw exc;
+          }
+        }
+        if (route === "/api/probe") {
+          // Synchronous by design: the response IS the probe result (2-40s
+          // per registry latencies; the UI shows per-row progress). Probes
+          // serialize globally — a second concurrent request gets a 409.
+          try {
+            return sendJson(res, await harnessData.probeHarness(ctx, payload));
+          } catch (exc) {
+            if (exc instanceof harnessData.ProbeBusyError) throw new ConflictError(exc.message);
+            throw exc;
+          }
+        }
         if (route === "/api/live/cancel") return sendJson(res, liveData.cancelRun(payload));
+        if (route === "/api/optimization/launch") {
+          const focused = requireFocusedState();
+          if (!fs.existsSync(focused.focusPath)) {
+            throw new ConflictError("no optimization focus exists; send flagged Review cases to Optimize first");
+          }
+          const liveStatus = liveData.liveStatus(ctx);
+          const alreadyRunning = Boolean(liveStatus.optimization_launch) || (liveStatus.active ?? []).some(
+            (run: any) => run.status === "running" && (run.kind === "iteration" || run.kind === "baseline"),
+          );
+          if (alreadyRunning) throw new ConflictError("an optimization workflow is already running");
+
+          const focus = readJson(focused.focusPath);
+          const known = knownScenarioSkills();
+          let skills: string[] = (focus.skills ?? [])
+            .map((item: any) => String(item.skill ?? ""))
+            .filter((skill: string) => known.has(skill));
+          if (!skills.length) {
+            skills = (focus.cases ?? [])
+              .map((item: any) => String(item.skill ?? ""))
+              .filter((skill: string) => known.has(skill));
+          }
+          skills = [...new Set(skills)].sort();
+          if (!skills.length) {
+            throw new ConflictError("the current focus contains no skills with optimization scenarios");
+          }
+          // An external --state-dir puts focus.json outside the repository,
+          // which the launch validation rightly refuses (the path becomes
+          // subprocess argv). Mirror it into the gitignored artifacts tree so
+          // the argv stays repo-contained.
+          let focusRel = repoRelative(focused.focusPath);
+          if (path.isAbsolute(focusRel)) {
+            const contained = fromRepoRoot("evaluation", "artifacts", "state", focused.runId, "focus.json");
+            fs.mkdirSync(path.dirname(contained), { recursive: true });
+            fs.copyFileSync(focused.focusPath, contained);
+            focusRel = repoRelative(contained);
+          }
+          try {
+            return sendJson(
+              res,
+              liveData.launchOptimization(ctx, {
+                focus_path: focusRel,
+                skills,
+                concurrency: payload.concurrency,
+              }),
+            );
+          } catch (exc) {
+            throw new ConflictError(exc instanceof Error ? exc.message : String(exc));
+          }
+        }
+        if (route === "/api/optimization/review") {
+          const skill = String(payload.skill ?? "");
+          const iteration = String(payload.iteration ?? "");
+          const decision = String(payload.decision ?? "");
+          if (!/^[a-z0-9-]+$/.test(skill) || !/^\d{3}$/.test(iteration)) {
+            throw new Error("candidate review requires a skill id and a NNN iteration id");
+          }
+          if (!["approve", "reject"].includes(decision)) {
+            throw new Error("candidate review decision must be 'approve' or 'reject'");
+          }
+          const candidateDir = fromRepoRoot("optimization", "candidates", skill, iteration);
+          const pending = path.join(candidateDir, "PROMOTED-PENDING.md");
+          if (!fs.existsSync(pending)) {
+            throw new NotFoundError(`no staged candidate for ${skill}/${iteration} to review`);
+          }
+          const review = {
+            schema_version: "1.0",
+            skill,
+            iteration,
+            decision,
+            source: "human",
+            via: "console",
+            reviewed_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+          };
+          writeJsonAtomic(path.join(candidateDir, "candidate-review.json"), review);
+          return sendJson(res, { ok: true, ...review });
+        }
         if (route === "/api/optimization/promote") {
           // The human promotion gate: only a candidate the loop explicitly
           // staged (PROMOTED-PENDING.md) can be applied, and the approval is
@@ -604,6 +847,12 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
           const pending = fromRepoRoot("optimization", "candidates", skill, iteration, "PROMOTED-PENDING.md");
           if (!fs.existsSync(pending)) {
             throw new NotFoundError(`no staged candidate for ${skill}/${iteration} — nothing awaits promotion`);
+          }
+          const review = readJsonOrNull(
+            fromRepoRoot("optimization", "candidates", skill, iteration, "candidate-review.json"),
+          );
+          if (review?.decision !== "approve" || review?.source !== "human") {
+            throw new ConflictError(`candidate ${skill}/${iteration} has not been approved in Decide`);
           }
           const { promoteCommand } = await import("./optimize.js");
           const code = await promoteCommand({ skill, iteration, via: "console" });
@@ -627,9 +876,13 @@ export async function serveCommand(ctx: EvalContext, options: ServeOptions): Pro
   });
   const boundPort = (server.address() as { port: number }).port;
   const url = `http://${host}:${boundPort}/`;
-  console.log(`Skill Evaluation Console serving ${state.scorecardPath}`);
-  console.log(`Review grades:      ${state.reviewDecisionsPath}`);
-  console.log(`Optimization focus: ${state.focusPath}`);
+  if (state) {
+    console.log(`Skill Evaluation Console serving ${state.scorecardPath}`);
+    console.log(`Review grades:      ${state.reviewDecisionsPath}`);
+    console.log(`Optimization focus: ${state.focusPath}`);
+  } else {
+    console.log(`Skill Evaluation Console serving ${ctx.repoRoot} (no runs on disk)`);
+  }
   console.log(url);
   if (options.open) {
     const { exec } = await import("node:child_process");

@@ -17,6 +17,7 @@
 
 * [[Run Skill Evaluations Locally|Run-Skill-Evaluations-Locally]]
 * [[Add an Evaluation Scenario|Add-Evaluation-Scenario]]
+* [[Configure the Required Skill Eval Gate|Configure-Skill-Eval-Gate]]
 
 ## Architecture Decision Records
 
@@ -26,6 +27,7 @@
 * [[ADR-0004: Browser Visual Evaluation|ADR-0004-Browser-Visual-Evaluation]]
 * [[ADR-0005: CI Trigger Policy|ADR-0005-CI-Trigger-Policy]]
 * [[ADR-0006: Public Artifact Policy|ADR-0006-Public-Artifact-Policy]]
+* [[ADR-0007: Skill Change Evaluation|ADR-0007-Skill-Change-Evaluation]]
 
 ## Repository
 

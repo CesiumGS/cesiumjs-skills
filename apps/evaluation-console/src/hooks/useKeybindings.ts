@@ -4,13 +4,13 @@ import type { Station } from "../types";
 
 const STATION_BY_DIGIT: Record<string, Station> = {
   "0": "dashboard",
-  "1": "evaluate",
-  "2": "review",
-  "3": "optimize",
-  "4": "decide",
-  "5": "promote",
-  "6": "models",
-  "7": "live",
+  "1": "live",
+  "2": "evaluate",
+  "3": "review",
+  "4": "optimize",
+  "5": "decide",
+  "6": "promote",
+  "7": "models",
   "8": "harnesses"
 };
 
@@ -26,7 +26,7 @@ function isTyping(el: EventTarget | null): boolean {
 /** The j/k spine: same keys, station-aware target (cases / skills / scenarios). */
 function streamMove(s: Store, delta: number): void {
   if (s.station === "optimize") {
-    const list = s.skills;
+    const list = s.optimizationQueue;
     if (list.length === 0) return;
     const idx = list.findIndex((x) => x.skill === s.selectedSkill);
     const next = list[Math.max(0, Math.min(list.length - 1, (idx < 0 ? 0 : idx) + delta))];

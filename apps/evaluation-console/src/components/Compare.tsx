@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { ChevronDown, ChevronRight, Eye, EyeOff, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, Eye, EyeOff } from "lucide-react";
 import { useStore } from "../store";
 import {
   fmtDuration,
@@ -457,7 +457,7 @@ export function Combos() {
               <th scope="col">Iterations</th>
               <th scope="col" title="KEEP decisions over decided iterations.">Keep Rate</th>
               <th scope="col" title="Scenario wins, losses, and ties against the running baseline.">W / L / T</th>
-              <th scope="col" title="Visual win rate W/(W+L), with per-iteration stability.">Win Rate · Stability</th>
+              <th scope="col" title="Visual Test win rate W/(W+L), with per-iteration stability.">Win Rate · Stability</th>
               <th scope="col">Avg Time</th>
               <th scope="col">Skills</th>
               <th scope="col" title="Most recent time this combo generated code or was evaluated by a run.">Last Active</th>
@@ -628,7 +628,7 @@ export function RunTrend() {
     <div className="dash-card">
       <div className="section-title">
         Run Score Trend
-        <span className="section-sub">▣ Deterministic checks score per run (y) across runs (x). Dot color is the run result.</span>
+        <span className="section-sub">▣ Code Test score per run (y) across runs (x). Dot color is the run result.</span>
         <span className="spacer" />
         <div className="axis-toggle" role="tablist" aria-label="X axis">
           <button
@@ -673,8 +673,8 @@ export function RunTrend() {
                   type="button"
                   className={`chart-pt ${r.overall_result === "pass" ? "pass" : "fail"}${loaded ? " loaded" : ""}`}
                   style={{ left: `${X(r, i)}%`, top: `${Y(r.overall_score as number)}%` }}
-                  title={`${r.run_id}\nchecks ${pct}% · ${r.overall_result} · ${r.total_cases} cases\n${r.timestamp_utc.slice(0, 16).replace("T", " ")} UTC · ${r.git_commit.slice(0, 7)}\nClick to focus this run.`}
-                  aria-label={`${r.run_id}: checks ${pct}%, run ${r.overall_result}. Click to focus this run.`}
+                  title={`${r.run_id}\nCode Tests ${pct}% · ${r.overall_result} · ${r.total_cases} cases\n${r.timestamp_utc.slice(0, 16).replace("T", " ")} UTC · ${r.git_commit.slice(0, 7)}\nClick to focus this run.`}
+                  aria-label={`${r.run_id}: Code Tests ${pct}%, run ${r.overall_result}. Click to focus this run.`}
                   onClick={() => void switchRun(r.run_id)}
                 />
               );
@@ -746,7 +746,7 @@ export function SkillTrend() {
       <div className="dash-card">
         <div className="section-title">
           Skill Optimization Trend
-          <span className="section-sub">Visual win rate per iteration for one skill.</span>
+          <span className="section-sub">Visual Test win rate per iteration for one skill.</span>
         </div>
         <div className="empty-note">No optimized skill yet. Run the loop to grow a trend.</div>
       </div>
@@ -789,7 +789,7 @@ export function SkillTrend() {
       <div className="section-title">
         Skill Optimization Trend
         <span className="section-sub">
-          ▣ Visual win rate W/(W+L) per iteration (y) across the loop (x). Gaps mean the judges did not score.
+          ▣ Visual Test win rate W/(W+L) per iteration (y) across the loop (x). Gaps mean Visual Tests were not run.
         </span>
         <span className="spacer" />
         <label className="baseline-pick">
@@ -829,7 +829,7 @@ export function SkillTrend() {
                   key={p.i}
                   className="chart-pt none"
                   style={{ left: `${X(p.i)}%`, top: `${Y(0)}%` }}
-                  title={`#${p.it.iteration}: not scored by the judges (no wins or losses); a gap, not a zero.`}
+                  title={`#${p.it.iteration}: Visual Tests were not run (no wins or losses); a gap, not a zero.`}
                 />
               ) : (
                 <span
@@ -913,6 +913,50 @@ function evidenceKey(spec: HarnessSpec, m: ModelSpec): string {
   return `${spec.id}|${modelShort(m.id)}`;
 }
 
+/* ---------------------------------------------------------------------------
+   PROVIDER-KEYED CATALOG. A model belongs to the provider that serves it, so
+   the catalog is purely provider-organized: one row per (provider, model).
+   Harnesses are a launch-time concern and appear nowhere in this view; the
+   registry's per-harness catalogs are only the raw ingredient this collapses.
+   --------------------------------------------------------------------------- */
+
+interface CatalogRow {
+  key: string;
+  model: ModelSpec;
+  observed: CatalogEvidence | null;
+}
+
+/** Collapse the registry's per-harness catalogs into unique (provider, model)
+ * rows, merging observed evidence across every route that exercised a model. */
+function buildProviderCatalog(harnesses: HarnessSpec[], evidence: Map<string, CatalogEvidence>) {
+  const rows = new Map<string, CatalogRow>();
+  for (const harness of harnesses) {
+    for (const model of harness.models) {
+      const key = `${harness.provider}|${modelShort(model.id)}`;
+      let row = rows.get(key);
+      if (!row) {
+        row = { key, model, observed: null };
+        rows.set(key, row);
+      }
+      // Richer metadata wins: catalogs disagree on how much they fill in.
+      if ((model.notes ?? "").length > (row.model.notes ?? "").length) row.model = model;
+      const seen = evidence.get(evidenceKey(harness, model));
+      if (seen) {
+        const merged = row.observed ?? { iterations: 0, lastActive: null };
+        merged.iterations += seen.iterations;
+        if (seen.lastActive && (!merged.lastActive || seen.lastActive > merged.lastActive)) merged.lastActive = seen.lastActive;
+        row.observed = merged;
+      }
+    }
+  }
+  const byProvider = new Map<string, CatalogRow[]>();
+  for (const row of rows.values()) {
+    const providerId = row.key.split("|")[0];
+    (byProvider.get(providerId) ?? byProvider.set(providerId, []).get(providerId)!).push(row);
+  }
+  return byProvider;
+}
+
 const VENDOR_ORDER = ["OpenAI", "Anthropic", "Google", "Microsoft"];
 
 function vendorRank(vendor: string | null): number {
@@ -944,26 +988,21 @@ function EffortRange({ levels }: { levels: string[] }) {
   );
 }
 
-/** One cell, three truths: effective vision, natively capable but provider-blocked, or text-only. */
-function CatalogVisionCell({ spec, m }: { spec: HarnessSpec; m: ModelSpec }) {
+/** Vision here is a MODEL attribute, nothing more: capable, text-only, or
+ * unknown. Route-level concerns live where launches happen, not in a catalog. */
+function CatalogVisionCell({ row }: { row: CatalogRow }) {
+  const m = row.model;
   if (m.native_vision === null) return <UnknownChip small />;
   if (!m.native_vision) {
     return (
-      <span className="mono catalog-novision" title="Natively text-only: the model itself accepts no images.">
+      <span className="mono catalog-novision" title="Text-only: this model accepts no images.">
         —
       </span>
     );
   }
-  if (spec.multimodal) {
-    return (
-      <span className="vision-cell on" title="Accepts image input, and this harness passes it through.">
-        <Eye size={13} aria-label="Vision available here" />
-      </span>
-    );
-  }
   return (
-    <span className="vision-cell blocked" title={`Natively vision-capable, but blocked on this harness: ${spec.vision_note}`}>
-      <EyeOff size={13} aria-label="Vision blocked by this provider" />
+    <span className="vision-cell on" title="Accepts image input.">
+      <Eye size={13} aria-label="Vision capable" />
     </span>
   );
 }
@@ -971,51 +1010,46 @@ function CatalogVisionCell({ spec, m }: { spec: HarnessSpec; m: ModelSpec }) {
 type CatalogFilter = "all" | "run" | "unrun";
 
 function CatalogTable({
-  spec,
-  evidence,
+  rows,
   filter,
   onShowObserved
 }: {
-  spec: HarnessSpec;
-  evidence: Map<string, CatalogEvidence>;
+  rows: CatalogRow[];
   filter: CatalogFilter;
   onShowObserved: () => void;
 }) {
   const groups = useMemo(() => {
-    const visible = spec.models.filter((m) => {
-      const seen = evidence.has(evidenceKey(spec, m));
-      return filter === "all" || (filter === "run" ? seen : !seen);
-    });
-    const byVendor = new Map<string, ModelSpec[]>();
-    for (const m of visible) {
-      const vendor = m.vendor ?? "Other";
-      (byVendor.get(vendor) ?? byVendor.set(vendor, []).get(vendor)!).push(m);
+    const visible = rows.filter((r) => filter === "all" || (filter === "run" ? r.observed : !r.observed));
+    const byVendor = new Map<string, CatalogRow[]>();
+    for (const r of visible) {
+      const vendor = r.model.vendor ?? "Other";
+      (byVendor.get(vendor) ?? byVendor.set(vendor, []).get(vendor)!).push(r);
     }
     return [...byVendor.entries()]
-      .map(([vendor, models]) => ({ vendor, models: [...models].sort(byReleaseDesc) }))
+      .map(([vendor, list]) => ({ vendor, rows: [...list].sort((a, b) => byReleaseDesc(a.model, b.model)) }))
       .sort((a, b) => vendorRank(a.vendor) - vendorRank(b.vendor) || a.vendor.localeCompare(b.vendor));
-  }, [spec, evidence, filter]);
+  }, [rows, filter]);
 
   if (!groups.length) {
     return (
       <div className="empty-note">
         {filter === "run"
-          ? "No model in this catalog has optimization evidence on disk yet."
-          : "Every model in this catalog has been exercised; nothing left untested."}
+          ? "No model from this provider has optimization evidence on disk yet."
+          : "Every model from this provider has been exercised; nothing left untested."}
       </div>
     );
   }
 
   return (
     <table className="matrix catalog-table">
-      <caption className="sr-only">{spec.name} model catalog, grouped by vendor, with observed evidence.</caption>
+      <caption className="sr-only">Model catalog for this provider, grouped by model vendor, with observed evidence.</caption>
       <thead>
         <tr>
           <th scope="col">Model</th>
           <th scope="col" title="Relative per-token cost tier. Realized spend also scales with the reasoning effort used.">
             Cost
           </th>
-          <th scope="col" title="Whether image input actually works for this model on this harness.">
+          <th scope="col" title="Whether the model accepts image input.">
             Vision
           </th>
           <th scope="col" title="Reasoning-effort levels the model exposes. Hover a value for the full list.">
@@ -1023,7 +1057,7 @@ function CatalogTable({
           </th>
           <th scope="col">Context</th>
           <th scope="col">Released</th>
-          <th scope="col" title="Optimization iterations recorded with this model on this harness: the observed side of the catalog.">
+          <th scope="col" title="Optimization iterations recorded with this model, joined from the evidence on disk.">
             Observed
           </th>
         </tr>
@@ -1033,17 +1067,16 @@ function CatalogTable({
           <tr className="catalog-group-row">
             <th colSpan={7} scope="colgroup">
               <span className="catalog-vendor-name">{g.vendor}</span>
-              <span className="catalog-vendor-count">{pluralize(g.models.length, "model")}</span>
+              <span className="catalog-vendor-count">{pluralize(g.rows.length, "model")}</span>
             </th>
           </tr>
-          {g.models.map((m) => {
-            const isDefault = m.id === spec.default_model;
-            const seen = evidence.get(evidenceKey(spec, m));
+          {g.rows.map((row) => {
+            const m = row.model;
+            const seen = row.observed;
             return (
-              <tr key={m.id} className={isDefault ? "catalog-default" : undefined}>
+              <tr key={row.key}>
                 <th scope="row" className="catalog-model">
                   <span className="cell-flex">
-                    {isDefault && <Star size={12} className="star" aria-label="Pipeline default" />}
                     <span className="mono catalog-model-id">{modelShort(m.id)}</span>
                     {m.notes && (
                       <span className="catalog-note" title={m.notes}>
@@ -1057,10 +1090,10 @@ function CatalogTable({
                   </span>
                 </th>
                 <td>
-                  <CostMeter band={m.price_band} usd={m.price_usd_per_mtok} effort={isDefault ? spec.default_effort : null} />
+                  <CostMeter band={m.price_band} usd={m.price_usd_per_mtok} effort={null} />
                 </td>
                 <td>
-                  <CatalogVisionCell spec={spec} m={m} />
+                  <CatalogVisionCell row={row} />
                 </td>
                 <td>
                   <EffortRange levels={m.effort_levels} />
@@ -1080,7 +1113,7 @@ function CatalogTable({
                       {seen.lastActive ? ` · ${relativeTime(seen.lastActive)}` : ""}
                     </button>
                   ) : (
-                    <span className="catalog-unrun" title="Available here, but no optimization iteration or run has exercised it yet.">
+                    <span className="catalog-unrun" title="Available from this provider, but no optimization iteration or run has exercised it yet.">
                       not run
                     </span>
                   )}
@@ -1099,23 +1132,45 @@ function titleWord(value: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+const PROVIDER_KIND_LABEL: Record<string, string> = {
+  first_party: "first-party",
+  broker: "broker",
+  aggregator: "aggregator",
+  cloud_platform: "cloud",
+  local_runtime: "local"
+};
+
 function Catalogs({ onShowObserved }: { onShowObserved: () => void }) {
   const { registry, insights } = useStore();
   const harnesses = registry?.harnesses ?? [];
   const evidence = useMemo(() => observedEvidence(insights?.combos ?? []), [insights]);
-  const [active, setActive] = useState<string>(harnesses[0]?.id ?? "");
-  const [filter, setFilter] = useState<CatalogFilter>("all");
-  const spec = harnesses.find((h) => h.id === active) ?? harnesses[0] ?? null;
-  if (!spec) return null;
+  // Purely provider-organized: one row per (provider, model).
+  const catalog = useMemo(() => buildProviderCatalog(harnesses, evidence), [harnesses, evidence]);
+  const providers = useMemo(() => {
+    const declared = new Map((registry?.providers ?? []).map((p) => [p.id, p]));
+    return [...catalog.entries()]
+      .map(([id, rows]) => ({
+        id,
+        name: declared.get(id)?.display_name ?? id,
+        kind: declared.get(id)?.kind ?? null,
+        rows
+      }))
+      .sort((a, b) => b.rows.length - a.rows.length || a.name.localeCompare(b.name));
+  }, [catalog, registry]);
 
-  const runCount = spec.models.filter((m) => evidence.has(evidenceKey(spec, m))).length;
+  const [active, setActive] = useState<string>("");
+  const [filter, setFilter] = useState<CatalogFilter>("all");
+  const provider = providers.find((p) => p.id === active) ?? providers[0] ?? null;
+  if (!provider) return null;
+
+  const runCount = provider.rows.filter((r) => r.observed).length;
   const filters: Array<{ id: CatalogFilter; label: string; count: number; hint: string }> = [
-    { id: "all", label: "All", count: spec.models.length, hint: "Every model this harness can name." },
+    { id: "all", label: "All", count: provider.rows.length, hint: "Every model this provider serves." },
     { id: "run", label: "Exercised", count: runCount, hint: "Models with optimization evidence on disk." },
     {
       id: "unrun",
       label: "Never run",
-      count: spec.models.length - runCount,
+      count: provider.rows.length - runCount,
       hint: "Available, but no iteration or run has exercised them yet."
     }
   ];
@@ -1123,27 +1178,27 @@ function Catalogs({ onShowObserved }: { onShowObserved: () => void }) {
   return (
     <div className="dash-card">
       <div className="section-title">
-        Model Catalog
+        <span className="st-label">Model Catalog</span>
         <span className="section-sub">
-          {spec.catalog_source}. Grouped by vendor, newest release first; the Observed column joins each row to
-          the evidence on disk.
+          Every model the registry knows, organized by the provider that serves it. Grouped by model vendor, newest
+          release first; the Observed column joins each row to the evidence on disk.
         </span>
       </div>
       <div className="catalog-controls">
-        <div className="harness-switch" role="tablist" aria-label="Catalog harness">
-          {harnesses.map((h) => (
+        <div className="harness-switch" role="tablist" aria-label="Catalog provider">
+          {providers.map((p) => (
             <button
-              key={h.id}
+              key={p.id}
               role="tab"
-              aria-selected={h.id === spec.id}
-              className={`harness-chip${h.id === spec.id ? " active" : ""}`}
-              data-harness={h.id}
-              onClick={() => setActive(h.id)}
-              title={`${h.name} · ${h.provider_label}`}
+              aria-selected={p.id === provider.id}
+              className={`harness-chip${p.id === provider.id ? " active" : ""}`}
+              data-provider={p.id}
+              onClick={() => setActive(p.id)}
+              title={`${p.name}${p.kind ? `, ${PROVIDER_KIND_LABEL[p.kind] ?? p.kind} provider` : ""}: ${pluralize(p.rows.length, "model")}`}
             >
-              {h.name}
-              <span className="hc-provider">{h.provider_label.split("·")[0].split("subscription")[0].trim()}</span>
-              <span className="hc-count">{h.models.length}</span>
+              {p.name}
+              {p.kind && <span className="hc-provider">{PROVIDER_KIND_LABEL[p.kind] ?? p.kind}</span>}
+              <span className="hc-count">{p.rows.length}</span>
             </button>
           ))}
         </div>
@@ -1163,12 +1218,7 @@ function Catalogs({ onShowObserved }: { onShowObserved: () => void }) {
           ))}
         </div>
       </div>
-      {!spec.multimodal && (
-        <div className="catalog-banner" role="note">
-          <EyeOff size={12} aria-hidden /> {spec.vision_note}
-        </div>
-      )}
-      <CatalogTable spec={spec} evidence={evidence} filter={filter} onShowObserved={onShowObserved} />
+      <CatalogTable rows={provider.rows} filter={filter} onShowObserved={onShowObserved} />
     </div>
   );
 }
@@ -1240,7 +1290,7 @@ export function HarnessesStation() {
         <Kpi
           label="Multimodal"
           value={`${multimodal} of ${harnesses.length}`}
-          sub="Codex judges screenshots natively"
+          sub="Codex runs Visual Tests natively"
           tone={multimodal > 0 ? "good" : "bad"}
         />
       </div>
@@ -1269,7 +1319,10 @@ export function ModelsStation() {
   const harnesses = registry?.harnesses ?? [];
   const combos = insights?.combos ?? [];
 
-  const totalModels = harnesses.reduce((n, h) => n + h.models.length, 0);
+  // Count DISTINCT (provider, model) pairs: summing per-harness catalogs
+  // double-counts every model that more than one harness can reach.
+  const uniqueModels = new Set(harnesses.flatMap((h) => h.models.map((m) => `${h.provider}|${modelShort(m.id)}`)));
+  const providerCount = new Set(harnesses.map((h) => h.provider)).size;
   const exercised = combos.length;
   const iterations = combos.reduce((n, c) => n + c.iterations, 0);
   const best = combos
@@ -1291,15 +1344,15 @@ export function ModelsStation() {
       <div className="kpi-row">
         <Kpi
           label="Models Available"
-          value={String(totalModels)}
-          sub={`Across ${pluralize(harnesses.length, "harness", "harnesses")}`}
+          value={String(uniqueModels.size)}
+          sub={`Across ${pluralize(providerCount, "provider")}`}
           tone="brand"
         />
         <Kpi label="Models Exercised" value={String(exercised)} sub="With optimization evidence on disk" />
         <Kpi
           label="Pipeline Default"
           value={defaultSpec ? modelShort(defaultSpec.default_model) : "—"}
-          sub={defaultSpec ? `@${defaultSpec.default_effort} effort, both harnesses` : undefined}
+          sub={defaultSpec ? `@${defaultSpec.default_effort} effort · ${defaultSpec.name}` : undefined}
           small
         />
         <Kpi

@@ -1,6 +1,7 @@
 {
-  "schema_version": "1.0",
-  "comment": "Bona fide registry of the agent-CLI harnesses and their model catalogs. This file is DATA, not code: adding a harness or model is adding an entry here. Model metadata (vendor, release, context, per-token price, effort levels, vision) is enriched from the models.dev catalog snapshot that OpenCode caches (~/.cache/opencode/models.json); price_band derives from the output $/Mtok. The eval runtime and server load role defaults from eval.config.json and use default_model / default_effort as harness fallbacks. Unknown metadata is null; the console renders null as unknown, never as zero.",
+  "$schema": "./harness-registry.schema.json",
+  "schema_version": "2.0",
+  "comment": "Bona fide registry of the agent-CLI harnesses, model providers, and their bindings. This file is DATA, not code: adding a harness or model is adding an entry here (a harness entry is only usable once a driver with the same id exists in packages/eval/src/harness). Model metadata (vendor, release, context, per-token price, effort levels, vision) is enriched from the models.dev catalog snapshot that OpenCode caches (~/.cache/opencode/models.json); price_band derives from the output $/Mtok. v2 adds three orthogonal axes \u2014 provider (canonical entity that serves/bills), credential_route (how the call is authed/billed), and wire protocols \u2014 plus attribution and probe metadata verified live on 2026-07-23. 'Adapter required' is DERIVED (provider protocols \u2229 harness protocols = \u2205), never stored per pair. Unknown metadata is null; the console renders null as unknown, never as zero.",
   "price_bands": [
     "very-low",
     "low",
@@ -8,25 +9,750 @@
     "high",
     "very-high"
   ],
+  "protocol_aliases": {
+    "openai-completions": "openai-chat",
+    "chat": "openai-chat",
+    "responses": "openai-responses"
+  },
+  "provider_aliases": {
+    "firstParty": {
+      "provider_id": "anthropic",
+      "credential_route": "oauth_subscription",
+      "note": "Claude Code modelUsage JSON"
+    },
+    "anthropic": {
+      "provider_id": "anthropic",
+      "credential_route": null
+    },
+    "openai": {
+      "provider_id": "openai",
+      "credential_route": null,
+      "note": "route ambiguous \u2014 OpenAI serves both api_key and codex_subscription; resolve from the harness entry"
+    },
+    "openai-codex": {
+      "provider_id": "openai",
+      "credential_route": "codex_subscription",
+      "note": "Hermes usage-file string; a ROUTE label, not a provider"
+    },
+    "github-copilot": {
+      "provider_id": "github-copilot",
+      "credential_route": "broker_subscription"
+    },
+    "google": {
+      "provider_id": "google",
+      "credential_route": null
+    }
+  },
+  "providers": [
+    {
+      "id": "anthropic",
+      "display_name": "Anthropic",
+      "kind": "first_party",
+      "protocols_served": [
+        "anthropic-messages"
+      ],
+      "first_party_vendor": "Anthropic",
+      "credentials": [
+        {
+          "route": "api_key",
+          "env_vars": [
+            "ANTHROPIC_API_KEY"
+          ],
+          "interactive": false
+        },
+        {
+          "route": "oauth_subscription",
+          "setup_command": "claude (login flow)",
+          "interactive": true
+        }
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "anthropic/",
+          "env": [
+            "ANTHROPIC_API_KEY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "openai",
+      "display_name": "OpenAI",
+      "kind": "first_party",
+      "protocols_served": [
+        "openai-responses",
+        "openai-chat"
+      ],
+      "first_party_vendor": "OpenAI",
+      "credentials": [
+        {
+          "route": "api_key",
+          "env_vars": [
+            "OPENAI_API_KEY"
+          ],
+          "interactive": false
+        },
+        {
+          "route": "codex_subscription",
+          "setup_command": "codex login",
+          "interactive": true
+        }
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "openai/",
+          "env": [
+            "OPENAI_API_KEY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "google",
+      "display_name": "Google",
+      "kind": "first_party",
+      "protocols_served": [
+        "google-generative-ai",
+        "openai-chat"
+      ],
+      "first_party_vendor": "Google",
+      "credentials": [
+        {
+          "route": "api_key",
+          "env_vars": [
+            "GEMINI_API_KEY"
+          ],
+          "interactive": false
+        }
+      ],
+      "notes": [
+        "openai-chat via Gemini's OpenAI-compatibility endpoint"
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "gemini/",
+          "env": [
+            "GEMINI_API_KEY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "github-copilot",
+      "display_name": "GitHub Copilot",
+      "kind": "broker",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "broker_subscription",
+          "setup_command": "copilot (GitHub OAuth login)",
+          "interactive": true
+        }
+      ],
+      "notes": [
+        "Brokers Anthropic, OpenAI, Google, and Microsoft models behind a GitHub subscription; model vendor is per-model",
+        "Third-party harnesses (opencode, pi) also consume it via device-flow OAuth"
+      ]
+    },
+    {
+      "id": "xai",
+      "display_name": "xAI",
+      "kind": "first_party",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": "xAI",
+      "credentials": [
+        {
+          "route": "api_key",
+          "env_vars": [
+            "XAI_API_KEY"
+          ],
+          "interactive": false
+        },
+        {
+          "route": "oauth_subscription",
+          "setup_command": "pi: /login xai",
+          "interactive": true
+        }
+      ]
+    },
+    {
+      "id": "openrouter",
+      "display_name": "OpenRouter",
+      "kind": "aggregator",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "api_key",
+          "env_vars": [
+            "OPENROUTER_API_KEY"
+          ],
+          "interactive": false
+        }
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "openrouter/",
+          "env": [
+            "OPENROUTER_API_KEY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "deepseek",
+      "display_name": "DeepSeek",
+      "kind": "first_party",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": "DeepSeek",
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "nvidia-nim",
+      "display_name": "NVIDIA NIM",
+      "kind": "aggregator",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "zai",
+      "display_name": "Z.AI (GLM)",
+      "kind": "first_party",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": "Zhipu",
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "kimi",
+      "display_name": "Kimi (Moonshot)",
+      "kind": "first_party",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": "Moonshot",
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "stepfun",
+      "display_name": "StepFun",
+      "kind": "first_party",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": "StepFun",
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "minimax",
+      "display_name": "MiniMax",
+      "kind": "first_party",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": "MiniMax",
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "minimax-cn",
+      "display_name": "MiniMax (CN)",
+      "kind": "first_party",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": "MiniMax",
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "deepinfra",
+      "display_name": "DeepInfra",
+      "kind": "aggregator",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "nous-portal",
+      "display_name": "Nous Portal",
+      "kind": "aggregator",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "oauth_subscription",
+          "setup_command": "hermes portal",
+          "interactive": true
+        }
+      ]
+    },
+    {
+      "id": "radius",
+      "display_name": "Radius",
+      "kind": "aggregator",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "oauth_subscription",
+          "setup_command": "pi: /login radius",
+          "interactive": true
+        }
+      ],
+      "notes": [
+        "Listed by pi-ai as OAuth-capable; details unverified"
+      ]
+    },
+    {
+      "id": "azure-openai",
+      "display_name": "Azure OpenAI",
+      "kind": "cloud_platform",
+      "protocols_served": [
+        "azure-openai"
+      ],
+      "first_party_vendor": "OpenAI",
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        },
+        {
+          "route": "cloud_iam",
+          "interactive": true
+        }
+      ],
+      "notes": [
+        "OpenAI-shaped but NOT drop-in: deployment-based paths + api-version param \u2014 modeled as its own protocol"
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "azure/",
+          "addressing": "deployment name, not model id",
+          "required_params": [
+            "api_base",
+            "api_version"
+          ],
+          "auth": [
+            "api_key (AZURE_API_KEY)",
+            "keyless: azure_ad_token from `az account get-access-token --resource https://cognitiveservices.azure.com`"
+          ]
+        }
+      }
+    },
+    {
+      "id": "aws-bedrock",
+      "display_name": "Amazon Bedrock",
+      "kind": "cloud_platform",
+      "protocols_served": [
+        "bedrock-sigv4"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "cloud_iam",
+          "interactive": false
+        }
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "bedrock/",
+          "auth": [
+            "AWS SDK credential chain (cloud_iam)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "google-vertex",
+      "display_name": "Google Vertex AI",
+      "kind": "cloud_platform",
+      "protocols_served": [
+        "vertex-ai"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "cloud_iam",
+          "interactive": false
+        }
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "vertex_ai/",
+          "auth": [
+            "gcloud ADC (cloud_iam)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "foundry",
+      "display_name": "Microsoft Foundry",
+      "kind": "cloud_platform",
+      "protocols_served": [
+        "openai-chat",
+        "anthropic-messages"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "cloud_iam",
+          "interactive": true
+        }
+      ],
+      "notes": [
+        "Named as first-class 3P in Claude Code help and in Copilot BYOK docs (Foundry Local); protocol details unverified"
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "azure/",
+          "addressing": "deployment name, not model id",
+          "required_params": [
+            "api_base (bare resource origin \u2014 strip /openai/v1)",
+            "api_version >= 2025-04-01-preview"
+          ],
+          "auth": [
+            "api_key (AZURE_API_KEY) \u2014 recommended, no expiry",
+            "keyless: azure_ad_token via Entra (`az login`; ~1h lifetime, re-minted each adapter start)"
+          ],
+          "note": "Portal is now 'Microsoft Foundry' (ai.azure.com); use the <resource>.openai.azure.com endpoint flavor with litellm's azure/ provider",
+          "verified": "2026-07-23: claude-code -> litellm -> azure/gpt-5.6-luna, real tool use, pass"
+        }
+      }
+    },
+    {
+      "id": "cloudflare-ai-gateway",
+      "display_name": "Cloudflare AI Gateway",
+      "kind": "aggregator",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "cloudflare-workers-ai",
+      "display_name": "Cloudflare Workers AI",
+      "kind": "cloud_platform",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "api_key",
+          "interactive": false
+        }
+      ]
+    },
+    {
+      "id": "snowflake-cortex",
+      "display_name": "Snowflake Cortex",
+      "kind": "cloud_platform",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "cloud_iam",
+          "interactive": true
+        }
+      ],
+      "notes": [
+        "From OpenCode provider docs; unverified"
+      ]
+    },
+    {
+      "id": "opencode-zen",
+      "display_name": "OpenCode Zen",
+      "kind": "aggregator",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "broker_subscription",
+          "setup_command": "opencode auth login",
+          "interactive": true
+        }
+      ],
+      "notes": [
+        "Observed as `opencode/` prefix in `opencode models`; bundles free models"
+      ]
+    },
+    {
+      "id": "ollama",
+      "display_name": "Ollama",
+      "kind": "local_runtime",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "local_none",
+          "interactive": false
+        }
+      ],
+      "adapter_hints": {
+        "litellm": {
+          "model_prefix": "ollama/",
+          "required_params": [
+            "api_base"
+          ]
+        }
+      }
+    },
+    {
+      "id": "llama-cpp",
+      "display_name": "llama.cpp server",
+      "kind": "local_runtime",
+      "protocols_served": [
+        "openai-chat"
+      ],
+      "first_party_vendor": null,
+      "credentials": [
+        {
+          "route": "local_none",
+          "env_vars": [
+            "LLAMA_BASE_URL",
+            "LLAMA_API_KEY"
+          ],
+          "interactive": false
+        }
+      ],
+      "notes": [
+        "env names from pi docs"
+      ]
+    }
+  ],
+  "adapters": [
+    {
+      "id": "litellm",
+      "display_name": "LiteLLM Gateway",
+      "kind": "local_proxy",
+      "serves_protocols": [
+        "openai-chat",
+        "openai-responses",
+        "anthropic-messages"
+      ],
+      "install": {
+        "recommended_route": "uvx_pinned",
+        "routes": [
+          {
+            "id": "uvx_pinned",
+            "command": "uvx --from 'litellm[proxy]==1.93.0' litellm",
+            "verified": true,
+            "notes": [
+              "Run pinned + on demand: nothing global to keep patched; the [proxy] extra is required (plain litellm lacks the server deps)"
+            ]
+          },
+          {
+            "id": "pip",
+            "command": "pip install 'litellm[proxy]==1.93.0'",
+            "verified": false
+          },
+          {
+            "id": "docker",
+            "command": "docker run -p 4010:4000 ghcr.io/berriai/litellm:main-v1.93.0",
+            "verified": false
+          }
+        ]
+      },
+      "run": {
+        "health_path": "/health/liveliness",
+        "default_port": 4010,
+        "config_artifact": "evaluation/artifacts/adapter/litellm.config.yaml",
+        "targets_artifact": "evaluation/artifacts/adapter/targets.json"
+      },
+      "security": {
+        "min_safe_version": "1.93.0",
+        "blocked_versions": [
+          "1.82.7",
+          "1.82.8"
+        ],
+        "advisory": "PyPI releases 1.82.7 and 1.82.8 were compromised with credential-stealing malware (BerriAI/litellm#24518). Pin explicitly; rotate credentials on any machine where either was installed."
+      },
+      "attribution_rule": "Behind the proxy a harness believes it is talking to its own first party \u2014 wire PROVIDER claims are meaningless on adapter bindings (observed live 2026-07-23: Claude Code reported provider 'firstParty' while gpt-5.5 served the call). The MODEL id stays truthful because the proxy maps model names, so adapter probes verify on model and report provider as inferred from the binding.",
+      "quirks": [
+        "Proxy auth is a master_key; if a harness's own OAuth token reaches the proxy instead, LiteLLM attempts a virtual-key DB lookup and fails with 'No connected db' \u2014 force key auth on the harness side (Claude Code: CLAUDE_CODE_SIMPLE=1 + ANTHROPIC_API_KEY=<master key>, since keychain OAuth otherwise wins over env)",
+        "Azure/Foundry targets address DEPLOYMENT names, not model ids (azure/<deployment>). api_base must be the bare resource origin: the Foundry portal hands out the v1-API flavor (https://<res>.openai.azure.com/openai/v1) but litellm's azure/ provider appends /openai/deployments/... itself, so leaving the path on 404s 'Resource not found' (the adapter strips it automatically)",
+        "Azure api_version must be new enough to serve the RESPONSES API (>= 2025-04-01-preview), not just chat/completions: Claude Code calls /v1/messages?beta=true, which litellm routes to Azure /openai/responses. With 2024-10-21 the chat lane works but the harness lane 404s \u2014 verified live 2026-07-23",
+        "Credentials load from the gitignored repo-root .env (or evaluation/artifacts/adapter/env.local); target params may reference them as ${VAR} so endpoints are never duplicated. Static AZURE_API_KEY avoids the ~1h Entra token expiry entirely",
+        "Downstream models can reject small max_tokens (gpt-5.5 requires >= 16) \u2014 translation surfaces the provider error verbatim; do not mistake it for an auth failure",
+        "The Foundry portal exposes two endpoint flavors per resource: <name>.openai.azure.com (classic Azure OpenAI; litellm azure/ provider) and <name>.services.ai.azure.com (Foundry API)"
+      ]
+    }
+  ],
+  "probe_policy": {
+    "serialize": true,
+    "token_strategy": "unique random token per run, written to a file in an otherwise-empty fixture dir \u2014 asserting the token proves TOOL USE (a real file read), not model recall",
+    "rules": [
+      "SERIALIZE probe runs: overlapping probes produced false 240s timeouts (codex, opencode) on 2026-07-23",
+      "Per-harness timeout_ms is mandatory: observed latency spread is ~9-17x (pi 2.2s .. codex 38.7s)",
+      "Re-probe after any install/update event; honor warmup_after_install (opencode's first post-install run failed transiently)",
+      "capability and attribution are INDEPENDENT assertions: a binding that runs but routes to the wrong provider fails differently (attribution_mismatch) than one that does not run (fail_capability)",
+      "attribution observed_by_driver=false can never yield a full 'pass' \u2014 cap at pass_provider_unverified"
+    ]
+  },
   "harnesses": [
     {
       "id": "codex",
       "name": "Codex CLI",
       "binary": "codex",
-      "provider": "openai-chatgpt",
-      "provider_label": "OpenAI · ChatGPT subscription",
+      "provider": "openai",
+      "credential_route": "codex_subscription",
+      "provider_label": "OpenAI \u00b7 ChatGPT subscription",
       "auth": "ChatGPT OAuth (codex login)",
+      "maintainer": "OpenAI",
+      "docs_url": "https://github.com/openai/codex",
+      "protocols_spoken": [
+        {
+          "protocol": "openai-responses",
+          "via": "first-party API (wire_api='responses')",
+          "verified": true
+        },
+        {
+          "protocol": "openai-chat",
+          "via": "config.toml wire_api='chat'",
+          "verified": false
+        }
+      ],
+      "provider_support": {
+        "native": [
+          "openai"
+        ],
+        "byok": {
+          "mechanism": "custom_provider_decl",
+          "config_surface": "config.toml [model_providers.<id>] { base_url, wire_api } + model_provider=<id>; also -c inline overrides",
+          "protocols": [
+            "openai-responses",
+            "openai-chat"
+          ],
+          "example": "codex exec -c \"model_providers.proxy={ base_url='http://127.0.0.1:8080/v1', wire_api='responses' }\" -c model_provider=proxy"
+        }
+      },
+      "attribution": {
+        "method": "stdout_banner",
+        "observed_by_driver": false,
+        "provider_source": "declared",
+        "model_source": "declared",
+        "note": "Plain `codex exec` prints provider:/model: banner lines, but the driver runs --json (banner absent) and only reads the final message \u2014 probes report registry-declared attribution for codex.",
+        "raw_provider_examples": [
+          "openai"
+        ]
+      },
+      "probe": {
+        "timeout_ms": 300000,
+        "observed_latency_ms": {
+          "min": 35351,
+          "max": 38717
+        }
+      },
+      "install": {
+        "recommended_route": "install_script",
+        "routes": [
+          {
+            "id": "install_script",
+            "command": "curl -fsSL https://chatgpt.com/codex/install.sh | sh",
+            "update_command": "curl -fsSL https://chatgpt.com/codex/install.sh | sh",
+            "verified": true,
+            "notes": [
+              "Listed first in the README quickstart; symlinks ~/.local/bin/codex -> ~/.codex/packages/standalone/current/bin/codex"
+            ]
+          },
+          {
+            "id": "npm",
+            "command": "npm install -g @openai/codex",
+            "verified": true,
+            "notes": [
+              "FOOTGUN: `npm uninstall -g @openai/codex` deletes ~/.local/bin/codex even when that symlink belongs to the standalone install \u2014 re-link after"
+            ]
+          },
+          {
+            "id": "brew_cask",
+            "command": "brew install --cask codex",
+            "verified": false
+          }
+        ]
+      },
+      "version": {
+        "scheme": "semver"
+      },
+      "quirks": [
+        "Slowest of the six by ~4x (35-39s probe latency observed) \u2014 a global timeout tuned to fast harnesses false-negatives this one"
+      ],
       "multimodal": true,
       "vision_note": "Fully multimodal. Image-bearing calls (screenshot judging) run natively.",
-      "vision_fallback_for": [
-        "copilot",
-        "opencode"
-      ],
       "roles": [
         "proposer",
         "codegen",
-        "judge",
-        "vision-fallback"
+        "judge"
       ],
       "default_model": "gpt-5.6-sol",
       "default_effort": "low",
@@ -182,16 +908,128 @@
       "id": "opencode",
       "name": "OpenCode CLI",
       "binary": "opencode",
+      "binary_candidates": [
+        "~/.opencode/bin/opencode"
+      ],
       "provider": "github-copilot",
+      "credential_route": "broker_subscription",
       "provider_label": "GitHub Copilot subscription",
       "auth": "GitHub device-flow OAuth (opencode auth login)",
-      "multimodal": false,
-      "vision_note": "Copilot disables the multimodal endpoint account-wide: every github-copilot/* model is text-only here even when the model is natively vision-capable. Image-bearing calls re-route to Codex (AGENT_VISION_FALLBACK).",
-      "vision_fallback_to": "codex",
+      "maintainer": "anomalyco (GitHub org; repo moved from sst)",
+      "docs_url": "https://opencode.ai/docs",
+      "protocols_spoken": [
+        {
+          "protocol": "openai-chat",
+          "via": "custom provider baseURL (@ai-sdk/openai-compatible)",
+          "verified": true
+        },
+        {
+          "protocol": "anthropic-messages",
+          "via": "@ai-sdk/anthropic package in the native catalog",
+          "verified": false
+        },
+        {
+          "protocol": "google-generative-ai",
+          "via": "@ai-sdk package in the native catalog",
+          "verified": false
+        }
+      ],
+      "provider_support": {
+        "native": [
+          "openai",
+          "anthropic",
+          "google",
+          "github-copilot",
+          "opencode-zen"
+        ],
+        "native_note": "Dynamic catalog (models.dev) \u2014 any enumeration is a snapshot; `opencode models` lists AUTHENTICATED providers, not supported ones",
+        "native_3p": [
+          "azure-openai",
+          "aws-bedrock",
+          "cloudflare-ai-gateway",
+          "cloudflare-workers-ai",
+          "snowflake-cortex"
+        ],
+        "byok": {
+          "mechanism": "custom_provider_decl",
+          "config_surface": "opencode.json provider block: { baseURL, npm: '@ai-sdk/...' }",
+          "protocols": [
+            "openai-chat"
+          ],
+          "example": "{ \"provider\": { \"custom\": { \"npm\": \"@ai-sdk/openai-compatible\", \"options\": { \"baseURL\": \"https://custom.example/v1\" } } } }"
+        }
+      },
+      "attribution": {
+        "method": "log_scrape_windowed",
+        "observed_by_driver": true,
+        "provider_source": "wire",
+        "model_source": "wire",
+        "extraction": {
+          "log_path": "~/.local/share/opencode/log/opencode.log",
+          "pattern": "providerID=(\\S+)\\s+modelID=(\\S+)",
+          "windowing": "record log byte-offset BEFORE the run; parse only bytes appended after \u2014 last-line-wins is racy under concurrency"
+        },
+        "raw_provider_examples": [
+          "openai",
+          "github-copilot"
+        ]
+      },
+      "probe": {
+        "timeout_ms": 180000,
+        "observed_latency_ms": {
+          "min": 11560,
+          "max": 18943
+        },
+        "retries": 1,
+        "warmup_after_install": true
+      },
+      "install": {
+        "recommended_route": "install_script",
+        "routes": [
+          {
+            "id": "install_script",
+            "command": "curl -fsSL https://opencode.ai/install | bash",
+            "verified": true,
+            "notes": [
+              "Docs call this 'the easiest way'; installs to ~/.opencode/bin and wires PATH via .zshrc (interactive shells only)"
+            ]
+          },
+          {
+            "id": "brew_tap",
+            "command": "brew install anomalyco/tap/opencode",
+            "verified": false,
+            "notes": [
+              "Official tap; build requires current Xcode Command Line Tools"
+            ]
+          },
+          {
+            "id": "npm",
+            "command": "npm install -g opencode-ai",
+            "verified": false
+          },
+          {
+            "id": "brew_core",
+            "command": "brew install opencode",
+            "verified": true,
+            "notes": [
+              "Works but the core formula lags releases (observed 1.18.0 vs 1.18.4)"
+            ]
+          }
+        ]
+      },
+      "version": {
+        "scheme": "semver"
+      },
+      "quirks": [
+        "First headless run after a fresh install can fail (observed: exit 1 at ~48s) during initialization \u2014 retry once before declaring failure",
+        "Credential precedence between OPENAI_API_KEY env and stored OAuth is UNVERIFIED \u2014 provider is observable but the billing path is not"
+      ],
+      "multimodal": true,
+      "vision_note": "Assumed multimodal: image delivery depends on the provider/model actually serving the call, not the harness alone, so runs proceed and image-bearing calls FAIL LOUDLY at runtime if the selected provider/model rejects them.",
       "roles": [
         "proposer",
         "codegen",
-        "judge (text-only)"
+        "judge"
       ],
       "default_model": "github-copilot/gpt-5.6-sol",
       "default_effort": "low",
@@ -746,11 +1584,99 @@
       "name": "GitHub Copilot CLI",
       "binary": "copilot",
       "provider": "github-copilot",
+      "credential_route": "broker_subscription",
       "provider_label": "GitHub Copilot subscription",
       "auth": "GitHub OAuth (copilot login)",
+      "maintainer": "GitHub",
+      "docs_url": "https://docs.github.com/en/copilot/how-tos/copilot-cli",
+      "protocols_spoken": [
+        {
+          "protocol": "openai-chat",
+          "via": "BYOK: any OpenAI-compatible endpoint incl. Ollama, vLLM, Foundry Local",
+          "verified": false
+        },
+        {
+          "protocol": "anthropic-messages",
+          "via": "BYOK: Anthropic named in docs",
+          "verified": false
+        },
+        {
+          "protocol": "azure-openai",
+          "via": "BYOK: Azure OpenAI named in docs",
+          "verified": false
+        }
+      ],
+      "provider_support": {
+        "native": [
+          "github-copilot"
+        ],
+        "native_note": "Broker fronts Anthropic + OpenAI + Google + Microsoft models; enterprise admins can add BYOK models to the /model picker (June 2026)",
+        "byok": {
+          "mechanism": "custom_provider_decl",
+          "config_surface": "interactive `providers` command (Custom Model Providers / BYOK); env-var based per docs",
+          "protocols": [
+            "openai-chat",
+            "anthropic-messages",
+            "azure-openai"
+          ],
+          "constraints": {
+            "tool_calling": "required",
+            "streaming": "required",
+            "min_context_tokens_recommended": 128000
+          }
+        }
+      },
+      "attribution": {
+        "method": "structured_jsonl",
+        "observed_by_driver": false,
+        "provider_source": "inferred_from_binding",
+        "model_source": "declared",
+        "note": "`--output-format json` emits data.model on model.call_start but NO provider field exists anywhere in the stream; the --silent driver path parses no events. The only harness here whose provider is unobservable on the wire.",
+        "extraction": {
+          "model_event": "model.call_start",
+          "model_path": "data.model"
+        }
+      },
+      "probe": {
+        "timeout_ms": 120000,
+        "observed_latency_ms": {
+          "min": 8059,
+          "max": 10092
+        }
+      },
+      "install": {
+        "recommended_route": "npm",
+        "routes": [
+          {
+            "id": "npm",
+            "command": "npm install -g @github/copilot",
+            "update_command": "npm install -g @github/copilot@latest",
+            "verified": true,
+            "notes": [
+              "README lists npm first",
+              "Update must use the SAME npm prefix that installed it; it is NOT a brew formula even when it lives under /opt/homebrew"
+            ]
+          },
+          {
+            "id": "install_script",
+            "command": "curl -fsSL https://gh.io/copilot-install | bash",
+            "verified": false
+          },
+          {
+            "id": "self_update",
+            "update_command": "copilot update",
+            "verified": false,
+            "notes": [
+              "Existence confirmed by the version banner; not exercised"
+            ]
+          }
+        ]
+      },
+      "version": {
+        "scheme": "semver"
+      },
       "multimodal": true,
-      "vision_note": "Fully multimodal through the first-party CLI: --attachment sends images natively, so image-bearing calls (screenshot judging) run on the Copilot subscription without rerouting. Text-only models (mai-code) still re-route via AGENT_VISION_FALLBACK.",
-      "vision_fallback_to": "codex",
+      "vision_note": "Fully multimodal through the first-party CLI: --attachment sends images natively, so image-bearing calls (screenshot judging) run on the Copilot subscription. Text-only models (mai-code) cannot accept images and will error \u2014 choose a vision-capable model or harness for that role.",
       "roles": [
         "proposer",
         "codegen",
@@ -1197,6 +2123,474 @@
           "context_k": 256,
           "release": "2026-06-02",
           "notes": "Microsoft coding model for fast, efficient everyday developer assistance. Natively text-only."
+        }
+      ]
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "binary": "claude",
+      "provider": "anthropic",
+      "credential_route": "oauth_subscription",
+      "provider_label": "Anthropic \u00b7 Claude subscription",
+      "auth": "Claude subscription OAuth (run `claude` once to log in)",
+      "maintainer": "Anthropic",
+      "docs_url": "https://code.claude.com/docs",
+      "protocols_spoken": [
+        {
+          "protocol": "anthropic-messages",
+          "via": "first-party API and ANTHROPIC_BASE_URL override",
+          "verified": true
+        },
+        {
+          "protocol": "bedrock-sigv4",
+          "via": "built-in 3P support (env-gated)",
+          "verified": false
+        },
+        {
+          "protocol": "vertex-ai",
+          "via": "built-in 3P support (env-gated)",
+          "verified": false
+        }
+      ],
+      "provider_support": {
+        "native": [
+          "anthropic"
+        ],
+        "native_3p": [
+          "aws-bedrock",
+          "google-vertex",
+          "foundry"
+        ],
+        "byok": {
+          "mechanism": "base_url_override",
+          "config_surface": "env: ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY, with CLAUDE_CODE_SIMPLE=1 \u2014 without simple mode the keychain OAuth credential outranks the env override and the gateway sees an unknown bearer (verified live 2026-07-23)",
+          "protocols": [
+            "anthropic-messages"
+          ],
+          "constraints": {
+            "models": "Anthropic models only in every mechanism \u2014 the only harness here that cannot run another vendor's weights without a translating adapter (e.g. LiteLLM serving /v1/messages)"
+          },
+          "example": "LiteLLM gateway serving /v1/messages; gateway models appear in the /model picker labeled 'From gateway'"
+        }
+      },
+      "attribution": {
+        "method": "structured_json",
+        "observed_by_driver": true,
+        "provider_source": "wire",
+        "model_source": "wire",
+        "extraction": {
+          "format": "single JSON object on stdout (`-p --output-format json`)",
+          "provider_path": "modelUsage.*.provider",
+          "model_path": "modelUsage.*.canonicalModel",
+          "result_text_path": "result"
+        },
+        "raw_provider_examples": [
+          "firstParty"
+        ]
+      },
+      "probe": {
+        "timeout_ms": 120000,
+        "observed_latency_ms": {
+          "min": 6550,
+          "max": 10291
+        }
+      },
+      "install": {
+        "recommended_route": "native_installer",
+        "routes": [
+          {
+            "id": "native_installer",
+            "update_command": "claude update",
+            "verified": true,
+            "notes": [
+              "Recommended on every platform since May 2026; zero dependencies; auto-updates"
+            ]
+          },
+          {
+            "id": "npm",
+            "command": "npm install -g @anthropic-ai/claude-code",
+            "verified": false,
+            "notes": [
+              "Deprecated Jan 2026 (v2.1.15) \u2014 compatibility path only; no auto-update"
+            ]
+          }
+        ]
+      },
+      "version": {
+        "scheme": "semver"
+      },
+      "quirks": [
+        "Nested sessions inject DISABLE_AUTOUPDATER=1 \u2014 `claude doctor` run from inside a Claude Code session misreports the user's auto-update state",
+        "Gateway/adapter auth requires CLAUDE_CODE_SIMPLE=1: with a subscription login present, ANTHROPIC_AUTH_TOKEN/ANTHROPIC_API_KEY alone do NOT override the keychain OAuth token"
+      ],
+      "multimodal": true,
+      "vision_note": "Fully multimodal in headless mode: the Read tool renders image files natively, so screenshot judging runs on the Claude subscription (pass file paths in the prompt plus --add-dir).",
+      "roles": [
+        "proposer",
+        "codegen",
+        "judge"
+      ],
+      "default_model": "claude-opus-4-8",
+      "default_effort": "none",
+      "effort_mechanism": null,
+      "discovery": null,
+      "catalog_source": "Curated: first-party model ids accepted by `claude --model`; opus verified live 2026-07-23 (observed canonicalModel + 1M context in modelUsage). Pricing mirrors the shared Anthropic catalog; subscription billing applies.",
+      "catalog_as_of": "2026-07-23",
+      "models": [
+        {
+          "id": "claude-opus-4-8",
+          "family": "claude-opus",
+          "vendor": "Anthropic",
+          "name": "Claude Opus 4.8",
+          "tier": "flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 25
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 1000,
+          "release": "2026-05-28",
+          "notes": "Harness default. Headless mode exposes no per-call reasoning-effort flag, so effort_levels is empty by design."
+        },
+        {
+          "id": "claude-sonnet-5",
+          "family": "claude-sonnet",
+          "vendor": "Anthropic",
+          "name": "Claude Sonnet 5",
+          "tier": "balanced",
+          "price_band": "medium",
+          "price_usd_per_mtok": {
+            "input": 2,
+            "output": 10
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 1000,
+          "release": "2026-06-30",
+          "notes": null
+        },
+        {
+          "id": "claude-haiku-4-5-20251001",
+          "family": "claude-haiku",
+          "vendor": "Anthropic",
+          "name": "Claude Haiku 4.5",
+          "tier": "small",
+          "price_band": "low",
+          "price_usd_per_mtok": {
+            "input": 1,
+            "output": 5
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 200,
+          "release": "2025-10-15",
+          "notes": null
+        },
+        {
+          "id": "claude-fable-5",
+          "family": "claude-fable",
+          "vendor": "Anthropic",
+          "name": "Claude Fable 5",
+          "tier": "specialist",
+          "price_band": "very-high",
+          "price_usd_per_mtok": {
+            "input": 10,
+            "output": 50
+          },
+          "native_vision": true,
+          "effort_levels": [],
+          "context_k": 1000,
+          "release": "2026-06-09",
+          "notes": "Creative-writing / analysis specialist lane."
+        }
+      ]
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes Agent",
+      "binary": "hermes",
+      "provider": "openai",
+      "credential_route": "codex_subscription",
+      "provider_label": "OpenAI \u00b7 Codex subscription (via Hermes)",
+      "auth": "Provider OAuth / keys managed by Hermes itself (`hermes model`, `hermes status`)",
+      "maintainer": "Nous Research",
+      "docs_url": "https://hermes-agent.nousresearch.com/docs",
+      "protocols_spoken": [
+        {
+          "protocol": "openai-chat",
+          "via": "OpenAI-compatible key-based providers",
+          "verified": false
+        }
+      ],
+      "provider_support": {
+        "native": [
+          "openai",
+          "openrouter",
+          "google",
+          "deepseek",
+          "xai",
+          "nvidia-nim",
+          "zai",
+          "kimi",
+          "stepfun",
+          "minimax",
+          "minimax-cn",
+          "deepinfra",
+          "nous-portal"
+        ],
+        "native_note": "Widest key-based provider list of the six (`hermes status` shows configured keys); plus a codex_subscription OAuth route to OpenAI",
+        "byok": {
+          "mechanism": "custom_provider_decl",
+          "config_surface": "auxiliary model provider config; `hermes fallback` chains providers on rate-limit/overload; `hermes proxy` EXPOSES a local OpenAI-compatible proxy to its OAuth providers \u2014 Hermes can itself act as the adapter for other harnesses",
+          "protocols": [
+            "openai-chat"
+          ]
+        }
+      },
+      "attribution": {
+        "method": "usage_file",
+        "observed_by_driver": true,
+        "provider_source": "wire",
+        "model_source": "wire",
+        "extraction": {
+          "flag": "--usage-file <path>",
+          "provider_path": "provider",
+          "model_path": "model",
+          "extras": [
+            "input_tokens",
+            "output_tokens",
+            "estimated_cost_usd",
+            "session_id"
+          ]
+        },
+        "raw_provider_examples": [
+          "openai-codex"
+        ]
+      },
+      "probe": {
+        "timeout_ms": 120000,
+        "observed_latency_ms": {
+          "min": 7127,
+          "max": 8697
+        }
+      },
+      "install": {
+        "recommended_route": "git_checkout",
+        "routes": [
+          {
+            "id": "git_checkout",
+            "update_command": "hermes update",
+            "verified": true,
+            "notes": [
+              "Tracks main (bleeding edge; ~215 commits/day observed)",
+              "`hermes update` restarts the gateway; the dashboard needs a manual restart",
+              "Record the commit SHA as installed identity \u2014 see version.note"
+            ]
+          },
+          {
+            "id": "desktop_installer",
+            "verified": false,
+            "notes": [
+              "Docs mark this '(recommended)' for macOS, but it is a GUI app; the git route is the pragmatic CLI choice"
+            ]
+          },
+          {
+            "id": "pypi",
+            "command": "pip install hermes-agent",
+            "verified": false,
+            "notes": [
+              "Release-pinned alternative when reproducibility matters more than freshness"
+            ]
+          }
+        ]
+      },
+      "version": {
+        "scheme": "commit_sha",
+        "note": "On the git route `--version` is NOT a build identifier: the semver only changes at release commits (874 commits all reported 0.19.0), and its 'upstream <sha>' names the remote tip, not the installed commit. One release carries dual ids (GitHub date tag v2026.7.20 == PyPI 0.19.0). Identity = `git -C ~/.hermes/hermes-agent rev-parse HEAD`."
+      },
+      "quirks": [
+        "Reports route labels as provider strings ('openai-codex') \u2014 normalize via provider_aliases",
+        "Prompt travels as an argv argument (-z), so very large prompts risk ARG_MAX limits"
+      ],
+      "multimodal": true,
+      "vision_note": "Assumed multimodal: image delivery depends on the provider/model actually serving the call, not the harness alone, so runs proceed and image-bearing calls FAIL LOUDLY at runtime if the selected provider/model rejects them.",
+      "roles": [
+        "proposer",
+        "codegen",
+        "judge"
+      ],
+      "default_model": "gpt-5.3-codex-spark",
+      "default_effort": "none",
+      "effort_mechanism": null,
+      "discovery": null,
+      "catalog_source": "Observed live via `hermes status` + usage-file attribution 2026-07-23. Hermes offers many providers/models via its interactive `hermes model` picker; only the verified default is cataloged \u2014 headless model overrides pass through -m.",
+      "catalog_as_of": "2026-07-23",
+      "models": [
+        {
+          "id": "gpt-5.3-codex-spark",
+          "family": "gpt-5.3",
+          "vendor": "OpenAI",
+          "name": "GPT-5.3 Codex Spark",
+          "tier": "fast-code",
+          "price_band": null,
+          "price_usd_per_mtok": null,
+          "native_vision": null,
+          "effort_levels": [],
+          "context_k": null,
+          "release": null,
+          "notes": "Hermes default on the Codex-subscription route; usage file reports cost_status 'included'."
+        }
+      ]
+    },
+    {
+      "id": "pi",
+      "name": "Pi",
+      "binary": "pi",
+      "provider": "openai",
+      "credential_route": "api_key",
+      "credential": {
+        "env_passthrough": [
+          "OPENAI_API_KEY"
+        ],
+        "note": "Explicitly declared API-key billing: the eval runner strips OPENAI_API_KEY from subprocess env by default (subscription-auth protection); this passthrough re-grants it deliberately for pi only."
+      },
+      "provider_label": "OpenAI \u00b7 API key (BYOK)",
+      "auth": "env OPENAI_API_KEY (key-based), or /login inside pi for OAuth providers",
+      "maintainer": "earendil-works (Mario Zechner / badlogic)",
+      "docs_url": "https://github.com/earendil-works/pi",
+      "protocols_spoken": [
+        {
+          "protocol": "openai-responses",
+          "via": "api:'openai-responses' (observed live on gpt-5.5)",
+          "verified": true
+        },
+        {
+          "protocol": "openai-chat",
+          "via": "api:'openai-completions' (see protocol_aliases)",
+          "verified": false
+        },
+        {
+          "protocol": "anthropic-messages",
+          "via": "api:'anthropic-messages'",
+          "verified": false
+        },
+        {
+          "protocol": "google-generative-ai",
+          "via": "api:'google-generative-ai'",
+          "verified": false
+        }
+      ],
+      "provider_support": {
+        "native": [
+          "anthropic",
+          "openai",
+          "google",
+          "xai",
+          "github-copilot",
+          "radius"
+        ],
+        "native_note": "`pi-ai list` shows OAuth-capable providers only; key-based ones (openai, google via env) do not appear there. Documented default provider is google, but pi silently falls back to whichever credential exists \u2014 pin provider/model explicitly.",
+        "byok": {
+          "mechanism": "custom_provider_decl",
+          "config_surface": "settings providers{} block or pi.registerProvider(name, {baseUrl, api, models, oauth}) \u2014 the wire protocol is DECLARED PER PROVIDER, including custom OAuth flows; can also override baseUrl on a built-in provider keeping its models",
+          "protocols": [
+            "openai-chat",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai"
+          ],
+          "example": "/login llama.cpp + LLAMA_BASE_URL=http://127.0.0.1:8080"
+        }
+      },
+      "attribution": {
+        "method": "structured_jsonl",
+        "observed_by_driver": true,
+        "provider_source": "wire",
+        "model_source": "wire",
+        "extraction": {
+          "format": "JSONL session events (`-p --mode json`)",
+          "event": "message_end",
+          "filter": "message.role == 'assistant'",
+          "provider_path": "message.provider",
+          "model_path": "message.model",
+          "text_path": "message.content[*].text"
+        },
+        "raw_provider_examples": [
+          "openai"
+        ]
+      },
+      "probe": {
+        "timeout_ms": 60000,
+        "observed_latency_ms": {
+          "min": 2170,
+          "max": 4130
+        }
+      },
+      "install": {
+        "recommended_route": "npm",
+        "routes": [
+          {
+            "id": "npm",
+            "command": "npm install -g --ignore-scripts @earendil-works/pi-coding-agent",
+            "update_command": "npm install -g --ignore-scripts @earendil-works/pi-coding-agent@latest",
+            "verified": true,
+            "notes": [
+              "--ignore-scripts is the documented flag (supply-chain hardening; pi needs no install scripts)"
+            ]
+          },
+          {
+            "id": "install_script",
+            "command": "curl -fsSL https://pi.dev/install.sh | sh",
+            "verified": false
+          }
+        ]
+      },
+      "version": {
+        "scheme": "semver"
+      },
+      "quirks": [
+        "Fastest of the six (2-4s probe latency) \u2014 its floor is the wrong baseline for a global timeout",
+        "Prompt travels as an argv argument, so very large prompts risk ARG_MAX limits"
+      ],
+      "multimodal": true,
+      "vision_note": "Assumed multimodal: image delivery depends on the provider/model actually serving the call, not the harness alone, so runs proceed and image-bearing calls FAIL LOUDLY at runtime if the selected provider/model rejects them.",
+      "roles": [
+        "proposer",
+        "codegen",
+        "judge"
+      ],
+      "default_model": "openai/gpt-5.5",
+      "default_effort": "low",
+      "effort_mechanism": "--thinking <level>",
+      "discovery": null,
+      "catalog_source": "Verified live 2026-07-23 (observed provider/model in --mode json stream). Pi's model syntax is provider/model[:thinking]; any authenticated provider's models are reachable \u2014 only the verified binding is cataloged.",
+      "catalog_as_of": "2026-07-23",
+      "models": [
+        {
+          "id": "openai/gpt-5.5",
+          "family": "gpt-5.5",
+          "vendor": "OpenAI",
+          "name": "GPT-5.5",
+          "tier": "previous-flagship",
+          "price_band": "high",
+          "price_usd_per_mtok": {
+            "input": 5,
+            "output": 30
+          },
+          "native_vision": true,
+          "effort_levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "context_k": 1050,
+          "release": "2026-04-23",
+          "notes": "Reached via api-key billing; pi maps reasoning effort through --thinking."
         }
       ]
     }

@@ -73,7 +73,7 @@ function ScoreVsThreshold({ score, threshold }: { score: number; threshold: numb
   const tPct = Math.round(threshold * 100);
   const ok = score >= threshold;
   return (
-    <div className="score-thresh" title={`Deterministic checks ${pct}% vs pass threshold ${tPct}%`}>
+    <div className="score-thresh" title={`Code Tests ${pct}% vs pass threshold ${tPct}%`}>
       <div className="st-track">
         <span className={`st-fill${ok ? "" : " under"}`} style={{ width: `${pct}%` }} />
         <span className="st-notch" style={{ left: `${tPct}%` }} title={`Threshold ${tPct}%`} />
@@ -146,7 +146,7 @@ function ChangedVsBaseline({ diff }: { diff: BaselineDiff | null }) {
     <>
       <div className="section-title">
         Changed vs Baseline
-        <span className="section-sub">Deterministic result flips between the two runs. Click a card to open the exact cases.</span>
+        <span className="section-sub">Code Test results that changed between runs. Click a card to open the exact cases.</span>
         <span className="spacer" />
         <label className="baseline-pick">
           <span>Baseline</span>
@@ -186,7 +186,7 @@ function ChangedVsBaseline({ diff }: { diff: BaselineDiff | null }) {
               <span className="dc-count mono">{diff.removed.length}</span>
               <span className="dc-label">Removed · baseline-only</span>
             </div>
-            <DiffCard label="Incomplete" keys={incompleteKeys} tone="warn" hint="Visual verdict still missing (not reviewed or needs review). Absence of evidence, not a failure." onDrill={() => drill("Incomplete visual review", incompleteKeys)} />
+            <DiffCard label="Incomplete" keys={incompleteKeys} tone="warn" hint="Visual Test result still missing. Absence of evidence, not a failure." onDrill={() => drill("Incomplete Visual Tests", incompleteKeys)} />
           </div>
           {baselineRun && (
             <div className="baseline-meta stage-sub">
@@ -256,8 +256,8 @@ function ProvenanceCard() {
           {chip("when", scorecard.timestampUtc ? `${scorecard.timestampUtc.slice(0, 16).replace("T", " ")} (${relativeTime(scorecard.timestampUtc)})` : null)}
           {chip("harness", harness !== "unknown" ? harness : null)}
           {chip("model", model ? `${modelShort(model)}${scorecard.modelVariant ? ` @${scorecard.modelVariant}` : ""}` : null)}
-          {chip("judge", judge)}
-          {chip("mode", scorecard.visualReviewSupplied ? "A · det + visual" : "B · det-only")}
+          {chip("visual tests", judge)}
+          {chip("mode", scorecard.visualReviewSupplied ? "Code + Visual" : "Code Only")}
           {chip("schema", scorecard.schemaVersion || null)}
           {chip("threshold", `${Math.round(scorecard.threshold * 100)}%`)}
         </div>
@@ -306,27 +306,41 @@ export function EvaluateOverview() {
         </div>
       </div>
 
-      {/* HERO — the verdict with its gates named, beside the score geometry. */}
+      {/* HERO — the verdict with its gates named, beside the score geometry.
+          "incomplete" (Visual Tests never ran) is neither pass nor fail. */}
       <div className="hero-card">
         <div>
-          <div className="ov-big" style={{ color: pass ? "var(--pass)" : "var(--fail)" }}>
-            {pass ? "PASS" : "FAIL"}
+          <div
+            className="ov-big"
+            style={{
+              color:
+                scorecard.overallResult === "incomplete" ? "var(--defer)" : pass ? "var(--pass)" : "var(--fail)"
+            }}
+          >
+            {scorecard.overallResult === "incomplete" ? "INCOMPLETE" : pass ? "PASS" : "FAIL"}
             <DeltaChip delta={diff?.scoreDelta ?? null} />
           </div>
           <div className="gate-chips" aria-label="Verdict composition">
             <span className={`gate-chip ${scorecard.deterministicResult === "pass" ? "ok" : "bad"}`}>
-              ▣ Deterministic {scorecard.deterministicResult.toUpperCase()}
+              ▣ Code Tests {scorecard.deterministicResult.toUpperCase()}
             </span>
-            {scorecard.visualReviewSupplied ? (
+            {scorecard.overallResult === "incomplete" ? (
+              <span
+                className="gate-chip neutral"
+                title="Visual Tests were requested but never ran: no baseline screenshots were available to judge. Render baselines in the launcher and rerun."
+              >
+                ◈ Visual Tests DID NOT RUN
+              </span>
+            ) : scorecard.visualReviewSupplied ? (
               <span
                 className={`gate-chip ${pass || scorecard.deterministicResult === "fail" ? (pass ? "ok" : "neutral") : "bad"}`}
-                title="The visual judge gate. Blocking failures fail the run even at a passing deterministic score."
+                title="The Visual Tests gate. Blocking failures fail the run even when Code Tests pass."
               >
-                ◈ Visual {pass ? "PASS" : scorecard.deterministicResult === "pass" ? "FAIL, the gate that failed" : "FAIL"}
+                ◈ Visual Tests {pass ? "PASS" : scorecard.deterministicResult === "pass" ? "FAIL, the gate that failed" : "FAIL"}
               </span>
             ) : (
-              <span className="gate-chip neutral" title="Mode B: no visual review supplied">
-                ◈ Visual not reviewed
+              <span className="gate-chip neutral" title="Visual Tests were not run">
+                ◈ Visual Tests not run
               </span>
             )}
           </div>
@@ -342,10 +356,10 @@ export function EvaluateOverview() {
             {needsYouCount > 0 ? (
               <>
                 <span aria-hidden>⚑ </span>
-                {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your eyes → Review (2)
+                {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your eyes → Review (3)
               </>
             ) : (
-              <>Nothing needs your eyes → Review (2)</>
+              <>Nothing needs your eyes → Review (3)</>
             )}
           </button>
           <div style={{ width: "100%" }}>
@@ -362,7 +376,7 @@ export function EvaluateOverview() {
             </div>
             {counts.neutral > 0 && (
               <div className="stage-sub" style={{ justifyContent: "flex-end" }}>
-                <span style={{ color: "var(--unknown)" }}>{counts.neutral} not visually reviewed</span>
+                <span style={{ color: "var(--unknown)" }}>{counts.neutral} without Visual Tests</span>
               </div>
             )}
           </div>
@@ -375,8 +389,8 @@ export function EvaluateOverview() {
           <span className="kpi-value">{counts.total}</span>
         </div>
         <div className="kpi">
-          <span className="kpi-label">Need You</span>
-          <span className="kpi-value" style={{ color: needsYouCount > 0 ? "var(--ink-human)" : undefined }}>
+          <span className="kpi-label">Needs Attention</span>
+          <span className="kpi-value" style={{ color: needsYouCount > 0 ? "var(--brand-blue)" : undefined }}>
             {needsYouCount}
           </span>
           <span className="kpi-sub">Failing or ambiguous</span>
@@ -442,6 +456,8 @@ export function PromotePanel() {
 
   const withKeep = skills.filter((s) => s.latest?.decision === "KEEP");
   const staged = withKeep.filter((s) => s.latest?.promotion === "staged");
+  const approved = withKeep.filter((s) => s.latest?.promotion === "approved");
+  const rejected = withKeep.filter((s) => s.latest?.promotion === "rejected");
   const promoted = withKeep.filter((s) => s.latest?.promotion === "promoted");
   const unknown = withKeep.filter((s) => !s.latest?.promotion || s.latest?.promotion === "unknown");
 
@@ -489,17 +505,38 @@ export function PromotePanel() {
       <div className="section-title" style={{ marginTop: 0 }}>
         Promote
         <span className="section-sub">
-          The human gate: a KEEP candidate is only <em>staged</em> by the loop; nothing touches a live SKILL.md until you
-          promote it here (or run the CLI command). The current version is archived first.
+          A KEEP candidate must first be approved in Decide. Promote is the separate live-file mutation; the current
+          version is archived before it changes.
         </span>
       </div>
 
-      <div className="section-title">Pending promotion</div>
+      <div className="section-title">Awaiting Decide review</div>
       {staged.length === 0 ? (
-        <div className="empty-note">Nothing staged. KEEP candidates appear here awaiting your approval.</div>
+        <div className="empty-note">No unreviewed KEEP candidates.</div>
       ) : (
         <div className="skill-grid">
           {staged.map((s) => {
+            const it = s.latest!;
+            return card(
+              s,
+              <div style={{ marginTop: "var(--sp-2)", fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
+                Inspect candidate <span className="mono">{it.iteration}</span> in Decide and record an explicit human
+                approve or reject decision. The live skill is untouched.
+                <div style={{ marginTop: "var(--sp-3)" }}>
+                  <Pill tone="human">awaiting Decide review</Pill>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="section-title">Pending promotion</div>
+      {approved.length === 0 ? (
+        <div className="empty-note">Nothing approved. Candidates appear here only after Decide approval.</div>
+      ) : (
+        <div className="skill-grid">
+          {approved.map((s) => {
             const it = s.latest!;
             const cmd = `node packages/eval/bin/cesium-eval.js optimize promote ${s.skill} ${it.iteration}`;
             const key = `${s.skill}/${it.iteration}`;
@@ -507,7 +544,7 @@ export function PromotePanel() {
               s,
               <div style={{ marginTop: "var(--sp-2)" }}>
                 <div style={{ fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
-                  Staged candidate <span className="mono">{it.iteration}</span> awaits your approval
+                  Approved candidate <span className="mono">{it.iteration}</span> awaits promotion
                   {it.finished_utc ? ` (won ${relativeTime(it.finished_utc)})` : ""}. The live{" "}
                   <span className="mono">skills/{s.skill}/SKILL.md</span> is untouched.
                 </div>
@@ -520,12 +557,31 @@ export function PromotePanel() {
                   </button>
                 </div>
                 <div style={{ marginTop: "var(--sp-2)" }}>
-                  <Pill tone="human">awaiting your approval</Pill>
+                  <Pill tone="human">approved in Decide</Pill>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {rejected.length > 0 && (
+        <>
+          <div className="section-title">Rejected in Decide</div>
+          <div className="skill-grid">
+            {rejected.map((s) =>
+              card(
+                s,
+                <div style={{ marginTop: "var(--sp-2)", fontSize: "var(--fs-100)", color: "var(--text-2)", lineHeight: 1.5 }}>
+                  Human review rejected this candidate. It remains archived for evidence and cannot be promoted from the console.
+                  <div style={{ marginTop: "var(--sp-3)" }}>
+                    <Pill tone="neutral">rejected</Pill>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </>
       )}
 
       <div className="section-title">Promoted</div>

@@ -5,7 +5,7 @@ name: Publish Wiki from Source
 on:
   workflow_dispatch:
   push:
-    branches: [ main, wiki-acd-sync ]
+    branches: [ main ]
     paths:
       - 'wiki/**'
       - '.assets/**'
@@ -20,11 +20,15 @@ concurrency:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    # Hosted unless this repo defines RUNNER_LABELS (a JSON array of runner labels).
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    # Without this the job inherits the 360-minute default, so a hung git push
+    # against the wiki remote would occupy a runner for six hours.
+    timeout-minutes: 10
 
     steps:
       - name: Check out source repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Git user
         run: |

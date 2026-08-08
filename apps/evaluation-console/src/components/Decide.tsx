@@ -8,8 +8,8 @@ import { LoopBadge, ScenarioChip } from "./primitives";
 /* The 5-rule cascade, in the exact order the loop evaluates them (decision.json
    `rule_fired` matches one of these names). DESIGN-SPEC §4(d). */
 const RUNGS: { name: string; label: string }[] = [
-  { name: "rule_1_check_failure", label: "check failure" },
-  { name: "rule_2_critical_judge_loss", label: "critical judge loss" },
+  { name: "rule_1_check_failure", label: "Code Test failure" },
+  { name: "rule_2_critical_judge_loss", label: "critical Visual Test loss" },
   { name: "rule_3_more_wins", label: "net wins" },
   { name: "rule_4_more_losses", label: "net losses" },
   { name: "rule_5_tie_keep_current", label: "tie → keep current" }
@@ -300,7 +300,7 @@ function Judges({ scn }: { scn: ScenarioDetail }) {
   if (scn.judge_unavailable || scn.individual_verdicts.length === 0) {
     return (
       <div className="empty-note" style={{ padding: "var(--sp-2)" }}>
-        Visual judges unavailable for this scenario, so the programmatic ledger is the evidence.
+        Visual Tests are unavailable for this scenario, so the Code Test ledger is the evidence.
       </div>
     );
   }
@@ -328,7 +328,8 @@ function Judges({ scn }: { scn: ScenarioDetail }) {
 }
 
 export function DecideInspector() {
-  const { iterationDetail, selectedScenarioIndex } = useStore();
+  const { iterationDetail, selectedScenarioIndex, selectedSkill, reviewSkillCandidate } = useStore();
+  const [reviewBusy, setReviewBusy] = useState<"approve" | "reject" | null>(null);
 
   if (!iterationDetail) {
     return <aside className="inspector col" aria-label="Decision inspector" />;
@@ -360,9 +361,64 @@ export function DecideInspector() {
       </div>
 
       <div className="band eye">
-        <div className="band-head">◈ 3 judges · candidate-relative</div>
+        <div className="band-head">◈ 3 AI reviewers · candidate-relative</div>
         <div className="band-body">{scn ? <Judges scn={scn} /> : <div className="empty-note">No scenario selected.</div>}</div>
       </div>
+
+      {iterationDetail.decision === "KEEP" && selectedSkill && (
+        <div className="band">
+          <div className="band-head">⚑ human decision · required before Promote</div>
+          <div className="band-body">
+            {iterationDetail.promotion === "promoted" ? (
+              <div className="intent" style={{ color: "var(--text-2)" }}>This approved candidate has been promoted.</div>
+            ) : iterationDetail.promotion === "approved" ? (
+              <div className="intent" style={{ color: "var(--pass)" }}>
+                Approved for Promote. The live SKILL.md is still untouched.
+              </div>
+            ) : iterationDetail.promotion === "rejected" ? (
+              <div className="intent" style={{ color: "var(--fail)" }}>
+                Rejected by human review. This candidate cannot be promoted from the console.
+              </div>
+            ) : (
+              <div className="intent" style={{ color: "var(--text-2)" }}>
+                Inspect the evidence, then explicitly approve or reject this candidate. Neither action edits the live skill.
+              </div>
+            )}
+            {iterationDetail.promotion !== "promoted" && (
+              <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-3)", flexWrap: "wrap" }}>
+                <button
+                  className="promote-btn"
+                  disabled={reviewBusy !== null || iterationDetail.promotion === "approved"}
+                  onClick={async () => {
+                    setReviewBusy("approve");
+                    try {
+                      await reviewSkillCandidate(selectedSkill, iterationDetail.iteration, "approve");
+                    } finally {
+                      setReviewBusy(null);
+                    }
+                  }}
+                >
+                  {reviewBusy === "approve" ? "Approving…" : "Approve for Promote"}
+                </button>
+                <button
+                  className="pill"
+                  disabled={reviewBusy !== null || iterationDetail.promotion === "rejected"}
+                  onClick={async () => {
+                    setReviewBusy("reject");
+                    try {
+                      await reviewSkillCandidate(selectedSkill, iterationDetail.iteration, "reject");
+                    } finally {
+                      setReviewBusy(null);
+                    }
+                  }}
+                >
+                  {reviewBusy === "reject" ? "Rejecting…" : "Reject candidate"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Seed provenance: only claim human authorization when the proposer was
           actually seeded by a handed-in decision record — never by default. */}

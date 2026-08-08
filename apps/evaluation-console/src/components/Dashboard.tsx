@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { ArrowRight, Flag } from "lucide-react";
 import { useStore } from "../store";
-import { modelShort, pluralize, relativeTime } from "../lib/format";
+import { modelShort, pluralize, relativeTime, verdictView } from "../lib/format";
 import { healthFromSummary, healthPct } from "../lib/grade";
 import { HarnessChip, Kpi, RunTrend } from "./Compare";
 import { LiveNowBanner } from "./Live";
@@ -16,7 +16,7 @@ import type { RunSummary } from "../types";
      2. Recent runs and the KPI row: glanceable numbers spanning runs,
         harnesses, and models.
      3. Performance over time: the run-score trend, the anchor chart.
-     4. Links into the Models (6) and Harnesses (8) stations, which own the
+     4. Links into the Models (7) and Harnesses (8) stations, which own the
         deeper per-unit analysis. The dashboard never duplicates their panels.
    The dashboard is read-only: it never mutates review state.
    ============================================================================ */
@@ -53,7 +53,7 @@ function RecentRuns() {
       <div className="section-title">
         Recent Runs
         <span className="section-sub">
-          Newest first. The verdict combines automated checks and the visual review; the % is the automated-check score. Click a row to focus that run.
+          Newest first. The verdict combines Code Tests and Visual Tests; the % is the Code Test score. Click a row to focus that run.
         </span>
         <span className="spacer" />
         <button className="pill link-pill" onClick={() => openOverlay("harness")} title="Run Browser (h)">
@@ -64,6 +64,7 @@ function RecentRuns() {
         {recent.map((r) => {
           const focused = scorecard?.runId === r.run_id;
           const pass = r.overall_result === "pass";
+          const verdict = verdictView(r.overall_result);
           const health = healthFromSummary(r);
           const aggPct = health.aggregate !== null ? healthPct(health.aggregate, pass) : null;
           const scorePct = aggPct !== null ? `${aggPct}%` : "—";
@@ -72,15 +73,15 @@ function RecentRuns() {
               <button
                 className={`rr-row${focused ? " focused" : ""}`}
                 onClick={() => void switchRun(r.run_id)}
-                title={`${r.run_id}\nClick to focus this run in every station.`}
+                title={`${r.run_id}${verdict.hint ? `\n${verdict.hint}` : ""}\nClick to focus this run in every station.`}
               >
-                <span className={`rr-verdict ${pass ? "pass" : "fail"}`}>{pass ? "PASS" : "FAIL"}</span>
+                <span className={`rr-verdict ${verdict.tone}`}>{verdict.label}</span>
                 <span
                   className="rr-score mono"
                   title={
                     health.hasVisual
-                      ? "Overall health: automated checks and visual review combined equally."
-                      : "Overall health: automated checks only (no visual review)."
+                      ? "Overall health: Code Tests and Visual Tests combined equally."
+                      : "Overall health: Code Tests only."
                   }
                 >
                   {scorePct}
@@ -105,11 +106,11 @@ function RecentRuns() {
                   className={`rr-judge${r.visual_review_supplied ? "" : " off"}`}
                   title={
                     r.visual_review_supplied
-                      ? "Automated checks plus a judge panel that reviewed the rendered screenshots."
-                      : "Automated checks only; no judge reviewed the rendered screenshots."
+                      ? "Code Tests plus Visual Tests of the rendered screenshots."
+                      : "Code Tests only; Visual Tests were not run."
                   }
                 >
-                  {r.visual_review_supplied ? "Checks + Visual" : "Checks Only"}
+                  {r.visual_review_supplied ? "Code + Visual" : "Code Only"}
                 </span>
                 <span className="rr-cases mono">{pluralize(r.total_cases, "case")}</span>
                 <span className="rr-when">{relativeTime(r.timestamp_utc)}</span>
@@ -143,6 +144,9 @@ export function DashboardStation() {
 
   const combos = insights?.combos ?? [];
   const iterations = combos.reduce((n, c) => n + c.iterations, 0);
+  const failedBaselines = skills.filter((skill) =>
+    skill.history.some((iteration) => iteration.is_baseline && iteration.status === "failed")
+  ).length;
   const best = combos
     .filter((c) => c.win_rate !== null && c.scored_iterations >= 2)
     .sort((a, b) => (b.win_rate as number) - (a.win_rate as number))[0];
@@ -160,28 +164,34 @@ export function DashboardStation() {
           </div>
         </div>
         <span className="spacer" />
-        <span className={`fresh-chip${fresh.stale ? " stale" : ""}`} title="Timestamp of the newest scorecard run on disk.">
-          Latest Data {fresh.label}
-          {fresh.stale && " · Stale"}
+        <span
+          className={`fresh-chip${latestRun && fresh.stale ? " stale" : ""}`}
+          title={latestRun ? "Timestamp of the newest scorecard run on disk." : "No scorecard runs exist in this repository."}
+        >
+          {latestRun ? `Latest Data ${fresh.label}${fresh.stale ? " · Stale" : ""}` : "No run data yet"}
         </span>
       </div>
 
       {/* 0 — HAPPENING NOW: present only while an eval run is executing.
           The dashboard stays results-oriented; the run's full anatomy
-          (phases, trials, journal) lives in the Live station this links to. */}
+          (phases, trials, journal) lives in the Run station this links to. */}
       <LiveNowBanner />
 
       {/* 1 — STATUS LINE: the focused run's verdict + the primary action.
           A det-only run must not read as a full PASS: the visual gate never ran. */}
       <div className="hero-card dashboard-hero">
         <div>
-          <div className="hero-eyebrow">Focused Run</div>
-          {scorecard && pass && !scorecard.visualReviewSupplied ? (
+          <div className="hero-eyebrow">{scorecard ? "Focused Run" : "Blank Slate"}</div>
+          {!scorecard ? (
+            <div className="ov-big" style={{ color: "var(--text-2)" }}>NO RUNS YET</div>
+          ) : scorecard.overallResult === "incomplete" || (pass && !scorecard.visualReviewSupplied) ? (
             <>
               <div className="ov-big" style={{ color: "var(--defer)" }}>INCOMPLETE</div>
               <div className="stage-sub" style={{ marginTop: "var(--sp-1)" }}>
-                <span style={{ color: "var(--pass)" }}>checks PASS</span>
-                <span style={{ color: "var(--unknown)" }}>· visual unreviewed, nobody looked at the renders</span>
+                <span style={{ color: "var(--pass)" }}>Code Tests PASS</span>
+                <span style={{ color: "var(--unknown)" }}>
+                  · Visual Tests {scorecard.overallResult === "incomplete" ? "did not run — no baseline screenshots" : "not run"}
+                </span>
               </div>
             </>
           ) : (
@@ -190,19 +200,26 @@ export function DashboardStation() {
             </div>
           )}
           <div className="stage-sub" style={{ marginTop: "var(--sp-2)" }}>
-            <span className="mono">{scorecard?.runId ?? "no run loaded"}</span>
+            <span className={scorecard ? "mono" : undefined}>
+              {scorecard?.runId ?? "This repository has no evaluation data yet."}
+            </span>
             {scorecard && <span style={{ color: "var(--text-3)" }}>{relativeTime(scorecard.timestampUtc)}</span>}
           </div>
         </div>
         <div className="hero-right">
-          <button className={`review-cta${needsYouCount > 0 ? " hot" : ""}`} onClick={() => setStation("evaluate")}>
-            {needsYouCount > 0 ? (
+          <button
+            className={`review-cta${needsYouCount > 0 ? " hot" : ""}`}
+            onClick={() => setStation(!scorecard ? "live" : needsYouCount > 0 ? "review" : "evaluate")}
+          >
+            {!scorecard ? (
+              <>Start the first study → Run (1)</>
+            ) : needsYouCount > 0 ? (
               <>
                 <Flag size={12} aria-hidden /> {needsYouCount} {needsYouCount === 1 ? "case needs" : "cases need"} your
-                eyes → Evaluate (1)
+                eyes → Review (3)
               </>
             ) : (
-              <>Open the focused run → Evaluate (1)</>
+              <>Open the focused run → Evaluate (2)</>
             )}
           </button>
         </div>
@@ -237,7 +254,15 @@ export function DashboardStation() {
           tone={best ? "good" : undefined}
           small
         />
-        <Kpi label="Loop Iterations" value={String(iterations)} sub={`${skills.length} skills under optimization`} />
+        <Kpi
+          label="Candidate Rounds"
+          value={String(iterations)}
+          sub={
+            failedBaselines
+              ? `${failedBaselines} ${failedBaselines === 1 ? "baseline failure" : "baseline failures"} blocked candidate work`
+              : `${skills.length} skills in optimization history`
+          }
+        />
       </div>
 
       {/* 3 — THE ANCHOR CHART: score across runs, over time. */}

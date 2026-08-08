@@ -3,19 +3,15 @@
   "registry": "config/harness-registry.json",
   "threshold": 0.95,
   "roles": {
-    "proposer": { "harness": "opencode", "model": "auto", "variant": "auto" },
-    "codegen": { "harness": "opencode", "model": "auto", "variant": "auto" },
-    "judge": { "harness": "opencode", "model": "auto", "variant": "auto" }
+    "proposer": { "harness": "copilot", "model": "gpt-5.6-sol", "variant": "low" },
+    "codegen": { "harness": "copilot", "model": "gpt-5.6-sol", "variant": "low" },
+    "judge": { "harness": "copilot", "model": "gpt-5.6-sol", "variant": "low" }
   },
   "judgePanel": {
     "size": 3,
     "seeds": [42, 123, 789],
     "pairwiseProtocol": "pairwise-v1",
     "staticProtocol": "static-visual-v1"
-  },
-  "visionFallback": {
-    "enabled": true,
-    "model": null
   },
   "browser": {
     "cesiumVersion": "1.142",
@@ -29,7 +25,7 @@
   },
   "server": {
     "host": "127.0.0.1",
-    "port": 8933,
+    "port": 8934,
     "pollMs": 2500
   },
   "liveness": {

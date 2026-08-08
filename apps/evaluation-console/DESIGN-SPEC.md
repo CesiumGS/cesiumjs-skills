@@ -8,17 +8,17 @@
 
 **Skill Evaluation Console** — *one console that carries a skill from a failing scorecard to a promoted fix, where the evidence is always the hero, the machine's word and the eye's word never blur, and a single human flag is the only thing that lights the optimizer.*
 
-> **North star:** A skill-quality issue should travel EVALUATE → REVIEW → OPTIMIZE → DECIDE → PROMOTE without the expert ever switching apps, rebuilding context, or wondering which judge spoke.
+> **North star:** A skill-quality issue should travel RUN → EVALUATE → REVIEW → OPTIMIZE → DECIDE → PROMOTE without the expert ever switching apps, rebuilding context, or wondering which workflow is active.
 
 ### Five named design principles
 
 | # | Principle | Theory | What it forces in the build |
 |---|-----------|--------|------------------------------|
-| **P1** | **One spine, no tabs.** The lifecycle is a persistent left RAIL of five stations + a three-pane skeleton (Rail / Stream / Stage) reused at every station. Phase is a *verb on the current selection*, not a place you navigate to. | Shneiderman overview→zoom→filter→details; Jakob (consistency = no relearning) | Context + reducer, **no router**. The same case object the human flags in Review is the same object the loop chases in Optimize. |
+| **P1** | **One spine, no tabs.** The lifecycle is a persistent left RAIL of six stations + a three-pane skeleton (Rail / Stream / Stage) reused at every station. Phase is a *verb on the current selection*, not a place you navigate to. | Shneiderman overview→zoom→filter→details; Jakob (consistency = no relearning) | Context + reducer, **no router**. The same case object the human flags in Review is the same object the loop chases in Optimize. |
 | **P2** | **The present data is the hero; the render is promoted, not assumed.** Deterministic checks are *always* present and are the default Stage hero. The render takes over the Stage only when `screenshots.length > 0`. | Tufte data-ink; the real data is 88/88 Mode B | Kills the prior concepts' fatal flaw of designing the hero around the rare Mode A case. The app is gorgeous on a deterministic-only run, not hollow. |
-| **P3** | **Provenance is ink; scales never share an axis.** Deterministic (0–1, %) speaks in **cool steel-cyan, monospace, ✓/✗ glyphs**. Visual judge (0–1 stored, shown ×10 as `N.N/10`) speaks in **warm amber, prose, pip capsules**. Human override carries a **magenta hairline**. Every score carries a unit token + glyph, never color alone. | Tufte honest encoding; Norman "which judge spoke"; WCAG 1.4.1 | *(stolen verbatim from LIGHTTABLE/Atlas/Cadence — the panel's #1 best-idea-to-steal, agreed by ≥6 judges)* Enforced in the **type layer**: `Score01` / `Score10` / `Pct` components physically cannot co-plot. |
-| **P4** | **Unknown is never low.** `not_reviewed`/`needs_review` render as a **hollow dashed slate chip labeled "unknown,"** never a red zero. Mode is detected **per case** off `visual_review.status`, not globally. | Honest encoding; the #1 dashboard lie over sparse data | A `0` score on an unreviewed dimension is suppressed; the dimension shows a dashed ring. |
-| **P5** | **The common path is near-zero interaction, and the flag is load-bearing.** Worst-first, silence-as-accept (`j` to advance), one-key override (`f`/`d`). `f` is the **only** writer of the focus set, and the focus set is the **only** seed of optimization. | Fitts/Hick (single-key high-frequency verbs); the brief's core product win | *(steals the enforced focus-bridge from Atlas/Cadence/FLIGHTDECK — the cross-cutting best-idea-to-steal)* The bridge is the architecture, not an export. |
+| **P3** | **Provenance is ink; scales never share an axis.** Deterministic (0–1, %) speaks in **cool steel-cyan, monospace, ✓/✗ glyphs**. Visual judge (0–1 stored, shown ×10 as `N.N/10`) uses a **warm amber provenance glyph and prose**, while its filled score marks use one severity scale: red `<5`, amber `5–<7`, green `≥7`. Human override carries a **magenta hairline**. Every score carries a unit token + glyph, never color alone. | Tufte honest encoding; Norman "which judge spoke"; WCAG 1.4.1 | Enforced in the **type layer**: `Score01` / `Score10` / `Pct` components physically cannot co-plot, and all visual magnitudes share `visualScoreTone`. |
+| **P4** | **Unknown is never low.** An unscored `not_reviewed`/`needs_review`/`not_applicable` dimension renders as a **hollow dashed slate chip labeled "unknown,"** never a red zero. A real numeric score keeps its magnitude and severity tone even when its categorical status is `needs_review`. Mode is detected **per case** off `visual_review.status`, not globally. | Honest encoding; the #1 dashboard lie over sparse data | A `0` score on an unreviewed dimension is suppressed; the dimension shows a dashed ring. |
+| **P5** | **The common path is near-zero interaction, and the flag is load-bearing.** Worst-first, silence-as-accept (`j` to advance), one-key override (`f`/`d`). The explicit bulk handoff transfers every Flagged case into the focus set, and that focus set is the only seed of optimization. | Fitts/Hick (single-key high-frequency verbs); the brief's core product win | *(steals the enforced focus-bridge from Atlas/Cadence/FLIGHTDECK — the cross-cutting best-idea-to-steal)* The bridge is the architecture, not an export. |
 
 **Base architecture:** LIGHTTABLE (Darkroom, rank #1, 24.5). **Grafts:** the *enforced, traceable focus-bridge with a CHASING bar* (FLIGHTDECK/Cadence/Atlas-editorial); the *dual provenance register* hardened into typed primitives (Atlas-editorial); the *visible focus→loop causal thread* (Spatial Atlas's flight-path, demetaphorized into a Stream connector); the *three-shape score language + hollow-unknown* (FLIGHTDECK); the *commit-log iteration history* and *blink-compare* A/B (Cadence/Spatial Atlas). **Rejected:** the spatial globe (judges: it's a delight-tax whose own escape-hatch reveals the list is the real workhorse); hardcoding the idealized 6 dimensions (not in data); leading the hero with the rare cardinal panorama.
 
@@ -27,7 +27,7 @@
 ## 2. The lifecycle journey across ONE app
 
 ```
-   EVALUATE ──────▶ REVIEW ──────▶ OPTIMIZE ──────▶ DECIDE ──────▶ PROMOTE
+   RUN ──────▶ EVALUATE ──────▶ REVIEW ──────▶ OPTIMIZE ──────▶ DECIDE ──────▶ PROMOTE
    (read-only)     (human flag)   (autonomous)     (human trust)  (mutate live)
       │               │ writes        │ reads          │              │
       │               ▼ focus.json    ▼                ▼              ▼
@@ -36,13 +36,13 @@
                     failures only)  focus skills      + run bundles   (+ archive)
 ```
 
-**There are no tabs.** There is one canvas and **three altitudes** you fly between with the same keys (`Enter` down, `Esc` up), and **five stations** on the rail that are *contexts*, not destinations:
+**There are no tabs.** There is one canvas and **three altitudes** you fly between with the same keys (`Enter` down, `Esc` up), and **six lifecycle stations** on the rail that are *contexts*, not destinations:
 
 - **Altitude 0 — LEDGER (overview):** the rail + a virtualized worst-first list. Home base for every station.
 - **Altitude 1 — STAGE (zoom/details):** one case (Review) or one iteration (Optimize/Decide) filling the right two-thirds.
 - **Altitude 2 — OVERLAYS (on-demand):** Matrix (`m`), Trends (`t`), Diff (`x`), Journal (`l`), Command Palette (`⌘K`), Help (`?`). Summoned by one key, dismissed with `Esc`. Never a route.
 
-The **rail station you're in** only swaps the Stage's *mode* and the action bar's *verbs*; the Rail, the Stream's `j/k` spine, and the keyboard grammar are invariant (P1). EVALUATE is the read-only face of the Review Ledger. PROMOTE is a guarded action inside Decide, not a separate screen.
+The **rail station you're in** only swaps the Stage's *mode* and the action bar's *verbs*; the Rail, the Stream's `j/k` spine, and the keyboard grammar are invariant (P1). RUN and OPTIMIZE own distinct live lanes; EVALUATE is read-only; PROMOTE is the separate, guarded mutation gate.
 
 ---
 
@@ -234,17 +234,20 @@ j / k or ↓/↑   next / prev in Stream (worst-first)      Enter   commit curso
 gg / G          top (worst) / bottom                     Esc     up one altitude / close overlay
 [ / ]           prev/next skill (rail) · prev/next scn   ⌘K      command palette (fuzzy: skill/case/iter/action)
 /               focus filter            ? help overlay    g       jump to origin (flag↔iteration, bidirectional)
-1-5             jump to station EVAL/REVIEW/OPT/DEC/PROM
+1-6             jump to RUN/EVAL/REVIEW/OPT/DEC/PROM
 ```
-**REVIEW verbs:** `a` accept · `f` flag→focus.json · `d` defer · `u` undo (toast) · `q` focus quant band · `◈`(`w`) focus qual band · `1-4` cardinal angle · `space` cycle angles · `z` zoom render.
+**REVIEW verbs:** `a` accept · `f` flag for Optimize · `d` defer · `u` undo (toast) · `q` focus quant band · `◈`(`w`) focus qual band · `1-4` cardinal angle · `space` cycle angles · `z` zoom render.
 **OPTIMIZE verbs:** `o` start loop on focused focus-skill (gated) · `space` pause · `a` abort (confirm) · `l` journal.
 **DECIDE verbs:** `x` swipe-diff (hold/drag) · `X` blink-compare · `k` keep-override · `r` reject(agree) · `Enter` trust machine · `[`/`]` scenario · `l` jump to LOSS scenarios.
-**PROMOTE:** `P` (uppercase = mutates live `SKILL.md`; **guarded**: Enter-to-confirm + 5s undo toast `Z`, *not* a typed-name ceremony — tuned for the solo trusted user per the judges' confirm-fatigue note).
+**PROMOTE:** Decide records an explicit human approve/reject verdict without
+touching `SKILL.md`. The separate Promote station enables its mutation button
+only for an approved staged candidate; promotion archives the current file
+before applying the candidate.
 **Global a11y:** `M` flatten any overlay → plain semantic list.
 
 **Affordance convention (Norman):** lowercase = safe/reversible, uppercase = consequential. The action bar always prints the live verbs (self-documenting). `d` means Defer in Review and is unused in Decide (Decide uses `x` for diff) — **no key is overloaded across a shared Stage** (resolves Cadence's flagged `d` collision).
 
-**THE NEAR-ZERO-INTERACTION COMMON PATH:** `1` (jump to Review) → thumb on `j`. Renders/check-ledgers flow past worst-first; silence = accept. Stop only where a render makes you flinch → one `f` flags it straight into focus.json. **92 cases triaged in ~3 minutes; the human's flags are the only seed for optimization.** A dwell-guard (auto-accept only fires on `j`-advance past a case dwelt on >400ms) plus an end-of-session "N accepted without dwell" summary catches autopilot (P5 safety net).
+**THE NEAR-ZERO-INTERACTION COMMON PATH:** `3` (jump to Review) → thumb on `j`. Renders/check-ledgers flow past worst-first; silence = accept. Stop only where a render makes you flinch → one `f` marks it Flagged. The bulk rail action transfers all flagged cases into `focus.json`, then Optimize starts the loop explicitly. A dwell-guard plus an end-of-session summary catches autopilot (P5 safety net).
 
 ---
 
@@ -256,12 +259,12 @@ gg / G          top (worst) / bottom                     Esc     up one altitude
 
 **Quant vs qual (typed primitives — the enforcement layer):**
 - `<Score01 value={case.score}/>` → steel bar + `%` + machine glyph ▣. Source: `case.score`, `category_scores[k].score`, `checks[]`.
-- `<Score10 value={vr.score} />` → renders `vr.score * 10` as `N.N/10` amber pip capsule + eye glyph ◈ **only if `vr.status` is reviewed**; else dashed ◌. (Real `visual_review.score` is **0-1**, e.g. 0.9 → "9.0/10" — never assume a stored 0-10; resolves the inverted-scale fatal flaw flagged in Cadence/Atlas.)
+- `<Score10 value={vr.score} />` → renders `vr.score * 10` as `N.N/10` pip capsule + amber eye glyph ◈ **only if a real score exists**; filled pips use the shared red/amber/green severity thresholds, otherwise the score is dashed ◌. (Real `visual_review.score` is **0-1**, e.g. 0.9 → "9.0/10" — never assume a stored 0-10; resolves the inverted-scale fatal flaw flagged in Cadence/Atlas.)
 - `<Pct value={summary.visualWinRate}/>` → steel ring for win-rates. Three shapes, three scales, **never one axis** (P3).
 
 **Auto-categorization (facet bar + Matrix):** five composable facets from real fields — **skill** (14), **category** (the 9 real `category_scores` keys), **dimension** (read dynamically from `visual_review.dimensions` keys per `schema_version`, NOT hardcoded — the persisted set is `clutter/framing/nonblank_render/occlusion/prompt_match/target_visible`; a `DIMENSION_LABELS` map gives friendly names and a fallback for any `^[a-z][a-z0-9_]*$` key), **verdict** (`result` + `vr.status`), **failure type** (`checks[].type` like `json_value_equals`, `critical` first). Facets AND-compose, recolor rail badges (Shneiderman dynamic queries).
 
-**Mode A / B (per-case, off `visual_review.status`):** `not_reviewed`/`needs_review` → dashed slate ◌ "unknown" (P4). A scorecard with `visual_summary.visual_review_supplied === false` shows a top-strip badge "MODE B · deterministic-only" and every Stage defaults to the check ledger — the deterministic experience is **first-class, not a fallback** (P2).
+**Mode A / B (per-case, off `visual_review.status`):** a missing score on `not_reviewed`/`needs_review`/`not_applicable` → dashed slate ◌ "unknown" (P4); a supplied numeric score remains visible and receives its score-derived severity tone. A scorecard with `visual_summary.visual_review_supplied === false` shows a top-strip badge "MODE B · deterministic-only" and every Stage defaults to the check ledger — the deterministic experience is **first-class, not a fallback** (P2).
 
 ---
 
@@ -269,11 +272,11 @@ gg / G          top (worst) / bottom                     Esc     up one altitude
 
 **Today's reality (verified):** `focus.json` is rich (`source_run_id`, `threshold`, `focus_required`, `categories[]`, `skills[]`, `cases[].failed_checks[]`) but is **auto-generated from the scorecard's critical failures** — human review does NOT write it. **Skill Evaluation Console makes the human the author.**
 
-1. **Write:** Every `f` (flag) in Review appends the case to an in-memory focus set keyed `case_id + skill + source_run_id`. The set is a live rail collection ("FOCUS 4"). A `provenance: "human_override"` tag distinguishes human flags (magenta hairline) from any auto-seeded entries.
-2. **Hand off:** An explicit rail affordance **"Optimize N confirmed/suggested →"** (or `⌘K`) `POST`s the focus set to the server, which writes `focus.json` in the **exact existing schema** (so the loop consumes it unchanged), stamping `source_run_id` to guard against a stale scorecard re-run. Human-confirmed flags take precedence; if none exist, the user can explicitly hand off the machine suggestions as a reviewable starting set.
-3. **Gate:** Optimize's handoff is disabled only when neither confirmed nor suggested flags exist. Suggestion-based handoffs are labeled in the handoff artifact and Optimize panel so they cannot be mistaken for human-confirmed focus.
-4. **Stream:** `o` `POST`s to launch `scripts/run-loop.py` scoped to the focus skill; the server tails `journal.jsonl` (coarse train) + watches `runs_dir` (fine scenario board). Failure stubs surface honestly (§4c).
-5. **Review & promote:** When `decision.json` lands, `Enter` carries you to Decide. The **CHASING bar** and **"authorized by: ⚑flag"** trace every iteration back to the human flag that triggered it (`g→origin`). `P` writes the candidate `SKILL.md` over the live one (with diff preview + 5s undo), archives to `optimization-snapshot-*`, and records the promotion on the rail's PROMOTE station. `rebaseline_required[]` from `decision.json` surfaces as an explicit warning row.
+1. **Flag:** `f` records a human-confirmed Review flag. Machine auto-flags remain visible suggestions until explicitly confirmed.
+2. **Hand off:** The explicit rail affordance **"Send N confirmed flags to Optimize"** transfers only persisted human flags. The server independently revalidates the selected keys, writes `focus.json` in the existing schema, and stamps `source_run_id` to guard against a stale run.
+3. **Gate:** Handoff is disabled when no human-confirmed flags exist. Optimize then shows a separate, explicit **Start optimization** action; the exact CLI command remains visible as a terminal fallback.
+4. **Stream:** Start POSTs the validated focus and known skills to the optimization dispatcher. The server tails `journal.jsonl` and watches artifacts; Optimize owns the resulting animation and live badge independently of Run.
+5. **Review & promote:** When `decision.json` lands, `Enter` carries you to Decide. The **CHASING bar** and **"authorized by: ⚑flag"** trace every iteration back to the human flag that triggered it (`g→origin`). Decide records `approve` or `reject` in `candidate-review.json` without mutating the live skill. Promote accepts only an approved `PROMOTED-PENDING.md`, archives the previous skill to `optimization/history/<skill>/iteration-<id>/current-best-before.md`, applies the candidate, and writes `promotion.json`. `rebaseline_required[]` from `decision.json` surfaces as an explicit warning row.
 
 > **Honesty note baked into the build:** the loop is **skill-scoped** (`run-loop.py` regenerates all ~14 scenarios per iteration) and eval-case IDs ≠ optimization-scenario IDs. So the CHASING bar reads *"optimizing **cesiumjs-camera**, seeded by your flags: eval-113, eval-104"* — skill-level honesty, not a fabricated per-case lock (resolves the Atlas-editorial fatal flaw).
 
@@ -314,7 +317,7 @@ Color is **never the sole signal**: steel/amber/magenta each carry a unit (`%`, 
 ```
 App
 ├─ TopStrip            (run provenance, overall Score01, mode badge, live OPTIMIZE pill)
-├─ Rail               (5 stations + badges, Focus collection, Matrix/Trends launchers)
+├─ Rail               (6 lifecycle stations + lane-specific badges, Matrix/Trends launchers)
 ├─ FacetBar           (5 composable facets, AND chips, live counts)
 ├─ Stream             (VirtualList — react-virtuoso; CaseRow / IterationRow)
 ├─ Stage              (mode: CheckLedgerHero | RenderHero | DiffHero | LoopMonitor)
@@ -366,7 +369,7 @@ SSE streams use atomic-rename/append-only tailing with a `decision.json`/`summar
 
 | Capability | audit-viewer | evaluation-review | optimization/dashboard | **Skill Evaluation Console** |
 |---|---|---|---|---|
-| Lifecycle coverage | review only, 4 fragmenting tabs | review only | optimize only, static dump | **all 5 stations, one spine, zero tabs** |
+| Lifecycle coverage | review only, 4 fragmenting tabs | review only | optimize only, static dump | **all 6 lifecycle stations, one spine, zero tabs** |
 | The focus bridge | buried in a handoff tab | exports focus.json (unconsumed) | n/a | **human flag is the only seed; gated, streamed, traceable (g→origin)** |
 | Render as evidence | tiny thumbnails | render-as-hero (good) | none | **render OR check-ledger hero, per-case Mode (P2)** |
 | Quant vs qual | mixed, ambiguous | partial | Chart.js blur | **typed Score01/Score10/Pct, ink-coded, never one axis (P3)** |
@@ -385,9 +388,9 @@ SSE streams use atomic-rename/append-only tailing with a `decision.json`/`summar
 
 **M1 — EVALUATE + REVIEW on real data (day 3-6):** `/api/scorecard`, `/api/screenshot`. Stream (virtualized, worst-first, "Needs You"), CheckLedgerHero (Mode B default), RenderHero + ContactStrip (Mode A), QuantBand + QualBand with dynamic dimensions, FacetBar. **`a/f/d/j/k` triage loop with dwell-guard.** *This alone beats both review UIs.*
 
-**M2 — The bridge (day 7-8):** in-memory focus set, FOCUS rail collection, `POST /api/focus` writing the real schema, "Hand off to Optimize →," the gate + escape hatch. *Closes the brief's core product gap.*
+**M2 — The bridge (day 7-8):** Flagged status, explicit bulk "Send N flags to Optimize" control, server-written focus/handoff artifacts, and a separate Start optimization gate plus terminal fallback. *Closes the brief's core product gap.*
 
-**M3 — OPTIMIZE live (day 9-12):** `POST /api/optimize`, SSE journal + runs watch, PipelineTrain (RED on `step_failed`), ScenarioBoard (de-aliased verdicts), iteration commit-log, CHASING bar.
+**M3 — OPTIMIZE live (day 9-12):** explicit `POST /api/optimization/launch`, dispatcher + journal polling, lane-specific live state, PipelineTrain (RED on `step_failed`), ScenarioBoard (de-aliased verdicts), iteration commit-log, CHASING bar.
 
 **M4 — DECIDE + PROMOTE (day 13-16):** DiffViewer (swipe + blink), CascadeLadder wired to regression check, decision/summary/run-bundle endpoints, `g→origin`, guarded `P` promote + archive + undo.
 

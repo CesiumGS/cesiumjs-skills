@@ -1,5 +1,15 @@
-# Gitleaks configuration for cesiumjs-skills
-# This file configures allowlisted paths and patterns for the secret scanner
+# Gitleaks configuration for cesiumjs-skills.
+#
+# WITHOUT the [extend] block below, gitleaks loads ZERO detection rules and every
+# scan in this repository is a no-op: an [allowlist] alone defines only what to
+# ignore, never what to look for. Verified empirically on an identical repository
+# containing a planted credential: the default rules report findings, this config
+# without [extend] reported none.
+#
+# Do not remove it. .github/scripts/gitleaks-selftest.sh plants a credential and
+# fails the build if this config stops detecting it.
+[extend]
+useDefault = true
 
 [allowlist]
 description = "Allowlist for known false positives"
@@ -10,13 +20,73 @@ paths = [
   '''tests/.*\.py''',
 ]
 
-# Coverage.json contains API references that match generic-api-key patterns
-# These are CesiumJS API names, not actual secrets
+# False positives from generic-api-key, matched against the SECRET value.
+#
+# optimization/results/coverage.json maps skill sections to the CesiumJS APIs
+# they exercise, so it is full of dotted API identifiers (Cartesian3.fromDegrees,
+# Ellipsoid.WGS84) that the generic-api-key heuristic reads as key material.
+# Arming this config surfaced 62 such findings across history, every one an API
+# name; the two pre-existing patterns below never covered those shapes because
+# nothing was ever actually scanned.
+#
+# The third entry is deliberately value-shaped rather than path-based:
+# allowlisting coverage.json by path would hide a real token committed into it.
+#
+# The SEGMENT LENGTH BOUND is the load-bearing part, and it is not cosmetic. A
+# dotted string of word characters is ALSO the shape of a JWT: base64url is
+# [A-Za-z0-9_-], `.` is the JWT separator, and `_` is inside the class. An
+# unbounded version of this pattern therefore allowlists any JWT whose segments
+# happen to contain no '-', which measures at roughly 44% of real Cesium ion
+# tokens. CESIUM_ION_TOKEN is a JWT, so the unbounded form silently disabled
+# gitleaks' `jwt` rule for this repository's single most important secret.
+# Verified on the pinned 8.18.2: a dash-free ion-shaped token scored 0 findings
+# with the unbounded pattern and 1 (rule=jwt) without it.
+#
+# THE BOUND MUST STAY STRICTLY BELOW 43, and the reason is the SIGNATURE, not the
+# payload. An HS256 signature is always exactly 43 base64url characters, so any
+# JWT with a short payload has all three segments under 45 and an earlier {0,44}
+# bound still swallowed the whole class. Capping at 42 puts the shortest possible
+# signature out of reach, which makes every signed JWT unmatchable rather than
+# merely moving the boundary (HS384=64, HS512/ES256=86, ES384=128, RS256=342).
+#
+# Headroom on the other side is measured, not guessed: 402 distinct dotted
+# identifiers in coverage.json, longest single segment 38
+# ("fromTranslationQuaternionRotationScale"). 42 sits between 38 and 43.
+#
+# Do NOT "simplify" this by removing the bound, and do not drop `_` from the
+# class either: 32 of those 402 identifiers contain one (Cartesian3.UNIT_X,
+# EdgeDisplayMode.EDGES_ONLY, ...).
+#
+# .github/scripts/gitleaks-selftest.sh plants a dash-free JWT and asserts the
+# `jwt` rule fires, so this specific regression cannot return silently.
 regexes = [
   '''Cesium\.(Ion|Viewer|Camera|Scene|Entity)''',
   '''viewer\.(camera|scene|entities|dataSources|imageryLayers)''',
+  '''^(?:[A-Za-z_][A-Za-z0-9_]{0,41}\.){1,3}[A-Za-z_][A-Za-z0-9_]{0,41}$''',
 ]
 
-# Commits before the evaluation framework was added (legacy history)
+# Commits before the evaluation framework was added (legacy history).
+#
+# MUST stay inside [allowlist] and ABOVE the [[rules]] table below. TOML binds a
+# bare key to the most recent table header, so when the anthropic rule was added
+# this key silently became a property of THAT rule instead of the allowlist.
+# Harmless while the list is empty, but a SHA added here would have been quietly
+# ignored rather than suppressed. Keep every [[rules]] table last in this file.
 commits = [
 ]
+
+# gitleaks' own DefaultStopWords contains "ant-", "ant.", and "ant_", and
+# generic-api-key checks those case-insensitively against the captured secret, so
+# every credential beginning `sk-ant-` is dropped. There is no anthropic rule in
+# the default set either, in 8.18.2 or in 8.30.1, so a version bump does not fix
+# it. A custom rule carries no stopword allowlist.
+#
+# This project's own harness credentials are OpenAI-shaped and are already
+# detected; the realistic exposure is a developer copying a personal
+# ~/.local/share/opencode/auth.json into the tree to reproduce a CI failure.
+# There is no .gitignore entry for auth.json, so `git add -A` takes it.
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API or OAuth credential"
+regex = '''sk-ant-[A-Za-z0-9_-]{24,}'''
+keywords = ["sk-ant-"]

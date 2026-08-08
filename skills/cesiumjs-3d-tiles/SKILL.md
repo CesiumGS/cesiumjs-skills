@@ -1,6 +1,6 @@
 ---
 name: cesiumjs-3d-tiles
-description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when loading 3D Tiles or Mapbox Vector Tiles, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
+description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when a task involves loading 3D Tiles or Mapbox Vector Tiles, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
 ---
 # CesiumJS 3D Tiles
 
@@ -24,7 +24,7 @@ const tileset = await Cesium3DTileset.fromUrl(
   { maximumScreenSpaceError: 16 }, // lower = higher quality
 );
 viewer.scene.primitives.add(tileset);
-viewer.zoomTo(tileset, new HeadingPitchRange(
+await viewer.zoomTo(tileset, new HeadingPitchRange(
   0.0, CesiumMath.toRadians(-25.0), tileset.boundingSphere.radius * 2.0,
 ));
 ```
@@ -134,20 +134,45 @@ Notes:
 - `provider.show` proxies visibility to the generated tileset.
 - Runtime vector glTF content uses draft `EXT_mesh_polygon` and `3DTILES_content_gltf_vector` support; treat this path as experimental.
 
-## Tileset Events
+## Tileset Events and Render Readiness
+
+`fromUrl` resolves when tileset metadata is usable; it does not mean the tiles
+for the current camera view have rendered. `initialTilesLoaded` fires only for
+the first loaded view, while `allTilesLoaded` and `tilesLoaded` are
+view-dependent. After `zoomTo`, `flyTo`, `setView`, or interactive camera
+movement, check readiness again. Do not substitute a fixed delay for this
+semantic condition.
 
 ```js
-tileset.loadProgress.addEventListener((pending, processing) => {
-  if (pending === 0 && processing === 0) console.log("Loaded");
-});
-tileset.initialTilesLoaded.addEventListener(() => { /* first view ready */ });
-tileset.allTilesLoaded.addEventListener(() => { /* all visible tiles ready */ });
-tileset.tileLoad.addEventListener((tile) => { /* tile content loaded */ });
-tileset.tileUnload.addEventListener((tile) => { /* tile evicted from cache */ });
-tileset.tileFailed.addEventListener(({ url, message }) => {
-  console.error(`Tile ${url}: ${message}`);
-});
+function waitForTilesetView(viewer, tileset, timeoutMs = 30_000) {
+  return new Promise((resolve, reject) => {
+    const scene = viewer.scene;
+    let readyFrames = 0;
+    const remove = scene.postRender.addEventListener(() => {
+      readyFrames = tileset.tilesLoaded ? readyFrames + 1 : 0;
+      if (readyFrames < 2) {
+        scene.requestRender();
+        return;
+      }
+      clearTimeout(timeoutId);
+      remove();
+      resolve(tileset);
+    });
+    const timeoutId = setTimeout(() => {
+      remove();
+      reject(new Error(`Tileset did not load within ${timeoutMs} ms`));
+    }, timeoutMs);
+    scene.requestRender();
+  });
+}
+
+await viewer.zoomTo(tileset);
+await waitForTilesetView(viewer, tileset);
 ```
+
+Use `loadProgress` for loading UI, `tileLoad`/`tileUnload` for cache activity,
+and `tileFailed` for diagnostics. Do not treat an individual `tileLoad` event as
+proof that the current view is complete.
 
 ```js
 import { Color } from "cesium";

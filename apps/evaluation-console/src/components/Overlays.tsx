@@ -4,7 +4,7 @@ import { useStore } from "../store";
 import { artifactUrl } from "../api";
 import type { CaseView, IterationSummary, RunSummary, SkillOverview, Station } from "../types";
 import { LoopBadge, Pct } from "./primitives";
-import { harnessLabel } from "../lib/format";
+import { harnessLabel, localDateTime, localDateTimeFull, relativeTime } from "../lib/format";
 import { healthFromSummary, healthPct } from "../lib/grade";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
@@ -144,13 +144,13 @@ function Matrix() {
   return (
     <>
       <div className="matrix-legend">
-        <span><span className="lg-swatch" /> Steel = checks passed / total</span>
-        <span><span className="lg-swatch empty" /> No checks run</span>
+        <span><span className="lg-swatch" /> Steel = Code Tests passed / total</span>
+        <span><span className="lg-swatch empty" /> No Code Tests run</span>
         <span style={{ color: "var(--crit)" }}>! Critical failure</span>
-        <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>Deterministic 0-1. Click a row to open Review.</span>
+        <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>Code Tests, 0–1 scale. Click a row to open Review.</span>
       </div>
       <table className="matrix">
-        <caption className="sr-only">Skills by check category: deterministic checks passed over total.</caption>
+        <caption className="sr-only">Skills by Code Test category: tests passed over total.</caption>
         <thead>
           <tr>
             <th />
@@ -168,14 +168,14 @@ function Matrix() {
             {categories.map((cat) => {
               const cell = grid.get(`${skill}::${cat}`);
               if (!cell || cell.total === 0) {
-                return <td key={cat} className="cell empty" title={`${skill} · ${cat} · no checks`} />;
+                return <td key={cat} className="cell empty" title={`${skill} · ${cat} · no Code Tests`} />;
               }
               const ratio = cell.passed / cell.total;
               return (
                 <td
                   key={cat}
                   className={`cell${cell.crit ? " crit" : ""}`}
-                  title={`${skill} · ${cat} · ${cell.passed}/${cell.total} checks${cell.crit ? " · critical ✗" : ""}`}
+                  title={`${skill} · ${cat} · ${cell.passed}/${cell.total} Code Tests${cell.crit ? " · critical ✗" : ""}`}
                   onClick={() => onCell(skill)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -185,7 +185,7 @@ function Matrix() {
                   }}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${skill.replace("cesiumjs-", "")} ${cat.replace(/_/g, " ")}: ${cell.passed} of ${cell.total} checks pass`}
+                  aria-label={`${skill.replace("cesiumjs-", "")} ${cat.replace(/_/g, " ")}: ${cell.passed} of ${cell.total} Code Tests pass`}
                 >
                   <span
                     className="cell-fill"
@@ -251,7 +251,7 @@ function Trends() {
   return (
     <>
       <div style={{ fontSize: "var(--fs-50)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-machine)", marginBottom: "var(--sp-2)" }}>
-        ▣ Visual win rate · Steel % · W/(W+L) per iteration
+        ▣ Visual Test Win Rate · Steel % · W/(W+L) per iteration
       </div>
       <div className="trend-chart">
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="none" role="img" aria-label="win-rate trend">
@@ -425,8 +425,8 @@ function HarnessOverlay() {
           </button>
         ))}
         {judge && (
-          <span className="harness-judge-note" title="Qualitative judge harness (separate from the tested codegen harness)">
-            Judge: {harnessLabel(judge)}
+          <span className="harness-judge-note" title="Visual Test harness (separate from the tested codegen harness)">
+            Visual Tests: {harnessLabel(judge)}
           </span>
         )}
       </div>
@@ -445,7 +445,7 @@ function HarnessOverlay() {
             <th scope="col">Runs</th>
             <th scope="col">Pass Rate</th>
             <th scope="col">Δ</th>
-            <th scope="col" title="Visual pass / needs review / fail across runs">Visual P / ? / F</th>
+            <th scope="col" title="Visual Test pass / needs attention / fail across runs">Visual Test P / ? / F</th>
             <th scope="col">Latest Run</th>
           </tr>
         </thead>
@@ -556,26 +556,32 @@ function HarnessOverlay() {
                     audit
                   </span>
                 )}
-                <span className={`hr-result ${r.overall_result === "pass" ? "ok" : "bad"}`}>{r.overall_result || "—"}</span>
+                <span
+                  className={`hr-result ${r.overall_result === "pass" ? "ok" : r.overall_result === "incomplete" ? "warn" : "bad"}`}
+                  title={r.overall_result === "incomplete" ? "Visual Tests never ran (no baseline screenshots); Code Tests passed." : undefined}
+                >
+                  {r.overall_result || "—"}
+                </span>
                 {aggPct !== null && (
                   <span
                     className="mono"
                     style={{ color: "var(--ink-machine)" }}
                     title={
                       health.hasVisual
-                        ? "Overall health: automated checks and visual review combined equally."
-                        : "Overall health: automated checks only (no visual review)."
+                        ? "Overall health: Code Tests and Visual Tests combined equally."
+                        : "Overall health: Code Tests only."
                     }
                   >
                     {aggPct}%
                   </span>
                 )}
                 <span
-                  className="mono"
-                  style={{ color: "var(--text-3)", marginLeft: "auto" }}
-                  title="Run start (UTC, to the second); the part that distinguishes same-commit runs."
+                  className="hr-time"
+                  style={{ marginLeft: "auto" }}
+                  title={`Run start: ${localDateTimeFull(r.timestamp_utc)} (${relativeTime(r.timestamp_utc)}). Distinguishes same-commit runs.`}
                 >
-                  {r.timestamp_utc.slice(0, 19).replace("T", " ")}
+                  <span className="hr-time-abs">{localDateTime(r.timestamp_utc)}</span>
+                  <span className="hr-time-rel">{relativeTime(r.timestamp_utc)}</span>
                 </span>
                 {isBaseline && <span className="hr-baseline" title="The comparison baseline">Baseline</span>}
                 {loaded && (
@@ -619,7 +625,7 @@ interface PaletteItem {
 
 const STATIONS: { id: Station; label: string }[] = [
   { id: "dashboard", label: "Dashboard · all studies at a glance" },
-  { id: "live", label: "Run Studies · launch & watch eval runs" },
+  { id: "live", label: "Run · launch & watch evaluation studies" },
   { id: "evaluate", label: "Evaluate · scorecard for the focused run" },
   { id: "review", label: "Review · triage cases, flag failures" },
   { id: "optimize", label: "Optimize · skill improvement loop" },
@@ -749,13 +755,12 @@ const HELP_ROWS: { keys: string[]; desc: string }[] = [
   { keys: ["Enter"], desc: "Commit the cursor to the stage" },
   { keys: ["Esc"], desc: "Up one altitude / close the overlay" },
   { keys: ["0"], desc: "Dashboard: all studies at a glance" },
-  { keys: ["1", "·", "5"], desc: "Lifecycle stations: Evaluate, Review, Optimize, Decide, Promote" },
-  { keys: ["6"], desc: "Insights: Models" },
-  { keys: ["7"], desc: "Run Studies: launch eval runs and watch them live" },
+  { keys: ["1", "·", "6"], desc: "Lifecycle: Run, Evaluate, Review, Optimize, Decide, Promote" },
+  { keys: ["7"], desc: "Insights: Models" },
   { keys: ["8"], desc: "Insights: Harnesses" },
   { keys: ["b"], desc: "Set the comparison baseline (in the Run Browser, h)" },
   { keys: ["a"], desc: "Accept (Review)" },
-  { keys: ["f"], desc: "Flag into focus.json, the only loop seed (Review)" },
+  { keys: ["f"], desc: "Mark the case Flagged for the bulk Optimize handoff (Review)" },
   { keys: ["d"], desc: "Defer (Review)" },
   { keys: ["e"], desc: "Confirm the decision and advance (Review)" },
   { keys: ["u"], desc: "Undo the last decision" },
@@ -798,11 +803,11 @@ function Help() {
           (fact chips, history ticks, phase chips) — readable without a mouse. */}
       <div className="help-legend">
         <div className="help-legend-title">Reading the Chrome</div>
-        <div className="help-legend-row"><b>Checks + Visual Review / No Visual Review</b>: whether a judge panel actually looked at the rendered screenshots, or only automated checks ran.</div>
+        <div className="help-legend-row"><b>Code + Visual / Code Only</b>: whether Visual Tests examined the rendered screenshots in addition to Code Tests.</div>
         <div className="help-legend-row"><b>Source chip</b>: who produced the scored output: a real agent harness, synthetic test fixtures, or unknown (pre-provenance runs).</div>
         <div className="help-legend-row"><b>vs baseline chip</b>: the comparison run every delta is measured against; set or clear it from the Run Browser (h).</div>
         <div className="help-legend-row"><b>History ticks</b> (Optimize rail rows): one tick per iteration: green KEEP, red REJECT, gray baseline/failed, newest on the right.</div>
-        <div className="help-legend-row"><b>Phase chips</b> (Run Studies): the run's pipeline phases; a count like 3/14 is real artifacts on disk, a pulse means running with nothing countable.</div>
+        <div className="help-legend-row"><b>Phase chips</b> (Run and Optimize): the owning workflow's pipeline phases; a count like 3/14 is real artifacts on disk, a pulse means running with nothing countable.</div>
         <div className="help-legend-row"><b>Promotion states</b>: <b>staged</b>: a KEEP candidate awaits your approval (SKILL.md untouched); <b>promoted</b>: applied with the previous version archived.</div>
       </div>
     </div>
@@ -879,7 +884,7 @@ export function Overlays() {
 
   if (overlay === "matrix") {
     return (
-      <OverlayShell title="Skill × Category Matrix" sub="Deterministic 0-1 only" onClose={closeOverlay}>
+      <OverlayShell title="Skill × Category Matrix" sub="Code Tests only · 0–1 scale" onClose={closeOverlay}>
         <Matrix />
       </OverlayShell>
     );

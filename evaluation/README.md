@@ -16,8 +16,7 @@ current-best metadata, or make promotion decisions. Those actions belong under
 `optimization/`.
 
 `node packages/eval/bin/cesium-eval.js validate --suite evaluation` enforces the
-evaluation data contracts. Evaluation fixtures may still preserve historical
-optimization artifact paths as provenance.
+evaluation data contracts.
 
 ## Feedback Incorporated
 
@@ -139,10 +138,12 @@ Validation checks that generic JSON Pointer assertions such as
 `/after/imagery_layers/0/provider` are backed by a corresponding
 `probe.capture` declaration such as `imagery_layers[*].provider`.
 
-The comprehensive review suite includes all 83 archived optimization prompts
-across the 14 CesiumJS skills as baseline-observed `eval-101+` cases. Those
-cases preserve the original prompt and expected behaviors while checking the
-observed baseline generated code and browser artifacts.
+The comprehensive baseline audit is derived live from the tracked scenario
+manifests (`optimization/scenarios/<skill>/`): `cesium-eval audit` builds one
+execution-health case per scenario and scores it against the rendered bundle
+the optimization loop wrote under the gitignored `optimization/runs/`. No
+captured evidence is committed for it — the audit always judges the current
+baselines, so it can actually fail when a skill regresses.
 
 The hand-built unit-style cases include:
 
@@ -172,6 +173,14 @@ Tracked synthetic evidence fixtures live under:
 evaluation/fixtures/
 ```
 
+These fixtures are hand-authored pass/fail pairs: each encodes a specific
+failure mode and proves the corresponding checker catches it. They test the
+evaluation harness itself and double as worked examples of the evidence
+contract. Captured observations (rendered baselines, screenshots, run bundles)
+are never committed here — they live under the gitignored
+`optimization/runs/` and `evaluation/artifacts/`, and `cesium-eval audit`
+reads them live.
+
 ## Two-Lane Baseline Audit (deterministic + qualitative)
 
 **Invariant: every eval has two lanes.** A *deterministic* programmatic lane (the
@@ -179,9 +188,11 @@ binding gate) **and** a *qualitative* static rendered-evidence lane (advisory).
 The qualitative lane is a single-render, non-pairwise judge that scores each
 baseline **0-10** against a fixed 6-dimension rubric with hard liveness/subject
 gates and named CesiumJS failure modes (see [docs/qualitative-audit-design.md](docs/qualitative-audit-design.md)).
-With OpenCode, Codex CLI, or GitHub Copilot CLI, the qualitative judge attaches
+With Codex CLI or GitHub Copilot CLI, the qualitative judge attaches
 the screenshot PNG files to each judge call and scores from direct image
-inspection.
+inspection. The OpenCode harness is text-only (the provider disables vision
+account-wide), so it cannot serve this lane — an image-bearing call to it is an
+error, never a silent reroute.
 Screenshot-quality checks, programmatic checks, console output, scene state,
 and scenario requirements remain supporting evidence for auditability and
 failure diagnosis.
@@ -189,40 +200,145 @@ The qualitative score can only *downgrade* a deterministically-passing baseline
 (a blocking failure flag → fail/needs_review); it can never upgrade a deterministic
 failure. The deterministic lane stays TypeScript-owned and binding.
 
-The judge lives in `packages/eval/src/evaluation/staticJudge.ts`
+The judge lives in `packages/eval/src/evaluation/judge/staticJudge.ts`
 (`judgeRender` + the `static-visual-v1` prompts). CI and the local
 fan-out both call the same module via one runner:
 
 ```bash
+# Blank run first: from a clean checkout, generate the baseline source and
+# render it into complete evidence bundles under optimization/runs/<skill>/baseline.
+# Resumable — anything already complete is kept, only the gaps are filled.
+node packages/eval/bin/cesium-eval.js render-baselines --skills all
+
 # Deterministic lane only (fast, no LLM) — the CI PR gate:
 node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
 
-# Both lanes (qualitative screenshot judge, 3-judge median panel):
-node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness opencode --judge-model auto --n-judges 3
-
-# Same qualitative lane through Codex CLI:
-node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness codex --judge-model auto --n-judges 3
-
-# Same qualitative lane through GitHub Copilot CLI:
-node packages/eval/bin/cesium-eval.js audit --skills all --judge-harness copilot --judge-model auto --n-judges 3
+# Both lanes (qualitative screenshot judge, 3-judge median panel).
+# GitHub Copilot CLI with gpt-5.6-sol/low is the configured default:
+node packages/eval/bin/cesium-eval.js audit --skills all --n-judges 3
 
 # Review results in the evaluation console:
 node packages/eval/bin/cesium-eval.js serve evaluation/artifacts/audits/<run_id>/scorecard.json --open
 ```
 
-The qualitative lane needs rendered baselines under `optimization/runs/<skill>/baseline`
-(gitignored). Local fan-out helpers can run the same judge module across all
-baselines concurrently; CI
-(`.github/workflows/baseline-audit.yml`) runs the deterministic lane as a blocking
-PR gate and the qualitative lane nightly (rendering baselines first).
+Both lanes need rendered baselines under `optimization/runs/<skill>/baseline`
+(gitignored), which `render-baselines` produces: the visual lane reads the
+screenshots and the deterministic lane reads `console.json` and
+`programmatic-checks.json` from the same bundle, so a bundle missing either is
+not a usable baseline. `--out <dir>` writes the same layout elsewhere (it must
+stay inside the repository — the eval page is served from the repo root) and is
+what `audit --bundle-root <dir>` then reads. Local fan-out helpers can run the
+same judge module across all baselines concurrently; in CI the blocking
+deterministic gate is `.github/workflows/pr-gate.yml`,
+`.github/workflows/pr-skill-eval-gate.yml` publishes the protected pre-merge
+live scorecard,
+`.github/workflows/skill-eval.yml` runs the post-merge per-skill live lane, and
+`.github/workflows/baseline-audit.yml` runs the Copilot-backed qualitative lane
+nightly (rendering baselines first). Credentialed jobs are controlled by trusted
+default-branch workflows, pinned to GitHub-hosted runners, and enter the
+approval-gated `copilot-inference` Environment.
+
+## What Happens When a Skill Changes
+
+A skill file is a prompt, so editing its wording changes program behaviour. The
+pipeline separates cheap structural proof, protected pre-merge behavioral
+evidence, and post-merge monitoring.
+
+**Tier 1 — the skill contract (hermetic, blocking, free).** `cesium-eval check
+skills` reads `skills/<id>/SKILL.md` directly and decides what can be decided by
+reading it: frontmatter shape, `name` matching the directory, a description that
+still carries its `Use when ...` activation clause and stays inside the length
+limit, an H1, every ```js fence parsing as JavaScript, and every referenced
+CesiumJS symbol existing in `wiki/Domain-Mapping.md`. It also fails when a domain
+skill no longer documents a single symbol it owns, or when live scenarios outlive
+the skill they belong to.
+
+It runs inside `.github/scripts/gate.sh`, so it is part of the required `gate`
+check on every pull request including forks, needs no credentials, and takes
+milliseconds. It is unscoped on purpose: checking all fifteen skills is cheaper
+than working out which ones to check.
+
+```bash
+node packages/eval/bin/cesium-eval.js check skills
+node packages/eval/bin/cesium-eval.js check skills --skills cesiumjs-camera
+```
+
+**Tier 2 — protected pre-merge live evaluation (blocking when configured,
+costs money).** `pr-skill-eval-gate.yml` is triggered by completion of PR Gate
+through `workflow_run`, so GitHub loads its definition from the trusted default
+branch. It never checks out the pull-request revision. Instead it copies the
+changed skill's bounded UTF-8 entrypoint/supporting files as data, generates
+scenario output with GitHub Copilot and no tools, then passes the generated
+JavaScript to a separate GitHub-hosted job with no secrets. That job renders the
+output and runs `audit --no-judge`. The workflow publishes a Check Run named
+`Skill Eval Gate` on the pull-request head SHA.
+
+The repository ruleset must require `Skill Eval Gate` for it to block a merge;
+see [Configure Skill Eval Gate](../wiki/Configure-Skill-Eval-Gate.md). Until the
+protected Environment, secret, readiness variable, and ruleset exist, the lane
+fails closed rather than silently claiming coverage.
+
+**Tier 3 — post-merge evidence (advisory).** After a changed skill reaches
+`main`, or through an explicit main-branch dispatch, `skill-eval.yml` repeats
+the real generation/render/audit path. This catches environment or integration
+drift after merge but is not represented as a pre-merge result.
+
+```bash
+node packages/eval/bin/cesium-eval.js render-baselines \
+  --skills cesiumjs-primitives --force --regenerate \
+  --codegen-harness copilot --codegen-model gpt-5.6-sol \
+  --codegen-variant low --out evaluation/artifacts/skill-eval
+node packages/eval/bin/cesium-eval.js audit \
+  --skills cesiumjs-primitives --no-judge \
+  --codegen-harness copilot --codegen-model gpt-5.6-sol \
+  --codegen-variant low \
+  --bundle-root evaluation/artifacts/skill-eval
+```
+
+`--no-judge` is deliberate: this lane must never fail on a matter of taste, so
+the visual panel stays in the nightly advisory lane and a red here is always
+mechanical — a required API missing from the generated code, a forbidden one
+present, or the page throwing.
+
+Scope and limits worth knowing before relying on it:
+
+- Only skills with `optimization/scenarios/<id>/` are evaluated live; that
+  directory is the work list. A skill without scenarios (the orientation skill,
+  or a new domain whose scenarios have not landed) is covered by Tier 1 only.
+- GitHub Actions receives only a fine-grained token with the `Copilot Requests`
+  account permission, stored as `COPILOT_GITHUB_TOKEN` in the protected
+  `copilot-inference` Environment. Secret-bearing jobs are pinned to ephemeral
+  GitHub-hosted runners and remain skipped until `COPILOT_INFERENCE_READY=true`.
+  No Codex/ChatGPT account-session file is copied, uploaded, refreshed, or
+  persisted on a runner.
+- Candidate skill text is untrusted prompt data. The token-bearing job disables
+  all model tools and never launches a browser. Generated JavaScript crosses an
+  artifact boundary and executes only in the later secret-free hosted job.
+- `CESIUM_ION_TOKEN` is optional. The public scenario suite is built to render
+  without ion entitlements.
+- There is a model in the loop, which makes this lane specific rather than
+  sensitive. A wording change that genuinely misdirects an agent — a wrong
+  deprecation notice, a removed constraint, guidance contradicting a scenario —
+  shows up as failed `pattern_present` / `pattern_absent` / runtime-health
+  checks. A subtly wrong aside often does not: a strong codegen model follows
+  the scenario prompt and ignores it. Tier 1 exists because it does not have
+  this property.
 
 ## Local Validation
 
 ```bash
 node packages/eval/bin/cesium-eval.js validate --suite evaluation
+node packages/eval/bin/cesium-eval.js check skills
 node packages/eval/bin/cesium-eval.js score
 node packages/eval/bin/cesium-eval.js audit --skills all --no-judge
 npm test --workspace @cesiumjs-skills/eval
+```
+
+Or run the whole blocking gate exactly as CI does, which includes all of the
+above except the audit:
+
+```bash
+npm run gate
 ```
 
 The current runner core accepts a case and a captured before/after evidence

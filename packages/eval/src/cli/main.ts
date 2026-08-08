@@ -93,10 +93,25 @@ program
   );
 
 program
+  .command("verify-fixtures")
+  .description("Assert every tracked fixture produces its declared expected_result, in both polarities.")
+  .option("--cases-root <dir>", "evaluation case manifests root")
+  .option("--fixtures-root <dir>", "synthetic fixture evidence root")
+  .option("--output <path>", "write the verification report JSON here")
+  .action((options) =>
+    run(async () => {
+      const { verifyFixturesCommand } = await import("../commands/verifyFixtures.js");
+      ctx(); // resolve repo root early for clear errors
+      return verifyFixturesCommand(options);
+    }),
+  );
+
+program
   .command("audit")
   .description("Run deterministic + visual-judge lanes over rendered baselines into one combined scorecard.")
   .option("--skills <list>", "'all' or comma-separated skill ids", "all")
   .option("--judge-model <id>", "judge model id (default: config/discovery)")
+  .option("--judge-provider <id>", "canonical provider serving the judge model (registry providers[]; harness default when omitted)")
   .option("--judge-variant <id>", "judge reasoning effort / variant (default: config/harness default)")
   .option("--n-judges <n>", "panel size", parseIntArg)
   .option("--concurrency <n>", "cases judged in parallel, 1-8 (default 4)", parseIntArg)
@@ -107,6 +122,7 @@ program
   .option("--judge-harness <id>", "judge harness: a registry harness id or 'fake'")
   .option("--codegen-harness <id>", "codegen harness stamped into the scorecard")
   .option("--codegen-model <id>", "codegen model id stamped into the scorecard (overrides meta recovery)")
+  .option("--codegen-provider <id>", "canonical provider stamped as having served the codegen model")
   .option("--codegen-variant <id>", "codegen reasoning effort / variant stamped into the scorecard")
   .option("--bundle-root <dir>", "root containing recaptured rendered bundles")
   .option("--threshold <number>", "pass threshold", parseFloatArg)
@@ -116,6 +132,51 @@ program
     run(async () => {
       const { auditCommand } = await import("../commands/audit.js");
       return auditCommand(ctx(), { ...options, noJudge: options.judge === false });
+    }),
+  );
+
+program
+  .command("probe")
+  .description("Verify (harness, model, variant) bindings end-to-end: capability (real tool use) + observed attribution.")
+  .option("--harness <id>", "registry harness id, comma list, or 'all'", "all")
+  .option("--model <id>", "model override for a single-harness probe")
+  .option("--variant <id>", "reasoning effort / variant override for a single-harness probe")
+  .option("--adapter <target>", "route a single-harness probe through the protocol adapter to this target name")
+  .option("--json", "emit machine-readable results")
+  .action((options) =>
+    run(async () => {
+      const { probeCommand } = await import("../commands/probe.js");
+      return probeCommand(ctx(), options);
+    }),
+  );
+
+program
+  .command("render-baselines")
+  .description("Blank run: generate and render current scenario baselines into complete audit evidence bundles.")
+  .option("--skills <list>", "'all' or comma-separated skill ids", "all")
+  .option("--out <dir>", "output root (repo-relative)", "optimization/runs")
+  .option("--only <list>", "comma-separated case ids to render")
+  .option("--force", "re-render even if a complete bundle already exists")
+  .option("--regenerate", "re-generate the baseline source too (implies --force)")
+  .option("--skip-codegen", "never invoke the codegen agent; report missing source instead")
+  .option("--codegen-harness <id>", "codegen harness (registry id)")
+  .option("--codegen-provider <id>", "canonical provider serving the codegen model")
+  .option("--codegen-model <id>", "codegen model id")
+  .option("--codegen-variant <id>", "codegen reasoning effort / variant")
+  .action((options) =>
+    run(async () => {
+      const { renderBaselinesCommand } = await import("../commands/renderBaselines.js");
+      return renderBaselinesCommand(ctx(), options);
+    }),
+  );
+
+program
+  .command("adapter <action>")
+  .description("Protocol adapter (LiteLLM) lifecycle: init | start | stop | status. Ships orchestration, not the binary — runs pinned via uvx.")
+  .action((action) =>
+    run(async () => {
+      const { adapterCommand } = await import("../commands/adapter.js");
+      return adapterCommand(ctx(), action);
     }),
   );
 
@@ -179,9 +240,9 @@ program
 program
   .command("serve")
   .description("Serve the Skill Evaluation Console (SPA + JSON API) over the artifacts.")
-  .argument("<scorecard>", "path to the focused run's scorecard.json")
+  .argument("[scorecard]", "path to the focused run's scorecard.json (defaults to newest run; optional for a blank repo)")
   .option("--state-dir <dir>", "directory for review-decisions.json / focus.json")
-  .option("--host <host>", "bind host")
+  .option("--host <host>", "bind host (the console is loopback-only; non-loopback clients are rejected)")
   .option("--port <port>", "bind port (0 for ephemeral)", parseIntArg)
   .option("--open", "open the system browser after start")
   .action((scorecard, options) =>
@@ -256,6 +317,7 @@ agentSelectionOptions(
     .option("--plateau-n <n>", "consecutive ties to trigger plateau stop", parseIntArg)
     .option("--promote", "apply KEEP candidates to skills/<skill>/SKILL.md (default: stage for human review and stop)")
     .option("--continue-on-failure", "continue remaining skills after one fails")
+    .option("--concurrency <n>", "independent skill loops to run in parallel (1-8)", parseIntArg, 1)
     .option("--dry-run", "print planned runs without executing"),
   ["proposer", "codegen", "judge"],
 ).action((options) =>
@@ -325,6 +387,7 @@ agentSelectionOptions(
     .command("generate-baselines")
     .description("Generate baseline JS for all scenarios against the current best skills.")
     .option("--skill <id>", "only generate for this skill")
+    .option("--skill-root <dir>", "candidate skill root (defaults to tracked skills/)")
     .option("--iteration <id>", "output iteration label", "baseline")
     .option("--force", "re-generate even if the .js exists")
     .option("--only <list>", "comma-separated scenario ids"),
@@ -452,6 +515,19 @@ check
     run(async () => {
       const { checkPublicArtifactsCommand } = await import("../commands/check.js");
       return checkPublicArtifactsCommand(ctx().repoRoot, paths ?? []);
+    }),
+  );
+
+check
+  .command("skills")
+  .description("Enforce the skill contract over skills/<id>/SKILL.md (frontmatter, code fences, CesiumJS symbols).")
+  .option("--skills <list>", "'all' or comma-separated skill ids", "all")
+  .option("--output <path>", "write a machine-readable skill-contract report")
+  .action((options) =>
+    run(async () => {
+      const { checkSkillsCommand } = await import("../commands/checkSkills.js");
+      ctx(); // resolve repo root early for clear errors
+      return checkSkillsCommand(options);
     }),
   );
 

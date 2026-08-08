@@ -185,7 +185,8 @@ Public v1 repository artifacts include:
 - `cesium-eval check canonical-surface` canonical eval-surface enforcement.
 - `cesium-eval check public-artifacts` public-facing artifact safety scan.
 - `cesium-eval optimize render` local browser-backed reproduction runner.
-- `.github/workflows/evals.yml` lightweight public eval validation in CI.
+- `.github/workflows/pr-gate.yml` the blocking deterministic eval gate in CI, and
+  `.github/workflows/secret-scan.yml` the blocking secret scan.
 
 Earlier local tuning history and raw traces were experimental predecessors to this public surface. They are not the public source of truth, are not part of the active repository pipeline, and must not be required to understand the wiki or ACD.
 
@@ -370,7 +371,7 @@ The framework should support three operational tiers.
 | Tier | Purpose | Current or target behavior |
 |------|---------|----------------------------|
 | Tier 1: Archival evaluation record | Preserve methodology, scenarios, selected scores, judge verdicts, decisions, and curated screenshots. | Public v1 content under `optimization/scenarios/` and `optimization/results/`. |
-| Tier 2: Reproducible local and CI harness | Run deterministic checks and selected visual scenarios from a clean checkout with documented commands. | `cesium-eval validate`, `cesium-eval check`, `cesium-eval optimize render`, and `.github/workflows/evals.yml`. |
+| Tier 2: Reproducible local and CI harness | Run deterministic checks and selected visual scenarios from a clean checkout with documented commands. | `cesium-eval validate`, `cesium-eval check`, `cesium-eval optimize render`, and `.github/workflows/pr-gate.yml`. |
 | Tier 3: MCP/tool-call evaluation | Evaluate structured tool selection, schema validation, multi-tool orchestration, error recovery, and final scene state. | Future target once relevant MCP/tool runtimes are mature enough. |
 
 Operational policies:

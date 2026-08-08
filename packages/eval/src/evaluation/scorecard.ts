@@ -214,12 +214,13 @@ function normalizeVisualReview(
   return normalized;
 }
 
-function visualSummary(cases: Array<Record<string, any>>, visualReviewSupplied: boolean): Record<string, any> {
+export function visualSummary(cases: Array<Record<string, any>>, visualReviewSupplied: boolean): Record<string, any> {
   const statusCounts: Record<string, number> = {};
   for (const status of [...VISUAL_REVIEW_STATUSES].sort()) statusCounts[status] = 0;
   const blockingFailures: Array<Record<string, any>> = [];
   let reviewedCount = 0;
   let requiredCount = 0;
+  let requiredNotReviewed = 0;
 
   for (const caseRow of cases) {
     const review = caseRow.visual_review;
@@ -227,6 +228,7 @@ function visualSummary(cases: Array<Record<string, any>>, visualReviewSupplied: 
     statusCounts[status] += 1;
     if (status !== "not_reviewed") reviewedCount += 1;
     if (review.required) requiredCount += 1;
+    if (review.required && status === "not_reviewed") requiredNotReviewed += 1;
     if (review.blocking && ["fail", "needs_review", "not_reviewed"].includes(status)) {
       blockingFailures.push({
         case_id: caseRow.case_id,
@@ -241,7 +243,17 @@ function visualSummary(cases: Array<Record<string, any>>, visualReviewSupplied: 
 
   let result: string;
   if (!visualReviewSupplied && requiredCount === 0) result = "not_required";
+  // The judge ran but reviewed nothing: every case fell back to not_reviewed
+  // because no baseline screenshot was found. That is a vacuous run, not a
+  // pass — a study that looked at zero screenshots must never read as green.
+  else if (visualReviewSupplied && cases.length > 0 && reviewedCount === 0) result = "not_run";
+  // A confirmed blocking failure is a stronger signal than incompleteness: if a
+  // judged case definitively failed, report it even when coverage is partial.
   else if (blockingFailures.length) result = "fail";
+  // Partial coverage: some required cases were never judged (missing
+  // screenshots) yet came through non-blocking. The reviewed cases may all pass,
+  // but required cases went unseen — that is incomplete, never a green pass.
+  else if (visualReviewSupplied && requiredNotReviewed > 0) result = "not_run";
   else if (statusCounts.fail || statusCounts.needs_review) result = "needs_review";
   else result = "pass";
 
@@ -249,6 +261,7 @@ function visualSummary(cases: Array<Record<string, any>>, visualReviewSupplied: 
     result,
     visual_review_supplied: visualReviewSupplied,
     required_count: requiredCount,
+    required_not_reviewed_count: requiredNotReviewed,
     reviewed_count: reviewedCount,
     total_cases: cases.length,
     pass_count: statusCounts.pass,
@@ -410,8 +423,13 @@ export function buildScorecard(inputs: ScorecardInput[], options: BuildScorecard
 
   const deterministicResult = overall.score >= threshold && !criticalFailures.length ? "pass" : "fail";
   const visualResult = summary.result;
-  const overallResult =
-    deterministicResult === "pass" && (visualResult === "pass" || visualResult === "not_required") ? "pass" : "fail";
+  // "incomplete" is distinct from "fail": deterministic passed, but the visual
+  // lane was requested and never actually ran (no screenshots to judge). It
+  // must not read as a green pass, and it is not a red failure either.
+  let overallResult: string;
+  if (deterministicResult === "pass" && (visualResult === "pass" || visualResult === "not_required")) overallResult = "pass";
+  else if (deterministicResult === "pass" && visualResult === "not_run") overallResult = "incomplete";
+  else overallResult = "fail";
 
   const artifactsOut: Record<string, any> = { ...(options.artifacts ?? {}) };
   if (options.harnessJudge && artifactsOut.harness_judge === undefined) artifactsOut.harness_judge = options.harnessJudge;

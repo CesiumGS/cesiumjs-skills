@@ -65,6 +65,18 @@ export function loadEvidenceValidator(): SchemaValidator {
   return new SchemaValidator(readJson(`${SCHEMAS_ROOT()}/evidence.schema.json`));
 }
 
+/**
+ * Validator for a single `CaseResult` as emitted by `runCase`.
+ *
+ * `result.schema.json` was previously only compiled and asserted as a
+ * well-formed schema; nothing ever validated a real result against it.
+ * `verify-fixtures` does, which is what closes the corresponding hardened
+ * acceptance criterion in evaluation/docs/deterministic-evaluation-plan.md.
+ */
+export function loadResultValidator(): SchemaValidator {
+  return new SchemaValidator(readJson(`${SCHEMAS_ROOT()}/result.schema.json`));
+}
+
 /** `Draft7Validator.check_schema` analog: throws when the schema is invalid. */
 export function assertValidSchema(name: string, schema: Record<string, any>): void {
   try {

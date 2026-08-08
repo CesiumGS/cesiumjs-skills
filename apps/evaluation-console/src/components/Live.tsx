@@ -3,6 +3,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowRight,
+  Camera,
   CheckCircle2,
   Clock,
   Copy,
@@ -14,9 +15,27 @@ import {
   XCircle
 } from "lucide-react";
 import { useStore } from "../store";
-import { loadLaunchSkills } from "../api";
-import type { HarnessSpec, LivePhase, LiveRun, LiveTrial } from "../types";
-import { fmtDuration, harnessLabel, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
+import {
+  adapterAction,
+  loadAdapter,
+  loadBaselineCoverage,
+  loadHarnessHealth,
+  loadLaunchSkills,
+  probeHarness,
+  prepareBaselines
+} from "../api";
+import type {
+  AdapterStatusDTO,
+  BaselineCoverageDTO,
+  HarnessHealthRow,
+  HarnessSpec,
+  LivePhase,
+  LiveRun,
+  LiveTrial,
+  ProbeResultDTO
+} from "../types";
+import { summarizeBaselineCoverage } from "../lib/baselineCoverage";
+import { fmtDuration, harnessLabel, modelShort, pluralize, relativeTime, skillLabel, titleCase } from "../lib/format";
 
 /* ============================================================================
    LIVE — the in-progress monitor for eval runs executing on this machine NOW.
@@ -50,7 +69,7 @@ const STAGE_WORD: Record<TrialStage, string> = {
   inflight: "In Flight",
   coded: "Code Ready",
   rendered: "Rendered",
-  judged: "Judged",
+  judged: "Visual Tested",
   skipped: "Review-Only"
 };
 
@@ -59,8 +78,8 @@ const AUDIT_STAGE_WORD: Record<TrialStage, string> = {
   queued: "Queued",
   inflight: "In Flight",
   coded: "Queued",
-  rendered: "Scored",
-  judged: "Judged",
+  rendered: "Code Tested",
+  judged: "Visual Tested",
   skipped: "—"
 };
 
@@ -101,6 +120,19 @@ function PhaseChip({ phase, running }: { phase: LivePhase; running: boolean }) {
       </span>
       <span className="lp-phase-name">{phase.label}</span>
       {count && <span className="lp-phase-count mono">{count}</span>}
+    </div>
+  );
+}
+
+/** Shared journal-derived phase animation. Run and Optimize use the same
+ * geometry while receiving only the lane-specific rows their pages own. */
+export function LivePhasePipeline({ run }: { run: LiveRun }) {
+  const running = run.status === "running";
+  return (
+    <div className="lp-phases">
+      {run.phases.map((phase) => (
+        <PhaseChip key={phase.id} phase={phase} running={running} />
+      ))}
     </div>
   );
 }
@@ -339,41 +371,47 @@ function describeJournalEvent(e: Record<string, unknown>): { text: string; tone:
     case "judge_started": {
       const par = Number(e.concurrency ?? 1);
       return {
-        text: `Visual Judge opened — ${pluralize(Number(e.total ?? 0), "case")}, ${e.n_judges}-judge panel${par > 1 ? ` · ${par} workers in parallel` : ""}`,
+        text: `Visual Tests started — ${pluralize(Number(e.total ?? 0), "case")}, ${e.n_judges} AI reviewers${par > 1 ? ` · ${par} cases in parallel` : ""}`,
         tone: "eye"
       };
     }
     case "judge_case_started":
-      return { text: `${workerTag(e)}judging ${journalCaseRef(e)}…`, tone: "eye" };
+      return { text: `${workerTag(e)}visually testing ${journalCaseRef(e)}…`, tone: "eye" };
     case "judge_case_completed": {
       const status = typeof e.status === "string" && e.status ? titleCase(e.status) : "Done";
       const dur = durationText(e.duration_ms);
       return {
-        text: `${workerTag(e)}${journalCaseRef(e)} judged — ${status} (${e.index}/${e.total})${dur ? ` · ${dur}` : ""}`,
+        text: `${workerTag(e)}${journalCaseRef(e)} visually tested — ${status} (${e.index}/${e.total})${dur ? ` · ${dur}` : ""}`,
         tone: e.status === "fail" ? "fail" : "eye"
       };
     }
     case "judge_completed":
-      return { text: `Visual Judge complete — ${e.judged_count}/${e.total} judged`, tone: "eye" };
+      return { text: `Visual Tests complete — ${e.judged_count}/${e.total} tested`, tone: "eye" };
     case "scoring_started":
-      return { text: `Deterministic Score opened — ${pluralize(Number(e.total ?? 0), "case")}`, tone: "machine" };
+      return { text: `Code Tests started — ${pluralize(Number(e.total ?? 0), "case")}`, tone: "machine" };
     case "scoring_case_completed":
       return {
-        text: `${journalCaseRef(e)} scored — ${titleCase(String(e.result ?? ""))} (${e.index}/${e.total})`,
+        text: `${journalCaseRef(e)} code-tested — ${titleCase(String(e.result ?? ""))} (${e.index}/${e.total})`,
         tone: e.result === "fail" ? "fail" : "machine"
       };
     case "scoring_completed":
-      return { text: "Deterministic Score complete", tone: "machine" };
+      return { text: "Code Tests complete", tone: "machine" };
     case "scorecard_written":
       return {
         text: `Scorecard written — ${titleCase(String(e.overall_result ?? "done"))}`,
         tone: e.overall_result === "pass" ? "pass" : "plain"
       };
-    case "audit_completed":
+    case "audit_completed": {
+      // "incomplete" = deterministic passed but Visual Tests never ran (no
+      // baseline screenshots). Neither green pass nor red fail: call it out.
+      const outcome = String(e.overall_result ?? "done");
+      const detail =
+        outcome === "incomplete" ? " — Visual Tests did not run (no baseline screenshots)" : "";
       return {
-        text: `Audit complete — ${titleCase(String(e.overall_result ?? "done"))}`,
-        tone: e.overall_result === "pass" ? "pass" : "fail"
+        text: `Audit complete — ${titleCase(outcome)}${detail}`,
+        tone: outcome === "pass" ? "pass" : outcome === "incomplete" ? "eye" : "fail"
       };
+    }
     case "audit_failed":
       return { text: `Audit failed — ${String(e.error ?? "unknown error")}`, tone: "fail" };
     default: {
@@ -440,11 +478,11 @@ function LiveRunCard({ run }: { run: LiveRun }) {
   const failedPhase = run.phases.find((p) => p.state === "failed");
   const doneWord = isAudit
     ? run.judge
-      ? "cases judged"
-      : "cases scored"
+      ? "cases visually tested"
+      : "cases code-tested"
     : run.kind === "baseline"
       ? "trials rendered"
-      : "trials judged";
+      : "trials visually tested";
 
   return (
     <div className={`dash-card live-run-card${running ? " running" : ""}${failed ? " failed" : ""}`}>
@@ -454,8 +492,8 @@ function LiveRunCard({ run }: { run: LiveRun }) {
         <span className="lrc-iter mono">
           {isAudit
             ? run.judge
-              ? "Checks + Visual Review"
-              : "Checks Only"
+              ? "Code + Visual"
+              : "Code Only"
             : run.kind === "baseline"
               ? "Baseline Prep"
               : `Iteration ${run.iteration}`}
@@ -505,7 +543,7 @@ function LiveRunCard({ run }: { run: LiveRun }) {
               if (run.kind === "iteration") selectSkill(run.skill);
               setStation("optimize");
             }}
-            title="Open this skill's iteration log and pipeline in Optimize (3)"
+            title="Open this skill's iteration log and pipeline in Optimize (4)"
           >
             Optimize <ArrowRight size={11} aria-hidden />
           </button>
@@ -546,11 +584,7 @@ function LiveRunCard({ run }: { run: LiveRun }) {
             </span>
           </div>
 
-          <div className="lp-phases">
-            {run.phases.map((p) => (
-              <PhaseChip key={p.id} phase={p} running={running} />
-            ))}
-          </div>
+          <LivePhasePipeline run={run} />
 
           <div className="lrc-columns">
             <div>
@@ -561,7 +595,7 @@ function LiveRunCard({ run }: { run: LiveRun }) {
                   return isAudit && groupCount > 1 ? ` · ${groupCount} Skills` : "";
                 })()}
                 {isAudit && (run.concurrency ?? 1) > 1 ? (
-                  <span className="lrc-concurrency mono" title={`Judge lane runs ${run.concurrency} cases in parallel`}>
+                  <span className="lrc-concurrency mono" title={`Visual Tests run ${run.concurrency} cases in parallel`}>
                     {run.concurrency}× parallel
                   </span>
                 ) : null}
@@ -619,20 +653,481 @@ function effortLevelsFor(spec: HarnessSpec | undefined, modelId: string): string
   return [...levels].sort((a, b) => effortRank(a) - effortRank(b));
 }
 
+/* ---------------------------------------------------------------------------
+   HARNESS HEALTH: every registry harness with its provider binding, live
+   availability, and a binding probe. A probe asserts two INDEPENDENT things
+   (registry probe_policy): capability — the harness really read a token file
+   (tool use, not recall) — and attribution — which provider/model actually
+   served the call, observed on the wire where the harness supports it.
+   Probes are serialized server-side; rows disable while one runs.
+   --------------------------------------------------------------------------- */
+
+// Capability and attribution are independent assertions, and the UI keeps
+// them apart: the verdict says whether the probe SUCCEEDED (green/red), and a
+// separate neutral chip says how the provider identity is known. A harness
+// whose CLI never reports its provider is not failing — that is a property of
+// the harness, not of the run — so it must not render as a warning.
+const PROBE_VERDICT_LABEL: Record<string, string> = {
+  pass: "Pass",
+  pass_provider_unverified: "Pass",
+  fail_capability: "No tool use",
+  attribution_mismatch: "Wrong provider",
+  error: "Error"
+};
+
+const CREDENTIAL_ROUTE_LABEL: Record<string, string> = {
+  api_key: "API key",
+  oauth_subscription: "Subscription OAuth",
+  codex_subscription: "Codex subscription",
+  broker_subscription: "Broker subscription",
+  cloud_iam: "Cloud IAM",
+  local_none: "Local (no auth)"
+};
+
+const ATTRIBUTION_WIRE_HINT =
+  "Verified: this harness reported which provider/model served the call in its own output during the probe.";
+const ATTRIBUTION_REGISTRY_HINT =
+  "This CLI's output does not say which provider served the call, so the identity shown is the registry's declared binding. The capability check passed either way.";
+
+function probeVerdictTone(verdict: string): "pass" | "fail" {
+  return verdict === "pass" || verdict === "pass_provider_unverified" ? "pass" : "fail";
+}
+
+function HarnessHealthPanel() {
+  const [rows, setRows] = useState<HarnessHealthRow[]>([]);
+  const [probing, setProbing] = useState<string | null>(null);
+  const [probeAll, setProbeAll] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = () =>
+    loadHarnessHealth()
+      .then((health) => setRows(health.harnesses))
+      .catch((exc) => setError(String(exc?.message ?? exc)));
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const applyResult = (result: ProbeResultDTO) =>
+    setRows((prev) => prev.map((row) => (row.id === result.harness ? { ...row, last_probe: result } : row)));
+
+  const probeOne = async (id: string) => {
+    setProbing(id);
+    setError(null);
+    try {
+      applyResult(await probeHarness(id));
+    } catch (exc: any) {
+      setError(`${id}: ${String(exc?.message ?? exc)}`);
+    } finally {
+      setProbing(null);
+    }
+  };
+
+  // Serialized on purpose (registry probe_policy): overlapping probes produced
+  // false timeouts when this pipeline was designed.
+  const probeEverything = async () => {
+    setProbeAll(true);
+    setError(null);
+    try {
+      for (const row of rows) {
+        if (!row.available || !row.driver_registered) continue;
+        setProbing(row.id);
+        try {
+          applyResult(await probeHarness(row.id));
+        } catch (exc: any) {
+          setError(`${row.id}: ${String(exc?.message ?? exc)}`);
+        }
+      }
+    } finally {
+      setProbing(null);
+      setProbeAll(false);
+    }
+  };
+
+  const busy = probing !== null || probeAll;
+
+  return (
+    <div className="dash-card launch-panel harness-health">
+      <div className="section-title">
+        <Activity size={13} aria-hidden /> Harness Health
+        <span className="section-sub">
+          Every registry harness with its provider binding and a live binding probe: capability (a real token-file
+          read — tool use, not recall) plus wire-observed attribution of which provider/model actually served the
+          call. Probes run one at a time.
+        </span>
+        <span className="spacer" />
+        <button className="lk-chip" onClick={probeEverything} disabled={busy || !rows.length} title="Probe every available harness, serialized">
+          {probeAll ? "Probing…" : "Probe all"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="launch-warn">
+          <AlertTriangle size={11} aria-hidden /> {error}
+        </div>
+      )}
+
+      <div className="hh-rows" role="table" aria-label="Harness health">
+        {rows.map((row) => {
+          const probe = row.last_probe;
+          const tone = probe ? probeVerdictTone(probe.verdict) : null;
+          const isProbing = probing === row.id;
+          return (
+            <div key={row.id} className="hh-row" role="row">
+              <div className="hh-cell hh-name" role="cell">
+                <span className={`hh-dot${row.available ? " on" : ""}`} title={row.available ? "CLI resolved" : row.availability_error ?? "not installed"} />
+                <span className="hh-title">{row.name}</span>
+                {!row.driver_registered && (
+                  <span className="hh-flag" title="Registry entry has no driver implementation">no driver</span>
+                )}
+              </div>
+              <div className="hh-cell hh-binding" role="cell" title={row.auth ?? undefined}>
+                <span className="hh-provider">{row.provider_label ?? row.provider ?? "—"}</span>
+                {row.credential_route && (
+                  <span className="hh-route">{CREDENTIAL_ROUTE_LABEL[row.credential_route] ?? row.credential_route}</span>
+                )}
+              </div>
+              <div className="hh-cell hh-vision" role="cell" title={row.vision_note ?? undefined}>
+                {row.multimodal ? <Eye size={12} aria-label="Vision-capable" /> : <EyeOff size={12} aria-label="Text-only" />}
+              </div>
+              <div className="hh-cell hh-probe" role="cell">
+                {isProbing ? (
+                  <span className="hh-verdict run">
+                    <Clock size={11} aria-hidden /> Probing… (≤{Math.round((row.probe_timeout_ms ?? 240000) / 1000)}s)
+                  </span>
+                ) : probe ? (
+                  <div className="hh-probe-stack">
+                    <span className={`hh-verdict ${tone}`} title={probe.capability.error ?? undefined}>
+                      {tone === "pass" ? <CheckCircle2 size={11} aria-hidden /> : <XCircle size={11} aria-hidden />}
+                      {PROBE_VERDICT_LABEL[probe.verdict] ?? probe.verdict}
+                      <span
+                        className={`hh-att ${probe.attribution.observed ? "wire" : "reg"}`}
+                        title={probe.attribution.observed ? ATTRIBUTION_WIRE_HINT : ATTRIBUTION_REGISTRY_HINT}
+                      >
+                        {probe.attribution.observed ? "verified live" : "per registry"}
+                      </span>
+                    </span>
+                    <span
+                      className="hh-probe-meta mono"
+                      title={`${probe.attribution.provider.value ?? "?"}/${probe.attribution.model.value ?? "?"} · ${fmtDuration(probe.latency_ms / 1000)}`}
+                    >
+                      {probe.attribution.provider.value ?? "?"}/{probe.attribution.model.value ?? "?"} ·{" "}
+                      {fmtDuration(probe.latency_ms / 1000)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="hh-verdict unknown">never probed</span>
+                )}
+              </div>
+              <div className="hh-cell hh-actions" role="cell">
+                <button
+                  className="lk-chip"
+                  onClick={() => probeOne(row.id)}
+                  disabled={busy || !row.available || !row.driver_registered}
+                  title={
+                    row.available
+                      ? `Probe ${row.name}: token-file capability + observed attribution`
+                      : row.availability_error ?? "CLI not installed"
+                  }
+                >
+                  {isProbing ? "…" : "Probe"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {!rows.length && !error && <div className="dash-sub">Loading harness registry…</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   PROTOCOL ADAPTER: some harness × provider pairs speak different wire
+   protocols (Claude Code speaks only anthropic-messages; Azure/Foundry serves
+   none of it). The adapter (LiteLLM, pinned, run on demand) translates
+   between them. Behind the adapter a harness believes it talks to its own
+   first party, so the wire PROVIDER claim is meaningless — adapter probes
+   verify on the MODEL id, which the proxy maps truthfully.
+   --------------------------------------------------------------------------- */
+
+function AdapterPanel() {
+  const [state, setState] = useState<AdapterStatusDTO | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  // Keyed BY TARGET: results accumulate so probing one target never clears
+  // another's verdict (a single result slot silently blanked the other row).
+  const [probeResults, setProbeResults] = useState<Record<string, ProbeResultDTO>>({});
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = () =>
+    loadAdapter()
+      .then(setState)
+      .catch((exc) => setError(String(exc?.message ?? exc)));
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const lifecycle = async (action: "start" | "stop") => {
+    setBusy(action);
+    setError(null);
+    try {
+      setState(await adapterAction(action));
+    } catch (exc: any) {
+      setError(String(exc?.message ?? exc));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const probeVia = async (target: string) => {
+    setBusy(`probe:${target}`);
+    setError(null);
+    try {
+      // Claude Code is the base_url_override harness — the one the adapter
+      // can redirect purely via env. Others need config-surface changes
+      // (documented in the registry) and are not yet automated.
+      const result = await probeHarness("claude-code", undefined, undefined, target);
+      setProbeResults((prev) => ({ ...prev, [target]: result }));
+    } catch (exc: any) {
+      setError(String(exc?.message ?? exc));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (!state) return null;
+
+  const stateTone = state.running ? (state.healthy ? "pass" : "fail") : "unknown";
+  const stateLabel = state.running ? (state.healthy ? `running · :${state.port}` : "running · unhealthy") : "stopped";
+
+  return (
+    <div className="dash-card launch-panel harness-health">
+      <div className="section-title">
+        <ArrowRight size={13} aria-hidden /> Protocol Adapter
+        <span className="section-sub">
+          Translates between wire protocols for harness × provider pairs that don't share one, so a harness can reach a
+          provider it couldn't speak to directly (e.g. Claude Code → Azure/Foundry).
+        </span>
+        <span className="spacer" />
+        <span className={`hh-verdict ${stateTone}`} title={state.pid ? `pid ${state.pid}` : undefined}>
+          <span className={`hh-dot${state.healthy ? " on" : ""}`} /> {stateLabel}
+        </span>
+        <button
+          className="lk-chip"
+          onClick={() => lifecycle(state.running ? "stop" : "start")}
+          disabled={busy !== null || (!state.running && !state.configured)}
+          title={
+            state.running
+              ? "Stop the adapter proxy"
+              : state.configured
+                ? "Generate config from targets and launch the adapter"
+                : "No targets configured — run `cesium-eval adapter init`, then edit the local targets file"
+          }
+        >
+          {busy === "start" ? "Starting…" : busy === "stop" ? "Stopping…" : state.running ? "Stop" : "Start"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="launch-warn">
+          <AlertTriangle size={11} aria-hidden /> {error}
+        </div>
+      )}
+
+      <div className="hh-rows">
+        {state.targets.map((target) => {
+          const isProbing = busy === `probe:${target.name}`;
+          const result = probeResults[target.name] ?? null;
+          const tone = result ? probeVerdictTone(result.verdict) : null;
+          // A missing credential is a SETUP state, not a failure: name it,
+          // link the remediation, and disable the probe rather than letting
+          // it fail downstream with a cryptic provider error.
+          const credentialMissing = target.credential_ready === false;
+          return (
+            <div key={target.name} className="hh-row" role="row">
+              <div className="hh-cell hh-name" role="cell">
+                <span className="hh-title mono" title={target.name}>{target.name}</span>
+              </div>
+              <div className="hh-cell hh-binding" role="cell" title={target.params?.api_base ?? undefined}>
+                <span className="hh-provider">→ {target.provider_id} · {target.model}</span>
+                {target.credential_env && (
+                  <span
+                    className={`hh-route${credentialMissing ? " missing" : ""}`}
+                    title={credentialMissing ? target.credential_hint ?? undefined : `Credential env: ${target.credential_env}`}
+                  >
+                    {target.credential_env}
+                    {credentialMissing ? " · not set" : ""}
+                  </span>
+                )}
+              </div>
+              <div className="hh-cell hh-vision" role="cell" />
+              <div className="hh-cell hh-probe" role="cell">
+                {isProbing ? (
+                  <span className="hh-verdict run">
+                    <Clock size={11} aria-hidden /> Probing via Claude Code…
+                  </span>
+                ) : credentialMissing ? (
+                  <div className="hh-probe-stack">
+                    <span className="hh-verdict unknown" title={target.credential_hint ?? undefined}>
+                      credential needed
+                    </span>
+                    <span className="hh-probe-meta" title={target.credential_hint ?? undefined}>
+                      {target.credential_hint}
+                    </span>
+                  </div>
+                ) : result ? (
+                  <div className="hh-probe-stack">
+                    <span className={`hh-verdict ${tone}`} title={result.capability.error ?? undefined}>
+                      {tone === "pass" ? <CheckCircle2 size={11} aria-hidden /> : <XCircle size={11} aria-hidden />}
+                      {PROBE_VERDICT_LABEL[result.verdict] ?? result.verdict}
+                      {tone === "pass" && (
+                        <span className="hh-att reg" title="Behind the adapter the harness cannot see the real provider; identity comes from this target's binding. The model id is still verified on the wire.">
+                          model-verified
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className="hh-probe-meta mono"
+                      title={result.capability.error ?? `claude-code → ${result.attribution.provider.value}/${result.attribution.model.value}`}
+                    >
+                      claude-code → {result.attribution.provider.value}/{result.attribution.model.value} ·{" "}
+                      {fmtDuration(result.latency_ms / 1000)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="hh-verdict unknown">not probed this session</span>
+                )}
+              </div>
+              <div className="hh-cell hh-actions" role="cell">
+                <button
+                  className="lk-chip"
+                  onClick={() => probeVia(target.name)}
+                  disabled={busy !== null || !state.healthy || credentialMissing}
+                  title={
+                    credentialMissing
+                      ? target.credential_hint ?? "Credential missing"
+                      : state.healthy
+                        ? `Probe Claude Code through the adapter to ${target.provider_id}/${target.model} — proves the full translation path with real tool use`
+                        : "Start the adapter first"
+                  }
+                >
+                  {isProbing ? "…" : "Probe"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {!state.targets.length && (
+          <div className="dash-sub">
+            No targets configured. Run <code className="mono">cesium-eval adapter init</code>, then edit the local
+            targets file (endpoints stay machine-local, never tracked).
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+/** Models are only provided by providers, so the model list follows the
+ * provider choice: the harness's own catalog for its bound provider, or the
+ * registry-wide catalog of the chosen provider (short ids) otherwise. */
+function modelsForProvider(
+  registry: ReturnType<typeof useStore>["registry"],
+  harness: HarnessSpec | undefined,
+  providerId: string
+): HarnessSpec["models"] {
+  if (!harness) return [];
+  if (!providerId || providerId === harness.provider) return harness.models;
+  const seen = new Map<string, HarnessSpec["models"][number]>();
+  for (const h of registry?.harnesses ?? []) {
+    if (h.provider !== providerId) continue;
+    for (const m of h.models) {
+      const short = modelShort(m.id);
+      if (short && !seen.has(short)) seen.set(short, { ...m, id: short });
+    }
+  }
+  return [...seen.values()];
+}
+
+/** Provider chips for one launcher section, dereferenced from the registry:
+ * the harness's bound provider (Auto) plus everything provider_support.native
+ * says it can reach. Protocol mismatches beyond that are adapter territory. */
+function ProviderPicker({
+  label,
+  flag,
+  registry,
+  harness,
+  value,
+  disabled,
+  onChange
+}: {
+  label: string;
+  flag: string;
+  registry: ReturnType<typeof useStore>["registry"];
+  harness: HarnessSpec | undefined;
+  value: string;
+  disabled: boolean;
+  onChange: (id: string) => void;
+}) {
+  if (!harness) return null;
+  const declared = new Map((registry?.providers ?? []).map((p) => [p.id, p]));
+  const name = (id: string | undefined) => (id ? declared.get(id)?.display_name ?? id : "?");
+  const others = [
+    ...new Set([...(harness.provider_support?.native ?? []), ...(harness.provider_support?.native_3p ?? [])])
+  ].filter((id) => id !== harness.provider);
+  return (
+    <div className="launch-field">
+      <div className="launch-label">
+        {label} <code className="launch-flag">{flag}</code>
+      </div>
+      <div className="launch-steppers" role="radiogroup" aria-label={label}>
+        <button
+          className={`lk-chip${value === "" ? " on" : ""}`}
+          role="radio"
+          aria-checked={value === ""}
+          disabled={disabled}
+          onClick={() => onChange("")}
+          title={`Use ${harness.name}'s bound provider, ${name(harness.provider)}`}
+        >
+          Auto · {name(harness.provider)}
+        </button>
+        {others.map((id) => (
+          <button
+            key={id}
+            className={`lk-chip${value === id ? " on" : ""}`}
+            role="radio"
+            aria-checked={value === id}
+            disabled={disabled}
+            onClick={() => onChange(id)}
+            title={`Serve the model from ${name(id)}. Models are provider-scoped, so the model list follows this choice.`}
+          >
+            {name(id)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function LaunchPanel() {
-  const { launchEvalRun, liveRunning, registry } = useStore();
+  const { launchEvalRun, studyRunning, registry } = useStore();
   const [available, setAvailable] = useState<string[]>([]);
   // Tri-state selection (error prevention): "all" is an explicit choice, and
   // an emptied custom set stays empty; it never silently re-arms all skills.
   const [mode, setMode] = useState<"all" | "custom">("all");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [judge, setJudge] = useState(true);
-  const [judgeHarness, setJudgeHarness] = useState<string>("opencode");
+  // Visual Tests attach screenshots, so the judge default must be vision-capable.
+  const [judgeHarness, setJudgeHarness] = useState<string>("codex");
   const [nJudges, setNJudges] = useState(3);
   const [concurrency, setConcurrency] = useState(4);
   const [judgeModel, setJudgeModel] = useState("");
+  const [judgeProvider, setJudgeProvider] = useState("");
   const [judgeVariant, setJudgeVariant] = useState("");
   const [codegenHarness, setCodegenHarness] = useState("");
+  const [codegenProvider, setCodegenProvider] = useState("");
   const [codegenModel, setCodegenModel] = useState("");
   const [codegenVariant, setCodegenVariant] = useState("");
   const [threshold, setThreshold] = useState("");
@@ -640,6 +1135,11 @@ function LaunchPanel() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Baseline screenshots: the Visual Tests prerequisite. Without them the
+  // judge has nothing to look at and the run completes "incomplete".
+  const [coverage, setCoverage] = useState<BaselineCoverageDTO | null>(null);
+  const [rendering, setRendering] = useState(false);
+  const [coverageErr, setCoverageErr] = useState<string | null>(null);
 
   // The registry is the single source of truth for harnesses and their model
   // catalogs. The server also accepts a hidden "fake" smoke judge, but that
@@ -652,11 +1152,110 @@ function LaunchPanel() {
     registry?.harnesses.filter((h) => h.roles.includes("codegen")).map((h) => h.id) ?? fallbackHarnesses;
   const harnessSpec = (id: string) => registry?.harnesses.find((h) => h.id === id);
   const judgeHarnessSpec = harnessSpec(judgeHarness);
-  const judgeHarnessModels = judgeHarnessSpec?.models ?? [];
+  // Multimodality is a property of the provider/model serving the call, so
+  // every harness is offered here; a rejected image call fails loudly at
+  // runtime instead of being pre-blocked on a per-harness flag.
+  const judgeModels = modelsForProvider(registry, judgeHarnessSpec, judgeProvider);
   const judgeEffortLevels = effortLevelsFor(judgeHarnessSpec, judgeModel);
   const codegenHarnessSpec = harnessSpec(codegenHarness);
-  const codegenHarnessModels = codegenHarnessSpec?.models ?? [];
+  const codegenModels = modelsForProvider(registry, codegenHarnessSpec, codegenProvider);
   const codegenEffortLevels = effortLevelsFor(codegenHarnessSpec, codegenModel);
+
+  // Coverage for the currently selected skills, refreshed when the selection
+  // changes. Computed from state directly so it does not depend on
+  // `selectedSkills`, which is declared further down. Loaded whether or not
+  // Visual Tests are on: the badge is judge-only, but the measured root also
+  // fills the Bundle Root field, and a Code-Tests-only run judges that same
+  // root.
+  const currentSkills = mode === "all" ? available : [...picked];
+  const coverageKey = currentSkills.join(",");
+  useEffect(() => {
+    if (!currentSkills.length) {
+      setCoverage(null);
+      return;
+    }
+    let disposed = false;
+    loadBaselineCoverage(currentSkills)
+      .then((c) => {
+        if (!disposed) setCoverage(c);
+      })
+      .catch((exc) => {
+        if (!disposed) setCoverageErr(String(exc?.message ?? exc));
+      });
+    return () => {
+      disposed = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverageKey]);
+
+  // The badge denominator is the launch selection, not merely the subset that
+  // already has rendered cases. Otherwise a stale or incomplete bundle set
+  // can claim "1/1 skills rendered" while All (8) is selected.
+  const {
+    coveredCount,
+    selectedCount: selectedCoverageCount,
+    needsPreparation,
+    missingScreenshots,
+    missingBaselineCases,
+    fullyCovered,
+  } = summarizeBaselineCoverage(coverage);
+  const coverageIncomplete = coverage !== null && coveredCount < selectedCoverageCount;
+  // ZERO screenshots anywhere in the selection: the visual lane would judge
+  // nothing and the run lands "incomplete" — block the launch (the server
+  // rejects it too; this stops it before the doomed click).
+  const noVisualEvidence = judge && coverage !== null && !coverage.skills.some((s) => s.screenshots > 0);
+
+  // Show the root coverage was measured at, whatever the coverage level. The
+  // launch judges this directory either way (the server fills in the same
+  // default), so clearing the field on partial coverage only hid the fact that
+  // the badge and the run were talking about the same place — or, when the
+  // operator types their own root, that they are not.
+  const bundleRootEdited = useRef(false);
+  useEffect(() => {
+    if (coverage && !bundleRootEdited.current) setBundleRoot(coverage.root);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverage?.root]);
+  // A hand-typed root is judged instead of the measured one: say so rather
+  // than letting a green badge vouch for a directory the run will not read.
+  const rootDiverged = coverage !== null && bundleRoot !== "" && bundleRoot !== coverage.root;
+
+  // While a render is running, poll coverage so the badge ticks live even
+  // inside a large skill (each screenshot lands on disk as it renders).
+  useEffect(() => {
+    if (!rendering) return;
+    const timer = setInterval(() => {
+      loadBaselineCoverage(currentSkills)
+        .then(setCoverage)
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rendering, coverageKey]);
+
+  const renderMissing = async () => {
+    if (!needsPreparation.length) return;
+    setRendering(true);
+    setCoverageErr(null);
+    try {
+      // One skill per request: rendering a large selection in a single POST
+      // can outlive the server's request timeout, and per-skill requests let
+      // the coverage badge tick up live as each skill finishes.
+      for (const entry of needsPreparation) {
+        await prepareBaselines({
+          skills: [entry.skill],
+          codegen_harness: codegenHarness || undefined,
+          codegen_provider: codegenProvider || undefined,
+          codegen_model: codegenModel || undefined,
+          codegen_variant: codegenVariant || undefined,
+        });
+        setCoverage(await loadBaselineCoverage(currentSkills));
+      }
+    } catch (exc: any) {
+      setCoverageErr(String(exc?.message ?? exc));
+    } finally {
+      setRendering(false);
+    }
+  };
 
   useEffect(() => {
     let disposed = false;
@@ -697,12 +1296,17 @@ function LaunchPanel() {
     if (!judge) parts.push("--no-judge");
     if (judge && concurrency > 1) parts.push(`--concurrency ${concurrency}`);
     if (judge && judgeModel) parts.push(`--judge-model ${judgeModel}`);
+    if (judge && judgeProvider) parts.push(`--judge-provider ${judgeProvider}`);
     if (judge && judgeVariant) parts.push(`--judge-variant ${judgeVariant}`);
     if (codegenHarness) parts.push(`--codegen-harness ${codegenHarness}`);
     if (codegenModel) parts.push(`--codegen-model ${codegenModel}`);
+    if (codegenProvider) parts.push(`--codegen-provider ${codegenProvider}`);
     if (codegenVariant) parts.push(`--codegen-variant ${codegenVariant}`);
     if (threshold) parts.push(`--threshold ${threshold}`);
-    if (bundleRoot) parts.push(`--bundle-root ${bundleRoot}`);
+    // The server always passes a root, defaulting to the one coverage measures,
+    // so show that rather than implying the audit picks its own.
+    const effectiveRoot = bundleRoot || coverage?.root;
+    if (effectiveRoot) parts.push(`--bundle-root ${effectiveRoot}`);
     parts.push("--journal <run-dir>/progress.jsonl", "--output-dir <run-dir>");
     return parts.join(" \\\n  ");
   }, [
@@ -712,13 +1316,16 @@ function LaunchPanel() {
     nJudges,
     judge,
     judgeModel,
+    judgeProvider,
     judgeVariant,
     concurrency,
     codegenHarness,
     codegenModel,
+    codegenProvider,
     codegenVariant,
     threshold,
-    bundleRoot
+    bundleRoot,
+    coverage?.root
   ]);
 
   const launch = async () => {
@@ -732,9 +1339,11 @@ function LaunchPanel() {
         n_judges: nJudges,
         concurrency: judge ? concurrency : undefined,
         judge_model: judge && judgeModel ? judgeModel : undefined,
+        judge_provider: judge && judgeProvider ? judgeProvider : undefined,
         judge_variant: judge && judgeVariant ? judgeVariant : undefined,
         codegen_harness: codegenHarness || undefined,
         codegen_model: codegenModel || undefined,
+        codegen_provider: codegenProvider || undefined,
         codegen_variant: codegenVariant || undefined,
         threshold: threshold ? Number(threshold) : undefined,
         bundle_root: bundleRoot || undefined
@@ -750,8 +1359,8 @@ function LaunchPanel() {
       <div className="section-title">
         <Rocket size={13} aria-hidden /> Launch an Eval Run
         <span className="section-sub">
-          Combined baseline audit over the archived baselines: deterministic checks
-          {judge ? " plus a visual judge panel" : " only"}. Every field maps to a cesium-eval audit flag.
+          Combined baseline audit over the archived baselines: Code Tests
+          {judge ? " plus Visual Tests" : " only"}. Every field maps to a cesium-eval audit flag.
         </span>
       </div>
 
@@ -821,6 +1430,7 @@ function LaunchPanel() {
                   aria-checked={codegenHarness === h}
                   onClick={() => {
                     setCodegenHarness(h);
+                    setCodegenProvider("");
                     setCodegenModel("");
                     setCodegenVariant("");
                   }}
@@ -835,6 +1445,23 @@ function LaunchPanel() {
               effort default to each baseline's meta sidecar; set them below to stamp explicit values instead.
             </div>
           </div>
+
+          <ProviderPicker
+            label="Codegen Provider"
+            flag="--codegen-provider"
+            registry={registry}
+            harness={codegenHarnessSpec}
+            value={codegenProvider}
+            disabled={!codegenHarness}
+            onChange={(id) => {
+              setCodegenProvider(id);
+              // A non-default provider needs a model it actually serves (the
+              // backend rejects an auto model under an override), so pre-select
+              // the first provider-scoped model; Auto keeps the harness default.
+              const ms = modelsForProvider(registry, codegenHarnessSpec, id);
+              setCodegenModel(id && ms.length ? ms[0].id : "");
+            }}
+          />
 
           <div className="launch-field">
             <label className="launch-model">
@@ -853,7 +1480,7 @@ function LaunchPanel() {
                 }}
               >
                 <option value="">auto (from baseline meta)</option>
-                {codegenHarnessModels.map((m) => (
+                {codegenModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.id}
                   </option>
@@ -896,11 +1523,11 @@ function LaunchPanel() {
 
         <fieldset className="launch-role">
           <legend>
-            <Eye size={11} aria-hidden /> Visual Judging
+            <Eye size={11} aria-hidden /> Visual Tests
           </legend>
           <div className="launch-field">
             <div className="launch-label">
-              Judge Panel <code className="launch-flag">--no-judge</code>
+              Visual Tests <code className="launch-flag">--no-judge</code>
             </div>
             <button
               className={`judge-toggle${judge ? " on" : ""}`}
@@ -909,8 +1536,8 @@ function LaunchPanel() {
               onClick={() => setJudge((j) => !j)}
               title={
                 judge
-                  ? "A judge panel reviews every rendered screenshot (recommended)."
-                  : "Automated checks only. Nobody will look at the rendered screenshots."
+                  ? "AI reviewers visually test every rendered screenshot (recommended)."
+                  : "Code Tests only. Screenshots will not be visually tested."
               }
             >
               <span className="jt-track" aria-hidden>
@@ -918,30 +1545,29 @@ function LaunchPanel() {
               </span>
               {judge ? (
                 <>
-                  <Eye size={12} aria-hidden /> <span className="jt-state">On</span> · Screenshots Reviewed
+                  <Eye size={12} aria-hidden /> <span className="jt-state">On</span> · Code + Visual
                 </>
               ) : (
                 <>
-                  <EyeOff size={12} aria-hidden /> <span className="jt-state">Off</span> · Checks Only
+                  <EyeOff size={12} aria-hidden /> <span className="jt-state">Off</span> · Code Only
                 </>
               )}
             </button>
             {!judge && (
               <div className="launch-warn">
                 <AlertTriangle size={11} aria-hidden /> The scorecard will say nothing about how the renders actually
-                look. Automated checks only.
+                look. Code Tests only.
               </div>
             )}
           </div>
 
           <div className="launch-field">
             <div className="launch-label" id="launch-judge-harness-label">
-              Judge Harness <code className="launch-flag">--judge-harness</code>
+              Visual Test Harness <code className="launch-flag">--judge-harness</code>
             </div>
             <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judge-harness-label">
               {judgeHarnesses.map((a) => {
                 const spec = harnessSpec(a);
-                const textOnly = spec ? !spec.multimodal : false;
                 return (
                   <button
                     key={a}
@@ -951,31 +1577,108 @@ function LaunchPanel() {
                     disabled={!judge}
                     onClick={() => {
                       setJudgeHarness(a);
+                      setJudgeProvider("");
                       setJudgeModel("");
                       setJudgeVariant((v) =>
                         v && !effortLevelsFor(harnessSpec(a), "").includes(v) ? "" : v
                       );
                     }}
-                    title={spec?.vision_note ?? `Judge via the ${harnessLabel(a)} harness`}
+                    title={spec?.vision_note ?? `Run Visual Tests with the ${harnessLabel(a)} harness`}
                   >
                     {harnessLabel(a)}
-                    {textOnly && <span className="lk-chip-note">text-only</span>}
                   </button>
                 );
               })}
             </div>
-            {judge && judgeHarnessSpec && !judgeHarnessSpec.multimodal && (
-              <div className="launch-hint">
-                {harnessLabel(judgeHarness)} models are text-only here, so screenshot judging reroutes each image call
-                to {harnessLabel(judgeHarnessSpec.vision_fallback_to ?? "codex")} automatically.
-              </div>
-            )}
           </div>
+
+          <ProviderPicker
+            label="Visual Test Provider"
+            flag="--judge-provider"
+            registry={registry}
+            harness={judgeHarnessSpec}
+            value={judgeProvider}
+            disabled={!judge}
+            onChange={(id) => {
+              setJudgeProvider(id);
+              // A non-default provider needs a model it actually serves (the
+              // backend rejects an auto model under an override), so pre-select
+              // the first provider-scoped model; Auto keeps the harness default.
+              const ms = modelsForProvider(registry, judgeHarnessSpec, id);
+              setJudgeModel(id && ms.length ? ms[0].id : "");
+            }}
+          />
+
+          {judge && (
+            <div className="launch-field launch-span">
+              <div className="launch-label">
+                Baseline Screenshots
+                {coverage && (
+                  <span className={`bl-badge${fullyCovered ? " ok" : coverageIncomplete ? " warn" : ""}`}>
+                    {coveredCount}/{selectedCoverageCount} selected skills ready
+                  </span>
+                )}
+              </div>
+              <div className="bl-row">
+                <span className="bl-note">
+                  {fullyCovered
+                    ? "Every selected skill has rendered baselines — Visual Tests will judge them."
+                    : needsPreparation.length && missingBaselineCases.length
+                      ? `${needsPreparation.length} selected skill${
+                          needsPreparation.length === 1 ? "" : "s"
+                        } need preparation; ${missingBaselineCases.length} ${
+                          missingBaselineCases.length === 1 ? "has" : "have"
+                        } missing generated baseline cases that will be created first.`
+                      : missingScreenshots.length
+                        ? `${missingScreenshots
+                            .map((s) => s.skill.replace(/^cesiumjs-/, ""))
+                            .join(", ")} need rendering, or Visual Tests will complete "incomplete."`
+                        : missingBaselineCases.length
+                          ? `${missingBaselineCases.length} selected skill${
+                              missingBaselineCases.length === 1 ? " has" : "s have"
+                            } missing generated baseline cases; Prepare will generate them before rendering.`
+                      : "Generating and rendering complete baseline evidence for the selected scenarios."}
+                </span>
+                <span className="spacer" />
+                <button
+                  className="lk-chip"
+                  onClick={renderMissing}
+                  disabled={rendering || !needsPreparation.length}
+                  title={
+                    needsPreparation.length
+                      ? `Generate missing baseline code and render screenshots for ${needsPreparation.length} skill(s). Agent authentication is required; Cesium ion is optional but improves token-backed scenes.`
+                      : missingBaselineCases.length
+                        ? `${missingBaselineCases.length} selected skill(s) need baseline generation before rendering`
+                        : "All selected skills already have baseline screenshots"
+                  }
+                >
+                  {rendering
+                    ? "Preparing…"
+                    : needsPreparation.length
+                      ? `Prepare ${needsPreparation.length}`
+                      : missingBaselineCases.length
+                        ? "Prepare cases"
+                        : "Rendered"}
+                </button>
+              </div>
+              {rootDiverged && (
+                <div className="launch-hint">
+                  <AlertTriangle size={11} aria-hidden /> Coverage above is measured at <code>{coverage?.root}</code>,
+                  but this launch judges <code>{bundleRoot}</code>. Clear Bundle Root to judge what was measured.
+                </div>
+              )}
+              {coverageErr && (
+                <div className="launch-hint">
+                  <AlertTriangle size={11} aria-hidden /> {coverageErr}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="launch-field">
             <label className="launch-model">
               <span className="launch-label">
-                Judge Model <code className="launch-flag">--judge-model</code>
+                Visual Test Model <code className="launch-flag">--judge-model</code>
               </span>
               <select
                 value={judgeModel}
@@ -989,7 +1692,7 @@ function LaunchPanel() {
                 }}
               >
                 <option value="">auto (discovered)</option>
-                {judgeHarnessModels.map((m) => (
+                {judgeModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.id}
                   </option>
@@ -1021,21 +1724,21 @@ function LaunchPanel() {
                   aria-checked={judgeVariant === lv}
                   disabled={!judge}
                   onClick={() => setJudgeVariant(lv)}
-                  title={`Judge reasoning effort: ${effortLabel(lv)}`}
+                  title={`Visual Test reasoning effort: ${effortLabel(lv)}`}
                 >
                   {effortLabel(lv)}
                 </button>
               ))}
             </div>
             <div className="launch-hint">
-              How much reasoning each judge call spends. Auto uses the harness default
+              How much reasoning each Visual Test call spends. Auto uses the harness default
               {judgeHarnessSpec ? ` (${effortLabel(judgeHarnessSpec.default_effort)})` : ""}.
             </div>
           </div>
 
           <div className="launch-field">
             <div className="launch-label" id="launch-judges-label">
-              Judges <code className="launch-flag">--n-judges</code>
+              AI Reviewers <code className="launch-flag">--n-judges</code>
             </div>
             <div className="launch-steppers" role="radiogroup" aria-labelledby="launch-judges-label">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -1046,7 +1749,7 @@ function LaunchPanel() {
                   aria-checked={nJudges === n}
                   disabled={!judge}
                   onClick={() => setNJudges(n)}
-                  title={`${n}-judge panel`}
+                  title={`${n} AI reviewers per case`}
                 >
                   {n}
                 </button>
@@ -1067,14 +1770,14 @@ function LaunchPanel() {
                   aria-checked={concurrency === n}
                   disabled={!judge}
                   onClick={() => setConcurrency(n)}
-                  title={n === 1 ? "One case at a time" : `${n} cases judged in parallel`}
+                  title={n === 1 ? "One case at a time" : `${n} cases visually tested in parallel`}
                 >
                   {n === 1 ? "1 · Serial" : `${n}×`}
                 </button>
               ))}
             </div>
             <div className="launch-hint">
-              How many cases the Visual Judge works at once. Each case still gets its own {nJudges}-judge panel; the
+              How many cases Visual Tests process at once. Each case still gets {nJudges} AI reviewers; the
               trial board shows every in-flight case live.
             </div>
           </div>
@@ -1104,8 +1807,15 @@ function LaunchPanel() {
               <input
                 type="text"
                 placeholder="default: archived baselines"
+                title="The directory the audit judges. Prefilled with the root baseline coverage is measured at; clearing it restores that default."
                 value={bundleRoot}
-                onChange={(e) => setBundleRoot(e.target.value)}
+                onChange={(e) => {
+                  // Once typed, stop tracking the measured root — an operator
+                  // pointing at their own bundles keeps that choice. Emptying
+                  // the field hands it back.
+                  bundleRootEdited.current = e.target.value !== "";
+                  setBundleRoot(e.target.value);
+                }}
               />
             </label>
           </div>
@@ -1140,7 +1850,12 @@ function LaunchPanel() {
             <button
               className="launch-btn"
               onClick={() => setConfirming(true)}
-              disabled={busy || selectedCount === 0}
+              disabled={busy || selectedCount === 0 || noVisualEvidence}
+              title={
+                noVisualEvidence
+                  ? "Visual Tests are on, but no selected skill has baseline screenshots to judge. Use Baseline Screenshots → Render above, or turn Visual Tests off."
+                  : undefined
+              }
             >
               <Rocket size={13} aria-hidden />
               {`Review & Launch · ${selectedCount} ${selectedCount === 1 ? "Skill" : "Skills"}`}
@@ -1155,12 +1870,12 @@ function LaunchPanel() {
                 </span>
                 <span>
                   {judge
-                    ? `Judging on · ${nJudges}-judge panel · ${
+                    ? `Visual Tests on · ${nJudges} AI reviewers · ${
                         concurrency > 1 ? `${concurrency} cases in parallel` : "one case at a time"
                       } · ${harnessLabel(judgeHarness)} harness · model ${
                         judgeModel || "auto"
                       } · effort ${judgeVariant ? effortLabel(judgeVariant) : "auto"} (real LLM calls per case)`
-                    : "Checks only · no judge calls"}
+                    : "Code Tests only · no visual-test calls"}
                 </span>
                 {codegenHarness && (
                   <span>
@@ -1184,7 +1899,7 @@ function LaunchPanel() {
               </div>
             </div>
           )}
-          {liveRunning && <div className="launch-note">A run is already in progress. Parallel runs are fine.</div>}
+          {studyRunning && <div className="launch-note">A study is already in progress. Parallel studies are fine.</div>}
         </div>
       </div>
     </div>
@@ -1192,6 +1907,50 @@ function LaunchPanel() {
 }
 
 function LiveEmptyState() {
+  // Baseline rendering is real in-progress work on this machine, so it must
+  // occupy the live slot rather than sit behind an idle "nothing running"
+  // banner while screenshots are being produced a panel below.
+  const [coverage, setCoverage] = useState<BaselineCoverageDTO | null>(null);
+  useEffect(() => {
+    let disposed = false;
+    const poll = () =>
+      loadBaselineCoverage([])
+        .then((c) => {
+          if (!disposed) setCoverage(c);
+        })
+        .catch(() => {});
+    poll();
+    const timer = setInterval(poll, 3000);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  if (coverage?.rendering?.active) {
+    const withCases = coverage.skills.filter((s) => s.cases > 0);
+    const shots = withCases.reduce((n, s) => n + s.screenshots, 0);
+    const total = withCases.reduce((n, s) => n + s.cases, 0);
+    const covered = withCases.filter((s) => s.covered).length;
+    const pct = total ? Math.round((shots / total) * 100) : 0;
+    return (
+      <div className="dash-card live-empty rendering">
+        <div className="le-icon" aria-hidden>
+          <Camera size={22} />
+        </div>
+        <div className="le-title">Rendering Baseline Screenshots…</div>
+        <div className="le-sub">
+          {shots}/{total} screenshots · {covered}/{withCases.length} skills complete
+          {coverage.rendering.skill ? ` · now: ${coverage.rendering.skill.replace(/^cesiumjs-/, "")}` : ""}. Each
+          skill's baseline code runs in a headless browser; the launcher unlocks Visual Tests as coverage completes.
+        </div>
+        <div className="le-render-bar" aria-hidden>
+          <span style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dash-card live-empty">
       <div className="le-icon" aria-hidden>
@@ -1199,11 +1958,10 @@ function LiveEmptyState() {
       </div>
       <div className="le-title">No Eval Run in Progress</div>
       <div className="le-sub">
-        Launch a baseline audit below, or start the optimization loop from a terminal. Either way, every phase and
-        case journals to disk and streams here within a few seconds.
+        Configure and launch an evaluation study below. Every Code Test and Visual Test journals to disk and streams
+        here within a few seconds.
       </div>
       <pre className="le-cmd mono">
-        node packages/eval/bin/cesium-eval.js optimize all --skills cesiumjs-camera{"\n"}
         node packages/eval/bin/cesium-eval.js audit --skills all --journal &lt;dir&gt;/progress.jsonl
       </pre>
     </div>
@@ -1211,8 +1969,7 @@ function LiveEmptyState() {
 }
 
 export function LiveStation() {
-  const { live } = useStore();
-  const runs = live?.active ?? [];
+  const { live, studyRuns: runs } = useStore();
   const runningRuns = useMemo(() => runs.filter((r) => r.status === "running"), [runs]);
   const failedRuns = useMemo(() => runs.filter((r) => r.status === "failed"), [runs]);
   const stalledRuns = useMemo(() => runs.filter((r) => r.status === "stalled"), [runs]);
@@ -1221,10 +1978,10 @@ export function LiveStation() {
     <div className="overview dashboard-station">
       <div className="dash-head">
         <div>
-          <div className="dash-title">Run Studies</div>
+          <div className="dash-title">Run</div>
           <div className="dash-sub">
-            Launch eval runs against the CLI and watch their real-time progress: phases, trials, and journal, straight
-            from disk.
+            Launch evaluation studies and watch their Code Tests, Visual Tests, and journal progress straight from
+            disk. Optimization activity stays in Optimize.
           </div>
         </div>
         <span className="spacer" />
@@ -1256,6 +2013,10 @@ export function LiveStation() {
 
       <LaunchPanel />
 
+      <HarnessHealthPanel />
+
+      <AdapterPanel />
+
       {stalledRuns.length > 0 && (
         <>
           <div className="section-title" style={{ marginTop: "var(--sp-4)" }}>
@@ -1274,30 +2035,53 @@ export function LiveStation() {
   );
 }
 
-/** Compact "happening now" strip for the Dashboard — visible only mid-run. */
+/** Lane-specific "happening now" strips for the Dashboard. */
 export function LiveNowBanner() {
-  const { live, setStation } = useStore();
-  const run = live?.active.find((r) => r.status === "running");
-  if (!run) return null;
-  const pct = Math.round(run.progress * 100);
+  const { studyRuns, optimizationRuns, setStation } = useStore();
+  const running = [
+    ...studyRuns.filter((run) => run.status === "running").map((run) => ({ run, lane: "study" as const })),
+    ...optimizationRuns
+      .filter((run) => run.status === "running")
+      .map((run) => ({ run, lane: "optimization" as const }))
+  ];
+  if (!running.length) return null;
   return (
-    <button className="live-now-banner" onClick={() => setStation("live")} title="Open Run Studies (7)">
-      <span className="lrc-dot on" aria-hidden />
-      <span className="lnb-label">
-        Eval run in progress: <strong>{liveRunTitle(run)}</strong>
-        <span className="mono">
-          {" "}
-          {run.kind === "audit" ? (run.judge ? "Checks + Judge" : "Checks Only") : run.kind === "baseline" ? "Baseline" : run.iteration}
-        </span>
-        {run.current_phase_label ? ` · ${run.current_phase_label}` : ""}
-      </span>
-      <span className="lnb-bar">
-        <LiveProgressBar run={run} slim />
-      </span>
-      <span className="mono lnb-pct">{pct}%</span>
-      <span className="lnb-cta">
-        Watch Live <ArrowRight size={11} aria-hidden />
-      </span>
-    </button>
+    <div className="live-now-stack">
+      {running.map(({ run, lane }) => {
+        const study = lane === "study";
+        const pct = Math.round(run.progress * 100);
+        return (
+          <button
+            key={`${lane}/${run.skill}/${run.iteration}`}
+            className={`live-now-banner${study ? "" : " optimization"}`}
+            onClick={() => setStation(study ? "live" : "optimize")}
+            title={study ? "Open Run (1)" : "Open Optimize (4)"}
+          >
+            <span className="lrc-dot on" aria-hidden />
+            <span className="lnb-label">
+              {study ? "Evaluation study" : "Optimization"} in progress: <strong>{liveRunTitle(run)}</strong>
+              <span className="mono">
+                {" "}
+                {run.kind === "audit"
+                  ? run.judge
+                    ? "Code + Visual"
+                    : "Code Only"
+                  : run.kind === "baseline"
+                    ? "Baseline"
+                    : run.iteration}
+              </span>
+              {run.current_phase_label ? ` · ${run.current_phase_label}` : ""}
+            </span>
+            <span className="lnb-bar">
+              <LiveProgressBar run={run} slim />
+            </span>
+            <span className="mono lnb-pct">{pct}%</span>
+            <span className="lnb-cta">
+              {study ? "Watch Run" : "Watch Optimize"} <ArrowRight size={11} aria-hidden />
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
