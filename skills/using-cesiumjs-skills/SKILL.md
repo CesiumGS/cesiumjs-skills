@@ -1,6 +1,6 @@
 ---
 name: using-cesiumjs-skills
-description: Maps the 14 domain skills on offer and explains how passive activation selects between them for CesiumJS development requests
+description: Use when a CesiumJS development request needs orientation - maps the 14 available domain skills and explains how passive activation selects the right one
 ---
 
 # CesiumJS Skills Orientation
