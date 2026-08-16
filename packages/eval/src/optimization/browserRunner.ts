@@ -109,6 +109,26 @@ function renderHtml(cesiumVersion: string, ionToken: string | null, generatedCod
     window.addEventListener("unhandledrejection", event => {
       window.__CESIUM_EVAL_ERRORS__.push({ message: String(event.reason) });
     });
+    // Record the live Viewer/CesiumWidget on window.__EVAL_VIEWER__. The
+    // generated code runs inside an async wrapper, so its "const viewer" is
+    // function-scoped, not a global; without this capture the settle probe
+    // and scene-state extraction can silently lose the scene and the
+    // partial-load safeguard never engages. The Cesium namespace exposes its
+    // exports through getter-only properties (so Cesium.Viewer cannot be
+    // reassigned); prototype methods stay writable, and the widget's default
+    // render loop calls widget.render() every frame, which hands us the
+    // instance.
+    (function () {
+      for (const name of ["Viewer", "CesiumWidget"]) {
+        const Type = Cesium[name];
+        if (!Type || !Type.prototype || typeof Type.prototype.render !== "function") continue;
+        const originalRender = Type.prototype.render;
+        Type.prototype.render = function (...args) {
+          if (this && this.scene) window.__EVAL_VIEWER__ = this;
+          return originalRender.apply(this, args);
+        };
+      }
+    })();
     ${tokenLine}
     (async () => {
       try {
@@ -247,24 +267,31 @@ export function analyzeScreenshot(filePath: string, expectedWidth: number, expec
 // ---------------------------------------------------------------------------
 // checks assembly
 // ---------------------------------------------------------------------------
-const ION_401_RE = /401|cesium\.com.*?(?:Unauthor|forbidden)/i;
+// 401/403 are auth failures; 429 is rate limiting. All three are environment
+// problems, not candidate bugs (a candidate's bad asset id yields a 404).
+// Bare 401s match anywhere (Cesium's Resource errors omit the host); 403/429
+// must be cesium.com-scoped to avoid claiming third-party tile throttling.
+const ION_AUTH_RE = /401|cesium\.com.*?(?:Unauthor|forbidden|rate limit|403|429)|(?:403|429).*?cesium\.com/i;
+const ION_AUTH_STATUSES = new Set(["401", "403", "429"]);
 
 export function detectIonAuthFailure(
   consoleMessages: Array<Record<string, any>>,
   networkFailures: Array<Record<string, any>>,
 ): Record<string, any> | null {
-  const ion401s = [
-    ...consoleMessages.filter((m) => m.type === "error" && ION_401_RE.test(m.text ?? "")),
-    ...networkFailures.filter((nf) => String(nf.status ?? "").includes("401") && String(nf.url ?? "").toLowerCase().includes("cesium")),
+  const ionFailures = [
+    ...consoleMessages.filter((m) => m.type === "error" && ION_AUTH_RE.test(m.text ?? "")),
+    ...networkFailures.filter(
+      (nf) => ION_AUTH_STATUSES.has(String(nf.status ?? "")) && String(nf.url ?? "").toLowerCase().includes("cesium"),
+    ),
   ];
-  if (!ion401s.length) return null;
+  if (!ionFailures.length) return null;
   return {
     check_id: "ion_auth_failure",
     type: "ion_auth_failure",
-    description: "Trial is environment-invalid: Ion auth failed during run.",
+    description: "Trial is environment-invalid: Ion auth or rate-limit failure during run.",
     result: "fail",
     detail:
-      `${ion401s.length} Ion 401 error(s) observed in console/network log. ` +
+      `${ionFailures.length} Ion 401/403/429 error(s) observed in console/network log. ` +
       "This trial's screenshot and downstream judge verdict are not reliable; re-run after verifying CESIUM_ION_TOKEN scopes.",
     environment_invalid: true,
   };
@@ -320,11 +347,12 @@ export function addScreenshotQualityChecks(
       checks.push({
         check_id: `tiles_loaded:${screenshot.filename}`,
         type: "tiles_loaded",
-        description: "Globe and 3D tileset tile streams finished loading before the screenshot was captured",
+        description:
+          "Globe surface, imagery layers, 3D tilesets, models, and entity visualizers finished loading before the screenshot was captured",
         result: settle.settled ? "pass" : "fail",
         detail: settle.settled
-          ? `scene settled after ${settle.waited_ms}ms`
-          : `tiles still loading when captured (waited ${settle.waited_ms}ms); image may not reflect the fully loaded scene`,
+          ? `scene settled after ${settle.waited_ms}ms${settle.settled_with_motion ? " (camera kept moving; load streams settled)" : ""}`
+          : `scene still loading when captured (waited ${settle.waited_ms}ms; ${settle.blockers ?? "cause unknown"}); image may not reflect the fully loaded scene`,
       });
     }
   }
@@ -346,10 +374,14 @@ export function applySettleToQuality(quality: Record<string, any>, settle: Settl
     viewer_unavailable: settle.viewer_unavailable,
     waited_ms: settle.waited_ms,
     polls: settle.polls,
+    camera_moved_polls: settle.camera_moved_polls,
+    settled_with_motion: settle.settled_with_motion,
   };
   if (settle.timed_out && !settle.viewer_unavailable) {
+    const blockers = summarizeSettleBlockers(settle.last_probe);
+    quality.tile_settle.blockers = blockers;
     const warnings: string[] = (quality.warnings ??= []);
-    warnings.push(`tiles still loading when screenshot was captured (waited ${settle.waited_ms}ms for scene to settle)`);
+    warnings.push(`scene still loading when screenshot was captured (waited ${settle.waited_ms}ms; ${blockers})`);
     quality.passed = false;
     quality.detail = warnings.join("; ");
   }
@@ -370,8 +402,11 @@ const ORBIT_PANORAMA_PITCH_DEG = -30;
 const ORBIT_PANORAMA_JS = String.raw`
 ({ headingDegrees, index }) => {
   const C = Cesium;
-  if (typeof viewer === 'undefined' || !viewer || !viewer.scene) return;
-  const scene = viewer.scene, camera = scene.camera;
+  let globalViewer = null;
+  try { globalViewer = (typeof viewer !== 'undefined' && viewer && viewer.scene) ? viewer : null; } catch (e) {}
+  const viewerRef = globalViewer || window.__EVAL_VIEWER__;
+  if (!viewerRef || !viewerRef.scene) return;
+  const scene = viewerRef.scene, camera = scene.camera;
   if (index === 0) {
     const p = camera.positionWC;
     window.__PANO_SETTLED__ = { pos: [p.x, p.y, p.z], heading: camera.heading, pitch: camera.pitch, roll: camera.roll };
@@ -390,8 +425,8 @@ const ORBIT_PANORAMA_JS = String.raw`
       }
     } catch (e) {}
     try {
-      const dsd = viewer.dataSourceDisplay, scr = new C.BoundingSphere(), now = viewer.clock ? viewer.clock.currentTime : undefined;
-      for (const e of viewer.entities.values) {
+      const dsd = viewerRef.dataSourceDisplay, scr = new C.BoundingSphere(), now = viewerRef.clock ? viewerRef.clock.currentTime : undefined;
+      for (const e of viewerRef.entities.values) {
         let got = false;
         try {
           const st = dsd.getBoundingSphere(e, false, scr);
@@ -428,11 +463,14 @@ const ORBIT_PANORAMA_JS = String.raw`
 const ORBIT_RESTORE_JS = `
 () => {
   const C = Cesium;
-  if (typeof viewer === 'undefined' || !viewer || !viewer.scene) return;
-  viewer.scene.camera.lookAtTransform(C.Matrix4.IDENTITY);
+  let globalViewer = null;
+  try { globalViewer = (typeof viewer !== 'undefined' && viewer && viewer.scene) ? viewer : null; } catch (e) {}
+  const viewerRef = globalViewer || window.__EVAL_VIEWER__;
+  if (!viewerRef || !viewerRef.scene) return;
+  viewerRef.scene.camera.lookAtTransform(C.Matrix4.IDENTITY);
   const s = window.__PANO_SETTLED__;
   if (s) {
-    viewer.scene.camera.setView({
+    viewerRef.scene.camera.setView({
       destination: new C.Cartesian3(s.pos[0], s.pos[1], s.pos[2]),
       orientation: { heading: s.heading, pitch: s.pitch, roll: s.roll }
     });
@@ -441,46 +479,168 @@ const ORBIT_RESTORE_JS = `
 `;
 
 // ---------------------------------------------------------------------------
-// scene settle safeguard: never capture while tiles are still streaming
+// scene settle safeguard: never capture while the scene is still loading
 // ---------------------------------------------------------------------------
 /**
- * In-page probe of Cesium's tile-load state. Reports whether the globe
- * (terrain + imagery for the current view) and every 3D tileset in the
- * primitive tree have finished streaming. Defensive by design: scenes
- * without a global `viewer` report `available: false` and scenes without
- * a globe treat it as loaded. Also kicks `scene.requestRender()` so
- * requestRenderMode scenes keep streaming while we wait.
+ * In-page probe of Cesium's load state, modeled on how CesiumGS/cesium's own
+ * test suite decides a scene is ready to assert against (verified against the
+ * 1.142 sources):
+ *
+ * - Renders a frame before reading anything, the page analogue of the
+ *   `scene.renderForSpecs()` call inside every `pollToPromise` iteration
+ *   (Specs/Cesium3DTilesTester.js, Specs/Scene/GlobeSpec.js). Tile selection,
+ *   request dispatch, and resource processing only advance during a rendered
+ *   frame, and every readiness getter reports the state of the *last
+ *   completed* pass — after a camera move the getters read stale-true until a
+ *   frame renders. The explicit render also keeps requestRenderMode scenes
+ *   and throttled headless pages streaming.
+ * - Globe: `tilesLoaded` (all three surface load queues empty) plus the
+ *   stricter `_surface._debug.tilesWaitingForChildren === 0` gate that
+ *   GlobeSurfaceTileProviderSpec's updateUntilDone uses, plus a guard for the
+ *   async-terrain window where `globe.terrainProvider` is still undefined and
+ *   `tilesLoaded` reads a vacuous true over an unloaded gray globe.
+ * - Imagery: every shown ImageryLayer must be `ready` (async providers). A
+ *   provider whose creation promise rejected latches ready=false forever, so
+ *   the probe hooks each layer's errorEvent and stops gating on layers whose
+ *   provider terminally failed — the failure is still reported so evidence
+ *   and checks can attribute the miss instead of burning the whole timeout.
+ * - Primitives: every shown Cesium3DTileset must report `tilesLoaded`; every
+ *   shown primitive or collection with a boolean `ready` (Model, Primitive,
+ *   GroundPrimitive, BillboardCollection/LabelCollection texture loads) must
+ *   be ready. `show === false` subtrees and empty collections are skipped:
+ *   they contribute no pixels, and some (hidden or empty billboard
+ *   collections) never update, so their `ready` can never turn true.
+ * - Entities: `dataSourceDisplay.ready` (geometry batches, plus the one-shot
+ *   ApproximateTerrainHeights asset fetch it bootstraps with; entity-backed
+ *   glTF models are covered by the Model walk above).
+ *
+ * The driven render intentionally ticks the widget clock (that is what the
+ * default render loop does per frame, and dataSourceDisplay.ready only
+ * progresses on ticks); clock-sensitive scenarios opt out via
+ * wait_for_tiles: false.
+ *
+ * Defensive by design: pages without a reachable viewer report
+ * `available: false`, and scenes without a globe treat it as loaded.
  */
-const SCENE_SETTLE_PROBE_JS = String.raw`
+export const SCENE_SETTLE_PROBE_JS = String.raw`
 () => {
-  if (typeof viewer === 'undefined' || !viewer || !viewer.scene) return { available: false };
-  const scene = viewer.scene;
+  let globalViewer = null;
+  try { globalViewer = (typeof viewer !== 'undefined' && viewer && viewer.scene) ? viewer : null; } catch (e) {}
+  const viewerRef = globalViewer || window.__EVAL_VIEWER__;
+  if (!viewerRef || !viewerRef.scene) return { available: false };
+  const scene = viewerRef.scene;
+
+  let renderErrors = 0;
+  try { scene.requestRender(); } catch (e) {}
+  try {
+    if (typeof viewerRef.render === 'function') viewerRef.render();
+    else { scene.initializeFrame(); scene.render(); }
+  } catch (e) { renderErrors += 1; }
+
+  const defined = (value) => value !== undefined && value !== null;
+
   const globe = scene.globe;
-  const globeLoaded = !globe || globe.show === false || globe.tilesLoaded === true;
+  const globeOff = !defined(globe) || globe.show === false;
+  const terrainPending = !globeOff && !defined(globe.terrainProvider);
+  let tilesWaiting = 0;
+  try {
+    const debug = !globeOff && globe._surface && globe._surface._debug;
+    if (debug && typeof debug.tilesWaitingForChildren === 'number') tilesWaiting = debug.tilesWaitingForChildren;
+  } catch (e) {}
+  const globeLoaded = globeOff || (!terrainPending && globe.tilesLoaded === true && tilesWaiting === 0);
+
+  let imageryTotal = 0;
+  let imageryReady = 0;
+  let imageryFailed = 0;
+  try {
+    const layers = viewerRef.imageryLayers || scene.imageryLayers;
+    if (layers && typeof layers.length === 'number' && typeof layers.get === 'function') {
+      for (let i = 0; i < layers.length; i++) {
+        const layer = layers.get(i);
+        if (!layer) continue;
+        // Watch for terminal provider failures: a rejected async provider
+        // (Ion 401/429, bad URL) leaves ready=false forever. An error with
+        // ready=true is a transient tile error, ignored by the not-ready
+        // guard below.
+        if (!layer.__evalErrorHooked && layer.errorEvent && typeof layer.errorEvent.addEventListener === 'function') {
+          layer.__evalErrorHooked = true;
+          try { layer.errorEvent.addEventListener(() => { layer.__evalProviderErrored = true; }); } catch (e) {}
+        }
+        if (layer.show === false) continue;
+        if (layer.ready === false && layer.__evalProviderErrored) {
+          imageryFailed += 1;
+          continue;
+        }
+        imageryTotal += 1;
+        if (layer.ready !== false) imageryReady += 1;
+      }
+    }
+  } catch (e) {}
+
   let tilesetsTotal = 0;
   let tilesetsLoaded = 0;
+  let primitivesTotal = 0;
+  let primitivesReady = 0;
   const visit = (collection) => {
     if (!collection || typeof collection.length !== 'number' || typeof collection.get !== 'function') return;
     for (let i = 0; i < collection.length; i++) {
       let pr;
       try { pr = collection.get(i); } catch (e) { continue; }
-      if (!pr) continue;
+      if (!pr || pr.show === false) continue;
+      // Empty collections render nothing but some (BillboardCollection,
+      // LabelCollection) hold ready=false until an update that never comes.
+      if (typeof pr.length === 'number' && pr.length === 0) continue;
       if (typeof pr.tilesLoaded === 'boolean') {
         tilesetsTotal += 1;
         if (pr.tilesLoaded) tilesetsLoaded += 1;
+      } else if (typeof pr.ready === 'boolean') {
+        primitivesTotal += 1;
+        if (pr.ready) primitivesReady += 1;
       } else if (typeof pr.length === 'number' && typeof pr.get === 'function') {
         visit(pr);
       }
     }
   };
   try { visit(scene.primitives); } catch (e) {}
-  try { scene.requestRender(); } catch (e) {}
+  try { visit(scene.groundPrimitives); } catch (e) {}
+
+  let dataSourcesReady = true;
+  try {
+    const dsd = viewerRef.dataSourceDisplay;
+    if (dsd && dsd.ready === false) dataSourcesReady = false;
+  } catch (e) {}
+
+  // Camera pose, so the waiter can reset its quiet streak while the camera is
+  // still moving: cullRequestsWhileMoving (default true) suppresses tile
+  // requests during motion, letting tilesLoaded read true for a view whose
+  // tiles were never requested.
+  let camera = null;
+  try {
+    const c = scene.camera;
+    camera = [c.positionWC.x, c.positionWC.y, c.positionWC.z, c.heading, c.pitch, c.roll];
+  } catch (e) {}
+
   return {
     available: true,
     globe_loaded: globeLoaded,
+    terrain_provider_pending: terrainPending,
+    tiles_waiting_for_children: tilesWaiting,
+    imagery_layers_total: imageryTotal,
+    imagery_layers_ready: imageryReady,
+    imagery_layers_failed: imageryFailed,
     tilesets_total: tilesetsTotal,
     tilesets_loaded: tilesetsLoaded,
-    settled: globeLoaded && tilesetsLoaded === tilesetsTotal,
+    primitives_total: primitivesTotal,
+    primitives_ready: primitivesReady,
+    data_sources_ready: dataSourcesReady,
+    render_errors: renderErrors,
+    camera: camera,
+    settled:
+      globeLoaded &&
+      imageryReady === imageryTotal &&
+      tilesetsLoaded === tilesetsTotal &&
+      primitivesReady === primitivesTotal &&
+      dataSourcesReady,
   };
 }
 `;
@@ -505,7 +665,8 @@ export interface SettleOptions {
   timeoutMs: number;
   pollMs: number;
   quietPolls: number;
-  /** Give up early if no global `viewer` appears within this budget. */
+  /** Give up early when no viewer is resolvable within this budget — neither
+   * a global `viewer` nor the window.__EVAL_VIEWER__ render-patch capture. */
   viewerGraceMs?: number;
 }
 
@@ -515,20 +676,86 @@ export interface SettleResult {
   viewer_unavailable: boolean;
   waited_ms: number;
   polls: number;
+  /** Polls where the camera pose changed since the previous poll. */
+  camera_moved_polls: number;
+  /** Every load stream settled, but the camera kept moving (an intentionally
+   * animated scene): accepted as settled after the motion-escape streak. */
+  settled_with_motion: boolean;
   last_probe: Record<string, any> | null;
 }
 
+const TWO_PI = Math.PI * 2;
+/** Position (m) and angle (rad) deltas below these are floating-point noise
+ * from the pose getters, not motion: heading/pitch/roll are recomputed from
+ * the orientation matrix each read and roll in particular jitters across the
+ * 0/2π wrap. Real camera motion moves meters and hundredths of radians. */
+const POSITION_EPSILON_M = 0.05;
+const ANGLE_EPSILON_RAD = 1e-5;
+
+/** Shortest angular distance, wrap-aware (2π-ε vs ε is no movement). */
+function angularDelta(a: number, b: number): number {
+  const d = Math.abs(a - b) % TWO_PI;
+  return Math.min(d, TWO_PI - d);
+}
+
+/** True when two probe camera poses differ beyond floating-point noise
+ * (missing poses count as static, and NaN components compare equal so a
+ * transient NaN cannot read as perpetual motion). Pose layout:
+ * [x, y, z (ECEF meters), heading, pitch, roll (radians)]. */
+function cameraMoved(previous: unknown, current: unknown): boolean {
+  if (!Array.isArray(previous) || !Array.isArray(current) || previous.length !== current.length) return false;
+  return current.some((component, i) => {
+    const prev = previous[i];
+    if (typeof component !== "number" || typeof prev !== "number") return component !== prev;
+    if (Number.isNaN(component) || Number.isNaN(prev)) return Number.isNaN(component) !== Number.isNaN(prev);
+    return i >= 3 ? angularDelta(component, prev) > ANGLE_EPSILON_RAD : Math.abs(component - prev) > POSITION_EPSILON_M;
+  });
+}
+
+/** Human-readable list of what kept a probe from settling (for evidence). */
+export function summarizeSettleBlockers(probe: Record<string, any> | null): string {
+  if (!probe || probe.available !== true) return "viewer unavailable";
+  const blockers: string[] = [];
+  if (probe.terrain_provider_pending) blockers.push("terrain provider still resolving");
+  else if (probe.globe_loaded === false) blockers.push("globe tiles still streaming");
+  if ((probe.imagery_layers_ready ?? 0) < (probe.imagery_layers_total ?? 0)) {
+    blockers.push(`imagery layers ${probe.imagery_layers_ready}/${probe.imagery_layers_total} ready`);
+  }
+  if ((probe.imagery_layers_failed ?? 0) > 0) blockers.push(`${probe.imagery_layers_failed} imagery layer(s) failed to load`);
+  if ((probe.tilesets_loaded ?? 0) < (probe.tilesets_total ?? 0)) {
+    blockers.push(`3D tilesets ${probe.tilesets_loaded}/${probe.tilesets_total} loaded`);
+  }
+  if ((probe.primitives_ready ?? 0) < (probe.primitives_total ?? 0)) {
+    blockers.push(`primitives ${probe.primitives_ready}/${probe.primitives_total} ready`);
+  }
+  if (probe.data_sources_ready === false) blockers.push("entity visualizers not ready");
+  if ((probe.render_errors ?? 0) > 0) blockers.push("render() is throwing");
+  if (!blockers.length && probe.settled === true) return "load streams settled; camera never stopped moving";
+  return blockers.length ? blockers.join(", ") : "unknown";
+}
+
 /**
- * Poll the page until Cesium reports every tile stream finished for
- * `quietPolls` consecutive polls (tilesLoaded flickers as LOD refines),
- * or until `timeoutMs`. The caller decides what a timeout means; this
- * helper only reports honestly what the scene said.
+ * Poll the page until Cesium reports every load stream finished for
+ * `quietPolls` consecutive polls, or until `timeoutMs`. The quiet streak
+ * guards two documented upstream behaviors: readiness flickers as LOD
+ * refines (tilesLoaded is non-monotonic), and a probe taken while the
+ * camera is still moving can read stale-true because moving cameras cull
+ * tile requests — so a camera-pose change also resets the streak. The
+ * caller decides what a timeout means; this helper only reports honestly
+ * what the scene said.
  */
 export async function waitForSceneSettled(page: SettlePage, options: SettleOptions): Promise<SettleResult> {
   const started = Date.now();
-  const viewerGraceMs = options.viewerGraceMs ?? 5_000;
+  const viewerGraceMs = options.viewerGraceMs ?? 10_000;
+  // A deliberately animated camera (trackedEntity, per-frame rotation) never
+  // stops moving; once every load stream has been settled for this many
+  // consecutive polls, accept the scene rather than burning the full timeout.
+  const motionEscapePolls = Math.max(options.quietPolls * 5, 20);
   let polls = 0;
   let consecutive = 0;
+  let settledStreak = 0;
+  let cameraMovedPolls = 0;
+  let lastCamera: unknown = null;
   let lastProbe: Record<string, any> | null = null;
   let everAvailable = false;
 
@@ -545,14 +772,38 @@ export async function waitForSceneSettled(page: SettlePage, options: SettleOptio
 
     if (probe.available) {
       everAvailable = true;
-      consecutive = probe.settled ? consecutive + 1 : 0;
-      if (consecutive >= options.quietPolls) {
-        return { settled: true, timed_out: false, viewer_unavailable: false, waited_ms: elapsed, polls, last_probe: probe };
+      const moved = cameraMoved(lastCamera, probe.camera);
+      if (moved) cameraMovedPolls += 1;
+      lastCamera = probe.camera ?? lastCamera;
+      consecutive = probe.settled && !moved ? consecutive + 1 : 0;
+      settledStreak = probe.settled ? settledStreak + 1 : 0;
+      const settledWithMotion = consecutive < options.quietPolls && settledStreak >= motionEscapePolls;
+      if (consecutive >= options.quietPolls || settledWithMotion) {
+        return {
+          settled: true,
+          timed_out: false,
+          viewer_unavailable: false,
+          waited_ms: elapsed,
+          polls,
+          camera_moved_polls: cameraMovedPolls,
+          settled_with_motion: settledWithMotion,
+          last_probe: probe,
+        };
       }
     } else {
       consecutive = 0;
+      settledStreak = 0;
       if (!everAvailable && elapsed >= viewerGraceMs) {
-        return { settled: false, timed_out: false, viewer_unavailable: true, waited_ms: elapsed, polls, last_probe: probe };
+        return {
+          settled: false,
+          timed_out: false,
+          viewer_unavailable: true,
+          waited_ms: elapsed,
+          polls,
+          camera_moved_polls: cameraMovedPolls,
+          settled_with_motion: false,
+          last_probe: probe,
+        };
       }
     }
 
@@ -563,6 +814,8 @@ export async function waitForSceneSettled(page: SettlePage, options: SettleOptio
         viewer_unavailable: !everAvailable,
         waited_ms: elapsed,
         polls,
+        camera_moved_polls: cameraMovedPolls,
+        settled_with_motion: false,
         last_probe: probe,
       };
     }
@@ -587,11 +840,17 @@ export function screenshotSpecsFor(scenario: Record<string, any>): Array<Record<
 
   const settleMs = specs.length ? Math.max(...specs.map((item: any) => Number(item.delay_ms ?? 3000))) : 3000;
   const panoramaDelayMs = Number(scenario.panorama_delay_ms ?? 750);
+  // Panorama specs are synthesized, so a shot-level wait_for_tiles opt-out on
+  // the authored specs would otherwise be silently dropped: carry it over when
+  // every authored shot opts out (scenario-level opt-outs already flow through
+  // shouldWaitForTiles).
+  const optedOut = specs.length > 0 && specs.every((item: any) => item.wait_for_tiles === false);
   return CARDINAL_PANORAMA_SHOTS.map((shot, index) => ({
     ...shot,
     delay_ms: settleMs + index * panoramaDelayMs,
     cardinal_panorama: true,
     index,
+    ...(optedOut ? { wait_for_tiles: false } : {}),
   }));
 }
 
@@ -759,6 +1018,7 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
         const specs = screenshotSpecsFor(run.scenario);
         const screenshotsTaken: Array<Record<string, any>> = [];
         const screenshotQuality: Array<Record<string, any>> = [];
+        let anySettleTimedOut = false;
         // Failures of the harness's own page helpers, folded into the bundle's
         // error list so they are evidence rather than a lost run.
         const harnessErrors: Array<Record<string, any>> = [];
@@ -766,6 +1026,7 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
           timeoutMs: browserConfig.tileSettleTimeoutMs,
           pollMs: browserConfig.tileSettlePollMs,
           quietPolls: browserConfig.tileSettleQuietPolls,
+          viewerGraceMs: browserConfig.tileSettleViewerGraceMs,
         };
 
         for (let i = 0; i < specs.length; i++) {
@@ -790,15 +1051,23 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
             await page.waitForTimeout(250);
           }
           // Safeguard against partial-load captures: the fixed delay is only a
-          // floor. Before the shutter fires, wait until the globe and every 3D
-          // tileset report their tile streams finished (camera moves — panorama
-          // included — restart streaming). Timeouts are recorded, never hidden.
+          // floor. Before the shutter fires, wait until every load stream the
+          // scene exposes reports finished (camera moves — panorama included —
+          // restart streaming). Timeouts are recorded, never hidden. After one
+          // shot times out, later shots in the same scenario run against a
+          // reduced budget: a terminally latched blocker (failed provider,
+          // 404'd model) would otherwise burn the full timeout once per shot.
           let settle: SettleResult | null = null;
           if (shouldWaitForTiles(spec, run.scenario)) {
-            settle = await waitForSceneSettled(page, settleOptions);
+            const timeoutMs = anySettleTimedOut
+              ? Math.max(settleOptions.quietPolls * settleOptions.pollMs + 2_000, Math.floor(settleOptions.timeoutMs / 4))
+              : settleOptions.timeoutMs;
+            settle = await waitForSceneSettled(page, { ...settleOptions, timeoutMs });
             if (settle.timed_out) {
+              anySettleTimedOut = true;
               console.warn(
-                `[render] ${run.scenario.id} shot ${i}: tiles still loading after ${settle.waited_ms}ms — capturing anyway and flagging`,
+                `[render] ${run.scenario.id} shot ${i}: scene still loading after ${settle.waited_ms}ms ` +
+                  `(${summarizeSettleBlockers(settle.last_probe)}) — capturing anyway and flagging`,
               );
             }
           }
@@ -817,6 +1086,8 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
                   timed_out: settle.timed_out,
                   viewer_unavailable: settle.viewer_unavailable,
                   waited_ms: settle.waited_ms,
+                  camera_moved_polls: settle.camera_moved_polls,
+                  settled_with_motion: settle.settled_with_motion,
                   last_probe: settle.last_probe,
                 }
               : { skipped: true },
@@ -860,11 +1131,14 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
         try {
           sceneState = (await page.evaluate(`
             (() => {
-              if (typeof viewer === 'undefined' || !viewer || !viewer.scene) {
+              let globalViewer = null;
+              try { globalViewer = (typeof viewer !== 'undefined' && viewer && viewer.scene) ? viewer : null; } catch (e) {}
+              const viewerRef = globalViewer || window.__EVAL_VIEWER__;
+              if (!viewerRef || !viewerRef.scene) {
                 return { available: false };
               }
-              const scene = viewer.scene;
-              const camera = viewer.camera;
+              const scene = viewerRef.scene;
+              const camera = scene.camera;
               return {
                 available: true,
                 camera: {
@@ -873,8 +1147,8 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
                   pitch: camera.pitch,
                   roll: camera.roll
                 },
-                entity_count: viewer.entities ? viewer.entities.values.length : 0,
-                imagery_layer_count: viewer.imageryLayers ? viewer.imageryLayers.length : 0,
+                entity_count: viewerRef.entities ? viewerRef.entities.values.length : 0,
+                imagery_layer_count: (viewerRef.imageryLayers || scene.imageryLayers) ? (viewerRef.imageryLayers || scene.imageryLayers).length : 0,
                 primitive_count: scene.primitives ? scene.primitives.length : 0
               };
             })()
@@ -952,6 +1226,7 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
           model_id: generationMeta.model_id ?? "unknown",
           temperature: generationMeta.temperature ?? 1.0,
           judge_protocol_version: ctx.config.judgePanel.pairwiseProtocol,
+          capture_protocol_version: CAPTURE_PROTOCOL_VERSION,
           browser_viewport: browserConfig.viewport,
           playwright_version: playwrightVersion,
           chromium_version: chromiumVersion,
@@ -987,3 +1262,11 @@ export async function renderCommand(ctx: EvalContext, options: RenderOptions): P
 export function sanitizeUrl(value: string): string {
   return value.replace(/([?&](?:access_token|token|key|api_key|apiKey)=)[^&#]+/gi, "$1[REDACTED]");
 }
+
+/**
+ * Version of the screenshot capture gate, stamped into bundle metadata. Bump
+ * whenever the settle semantics change enough that bundles captured under the
+ * old gate are not comparable with new ones (environmentMismatch flags the
+ * pairing, prompting a baseline re-render).
+ */
+export const CAPTURE_PROTOCOL_VERSION = "settle-gate-v2";

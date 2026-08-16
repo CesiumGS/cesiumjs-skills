@@ -62,7 +62,8 @@
         "ionPreflightAssetId": { "type": "integer", "minimum": 1 },
         "tileSettleTimeoutMs": { "type": "integer", "minimum": 1 },
         "tileSettlePollMs": { "type": "integer", "minimum": 1 },
-        "tileSettleQuietPolls": { "type": "integer", "minimum": 1 }
+        "tileSettleQuietPolls": { "type": "integer", "minimum": 1 },
+        "tileSettleViewerGraceMs": { "type": "integer", "minimum": 1 }
       }
     },
     "server": {

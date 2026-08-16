@@ -30,6 +30,7 @@ export const ENVIRONMENT_FINGERPRINT_KEYS = [
   "model_id",
   "browser_viewport",
   "judge_protocol_version",
+  "capture_protocol_version",
 ] as const;
 
 /** Diff two evidence-bundle metadata records over the environment keys. */

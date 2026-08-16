@@ -2,8 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   addScreenshotQualityChecks,
   applySettleToQuality,
+  detectIonAuthFailure,
   invokePageFunction,
+  SCENE_SETTLE_PROBE_JS,
+  screenshotSpecsFor,
   shouldWaitForTiles,
+  summarizeSettleBlockers,
   waitForSceneSettled,
   type SettlePage,
 } from "../src/optimization/browserRunner.js";
@@ -85,6 +89,265 @@ describe("waitForSceneSettled", () => {
     expect(result.settled).toBe(false);
     expect(result.viewer_unavailable).toBe(true);
   });
+
+  it("resets the quiet streak while the camera is still moving", async () => {
+    // Settled reads taken mid-camera-motion are untrustworthy: moving cameras
+    // cull tile requests, so tilesLoaded can be a stale true for the new view.
+    const at = (x: number) => ({ ...settled, camera: [x, 0, 0, 0, 0, 0] });
+    const page = fakePage([at(0), at(500), at(500), at(500), at(500)]);
+    const result = await waitForSceneSettled(page, options);
+    expect(result.settled).toBe(true);
+    expect(result.polls).toBe(5);
+    expect(result.camera_moved_polls).toBe(1);
+  });
+
+  it("counts probes without camera data as static", async () => {
+    const page = fakePage([settled]);
+    const result = await waitForSceneSettled(page, options);
+    expect(result.settled).toBe(true);
+    expect(result.camera_moved_polls).toBe(0);
+  });
+
+  it("treats angle-wrap and floating-point pose jitter as static", async () => {
+    // roll flapping between 2π-ε and ε across frames is getter noise, not
+    // motion; likewise sub-centimeter position deltas.
+    const jitter = (roll: number, x: number) => ({ ...settled, camera: [x, 0, 0, 0.1, -0.5, roll] });
+    const page = fakePage([jitter(6.2831852860615305, 1000), jitter(1.2e-9, 1000.001), jitter(0, 1000)]);
+    const result = await waitForSceneSettled(page, options);
+    expect(result.settled).toBe(true);
+    expect(result.camera_moved_polls).toBe(0);
+    expect(result.polls).toBe(3);
+  });
+
+  it("treats NaN camera components as static rather than perpetual motion", async () => {
+    const nanPose = { ...settled, camera: [1, 2, 3, NaN, -0.5, 0] };
+    const page = fakePage([nanPose, nanPose, nanPose]);
+    const result = await waitForSceneSettled(page, options);
+    expect(result.settled).toBe(true);
+    expect(result.camera_moved_polls).toBe(0);
+  });
+
+  it("accepts a deliberately animated camera once load streams stay settled", async () => {
+    // Camera pose changes every poll (trackedEntity-style motion) so the quiet
+    // streak never accumulates; the motion escape accepts the scene after the
+    // settled streak instead of burning the whole timeout.
+    let x = 0;
+    const page: SettlePage & { polls: () => number } = {
+      polls: () => x,
+      evaluate: async () => ({ ...settled, camera: [(x += 1), 0, 0, 0, 0, 0] }),
+      waitForTimeout: async () => {},
+    };
+    const result = await waitForSceneSettled(page, options);
+    expect(result.settled).toBe(true);
+    expect(result.settled_with_motion).toBe(true);
+    expect(result.timed_out).toBe(false);
+    expect(result.polls).toBe(Math.max(options.quietPolls * 5, 20));
+  });
+});
+
+describe("SCENE_SETTLE_PROBE_JS readiness matrix", () => {
+  /** Execute the actual in-page probe source against a mock viewer/window. */
+  function runProbe(viewer: any, win: Record<string, any> = {}): Record<string, any> {
+    const fn = new Function("viewer", "window", `return (${SCENE_SETTLE_PROBE_JS})();`);
+    return fn(viewer, win);
+  }
+
+  const collection = (items: any[]) => ({ length: items.length, get: (i: number) => items[i] });
+
+  function mockViewer(mutate?: (v: any) => void): any {
+    const viewer: any = {
+      renders: 0,
+      render() {
+        viewer.renders += 1;
+      },
+      imageryLayers: collection([]),
+      dataSourceDisplay: { ready: true },
+      scene: {
+        renderRequests: 0,
+        requestRender() {
+          viewer.scene.renderRequests += 1;
+        },
+        globe: {
+          show: true,
+          tilesLoaded: true,
+          terrainProvider: {},
+          _surface: { _debug: { tilesWaitingForChildren: 0 } },
+        },
+        camera: { positionWC: { x: 1, y: 2, z: 3 }, heading: 0.1, pitch: -0.5, roll: 0 },
+        primitives: collection([]),
+        groundPrimitives: collection([]),
+      },
+    };
+    mutate?.(viewer);
+    return viewer;
+  }
+
+  it("reports unavailable without a viewer, and finds the captured fallback viewer", () => {
+    expect(runProbe(undefined)).toEqual({ available: false });
+    const captured = mockViewer();
+    const viaWindow = runProbe(undefined, { __EVAL_VIEWER__: captured });
+    expect(viaWindow.available).toBe(true);
+    expect(viaWindow.settled).toBe(true);
+  });
+
+  it("drives a render before reading any signal, like renderForSpecs in upstream specs", () => {
+    const viewer = mockViewer();
+    runProbe(viewer);
+    expect(viewer.renders).toBe(1);
+    expect(viewer.scene.renderRequests).toBe(1);
+  });
+
+  it("tolerates a throwing render and records it", () => {
+    const viewer = mockViewer((v) => {
+      v.render = () => {
+        throw new Error("render error panel");
+      };
+    });
+    const probe = runProbe(viewer);
+    expect(probe.render_errors).toBe(1);
+    expect(probe.settled).toBe(true);
+  });
+
+  it("settles a fully loaded scene and reports the camera pose", () => {
+    const probe = runProbe(mockViewer());
+    expect(probe.settled).toBe(true);
+    expect(probe.camera).toEqual([1, 2, 3, 0.1, -0.5, 0]);
+  });
+
+  it("blocks on the async-terrain window (terrainProvider undefined, tilesLoaded vacuously true)", () => {
+    const probe = runProbe(mockViewer((v) => (v.scene.globe.terrainProvider = undefined)));
+    expect(probe.terrain_provider_pending).toBe(true);
+    expect(probe.globe_loaded).toBe(false);
+    expect(probe.settled).toBe(false);
+  });
+
+  it("blocks while tiles are waiting for children even when the load queues are empty", () => {
+    const probe = runProbe(mockViewer((v) => (v.scene.globe._surface._debug.tilesWaitingForChildren = 4)));
+    expect(probe.tiles_waiting_for_children).toBe(4);
+    expect(probe.settled).toBe(false);
+  });
+
+  it("blocks while the globe's tile load queues are non-empty", () => {
+    const probe = runProbe(mockViewer((v) => (v.scene.globe.tilesLoaded = false)));
+    expect(probe.globe_loaded).toBe(false);
+    expect(probe.settled).toBe(false);
+  });
+
+  it("treats a hidden or missing globe as vacuously loaded", () => {
+    expect(runProbe(mockViewer((v) => (v.scene.globe.show = false))).settled).toBe(true);
+    expect(runProbe(mockViewer((v) => (v.scene.globe = undefined))).settled).toBe(true);
+  });
+
+  it("blocks on a shown imagery layer whose async provider is not ready, ignoring hidden ones", () => {
+    const blocked = runProbe(
+      mockViewer((v) => (v.imageryLayers = collection([{ show: true, ready: false }]))),
+    );
+    expect(blocked.imagery_layers_ready).toBe(0);
+    expect(blocked.settled).toBe(false);
+
+    const hidden = runProbe(
+      mockViewer((v) => (v.imageryLayers = collection([{ show: false, ready: false }]))),
+    );
+    expect(hidden.imagery_layers_total).toBe(0);
+    expect(hidden.settled).toBe(true);
+  });
+
+  it("stops gating on a layer whose provider terminally failed, and reports it", () => {
+    // A rejected async provider latches ready=false forever; the probe hooks
+    // errorEvent on first sight and, once the error fires, excludes the layer
+    // instead of blocking until timeout.
+    let errorListener: (() => void) | null = null;
+    const layer: any = {
+      show: true,
+      ready: false,
+      errorEvent: {
+        addEventListener: (fn: () => void) => {
+          errorListener = fn;
+        },
+      },
+    };
+    const viewer = mockViewer((v) => (v.imageryLayers = collection([layer])));
+
+    const before = runProbe(viewer);
+    expect(before.settled).toBe(false);
+    expect(before.imagery_layers_failed).toBe(0);
+    expect(errorListener).not.toBeNull();
+
+    errorListener!();
+    const after = runProbe(viewer);
+    expect(after.imagery_layers_failed).toBe(1);
+    expect(after.imagery_layers_total).toBe(0);
+    expect(after.settled).toBe(true);
+
+    // A transient tile error on an already-ready layer never excludes it.
+    layer.ready = true;
+    const transient = runProbe(viewer);
+    expect(transient.imagery_layers_failed).toBe(0);
+    expect(transient.imagery_layers_total).toBe(1);
+    expect(transient.settled).toBe(true);
+  });
+
+  it("prefers the captured viewer over a truthy sceneless global", () => {
+    const probe = runProbe({ then: () => {} }, { __EVAL_VIEWER__: mockViewer() });
+    expect(probe.available).toBe(true);
+    expect(probe.settled).toBe(true);
+  });
+
+  it("skips empty billboard/label collections that can never become ready", () => {
+    const emptyCollection = { show: true, length: 0, ready: false, get: () => undefined };
+    const probe = runProbe(mockViewer((v) => (v.scene.primitives = collection([emptyCollection]))));
+    expect(probe.primitives_total).toBe(0);
+    expect(probe.settled).toBe(true);
+  });
+
+  it("still gates on non-empty collections exposing an aggregate ready", () => {
+    const loadingCollection = { show: true, length: 2, ready: false, get: () => ({}) };
+    const probe = runProbe(mockViewer((v) => (v.scene.primitives = collection([loadingCollection]))));
+    expect(probe.primitives_total).toBe(1);
+    expect(probe.primitives_ready).toBe(0);
+    expect(probe.settled).toBe(false);
+  });
+
+  it("blocks on streaming 3D tilesets and skips hidden ones", () => {
+    const streaming = runProbe(
+      mockViewer((v) => (v.scene.primitives = collection([{ tilesLoaded: false }]))),
+    );
+    expect(streaming.tilesets_total).toBe(1);
+    expect(streaming.tilesets_loaded).toBe(0);
+    expect(streaming.settled).toBe(false);
+
+    const hidden = runProbe(
+      mockViewer((v) => (v.scene.primitives = collection([{ tilesLoaded: false, show: false }]))),
+    );
+    expect(hidden.tilesets_total).toBe(0);
+    expect(hidden.settled).toBe(true);
+  });
+
+  it("blocks on unready models nested inside primitive collections", () => {
+    const nested = collection([{ ready: false }]);
+    const probe = runProbe(mockViewer((v) => (v.scene.primitives = collection([nested]))));
+    expect(probe.primitives_total).toBe(1);
+    expect(probe.primitives_ready).toBe(0);
+    expect(probe.settled).toBe(false);
+  });
+
+  it("skips hidden collections whose members can never become ready", () => {
+    const hiddenCollection = { ...collection([{ ready: false }]), show: false };
+    const probe = runProbe(mockViewer((v) => (v.scene.primitives = collection([hiddenCollection]))));
+    expect(probe.primitives_total).toBe(0);
+    expect(probe.settled).toBe(true);
+  });
+
+  it("blocks on unready ground primitives", () => {
+    const probe = runProbe(mockViewer((v) => (v.scene.groundPrimitives = collection([{ ready: false }]))));
+    expect(probe.settled).toBe(false);
+  });
+
+  it("blocks while entity visualizers are not ready", () => {
+    const probe = runProbe(mockViewer((v) => (v.dataSourceDisplay = { ready: false })));
+    expect(probe.data_sources_ready).toBe(false);
+    expect(probe.settled).toBe(false);
+  });
 });
 
 describe("invokePageFunction", () => {
@@ -109,6 +372,76 @@ describe("invokePageFunction", () => {
     const scripts: string[] = [];
     await invokePageFunction(page(scripts), "() => 1");
     expect(scripts).toEqual(["(() => 1)()"]);
+  });
+});
+
+describe("summarizeSettleBlockers", () => {
+  it("names the unavailable viewer", () => {
+    expect(summarizeSettleBlockers(null)).toBe("viewer unavailable");
+    expect(summarizeSettleBlockers({ available: false })).toBe("viewer unavailable");
+  });
+
+  it("names each pending load stream", () => {
+    const text = summarizeSettleBlockers({
+      available: true,
+      terrain_provider_pending: true,
+      imagery_layers_total: 2,
+      imagery_layers_ready: 1,
+      imagery_layers_failed: 1,
+      tilesets_total: 1,
+      tilesets_loaded: 0,
+      primitives_total: 3,
+      primitives_ready: 2,
+      data_sources_ready: false,
+      settled: false,
+    });
+    expect(text).toContain("terrain provider still resolving");
+    expect(text).toContain("imagery layers 1/2 ready");
+    expect(text).toContain("1 imagery layer(s) failed to load");
+    expect(text).toContain("3D tilesets 0/1 loaded");
+    expect(text).toContain("primitives 2/3 ready");
+    expect(text).toContain("entity visualizers not ready");
+  });
+
+  it("attributes a settled-but-moving probe to camera motion", () => {
+    expect(summarizeSettleBlockers({ available: true, settled: true })).toContain("camera never stopped moving");
+  });
+});
+
+describe("screenshotSpecsFor panorama synthesis", () => {
+  it("carries a shot-level wait_for_tiles opt-out into synthesized panorama specs", () => {
+    const scenario = {
+      screenshot_mode: "cardinal_panorama",
+      screenshots: [{ delay_ms: 2000, wait_for_tiles: false }],
+    };
+    const specs = screenshotSpecsFor(scenario);
+    expect(specs).toHaveLength(4);
+    for (const spec of specs) {
+      expect(shouldWaitForTiles(spec, scenario)).toBe(false);
+    }
+  });
+
+  it("keeps waiting by default in panorama mode", () => {
+    const scenario = { screenshot_mode: "cardinal_panorama", screenshots: [{ delay_ms: 2000 }] };
+    for (const spec of screenshotSpecsFor(scenario)) {
+      expect(shouldWaitForTiles(spec, scenario)).toBe(true);
+    }
+  });
+});
+
+describe("detectIonAuthFailure", () => {
+  it("flags cesium.com 429 rate limiting as environment-invalid", () => {
+    const check = detectIonAuthFailure([], [{ url: "https://api.cesium.com/v1/assets/1/endpoint", status: 429 }]);
+    expect(check).toMatchObject({ environment_invalid: true });
+  });
+
+  it("ignores third-party 429s", () => {
+    expect(detectIonAuthFailure([], [{ url: "https://tile.openstreetmap.org/1/2/3.png", status: 429 }])).toBeNull();
+  });
+
+  it("still flags bare 401 console errors", () => {
+    const check = detectIonAuthFailure([{ type: "error", text: "Request has failed. Status Code: 401" }], []);
+    expect(check).toMatchObject({ environment_invalid: true });
   });
 });
 
@@ -146,6 +479,7 @@ describe("applySettleToQuality", () => {
       viewer_unavailable: false,
       waited_ms: 750,
       polls: 3,
+      camera_moved_polls: 0,
       last_probe: settled,
     });
     expect(quality.passed).toBe(true);
@@ -159,10 +493,11 @@ describe("applySettleToQuality", () => {
       viewer_unavailable: false,
       waited_ms: 45_000,
       polls: 180,
+      camera_moved_polls: 0,
       last_probe: loading,
     });
     expect(quality.passed).toBe(false);
-    expect(quality.detail).toContain("tiles still loading");
+    expect(quality.detail).toContain("scene still loading");
   });
 
   it("does not fail on timeout when the viewer never existed", () => {
@@ -172,6 +507,7 @@ describe("applySettleToQuality", () => {
       viewer_unavailable: true,
       waited_ms: 1_000,
       polls: 5,
+      camera_moved_polls: 0,
       last_probe: noViewer,
     });
     expect(quality.passed).toBe(true);

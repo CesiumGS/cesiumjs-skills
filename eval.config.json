@@ -21,7 +21,8 @@
     "ionPreflightAssetId": 1,
     "tileSettleTimeoutMs": 45000,
     "tileSettlePollMs": 250,
-    "tileSettleQuietPolls": 3
+    "tileSettleQuietPolls": 3,
+    "tileSettleViewerGraceMs": 10000
   },
   "server": {
     "host": "127.0.0.1",

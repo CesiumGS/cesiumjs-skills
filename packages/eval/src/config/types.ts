@@ -28,6 +28,9 @@ export interface BrowserConfig {
   tileSettlePollMs: number;
   /** Consecutive settled polls required (tilesLoaded flickers as LOD refines). */
   tileSettleQuietPolls: number;
+  /** Give up waiting when no viewer appears within this budget (scenes that
+   * await slow resources before constructing the Viewer need headroom). */
+  tileSettleViewerGraceMs: number;
 }
 
 export interface ServerConfig {

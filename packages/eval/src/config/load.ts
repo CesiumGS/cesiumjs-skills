@@ -49,6 +49,7 @@ function builtinDefaults(): EvalConfig {
       tileSettleTimeoutMs: 45_000,
       tileSettlePollMs: 250,
       tileSettleQuietPolls: 3,
+      tileSettleViewerGraceMs: 10_000,
     },
     server: { host: "127.0.0.1", port: 8933, pollMs: 2500 },
     liveness: { runningMaxAgeSeconds: 1800 },

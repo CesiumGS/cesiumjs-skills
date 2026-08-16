@@ -6,7 +6,7 @@ Runtime contract for your output:
 - The code runs inside an async IIFE in a browser page that has already loaded the global CesiumJS UMD bundle (the `Cesium` namespace is available; do NOT use ES module `import` statements).
 - A div with id `cesiumContainer` exists. Your code MUST create the viewer and assign it to BOTH a local `viewer` and `window.viewer` so the scene-state probe (which runs in page global scope) can see it. Pattern:
     `const viewer = (window.viewer = new Cesium.Viewer('cesiumContainer', { /* options */ }));`
-  If you forget the `window.viewer` assignment, scene-state will silently report `available: false`.
+  The harness has a fallback capture for the constructed viewer, but omitting the `window.viewer` assignment is unsupported and may degrade scene-state and load-settle behavior.
 - `Cesium.Ion.defaultAccessToken` is already configured — do not set it or hardcode any token.
 - Top-level `await` is allowed (you are inside an async function).
 - Async asset loads (3D Tiles, glTF models, terrain, imagery layers) must be awaited before camera setView/zoomTo/flyTo so the framing references resolved content. For Cesium3DTileset and Model, also await tileset.readyEvent / model.readyEvent (or readyPromise) when sizing the camera to the tileset's boundingSphere.
