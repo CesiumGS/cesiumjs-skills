@@ -12,6 +12,7 @@ import {
   relativeTime,
   skillLabel
 } from "../lib/format";
+import { healthTone } from "../lib/grade";
 import { UnknownChip } from "./primitives";
 import type { ComboInsight, HarnessSpec, IterationSummary, ModelSpec, RunSummary } from "../types";
 
@@ -574,14 +575,16 @@ function timeTickLabel(iso: string, prevIso: string | null): string {
    reads as exactly that -- every run passed everything.
    --------------------------------------------------------------------------- */
 export function RunTrend() {
-  const { runs, switchRun, scorecard } = useStore();
+  const { runs, evalRuns, switchRun, scorecard } = useStore();
   const [axis, setAxis] = useState<"time" | "sequence">("sequence");
 
+  // Pure synthetic runs are excluded: a fixtures run scoring 100% would paint
+  // a fake summit on the trend.
   const points = useMemo(() => {
-    return runs
+    return evalRuns
       .filter((r) => typeof r.overall_score === "number" && r.timestamp_utc)
       .sort((a, b) => a.timestamp_utc.localeCompare(b.timestamp_utc));
-  }, [runs]);
+  }, [evalRuns]);
 
   if (points.length === 0) {
     return (
@@ -590,7 +593,11 @@ export function RunTrend() {
           Run Score Trend
           <span className="section-sub">Across runs, chronological or by run sequence.</span>
         </div>
-        <div className="empty-note">No scored runs on disk yet, so there is nothing to trend.</div>
+        <div className="empty-note">
+          {runs.length > 0
+            ? "No scored real agent runs yet; pure synthetic runs are never trended."
+            : "No scored runs on disk yet, so there is nothing to trend."}
+        </div>
       </div>
     );
   }
@@ -628,7 +635,9 @@ export function RunTrend() {
     <div className="dash-card">
       <div className="section-title">
         Run Score Trend
-        <span className="section-sub">▣ Code Test score per run (y) across runs (x). Dot color is the run result.</span>
+        <span className="section-sub">
+          ▣ Code Test score per run (y) across runs (x); pure synthetic runs excluded. Dot color grades the score.
+        </span>
         <span className="spacer" />
         <div className="axis-toggle" role="tablist" aria-label="X axis">
           <button
@@ -671,7 +680,7 @@ export function RunTrend() {
                 <button
                   key={r.run_id}
                   type="button"
-                  className={`chart-pt ${r.overall_result === "pass" ? "pass" : "fail"}${loaded ? " loaded" : ""}`}
+                  className={`chart-pt ${healthTone(pct)}${loaded ? " loaded" : ""}`}
                   style={{ left: `${X(r, i)}%`, top: `${Y(r.overall_score as number)}%` }}
                   title={`${r.run_id}\nCode Tests ${pct}% · ${r.overall_result} · ${r.total_cases} cases\n${r.timestamp_utc.slice(0, 16).replace("T", " ")} UTC · ${r.git_commit.slice(0, 7)}\nClick to focus this run.`}
                   aria-label={`${r.run_id}: Code Tests ${pct}%, run ${r.overall_result}. Click to focus this run.`}
@@ -708,8 +717,9 @@ export function RunTrend() {
         )}
       </ChartScaffold>
       <div className="trend-legend">
-        <span><span className="dotex pass" /> Pass</span>
-        <span><span className="dotex fail" /> Fail</span>
+        <span><span className="dotex good" /> ≥ 90%</span>
+        <span><span className="dotex warn" /> 70–89%</span>
+        <span><span className="dotex bad" /> &lt; 70%</span>
         <span><span className="dotex thr" /> Pass threshold</span>
         <span><span className="dotex loaded" /> Focused run</span>
         <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>
@@ -1236,7 +1246,7 @@ export function Kpi({
   label: string;
   value: string;
   sub?: string;
-  tone?: "good" | "bad" | "brand";
+  tone?: "good" | "warn" | "bad" | "brand";
   small?: boolean;
 }) {
   return (
@@ -1253,12 +1263,14 @@ export function Kpi({
    harness is, and how scorecard runs behave per harness.
    --------------------------------------------------------------------------- */
 export function HarnessesStation() {
-  const { registry, runs } = useStore();
+  const { registry, runs, evalRuns } = useStore();
   const harnesses = registry?.harnesses ?? [];
 
-  const scored = runs.filter((r) => typeof r.overall_score === "number");
-  const passRate = runs.length
-    ? Math.round((runs.filter((r) => r.overall_result === "pass").length / runs.length) * 100)
+  // KPI headlines read real agent evidence only; the table below still buckets
+  // fixtures/mixed runs explicitly so nothing on disk is hidden.
+  const scored = evalRuns.filter((r) => typeof r.overall_score === "number");
+  const passRate = evalRuns.length
+    ? Math.round((evalRuns.filter((r) => r.overall_result === "pass").length / evalRuns.length) * 100)
     : null;
   const meanScore = scored.length
     ? Math.round((scored.reduce((s, r) => s + (r.overall_score as number), 0) / scored.length) * 100)
@@ -1283,8 +1295,8 @@ export function HarnessesStation() {
         <Kpi
           label="Run Pass Rate"
           value={passRate === null ? "—" : `${passRate}%`}
-          sub="Across all runs"
-          tone={passRate !== null && passRate >= 90 ? "good" : undefined}
+          sub="Excludes pure synthetic runs"
+          tone={passRate === null ? undefined : healthTone(passRate)}
         />
         <Kpi label="Avg Run Score" value={meanScore === null ? "—" : `${meanScore}%`} sub={`${scored.length} scored runs`} />
         <Kpi

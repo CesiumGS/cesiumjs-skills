@@ -31,7 +31,7 @@ import {
 } from "./api";
 import type { HandoffResult, LaunchRecord, LaunchRequest } from "./api";
 import { adaptScorecard } from "./lib/adapt";
-import { autoGrade, matchesFilter, worstFirstSort } from "./lib/grade";
+import { autoGrade, isSyntheticRun, matchesFilter, worstFirstSort } from "./lib/grade";
 import {
   buildOptimizationQueue,
   type OptimizationQueueSkill,
@@ -89,6 +89,10 @@ export interface Store {
   config: ConfigDTO | null;
   scorecard: AdaptedScorecard | null;
   runs: RunSummary[];
+  /** Runs backed by real agent evidence: pure fixtures (synthetic evaluator
+   *  self-tests) are excluded. Dashboard headline surfaces read this; the Run
+   *  Browser and Harnesses station keep reading the full `runs`. */
+  evalRuns: RunSummary[];
   // harness lens (persistent across stations): the harness of the loaded run,
   // the distinct harnesses across all runs, and the run list scoped to the lens.
   activeHarness: Harness | null;
@@ -459,6 +463,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ---------- derived: harness lens ----------
+  const evalRuns = useMemo<RunSummary[]>(() => runs.filter((r) => !isSyntheticRun(r)), [runs]);
   const harnesses = useMemo<Harness[]>(
     () => [...new Set(runs.map((r) => r.harness ?? "unknown"))].sort(),
     [runs]
@@ -1158,6 +1163,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     config,
     scorecard,
     runs,
+    evalRuns,
     activeHarness,
     harnesses,
     visibleRuns,

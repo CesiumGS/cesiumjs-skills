@@ -556,6 +556,14 @@ function HarnessOverlay() {
                     audit
                   </span>
                 )}
+                {r.source === "fixtures" && (
+                  <span
+                    className="hr-kind hr-synthetic"
+                    title="Synthetic run: hand-authored fixtures that validate the evaluator itself; no AI agent involved. Excluded from dashboard stats."
+                  >
+                    synthetic
+                  </span>
+                )}
                 <span
                   className={`hr-result ${r.overall_result === "pass" ? "ok" : r.overall_result === "incomplete" ? "warn" : "bad"}`}
                   title={r.overall_result === "incomplete" ? "Visual Tests never ran (no baseline screenshots); Code Tests passed." : undefined}

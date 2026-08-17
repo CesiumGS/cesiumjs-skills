@@ -3044,6 +3044,12 @@ button.verb-btn:disabled {
   padding: 0 6px;
   white-space: nowrap;
 }
+/* Fixtures runs: same dashed slate voice as the Synthetic harness pill, so the
+   runs excluded from dashboard stats are identifiable in the browser. */
+.harness-run .hr-synthetic {
+  color: var(--unknown);
+  border-color: var(--unknown);
+}
 
 /* ============================================================================
    MODELS & HARNESSES (station 6) + Evaluate decision-support additions.
@@ -3625,10 +3631,13 @@ button.verb-btn:disabled {
   margin-right: 4px;
   vertical-align: -1px;
 }
-.trend-legend .dotex.pass {
+.trend-legend .dotex.good {
   background: var(--pass);
 }
-.trend-legend .dotex.fail {
+.trend-legend .dotex.warn {
+  background: var(--defer);
+}
+.trend-legend .dotex.bad {
   background: var(--fail);
 }
 .trend-legend .dotex.thr {
@@ -4035,6 +4044,7 @@ button.verb-btn:disabled {
   margin-left: 2px;
 }
 .kpi.good .kpi-value { color: var(--pass); }
+.kpi.warn .kpi-value { color: var(--defer); }
 .kpi.bad .kpi-value { color: var(--fail); }
 .kpi.brand .kpi-value { color: var(--brand-blue); }
 
@@ -4947,8 +4957,10 @@ button.chart-pt:focus-visible {
   transform: translate(-50%, -50%) scale(1.45);
   z-index: 3;
 }
-.chart-pt.pass { background: var(--pass); }
-.chart-pt.fail { background: var(--fail); }
+/* Graded score severity (healthTone): green >= 90 %, amber 70-89 %, red < 70 %. */
+.chart-pt.good { background: var(--pass); }
+.chart-pt.warn { background: var(--defer); }
+.chart-pt.bad { background: var(--fail); }
 .chart-pt.machine { background: var(--ink-machine); width: 9px; height: 9px; }
 .chart-pt.loaded { box-shadow: 0 0 0 2.5px var(--live); }
 .chart-pt.none {
@@ -5060,6 +5072,10 @@ button.chart-pt:focus-visible {
   flex: none;
   color: var(--text-1);
 }
+/* Graded score severity (healthTone), independent of the verdict chip. */
+.rr-score.good { color: var(--pass); }
+.rr-score.warn { color: var(--defer); }
+.rr-score.bad { color: var(--fail); }
 .rr-bar {
   position: relative;
   width: 90px;
@@ -5074,8 +5090,9 @@ button.chart-pt:focus-visible {
   inset: 0 auto 0 0;
   border-radius: inherit;
 }
-.rr-fill.pass { background: var(--pass); }
-.rr-fill.fail { background: var(--fail); }
+.rr-fill.good { background: var(--pass); }
+.rr-fill.warn { background: var(--defer); }
+.rr-fill.bad { background: var(--fail); }
 .rr-model {
   font-size: var(--fs-50);
   color: var(--text-2);

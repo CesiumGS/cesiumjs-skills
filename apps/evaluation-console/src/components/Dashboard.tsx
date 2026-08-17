@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { ArrowRight, Flag } from "lucide-react";
 import { useStore } from "../store";
 import { modelShort, pluralize, relativeTime, verdictView } from "../lib/format";
-import { healthFromSummary, healthPct } from "../lib/grade";
+import { healthFromSummary, healthPct, healthTone } from "../lib/grade";
 import { HarnessChip, Kpi, RunTrend } from "./Compare";
 import { LiveNowBanner } from "./Live";
 import type { RunSummary } from "../types";
@@ -42,10 +42,10 @@ function runSourceChip(r: RunSummary): string {
    source, judge coverage, size, age. Click a row to focus that run.
    --------------------------------------------------------------------------- */
 function RecentRuns() {
-  const { runs, scorecard, switchRun, openOverlay } = useStore();
+  const { runs, evalRuns, scorecard, switchRun, openOverlay } = useStore();
   const recent = useMemo(
-    () => [...runs].sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc)).slice(0, 6),
-    [runs]
+    () => [...evalRuns].sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc)).slice(0, 6),
+    [evalRuns]
   );
   if (recent.length === 0) return null;
   return (
@@ -53,7 +53,7 @@ function RecentRuns() {
       <div className="section-title">
         Recent Runs
         <span className="section-sub">
-          Newest first. The verdict combines Code Tests and Visual Tests; the % is the Code Test score. Click a row to focus that run.
+          Newest first; pure synthetic runs are excluded. The verdict combines Code Tests and Visual Tests; the % is their combined health. Click a row to focus that run.
         </span>
         <span className="spacer" />
         <button className="pill link-pill" onClick={() => openOverlay("harness")} title="Run Browser (h)">
@@ -68,6 +68,7 @@ function RecentRuns() {
           const health = healthFromSummary(r);
           const aggPct = health.aggregate !== null ? healthPct(health.aggregate, pass) : null;
           const scorePct = aggPct !== null ? `${aggPct}%` : "—";
+          const tone = healthTone(aggPct);
           return (
             <li key={r.run_id}>
               <button
@@ -77,18 +78,18 @@ function RecentRuns() {
               >
                 <span className={`rr-verdict ${verdict.tone}`}>{verdict.label}</span>
                 <span
-                  className="rr-score mono"
+                  className={`rr-score mono ${tone}`}
                   title={
                     health.hasVisual
-                      ? "Overall health: Code Tests and Visual Tests combined equally."
-                      : "Overall health: Code Tests only."
+                      ? "Overall health: Code Tests and Visual Tests combined equally. Green ≥ 90%, amber 70–89%, red below 70%."
+                      : "Overall health: Code Tests only. Green ≥ 90%, amber 70–89%, red below 70%."
                   }
                 >
                   {scorePct}
                 </span>
                 <span className="rr-bar" aria-hidden>
                   <span
-                    className={`rr-fill ${pass ? "pass" : "fail"}`}
+                    className={`rr-fill ${tone}`}
                     style={{ width: `${aggPct ?? 0}%` }}
                   />
                 </span>
@@ -125,21 +126,23 @@ function RecentRuns() {
 }
 
 export function DashboardStation() {
-  const { scorecard, runs, skills, insights, registry, needsYouCount, setStation } = useStore();
+  const { scorecard, runs, evalRuns, skills, insights, registry, needsYouCount, setStation, config } = useStore();
 
+  // Headline numbers read real agent evidence only: a synthetic fixtures run
+  // passing 100% must not set the freshness chip or inflate the pass rate.
   const latestRun = useMemo(
     () =>
-      runs.reduce<(typeof runs)[number] | null>(
+      evalRuns.reduce<(typeof evalRuns)[number] | null>(
         (best, r) => (!best || r.timestamp_utc > best.timestamp_utc ? r : best),
         null
       ),
-    [runs]
+    [evalRuns]
   );
   const fresh = freshness(latestRun?.timestamp_utc);
 
-  const scored = runs.filter((r) => typeof r.overall_score === "number");
-  const passRate = runs.length
-    ? Math.round((runs.filter((r) => r.overall_result === "pass").length / runs.length) * 100)
+  const scored = evalRuns.filter((r) => typeof r.overall_score === "number");
+  const passRate = evalRuns.length
+    ? Math.round((evalRuns.filter((r) => r.overall_result === "pass").length / evalRuns.length) * 100)
     : null;
 
   const combos = insights?.combos ?? [];
@@ -166,9 +169,19 @@ export function DashboardStation() {
         <span className="spacer" />
         <span
           className={`fresh-chip${latestRun && fresh.stale ? " stale" : ""}`}
-          title={latestRun ? "Timestamp of the newest scorecard run on disk." : "No scorecard runs exist in this repository."}
+          title={
+            latestRun
+              ? "Timestamp of the newest real agent run. Synthetic fixture runs never set freshness."
+              : runs.length > 0
+                ? "Only synthetic fixture runs exist on disk; they never set freshness."
+                : "No scorecard runs exist in this repository."
+          }
         >
-          {latestRun ? `Latest Data ${fresh.label}${fresh.stale ? " · Stale" : ""}` : "No run data yet"}
+          {latestRun
+            ? `Latest Data ${fresh.label}${fresh.stale ? " · Stale" : ""}`
+            : runs.length > 0
+              ? "No real agent runs yet"
+              : "No run data yet"}
         </span>
       </div>
 
@@ -181,7 +194,12 @@ export function DashboardStation() {
           A det-only run must not read as a full PASS: the visual gate never ran. */}
       <div className="hero-card dashboard-hero">
         <div>
-          <div className="hero-eyebrow">{scorecard ? "Focused Run" : "Blank Slate"}</div>
+          <div className="hero-eyebrow" style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+            {scorecard ? "Focused Run" : "Blank Slate"}
+            {/* A focused pure-fixtures run must never masquerade as agent evidence:
+                it is invisible in Recent Runs, so the hero carries the label. */}
+            {scorecard && config?.source === "fixtures" && <HarnessChip harness="fixtures" />}
+          </div>
           {!scorecard ? (
             <div className="ov-big" style={{ color: "var(--text-2)" }}>NO RUNS YET</div>
           ) : scorecard.overallResult === "incomplete" || (pass && !scorecard.visualReviewSupplied) ? (
@@ -233,14 +251,20 @@ export function DashboardStation() {
         <Kpi
           label="Runs on Disk"
           value={String(runs.length)}
-          sub={latestRun ? `Newest ${fresh.label}` : "Run the scorecard to add one"}
+          sub={
+            runs.length > evalRuns.length
+              ? `${pluralize(runs.length - evalRuns.length, "synthetic run")} excluded from stats`
+              : latestRun
+                ? `Newest ${fresh.label}`
+                : "Run the scorecard to add one"
+          }
           tone="brand"
         />
         <Kpi
           label="Run Pass Rate"
           value={passRate === null ? "—" : `${passRate}%`}
           sub={`${scored.length} scored ${pluralize(scored.length, "run").replace(/^\d+ /, "")}`}
-          tone={passRate !== null && passRate >= 90 ? "good" : undefined}
+          tone={passRate === null ? undefined : healthTone(passRate)}
         />
         <Kpi label="Harnesses" value={String(harnessCount)} sub="Registered in the registry" />
         <Kpi

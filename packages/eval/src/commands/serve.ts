@@ -484,10 +484,16 @@ export interface ServeOptions {
 
 export async function serveCommand(ctx: EvalContext, options: ServeOptions): Promise<number> {
   const stateDirOverride = options.stateDir ? path.resolve(options.stateDir) : null;
+  // Default focus: the newest run backed by real agent evidence. A pure
+  // fixtures run validates the evaluator itself, so it must not open as the
+  // console's focused run; it only wins when nothing else exists.
+  const discovered = listRuns(ctx);
   const initialScorecard =
     options.scorecard !== undefined
       ? path.resolve(options.scorecard)
-      : (listRuns(ctx)[0]?.scorecard_path as string | undefined);
+      : ((discovered.find((run) => run.source !== "fixtures") ?? discovered[0])?.scorecard_path as
+          | string
+          | undefined);
   let state: ViewerState | null = null;
   if (initialScorecard) {
     state = new ViewerState(ctx, initialScorecard);

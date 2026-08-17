@@ -83,6 +83,28 @@ export function healthPct(fraction: number, pass: boolean): number {
   return pass ? Math.round(raw) : Math.min(99, Math.floor(raw));
 }
 
+export type HealthTone = "good" | "warn" | "bad" | "unknown";
+
+// Graded severity for a health percentage, independent of the binary verdict:
+// a 93% run that failed one gate is "nearly there", not the same red as a 40%
+// run. The verdict chip stays the pass/fail truth; magnitudes use this scale.
+export function healthTone(pct: number): Exclude<HealthTone, "unknown">;
+export function healthTone(pct: number | null | undefined): HealthTone;
+export function healthTone(pct: number | null | undefined): HealthTone {
+  if (pct === null || pct === undefined || !Number.isFinite(pct)) return "unknown";
+  if (pct >= 90) return "good";
+  if (pct >= 70) return "warn";
+  return "bad";
+}
+
+// Pure fixtures runs exercise the evaluator itself (no AI agent involved), so
+// they are not evidence about skill quality. Mixed sweeps still carry real
+// agent output and stay in. Dashboard headline surfaces filter with this; the
+// Run Browser and Harnesses station keep showing them, clearly labeled.
+export function isSyntheticRun(r: RunSummary): boolean {
+  return r.source === "fixtures";
+}
+
 // Auto-grade rule (DESIGN-SPEC §0.2 / Appendix A).
 export function autoGrade(c: AdaptedCase): Decision {
   const det = c.result;
