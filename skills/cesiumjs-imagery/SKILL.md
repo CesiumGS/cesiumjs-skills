@@ -4,7 +4,7 @@ description: "CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLa
 ---
 # CesiumJS Imagery Layers
 
-> CesiumJS v1.143 -- Imagery providers supply raster tile data rendered on the Globe
+> CesiumJS v1.144 -- Imagery providers supply raster tile data rendered on the Globe
 > or draped over a Cesium3DTileset. The three core abstractions are **ImageryProvider**
 > (fetches tiles), **ImageryLayer** (display settings), and
 > **ImageryLayerCollection** (ordered stack on the globe).
@@ -457,6 +457,13 @@ labelLayer.show = false; // toggle off
 When demonstrating imagery draped on a public sample tileset, zoom out enough
 to frame the whole tileset so the imagery is visible across the model surface,
 not just one close-up section.
+
+Since 1.144, feature-info picking also works for layers draped on tilesets:
+the Viewer InfoBox and `ImageryLayerCollection.pickImageryLayerFeatures` fall
+back to `tileset.imageryLayers` when the globe pick finds nothing, so a
+WMS/WMTS layer configured with `enablePickFeatures` returns metadata on 3D
+Tiles surfaces too (see the WMTS GetFeatureInfo options under Imagery
+Providers).
 
 ## Debugging Providers
 

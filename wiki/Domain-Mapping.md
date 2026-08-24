@@ -1,8 +1,8 @@
 # CesiumJS Skills Domain Mapping
 
-> **Version baseline:** CesiumJS v1.143 (2026-07-01)
-> **Last updated:** 2026-07-15
-> **Total public symbols assigned:** ~551
+> **Version baseline:** CesiumJS v1.144 (2026-08-01)
+> **Last updated:** 2026-08-24
+> **Total public symbols assigned:** ~563
 
 This document is the definitive source of truth for the CesiumJS skill decomposition. Every public class, function, and enum in CesiumJS is assigned to exactly one domain. Other domains may cross-reference a symbol, but only one domain **owns** it.
 
@@ -11,16 +11,16 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 | # | Skill Name | Entries | Description (passive activation) |
 |---|-----------|---------|----------------------------------|
 | 1 | `cesiumjs-viewer-setup` | ~70 | CesiumJS viewer setup - Viewer, CesiumWidget, widgets, Ion token, Scene configuration, SceneMode, factory helpers, geocoders, platform services. Use when initializing a CesiumJS application, configuring viewer widgets, setting Ion access tokens, creating default terrain or imagery, or bootstrapping a 3D globe. |
-| 2 | `cesiumjs-camera` | ~10 | CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, tracking entities, or converting between screen and world coordinates. |
+| 2 | `cesiumjs-camera` | ~19 | CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, composable Controller camera controllers (1.144), CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, adding custom or asset-inspection camera controllers, tracking entities, or converting between screen and world coordinates. |
 | 3 | `cesiumjs-entities` | ~61 | CesiumJS entities and data sources - Entity, EntityCollection, DataSource, GeoJsonDataSource, KmlDataSource, CzmlDataSource, Graphics types, PathMode, Visualizers. Use when adding points, labels, models, polygons, polylines, or time-segmented paths to the map, loading GeoJSON/KML/CZML/GPX data, or working with the high-level Entity API. |
-| 4 | `cesiumjs-3d-tiles` | ~48 | CesiumJS 3D Tiles - Cesium3DTileset, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets or Mapbox Vector Tiles as runtime 3D Tiles, styling building/vector features, querying metadata properties, working with voxels or point clouds, or clipping spatial data. |
+| 4 | `cesiumjs-3d-tiles` | ~49 | CesiumJS 3D Tiles - Cesium3DTileset, MVTDataProvider, UrlTemplate3DTilesDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping planes and polygons. Use when loading 3D Tiles tilesets or Mapbox Vector Tiles as runtime 3D Tiles, draping vector tiles on terrain, styling building/vector features, querying metadata properties, working with voxels or point clouds, or clipping spatial data. |
 | 5 | `cesiumjs-imagery` | ~30 | CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLayerCollection, WMS, WMTS, Bing, OpenStreetMap, ArcGIS, Mapbox, tile discard policies. Use when adding or swapping base map layers, configuring imagery providers, layering multiple map sources, or creating split-screen imagery comparisons. |
 | 6 | `cesiumjs-terrain-environment` | ~35 | CesiumJS terrain, globe, and environment - TerrainProvider, Globe, sampleTerrain, atmosphere, sky, fog, lighting, shadows, panoramas. Use when configuring terrain providers, querying terrain heights, customizing atmosphere or sky rendering, adding panoramas, or adjusting scene lighting and shadows. |
 | 7 | `cesiumjs-primitives` | ~82 | CesiumJS primitives and geometry - Primitive, GeometryInstance, Appearance, BufferPrimitive collections, GeoJsonPrimitive, Billboard/Label/PointPrimitive collections, built-in geometry shapes, ground primitives, classification. Use when rendering performance-critical static/vector geometry, loading GeoJSON without entities, creating custom shapes, batching draw calls, or using low-level collections. |
-| 8 | `cesiumjs-materials-shaders` | ~20 | CesiumJS materials and post-processing - Material, Fabric JSON, MaterialAppearance, ImageBasedLighting, PostProcessStage, PostProcessStageLibrary, bloom, depth of field, ambient occlusion, FXAA, tonemapping, BlendingState. Use when defining Fabric materials for entities or primitives, configuring PBR image-based lighting, or adding screen-space post-processing effects. |
+| 8 | `cesiumjs-materials-shaders` | ~21 | CesiumJS materials and post-processing - Material, Fabric JSON, MaterialAppearance, ImageBasedLighting, PostProcessStage, PostProcessStageLibrary, bloom, depth of field, ambient occlusion, FXAA, tonemapping, BlendingState. Use when defining Fabric materials for entities or primitives, configuring PBR image-based lighting, or adding screen-space post-processing effects. |
 | 9 | `cesiumjs-time-properties` | ~57 | CesiumJS time, properties, and animation - Clock, JulianDate, TimeInterval, Property, SampledProperty, CallbackProperty, interpolation, splines, CZML temporal data. Use when making entity attributes time-dynamic, configuring the simulation clock, interpolating positions over time, or working with sampled or callback properties. |
 | 10 | `cesiumjs-spatial-math` | ~55 | CesiumJS spatial math - Cartesian3, Cartographic, Matrix4, Quaternion, Transforms, Ellipsoid, BoundingSphere, projections, coordinate conversions. Use when converting between coordinate systems, computing positions on the ellipsoid, performing spatial intersection tests, building model matrices, or working with geographic projections. |
-| 11 | `cesiumjs-interaction` | ~8 | CesiumJS interaction and picking - ScreenSpaceEventHandler, Scene.pick, Scene.drillPick, Scene.pickPosition, mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, registering multi-key-modifier input actions, implementing hover effects, or building drag-based interactions. |
+| 11 | `cesiumjs-interaction` | ~9 | CesiumJS interaction and picking - ScreenSpaceEventHandler, Scene.pick, Scene.drillPick, Scene.pickPosition, Scene.snap edge snapping (1.144), mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, registering multi-key-modifier input actions, snapping to model edges, implementing hover effects, or building drag-based interactions. |
 | 12 | `cesiumjs-models-particles` | ~21 | CesiumJS models, glTF, and particle effects - Model, ModelAnimation, ModelNode, EdgeDisplayMode, ParticleSystem, emitters, GPM extensions. Use when loading glTF/GLB 3D models, controlling edge rendering, playing model animations, positioning particle effects like fire or smoke, or working with geospatial positioning metadata. |
 | 13 | `cesiumjs-core-utilities` | ~46 | CesiumJS core utilities and networking - Resource, Color, Event, Request, RequestScheduler, error handling, helper functions, feature detection. Use when fetching remote data, managing HTTP requests, working with colors, handling events, debugging errors, or using utility functions like defined, clone, or buildModuleUrl. |
 | 14 | `cesiumjs-custom-shader` | ~7 | CustomShader authoring - vertexShaderText and fragmentShaderText against VertexInput, FragmentInput, FeatureIds, Metadata, czm_modelMaterial. Use when reading EXT_mesh_features or EXT_structural_metadata property textures/tables, vertex displacement, or shading VoxelPrimitive. |
@@ -123,13 +123,23 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ---
 
-## Domain 2: cesiumjs-camera (~10 entries)
+## Domain 2: cesiumjs-camera (~19 entries)
 
 ### Core
 - Camera
 - CameraEventAggregator
 - ScreenSpaceCameraController
 - EntityView
+
+### Controller Framework (1.144)
+- Controller
+- ControllerHost
+- HybridScreenSpacePanCameraController
+- ScreenSpaceElevatorCameraController
+- ScreenSpaceMapCameraController
+- ScreenSpaceTiltOrbitCameraController
+- ScreenSpaceZoomCameraController
+- ScreenSpaceInputBindings
 
 ### Debug
 - DebugCameraPrimitive
@@ -140,6 +150,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 ### Enums
 - CameraEventType
 - KeyboardEventModifier
+- MouseButton
 
 ### Key Methods (documented as patterns)
 - Camera.flyTo
@@ -156,6 +167,8 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - ScreenSpaceCameraController.enableTilt / enableZoom / enableRotate
 - ScreenSpaceCameraController.minimumZoomDistance / maximumZoomDistance
 - ScreenSpaceCameraController.maximumTiltAngle
+- Viewer.addController / Viewer.removeController (also on CesiumWidget; documented here, classes owned by Domain 1)
+- Scene.controllerHost (ControllerHost accessor)
 
 ---
 
@@ -305,6 +318,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - GaussianSplat3DTileContent
 - TimeDynamicPointCloud
 - VectorGltf3DTileContent
+- UrlTemplate3DTilesDataProvider (1.144 base class of MVTDataProvider)
 
 ### Terrain Bridge (experimental)
 - Cesium3DTilesTerrainData
@@ -561,6 +575,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - CompressedTextureBuffer
 - TextureMagnificationFilter
 - TextureMinificationFilter
+- Texture (runtime-public; absent from Cesium.d.ts; 1.144 adds static defaultColor)
 
 ### Functions
 - createElevationBandMaterial (cross-ref from Domain 6)
@@ -741,7 +756,7 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 
 ---
 
-## Domain 11: cesiumjs-interaction (~8 entries)
+## Domain 11: cesiumjs-interaction (~9 entries)
 
 ### Event Handling
 - ScreenSpaceEventHandler
@@ -752,12 +767,16 @@ This document is the definitive source of truth for the CesiumJS skill decomposi
 - addDrillPickedResults
 - computePickingDrawingBufferRectangle
 
+### Types
+- SceneSnapResult (1.144)
+
 ### Scene Picking Methods (documented as patterns)
 - Scene.pick()
 - Scene.drillPick()
 - Scene.pickPosition()
 - Scene.pickVoxel()
 - Scene.pickAsync()
+- Scene.snap() (experimental, 1.144)
 
 ### Types Returned by Picking (cross-refs)
 - Cesium3DTileFeature (Domain 4)
@@ -956,9 +975,28 @@ The July CAD announcement extends the workflow surface beyond newly exported API
 | July-announced surface | Support boundary |
 |---|---|
 | [CAD-style glTF lines, points, edges, and constant-LOD textures](https://cesium.com/blog/2026/07/09/introducing-cad-style-workflow-extensions-for-gltf/) | `cesiumjs-models-particles/REFERENCE.md` maps `EXT_mesh_primitive_restart`, `EXT_mesh_primitive_edge_visibility`, `BENTLEY_materials_line_style`, `BENTLEY_materials_point_style`, and `EXT_textureInfo_constant_lod` |
-| `BENTLEY_materials_planar_fill` | Explicitly marked upcoming and unsupported in 1.143; do not generate it as a working CesiumJS path |
+| `BENTLEY_materials_planar_fill` | Explicitly marked upcoming and unsupported in 1.143; superseded by 1.144 support (see the August coverage below) |
 
-## Recently Added APIs (v1.120-v1.143)
+## August 2026 / CesiumJS 1.144 Coverage
+
+The [1.144 release](https://github.com/CesiumGS/cesium/releases/tag/1.144)
+(2026-08-01) has no breaking changes and no deprecations. It adds 12 exported
+symbols and several loader/picking behaviors:
+
+| 1.144 surface | Canonical skill coverage |
+|---|---|
+| Composable `Controller` framework: `ControllerHost`, five ScreenSpace camera controller implementations, `MouseButton`, `ScreenSpaceInputBindings`, `Viewer.addController` / `CesiumWidget.addController` | `cesiumjs-camera` (Domain 2) |
+| `Scene.snap` and `SceneSnapResult`: experimental edge-snap picking over Model-pipeline content | `cesiumjs-interaction` (Domain 11) |
+| `UrlTemplate3DTilesDataProvider` base class; `MVTDataProvider` now extends it | `cesiumjs-3d-tiles` (Domain 4) |
+| Automatic terrain draping of clamped vector tile polylines/polygons, screen-space-constant width, `Cesium3DTileStyle` styling | `cesiumjs-3d-tiles` MVT guidance |
+| WMS/WMTS feature-info picking for imagery draped on 3D Tiles | `cesiumjs-imagery` draping guidance |
+| `BENTLEY_materials_planar_fill` now supported (`wireframeFill` is a no-op) | `cesiumjs-models-particles/REFERENCE.md`; supersedes the 1.143 "unsupported" boundary above |
+| `KHR_mesh_primitive_restart` (ratified successor of the EXT variant) | `cesiumjs-models-particles/REFERENCE.md` |
+| `EXT_mesh_primitive_edge_visibility` typed-array loading (up to ~19x less JS heap) | `cesiumjs-models-particles/REFERENCE.md` |
+| `Texture.defaultColor` placeholder color (`Texture` is runtime-public, absent from Cesium.d.ts) | `cesiumjs-materials-shaders` note (Domain 8) |
+| `GRID_TARGET_SEGMENTS_PER_CELL` | Accidental top-level export from the vector draping work; not assigned to a domain, do not generate code that uses it |
+
+## Recently Added APIs (v1.120-v1.144)
 
 | Version | Addition | Domain |
 |---------|----------|--------|
@@ -983,6 +1021,12 @@ The July CAD announcement extends the workflow surface beyond newly exported API
 | v1.142 | multiple KeyboardEventModifier keys in ScreenSpaceEventHandler | 11 |
 | v1.143 | PathMode, PathGraphics.materialMode | 3 (property workflows in 9) |
 | v1.143 | KHR_meshopt_compression decoding (loader behavior) | 12 (3D Tiles cross-reference in 4) |
+| v1.144 | Controller, ControllerHost, ScreenSpaceMap/Elevator/HybridPan/TiltOrbit/Zoom camera controllers, ScreenSpaceInputBindings, MouseButton | 2 |
+| v1.144 | Scene.snap, SceneSnapResult (experimental) | 11 |
+| v1.144 | UrlTemplate3DTilesDataProvider | 4 |
+| v1.144 | Terrain draping of clamped vector tile content (loader behavior) | 4 |
+| v1.144 | BENTLEY_materials_planar_fill, KHR_mesh_primitive_restart (loader behavior) | 12 |
+| v1.144 | Texture.defaultColor (runtime static, untyped) | 8 |
 
 ---
 

@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-interaction
-description: "CesiumJS interaction and picking - ScreenSpaceEventHandler, multi-key KeyboardEventModifier input actions, Scene.pick, Scene.drillPick, Scene.pickPosition, mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, registering modifier-key shortcuts, implementing hover effects, or building drag-based interactions."
+description: "CesiumJS interaction and picking - ScreenSpaceEventHandler, multi-key KeyboardEventModifier input actions, Scene.pick, Scene.drillPick, Scene.pickPosition, Scene.snap edge snapping (1.144), mouse and touch events. Use when handling user clicks on the globe, selecting entities or 3D Tiles features, registering modifier-key shortcuts, implementing hover effects, snapping to model edges for measurement, or building drag-based interactions."
 ---
 # CesiumJS Interaction & Picking
 
-Version baseline: CesiumJS v1.143 (ES module imports, Ion token required).
+Version baseline: CesiumJS v1.144 (ES module imports, Ion token required).
 
 ## ScreenSpaceEventHandler
 
@@ -120,6 +120,30 @@ if (defined(voxelCell)) {
   console.log(voxelCell.getProperty("temperature"));
 }
 ```
+
+### snap (experimental, 1.144+)
+
+`scene.snap` searches a screen-space region around a window position and
+returns the best snap target, preferring model edges (from CAD-style
+`EXT_mesh_primitive_edge_visibility` data) over surfaces; among hits of the
+same kind, the one nearest the cursor wins. Use it for measurement and
+inspection tools that should latch onto edges instead of raw cursor hits.
+
+```js
+import { defined } from "cesium";
+
+// Search a 25x25 px region centered on the cursor
+const result = viewer.scene.snap(movement.endPosition, { width: 25 });
+if (defined(result)) {
+  // SceneSnapResult: { object, position, screenPosition, isEdge }
+  console.log(result.isEdge ? "edge" : "surface", result.position);
+}
+```
+
+Only primitives rendered through the Model pipeline (3D Tiles and glTF
+models) are snappable. Snapping requires WebGL2 with float color attachments
+(`EXT_color_buffer_float`); when that is unsupported, or the region contains
+no snappable geometry, `snap` returns `undefined`.
 
 ### Picking Return Values
 

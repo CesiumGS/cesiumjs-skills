@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-3d-tiles
-description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when a task involves loading 3D Tiles or Mapbox Vector Tiles, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
+description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, UrlTemplate3DTilesDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when a task involves loading 3D Tiles or Mapbox Vector Tiles, draping vector tiles on terrain, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
 ---
 # CesiumJS 3D Tiles
 
-Version baseline: CesiumJS v1.143 (ES module imports, async factory methods).
+Version baseline: CesiumJS v1.144 (ES module imports, async factory methods).
 
 ## Loading a Tileset
 
@@ -133,6 +133,19 @@ Notes:
 - Empty 204/404 tiles are treated as missing instead of hard failures.
 - `provider.show` proxies visibility to the generated tileset.
 - Runtime vector glTF content uses draft `EXT_mesh_polygon` and `3DTILES_content_gltf_vector` support; treat this path as experimental.
+
+**Terrain draping (1.144+):** clamped vector tile polylines and polygons drape
+onto terrain automatically, with screen-space-constant line width, and
+per-feature styling stays driven by `Cesium3DTileStyle`. There is no opt-in
+flag; clamped vector content follows the terrain surface beneath it.
+
+**Custom vector tile formats (1.144+):** `MVTDataProvider` now extends
+`UrlTemplate3DTilesDataProvider`, a public base class that turns any
+`{z}/{x}/{y}` URL-template vector source into a runtime-generated
+`Cesium3DTileset`. Its `fromUrl`, `tileset`, `show`, `extent`, and
+`minZoom`/`maxZoom` options behave the same as on `MVTDataProvider`; subclass
+it and implement its protected codec hook to support a tiled vector format
+other than MVT.
 
 ## Tileset Events and Render Readiness
 

@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-camera
-description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, tracking entities, or converting between screen and world coordinates."
+description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, composable Controller camera controllers (1.144), CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, adding custom or asset-inspection camera controllers, tracking entities, or converting between screen and world coordinates."
 ---
 # CesiumJS Camera & Navigation
 
-> **Baseline:** CesiumJS v1.143 -- ES module imports (`import { ... } from "cesium";`)
+> **Baseline:** CesiumJS v1.144 -- ES module imports (`import { ... } from "cesium";`)
 
 ## Camera Fundamentals
 
@@ -432,9 +432,83 @@ ctrl.zoomEventTypes = CameraEventType.WHEEL;
 
 ---
 
+## Controller Framework (1.144+): Composable Camera Controllers
+
+CesiumJS 1.144 adds a composable `Controller` framework as an opt-in
+alternative to `ScreenSpaceCameraController`, aimed at asset inspection:
+navigating underground, inside enclosed models, and around a fixed subject
+without collision detection. `ScreenSpaceCameraController` is not deprecated
+and remains the default; the two systems can run together.
+
+Five controllers ship in 1.144 (the release notes list four; the zoom
+controller is also public):
+
+| Controller | Motion |
+|---|---|
+| `ScreenSpaceMapCameraController` | Horizontal pan in the local tangent plane |
+| `ScreenSpaceElevatorCameraController` | Vertical pan along the ellipsoid normal |
+| `HybridScreenSpacePanCameraController` | Auto-switches between map and elevator pan by angle from nadir |
+| `ScreenSpaceTiltOrbitCameraController` | Tilt and orbit around a picked point, critically damped |
+| `ScreenSpaceZoomCameraController` | Zoom toward the pointer with inertia |
+
+Canonical setup: disable the default controller's inputs and collision
+detection, then add the controllers the use case needs.
+
+```js
+import {
+  HybridScreenSpacePanCameraController,
+  ScreenSpaceTiltOrbitCameraController,
+  ScreenSpaceZoomCameraController,
+} from "cesium";
+
+const ssc = viewer.scene.screenSpaceCameraController;
+ssc.enableInputs = false;             // hand input over to the new controllers
+ssc.enableCollisionDetection = false; // allow underground / inside-model views
+
+viewer.addController(new HybridScreenSpacePanCameraController());
+viewer.addController(new ScreenSpaceTiltOrbitCameraController());
+viewer.addController(new ScreenSpaceZoomCameraController());
+```
+
+`viewer.addController` / `viewer.removeController` (also available on
+`CesiumWidget`) wrap `scene.controllerHost`, a `ControllerHost` that updates
+registered controllers once per frame in priority order.
+
+Remap inputs per controller with `MouseButton` plus an optional
+`KeyboardEventModifier`; tune feel with `panSpeed`, `inertiaEnabled`, and
+`inertialDecay`. A `pickWorldPosition` callback selects the world point that
+panning is computed against (default: the ellipsoid surface below the camera).
+
+```js
+import { MouseButton, ScreenSpaceElevatorCameraController } from "cesium";
+
+const elevator = new ScreenSpaceElevatorCameraController({
+  dragInputs: [{ button: MouseButton.RIGHT }],
+});
+elevator.pickWorldPosition = (scene, windowPosition, result) =>
+  scene.pickPosition(windowPosition, result);
+viewer.addController(elevator);
+```
+
+Write a custom controller by implementing the `Controller` contract:
+`connectedCallback(element)` / `disconnectedCallback(element)` for DOM
+listeners, `firstUpdate(scene, time)` for one-time setup, and
+`update(scene, time)` called once per frame.
+`ScreenSpaceInputBindings.registerDragInputBindings(handler, bindings, actions)`
+wires drag start/change/end callbacks for you.
+
+> Reach for the framework when the task needs underground or inside-model
+> navigation, orbit-around-subject inspection, or per-axis input remapping that
+> the `enableRotate`-style flags cannot express. The official Sandcastle demo
+> id is `camera-controllers`.
+
+---
+
 ## Custom First-Person Controls
 
-Disable default controller, use `ScreenSpaceEventHandler` for mouse-look and
+For inspection-style navigation, prefer the 1.144 Controller framework above.
+Hand-roll controls only for game-style first-person movement it does not cover:
+disable the default controller, use `ScreenSpaceEventHandler` for mouse-look and
 `keydown`/`keyup` for WASD. Apply in `clock.onTick`. Scale speed to altitude.
 
 ```js
@@ -544,6 +618,7 @@ Debug: `viewer.scene.primitives.add(new Cesium.DebugCameraPrimitive({ camera: vi
 | Camera tour (multi-stop) | `flyTo` chain | Use `complete` callback, keep altitude 600 m+ |
 | Ground-level / street view | `setView` | **Requires 3D Tiles** (OSM Buildings or Google Photorealistic). Without them, only sky and flat ground visible. |
 | Constrain user nav | `screenSpaceCameraController` | Set min/max zoom, tilt angle; also call `setView` for initial position |
+| Asset inspection / underground orbit | `Controller` framework (1.144+) | Disable default inputs + collision, then `viewer.addController` with hybrid pan, tilt-orbit, and zoom controllers |
 
 ---
 

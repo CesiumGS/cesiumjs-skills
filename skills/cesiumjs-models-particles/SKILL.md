@@ -4,7 +4,7 @@ description: "CesiumJS models, glTF, and particle effects - Model, KHR_meshopt_c
 ---
 # CesiumJS Models, glTF & Particle Effects
 
-Version baseline: CesiumJS v1.143.
+Version baseline: CesiumJS v1.144.
 
 ## Quick Reference
 

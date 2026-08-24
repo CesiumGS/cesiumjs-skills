@@ -14,7 +14,7 @@
     "staticProtocol": "static-visual-v1"
   },
   "browser": {
-    "cesiumVersion": "1.142",
+    "cesiumVersion": "1.144",
     "viewport": { "width": 1280, "height": 720 },
     "navigationTimeoutMs": 60000,
     "screenshotTimeoutMs": 90000,

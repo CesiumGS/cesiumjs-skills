@@ -4,11 +4,17 @@ description: "CesiumJS materials and post-processing — Material, Fabric JSON, 
 ---
 # CesiumJS Materials, Shaders & Post-Processing
 
-Version baseline: CesiumJS 1.143 (July 2026). All imports use ES module style.
+Version baseline: CesiumJS 1.144 (August 2026). All imports use ES module style.
 
 ## Material System (Fabric JSON)
 
 `Material` defines surface appearance for **Primitives** through a JSON schema called Fabric. Materials compile to GLSL and are consumed by `MaterialAppearance` or `PolylineMaterialAppearance`.
+
+While a material's image loads, CesiumJS renders a placeholder texture that
+defaults to white. Since 1.144 the static `Texture.defaultColor` changes that
+placeholder color to avoid white flashes during material construction. Note
+that the `Texture` class is runtime-public but absent from the published
+TypeScript definitions, so TypeScript callers need a cast.
 
 ### Built-in Material Types
 
