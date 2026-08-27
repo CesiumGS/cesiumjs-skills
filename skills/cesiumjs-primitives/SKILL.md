@@ -4,7 +4,7 @@ description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Ap
 ---
 # CesiumJS Primitives & Geometry
 
-> **Applies to:** CesiumJS v1.143+ (ES module imports, `??` instead of `defaultValue`)
+> **Applies to:** CesiumJS v1.144+ (ES module imports, `??` instead of `defaultValue`)
 
 ## Architecture
 
@@ -92,6 +92,67 @@ scene.primitives.add(new Primitive({
   appearance: new PerInstanceColorAppearance(),
 }));
 ```
+
+### Batching Volume Geometry (CylinderGeometry Grid)
+
+Volume geometry (Cylinder, Box, Ellipsoid) must be positioned via `modelMatrix` on each GeometryInstance. Use `Matrix4.multiply` to combine a world-space anchor with a local offset, then batch all instances into one Primitive.
+
+```js
+import {
+  Primitive, GeometryInstance, CylinderGeometry,
+  PerInstanceColorAppearance, ColorGeometryInstanceAttribute,
+  Cartesian3, Matrix4, Transforms, Color, Math as CesiumMath,
+} from "cesium";
+
+const center = Cartesian3.fromDegrees(-73.9857, 40.7580);
+const anchorFrame = Transforms.eastNorthUpToFixedFrame(center, undefined, new Matrix4());
+const instances = [];
+const GRID = 10;
+const SPACING = 50; // metres
+
+for (let row = 0; row < GRID; row++) {
+  for (let col = 0; col < GRID; col++) {
+    const xOffset = (col - GRID / 2) * SPACING;
+    const yOffset = (row - GRID / 2) * SPACING;
+    // Combine anchor ENU frame with a local XYZ offset
+    const modelMatrix = Matrix4.multiply(
+      anchorFrame,
+      Matrix4.fromTranslation(new Cartesian3(xOffset, yOffset, 100), new Matrix4()),
+      new Matrix4(),
+    );
+    instances.push(new GeometryInstance({
+      geometry: new CylinderGeometry({
+        length: 200,
+        topRadius: 8,
+        bottomRadius: 8,
+        vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT,
+      }),
+      modelMatrix,
+      attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.fromRandom({ alpha: 1.0 })) },
+    }));
+  }
+}
+
+scene.primitives.add(new Primitive({
+  geometryInstances: instances,
+  appearance: new PerInstanceColorAppearance({ flat: true }),
+}));
+
+// Frame the grid so the full batch is visible -- a shallow pitch hides cylinders
+// behind the foreground; a near-nadir pitch flattens them. Aim for ~-45° (-PI/4)
+// at a range that covers the grid footprint (GRID * SPACING) with margin.
+const range = GRID * SPACING * 3; // ~1500 m for a 10x10x50m grid
+viewer.camera.lookAt(
+  center,
+  new Cartesian3(0, -range * 0.7, range * 0.7), // offset south + up for -45° pitch
+);
+```
+
+**Key patterns:**
+- `Matrix4.multiply(anchorFrame, Matrix4.fromTranslation(offset, result), result)` -- compose the ENU frame at a geographic anchor with a local East/North/Up translation.
+- `Color.fromRandom({ alpha: 1.0 })` produces fully-opaque random colours suitable for rainbow-coloured batches.
+- **Framing matters:** for a grid of vertical volumes, prefer a `~-45°` (`-CesiumMath.PI_OVER_FOUR`, ~`-0.785` rad) pitch at a range of roughly `3 * gridFootprint`. Pitches shallower than ~`-0.6` rad can push the grid off-screen or hide it behind buildings; nadir views flatten cylinders into dots and lose the batched "field" appearance. A `-0.61` rad pitch is still shallow enough to leave the grid completely out of frame.
+- **Verify visibility:** after `primitive.ready`, prefer `viewer.camera.flyToBoundingSphere(primitive._boundingSpheres[0], { duration: 0 })` (or `viewer.flyTo(primitive)`) over hand-tuned offsets if the scenario only requires "the batch is visible".
 
 ## Updating Per-Instance Attributes
 
@@ -342,13 +403,14 @@ scene.primitives.add(new Primitive({
 
 ## GroundPrimitive
 
-Drapes geometry onto terrain/3D Tiles. Supported: `CircleGeometry`, `CorridorGeometry`, `EllipseGeometry`, `PolygonGeometry`, `RectangleGeometry`.
+Drapes geometry onto terrain/3D Tiles. Supported: `CircleGeometry`, `CorridorGeometry`, `EllipseGeometry`, `PolygonGeometry`, `RectangleGeometry`. Add to `scene.primitives` (not `scene.groundPrimitives` -- both work but `scene.primitives` is the conventional target when using a public basemap without Ion terrain).
 
 ```js
 import { GroundPrimitive, GeometryInstance, PolygonGeometry, PolygonHierarchy,
-  ColorGeometryInstanceAttribute, ClassificationType, Cartesian3, Color } from "cesium";
+  PerInstanceColorAppearance, ColorGeometryInstanceAttribute, ClassificationType,
+  Cartesian3, Color } from "cesium";
 
-scene.groundPrimitives.add(new GroundPrimitive({
+scene.primitives.add(new GroundPrimitive({
   geometryInstances: new GeometryInstance({
     geometry: new PolygonGeometry({
       polygonHierarchy: new PolygonHierarchy(
@@ -358,17 +420,20 @@ scene.groundPrimitives.add(new GroundPrimitive({
     id: "groundPolygon",
     attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.RED.withAlpha(0.5)) },
   }),
+  appearance: new PerInstanceColorAppearance({ flat: true, translucent: true }),
   classificationType: ClassificationType.TERRAIN, // TERRAIN, CESIUM_3D_TILE, or BOTH
 }));
 ```
 
 ## GroundPolylinePrimitive
 
+Drapes a polyline on terrain. Add to `scene.primitives` (not `scene.groundPrimitives`).
+
 ```js
 import { GroundPolylinePrimitive, GeometryInstance, GroundPolylineGeometry,
   PolylineColorAppearance, ColorGeometryInstanceAttribute, Cartesian3, Color } from "cesium";
 
-scene.groundPrimitives.add(new GroundPolylinePrimitive({
+scene.primitives.add(new GroundPolylinePrimitive({
   geometryInstances: new GeometryInstance({
     geometry: new GroundPolylineGeometry({
       positions: Cartesian3.fromDegreesArray([-112.13, 36.05, -112.09, 36.10, -112.13, 36.17]),
@@ -412,6 +477,8 @@ GPU-efficient viewport-aligned images -- far more performant than entities at sc
 > render -- gate on `scene.context.webgl2` (or feature-detect the extension) if you
 > still target legacy WebGL 1 hardware.
 
+### Basic Usage
+
 > **Compatibility fix (1.143):** billboard image loading no longer crashes when
 > an application replaces the global `Promise` implementation. Use the public
 > `image` property with a URL, loaded image, or canvas; use `setImage` for a
@@ -434,6 +501,41 @@ const b = billboards.add({
 b.position = Cartesian3.fromDegrees(-75.60, 40.05); // update dynamically
 billboards.remove(b);
 ```
+
+### PinBuilder -- Procedural Pin Images
+
+`PinBuilder` generates canvas-based pin icons at runtime without external image files. Use `fromColor` for solid-colour pins or `fromText` for labelled pins. Pass the returned canvas as the billboard `image`.
+
+When a scenario specifies an ordered list of cities/items and a colour-by-index scheme, **iterate the source array in the given order** and use the loop index directly as the HSL hue index. Re-ordering the source list (e.g. sorting by latitude) swaps which colour lands on which city and fails visual checks.
+
+```js
+import { BillboardCollection, PinBuilder, Cartesian3, Color, VerticalOrigin } from "cesium";
+
+const pinBuilder = new PinBuilder();
+const cities = [
+  { name: "Boston",       lng: -71.0589, lat: 42.3601 },
+  { name: "New York",     lng: -74.0060, lat: 40.7128 },
+  { name: "Philadelphia", lng: -75.1652, lat: 39.9526 },
+  { name: "Washington DC",lng: -77.0369, lat: 38.9072 },
+  { name: "Miami",        lng: -80.1918, lat: 25.7617 },
+];
+
+const billboards = scene.primitives.add(new BillboardCollection({ scene }));
+
+cities.forEach((city, index) => {
+  billboards.add({
+    position: Cartesian3.fromDegrees(city.lng, city.lat),
+    // Color.fromHsl(hue 0-1, saturation, lightness) produces evenly-spaced hues
+    image: pinBuilder.fromColor(Color.fromHsl(index / cities.length, 0.8, 0.5), 48),
+    verticalOrigin: VerticalOrigin.BOTTOM,
+  });
+});
+
+// Text label pin: pinBuilder.fromText("A", Color.ROYALBLUE, 48)
+// fromColor / fromText return a canvas -- pass directly as image
+```
+
+**`Color.fromHsl(hue, saturation, lightness)`** -- generates colours across the spectrum by varying `hue` (0–1 wraps full circle). Useful for rainbow-colouring N items: `Color.fromHsl(i / n, 0.8, 0.5)`. **`Color.fromRandom({ alpha })`** -- random hue/saturation/lightness with fixed alpha.
 
 ## LabelCollection
 
@@ -522,6 +624,17 @@ scene.primitives.add(new Primitive({
 | `ClassificationType` | `TERRAIN`, `CESIUM_3D_TILE`, `BOTH` | GroundPrimitive, ClassificationPrimitive |
 | `PrimitiveType` | `POINTS`, `LINES`, `TRIANGLES`, etc. | Low-level Geometry |
 | `CloudType` | `CUMULUS` | CloudCollection |
+
+## Camera Framing for Primitive Scenes
+
+Programmatic checks (primitive count, camera position) can pass while the visual output completely misses the rendered geometry. A few rules of thumb that recur in visual evaluations:
+
+- **Volume-geometry grids (cylinders/boxes):** use ~`-PI/4` (~`-0.785` rad, -45°) pitch from a range of `~3 * gridFootprint`. Pitches shallower than ~`-0.6` rad can park the grid behind the camera or out of frame; pitches near `-PI/2` flatten vertical extent and make the batch look like dots.
+- **Surface polygons draped on terrain (GroundPrimitive):** with steeper pitches (~`-50°`) and far ranges, the polygon shrinks to a thin strip at the bottom edge. Reduce range or use a flatter pitch so the polygon occupies the centre of the frame.
+- **Continental polylines (Route 66, transcontinental routes):** a near-nadir top-down view from ~5–6 Mm above the centroid keeps the full path visible.
+- **Pin chains along a coast/route:** centre the camera on the midpoint of the chain at a range that covers the chain's bounding box with margin on all sides.
+
+When in doubt, `viewer.flyTo(primitive)` or `viewer.camera.flyToBoundingSphere(primitive._boundingSpheres[0])` after `primitive.ready` will frame the batch automatically.
 
 ## Performance Tips
 
