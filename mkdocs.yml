@@ -1,0 +1,59 @@
+site_name: CesiumJS Agent Skills
+site_description: Curated agent skills and evidence-backed evaluation workflows for CesiumJS development.
+site_url: https://cesiumgs.github.io/cesiumjs-skills/
+repo_url: https://github.com/CesiumGS/cesiumjs-skills
+repo_name: CesiumGS/cesiumjs-skills
+
+docs_dir: docs
+
+theme:
+  name: material
+  logo: assets/cesium-favicon.ico
+  favicon: assets/cesium-favicon.ico
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mermaid.mjs
+
+plugins:
+  - search
+  - include-markdown
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture:
+      - System Overview: architecture.md
+      - Domain Mapping: domain-mapping.md
+  - Skills Catalog: skills-catalog.md
+  - Evaluation & Optimization: evaluation-optimization.md
+  - Contributor Workflow: contributing.md

@@ -40,6 +40,10 @@ evaluation/artifacts/
 evaluation/tmp/
 *.eval.html
 
+# MkDocs local environment and generated site output
+.venv-docs/
+site/
+
 # Local planning and agent-loop scratch files
 local-plans/
 prompt.md
