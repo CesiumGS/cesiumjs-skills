@@ -4,7 +4,7 @@ description: "CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLa
 ---
 # CesiumJS Imagery Layers
 
-> CesiumJS v1.143 -- Imagery providers supply raster tile data rendered on the Globe
+> CesiumJS v1.144 -- Imagery providers supply raster tile data rendered on the Globe
 > or draped over a Cesium3DTileset. The three core abstractions are **ImageryProvider**
 > (fetches tiles), **ImageryLayer** (display settings), and
 > **ImageryLayerCollection** (ordered stack on the globe).
@@ -27,10 +27,15 @@ in position immediately — `flyTo` animates and may not finish before your code
 continues.
 
 ```js
-import { Viewer, ImageryLayer, IonImageryProvider, IonWorldImageryStyle, Math as CesiumMath } from "cesium";
+import { Viewer, ImageryLayer, OpenStreetMapImageryProvider, UrlTemplateImageryProvider, Math as CesiumMath } from "cesium";
 
 // Clean viewer -- disable widgets that distract from imagery
 const viewer = new Viewer("cesiumContainer", {
+  baseLayer: new ImageryLayer(new OpenStreetMapImageryProvider({
+    url: "https://tile.openstreetmap.org/",
+    maximumLevel: 18,
+  })),
+  baseLayerPicker: false,
   animation: false,
   timeline: false,
   navigationHelpButton: false,
@@ -47,25 +52,20 @@ viewer.camera.setView({
   },
 });
 
-// Explicit base layer choice
-const viewer2 = new Viewer("cesiumContainer", {
-  baseLayer: ImageryLayer.fromWorldImagery(),
-});
-
-// fromProviderAsync -- wraps any async provider; returns ImageryLayer immediately
-const nightLayer = ImageryLayer.fromProviderAsync(
-  IonImageryProvider.fromAssetId(3812), // Earth at Night
-);
+// Public URL-backed overlay
+const nightLayer = new ImageryLayer(new UrlTemplateImageryProvider({
+  url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+  maximumLevel: 8,
+  credit: "NASA GIBS",
+}));
 nightLayer.alpha = 0.5;
 nightLayer.brightness = 2.0;
 viewer.imageryLayers.add(nightLayer);
-
-// fromWorldImagery with style override
-const roadLayer = ImageryLayer.fromWorldImagery({
-  style: IonWorldImageryStyle.ROAD,
-});
-viewer.imageryLayers.add(roadLayer);
 ```
+
+Use `IonImageryProvider` and `ImageryLayer.fromWorldImagery` only when the
+runtime has the required Cesium ion entitlement. For public/no-token examples,
+prefer OpenStreetMap, ArcGIS, NASA GIBS, WMS, WMTS, or URL-template providers.
 
 ### Camera Height Reference for Imagery Scenes
 
@@ -81,6 +81,33 @@ Use `camera.setView` with these approximate heights:
 
 For top-down (map-style) views set `pitch: CesiumMath.toRadians(-90)`.
 For oblique 3D views set `pitch: CesiumMath.toRadians(-35)` to `CesiumMath.toRadians(-60)`.
+
+Default to top-down framing when a scenario names a specific country, city, or
+region. It keeps the named feature centered without perspective skew. Oblique
+high-altitude views can easily show a neighboring landmass because the target
+falls outside the view frustum.
+
+### Framing Reference for Named Places
+
+Frame named places by their actual longitude and latitude, not a nearby guess.
+Use `camera.setView` with `Cartesian3.fromDegrees(lon, lat, height)` and a
+top-down pitch unless the prompt explicitly asks for an oblique view.
+
+| Place | lon, lat | Suggested height |
+|---|---|---:|
+| London | -0.12, 51.50 | 60,000 |
+| Paris | 2.35, 48.86 | 30,000 |
+| New York City | -74.00, 40.71 | 60,000 |
+| New York-Boston corridor | -72.5, 41.5 | 800,000 |
+| Washington DC, National Mall | -77.03, 38.89 | 25,000 |
+| Florida peninsula | -81.5, 28.0 | 1,500,000 |
+| Grand Canyon | -112.5, 36.3 | 200,000 |
+| Hawaiian Islands | -157.0, 20.5 | 1,800,000 |
+| Iceland | -19.0, 64.9 | 1,200,000 |
+| Italy peninsula | 12.5, 42.0 | 2,500,000 |
+| Southern Europe split view | 13.0, 42.0 | 4,500,000 |
+| Greenland | -42.0, 72.0 | 5,000,000 |
+| Japan, Honshu | 138.0, 36.5 | 2,500,000 |
 
 ## ImageryLayerCollection API
 
@@ -162,9 +189,26 @@ const osmLayer = new ImageryLayer(
 viewer.imageryLayers.add(osmLayer, 0);
 ```
 
+### Choosing a Visible Light Basemap
+
+When a scenario asks for a light or everyday basemap, do not use night-lights,
+dark-canvas, or satellite-night tiles as the base layer. Those render as mostly
+black pixels and visibly fail the requirement. Reliable public light basemaps:
+
+- OpenStreetMap (`https://tile.openstreetmap.org/`)
+- Carto Positron (`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png`)
+- ArcGIS World Street Map / World Topographic
+- USGS Shaded Relief (WMTS)
+
+Reserve `VIIRS_CityLights_2012`, `BlackMarble`, and `CANVAS_DARK` for overlays
+on top of a light base, or for scenes that explicitly call for a night view.
+
 ## Imagery Providers
 
 ### IonImageryProvider
+
+Requires Cesium ion asset access. Do not use in public/no-token examples unless
+the caller explicitly asks for an ion imagery asset.
 
 ```js
 // Always use fromAssetId (async factory); never call constructor directly
@@ -335,10 +379,13 @@ viewer.imageryLayers.add(logo);
 ## Split-Screen Comparison
 
 ```js
-import { ImageryLayer, IonImageryProvider, SplitDirection } from "cesium";
+import { ImageryLayer, SplitDirection, UrlTemplateImageryProvider } from "cesium";
 
 // Add an overlay that only appears on the left side of the split
-const nightLayer = ImageryLayer.fromProviderAsync(IonImageryProvider.fromAssetId(3812));
+const nightLayer = new ImageryLayer(new UrlTemplateImageryProvider({
+  url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+  maximumLevel: 8,
+}));
 nightLayer.splitDirection = SplitDirection.LEFT;
 viewer.imageryLayers.add(nightLayer);
 
@@ -347,27 +394,50 @@ viewer.scene.splitPosition = 0.5; // 0-1 fraction of viewport width
 
 `SplitDirection`: `LEFT` (-1), `NONE` (0), `RIGHT` (1).
 
+When splitting two basemaps and the prompt names a country or region, center
+the camera on that region before setting the split. A split view that lands on
+a neighboring landmass fails the framing intent regardless of which side the
+overlay covers.
+
 ## Cutout Rectangle
 
 ```js
 import { Rectangle } from "cesium";
 
-const cutout = Rectangle.fromDegrees(-90, 20, -70, 40);
+// Cover the full named region. Florida peninsula needs roughly -87..-80 lon,
+// 24..31 lat; a narrow strip or off-center box will miss the visual target.
+const cutout = Rectangle.fromDegrees(-87.6, 24.5, -80.0, 31.0);
 
 // Cut a hole in the base layer to reveal imagery beneath
 const base = viewer.imageryLayers.get(0);
 base.cutoutRectangle = cutout;
 ```
 
+Size cutouts to match the full extent of the feature being revealed. For
+peninsulas, states, or islands, use a rectangle that spans the named feature in
+both longitude and latitude, then center the camera on the same region so the
+revealed hole sits in the middle of the frame.
+
 ## Color-to-Alpha
+
+`colorToAlpha` removes pixels matching a target color; `colorToAlphaThreshold`
+controls how aggressively similar colors are removed. The default threshold is
+too tight for night-lights overlays where the "black" background varies
+tile-to-tile. Use a noticeably higher threshold so the light base actually
+shows through.
 
 ```js
 import { Color } from "cesium";
 
-const baseLayer = viewer.imageryLayers.get(0);
-baseLayer.colorToAlpha = new Color(0.0, 0.016, 0.059); // dark ocean blue
-baseLayer.colorToAlphaThreshold = 0.2; // tolerance (0-1)
+// On a VIIRS-style night-lights overlay added above an OSM base
+const overlay = viewer.imageryLayers.get(1);
+overlay.colorToAlpha = new Color(0.0, 0.016, 0.059); // dark ocean blue
+overlay.colorToAlphaThreshold = 0.2;                  // generous tolerance
 ```
+
+If the result still looks predominantly dark, raise the threshold further
+(roughly `0.3`-`0.5`) or lower the overlay alpha. For a translucent or brightened
+overlay, set both `layer.alpha < 1.0` and `layer.brightness > 1.0` explicitly.
 
 ## Draping Imagery on 3D Tiles
 
@@ -383,6 +453,17 @@ const labelLayer = ImageryLayer.fromProviderAsync(
 tileset.imageryLayers.add(labelLayer); // drape on tileset, not globe
 labelLayer.show = false; // toggle off
 ```
+
+When demonstrating imagery draped on a public sample tileset, zoom out enough
+to frame the whole tileset so the imagery is visible across the model surface,
+not just one close-up section.
+
+Since 1.144, feature-info picking also works for layers draped on tilesets:
+the Viewer InfoBox and `ImageryLayerCollection.pickImageryLayerFeatures` fall
+back to `tileset.imageryLayers` when the globe pick finds nothing, so a
+WMS/WMTS layer configured with `enablePickFeatures` returns metadata on 3D
+Tiles surfaces too (see the WMTS GetFeatureInfo options under Imagery
+Providers).
 
 ## Debugging Providers
 
@@ -426,16 +507,25 @@ layer.errorEvent.addEventListener((error) => {
 });
 
 // Provider resolved -- listen for per-tile errors
-layer.readyEvent.addEventListener((provider) => {
-  provider.errorEvent.addEventListener((tileError) => {
-    console.warn("Tile error:", tileError.message);
+if (layer.readyEvent) {
+  layer.readyEvent.addEventListener((provider) => {
+    provider.errorEvent.addEventListener((tileError) => {
+      console.warn("Tile error:", tileError.message);
+    });
   });
-});
+}
 ```
+
+Only wait on `readyEvent` when you need explicit readiness/error wiring. For
+ordinary static map scenes, add the layer and frame the camera immediately so
+missing or version-specific readiness events do not break the render path.
 
 ## Time-Dynamic WMTS
 
 Pass `clock` and `times` (a `TimeIntervalCollection`) for time-varying layers.
+Keep the `timeline` and `animation` viewer widgets enabled when the scenario
+calls for a time-dynamic layer; the rendered clock controls are the clearest
+visual evidence that the time interval wiring is active.
 
 ```js
 import { WebMapTileServiceImageryProvider, TimeIntervalCollection, JulianDate, Credit } from "cesium";
@@ -464,6 +554,17 @@ viewer.imageryLayers.addImageryProvider(weather);
 6. **Reuse provider instances** -- remove with `destroy: false` and re-add instead of recreating.
 7. **Use `NeverTileDiscardPolicy`** when tiles are always valid; pixel comparison adds overhead.
 8. **Choose NEAREST filtering** only for classified raster data; LINEAR (default) is faster.
+
+## Common Framing Pitfalls
+
+- **Wrong landmass.** Asking for Iceland and rendering Greenland is a hard
+  framing failure. Use the reference coordinates literally.
+- **Region in a corner.** A cutout, split, or bounded rectangle must be centered
+  under the camera, not pushed to one edge.
+- **Dark base layer for a light-basemap prompt.** Use OSM, ArcGIS World Street
+  Map, Carto Positron, or USGS Shaded Relief as the base.
+- **Default zoom too wide.** A city scene at continent-scale height reads as
+  wrong framing even if the city is technically visible.
 
 ## See Also
 

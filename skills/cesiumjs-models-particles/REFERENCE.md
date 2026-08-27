@@ -1,6 +1,6 @@
 # glTF Compatibility Reference
 
-Updated for CesiumJS 1.143. Read this reference when loading compressed glTF,
+Updated for CesiumJS 1.144. Read this reference when loading compressed glTF,
 CAD/design-model content, or glTF embedded in 3D Tiles. These features are
 asset-driven and use CesiumJS's built-in model pipeline; they do not require
 custom shaders or decoder setup.
@@ -48,14 +48,15 @@ assets at authoring time; the fallback is resilience, not validation.
 
 ## CAD and Design-Model Extensions
 
-| Extension | CesiumJS 1.143 behavior | Agent action |
+| Extension | CesiumJS 1.144 behavior | Agent action |
 |---|---|---|
 | `EXT_mesh_primitive_restart` | Loads primitive-restart line/index data | No runtime option |
-| `EXT_mesh_primitive_edge_visibility` | Reconstructs hidden, hard, silhouette, and repeated-hard edges with stable quad rendering | Select `EdgeDisplayMode`; edges are hidden by default |
+| `KHR_mesh_primitive_restart` | Supported since 1.144; the multi-vendor KHR successor of the EXT variant (Khronos spec still in review, not yet ratified) | No runtime option |
+| `EXT_mesh_primitive_edge_visibility` | Reconstructs hidden, hard, silhouette, and repeated-hard edges with stable quad rendering. Since 1.144, edge accessor data loads as typed arrays (up to ~19x less JS heap on edge-heavy CAD assets) | Select `EdgeDisplayMode`; edges are hidden by default |
 | `BENTLEY_materials_line_style` | Honors screen-pixel `width` and 16-bit dash `pattern` for lines and visible edges | Author values in the glTF material |
 | `BENTLEY_materials_point_style` | Honors point `diameter` in CSS pixels; color comes from the material | Author values in the glTF material |
 | `EXT_textureInfo_constant_lod` | Generates and blends texture coordinates to maintain a roughly constant on-screen texture scale | Use seamless textures and author real-world scale, offset, and blend distances |
-| `BENTLEY_materials_planar_fill` | Not supported in 1.143; announced as upcoming | Do not emit this as a working 1.143 feature |
+| `BENTLEY_materials_planar_fill` | Supported since 1.144: CAD-style planar polygon fill with depth sorting, background-color masking, and coplanar geometry ordering | Author values in the glTF material; the extension's `wireframeFill` property is a no-op in 1.144 |
 
 Prefer the built-in extension path over recreating edges, dash masks, point
 sizing, or constant-LOD sampling in a `CustomShader`. The built-in path batches
@@ -67,3 +68,6 @@ LOD. Use a custom shader only for effects outside the encoded extension data.
 - `SURFACES_ONLY` (default): render surfaces and hide extension edges.
 - `SURFACES_AND_EDGES`: composite extension edges over surfaces.
 - `EDGES_ONLY`: render CAD-style wireframe content without surfaces.
+
+Extension edges also power the experimental `viewer.scene.snap` edge-snap
+picking API added in 1.144 (see `cesiumjs-interaction`).

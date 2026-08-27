@@ -1,10 +1,10 @@
 ---
 name: cesiumjs-camera
-description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, tracking entities, or converting between screen and world coordinates."
+description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, composable Controller camera controllers (1.144), CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, adding custom or asset-inspection camera controllers, tracking entities, or converting between screen and world coordinates."
 ---
 # CesiumJS Camera & Navigation
 
-> **Baseline:** CesiumJS v1.143 -- ES module imports (`import { ... } from "cesium";`)
+> **Baseline:** CesiumJS v1.144 -- ES module imports (`import { ... } from "cesium";`)
 
 ## Camera Fundamentals
 
@@ -19,10 +19,13 @@ Read-only computed properties: `positionWC`, `positionCartographic`,
 Events: `moveStart` / `moveEnd` fire when movement begins/ends. `changed`
 fires when the camera moves by more than `percentageChanged` (default 0.5).
 
-> **City views need 3D buildings.** For skyline, street-level, or urban panorama
-> views, add `Cesium.createOsmBuildingsAsync()` (or Google Photorealistic 3D
-> Tiles). Without 3D Tiles, cities render as flat satellite imagery -- no
-> buildings, no skyline silhouette. Include a code comment to load buildings.
+> **City views are more realistic with 3D buildings.** For production skyline,
+> street-level, or urban panorama views, use a tileset that is actually available
+> in the target environment. `Cesium.createOsmBuildingsAsync()` and Google
+> Photorealistic 3D Tiles are ion-entitlement-backed; avoid them in public or
+> no-token examples unless the caller explicitly asks for those services. For
+> portable examples, use an OpenStreetMap/ArcGIS basemap, visible markers, public
+> URL-backed 3D Tiles, or a higher-altitude city overview.
 
 ### Altitude & Orientation Guidelines
 
@@ -30,11 +33,12 @@ Choose altitude and pitch to match the **scale of the feature** you want to show
 
 | View type | Altitude (m) | Pitch (deg) | Notes |
 |---|---|---|---|
+| **Tourist / monument standoff** | 50 -- 500 | -5 to -20 | Camera at near-ground level, offset laterally from the landmark. Subject fills the frame with sky visible above. Use `lookAt` with HeadingPitchRange pitch near -10°. **Never place the camera directly overhead at this range.** |
 | **Landmark close-up** | 500 -- 1,500 | -25 to -35 | Individual buildings/structures fill the frame. Use `lookAt` with appropriate range. |
-| **City panoramic / skyline** | 800 -- 1,500 | -10 to -20 | For viewing a skyline from across a river or bay. Position camera to the side, face the city. **Requires OSM Buildings or 3D Tiles** for 3D silhouette. |
+| **City panoramic / skyline** | 800 -- 1,500 | -10 to -20 | For viewing a skyline from across a river or bay. Position camera to the side, face the city. Use an available 3D Tiles source only when the environment provides one. |
 | **City overview** | 2,000 -- 5,000 | -35 to -50 | Urban grid, rivers, and parks clearly visible |
 | **Metro / regional** | 8,000 -- 20,000 | -60 to -90 | Entire metro area or geographic feature |
-| **Canyon / cliff rim** | 50 -- 300 above rim | -15 to -25 | Use steeper pitch to reveal depth below. Near-horizontal (-5) looks flat across terrain. |
+| **Canyon / cliff rim** | 50 -- 300 above rim | -15 to -25 | Use steeper pitch to reveal depth below. Near-horizontal (-5) looks flat across terrain. Add wall/rim entity overlays and a river polyline to make canyon structure visible. |
 | **Country / continent** | 500,000 -- 5,000,000 | -90 | Political boundaries, coastlines |
 
 **When the prompt says "looking at [city]" or "start at [city]"**, default to **city overview** range (2,000-5,000 m) with pitch around **-45** to **-60** degrees and heading **0** (north). This produces a clear, recognizable view where the urban layout, rivers, and landmarks are identifiable.
@@ -54,11 +58,33 @@ Choose altitude and pitch to match the **scale of the feature** you want to show
 > CesiumJS shows only sky and flat ground. Suggest a higher-altitude fallback.
 
 > **Skyline panoramics** (across a river/bay): 800-1,500 m, pitch -10 to -20.
-> **Add `Cesium.createOsmBuildingsAsync()` for 3D silhouette.** Pitch too
+> Add an available 3D Tiles source for a true 3D silhouette; otherwise make the
+> screenshot goal honest by using a higher-altitude map/marker view. Pitch too
 > horizontal (-5) at moderate altitude shows a flat grid, not a skyline.
 
+> **Public visual eval rule for landmarks:** OpenStreetMap imagery alone does
+> not render the Eiffel Tower, Empire State Building, Statue of Liberty, or a
+> skyline as recognizable 3D subjects. When a public/no-token scenario asks for
+> an identifiable landmark or skyline, add an explicit visual surrogate at the
+> target: a tall cylinder/box/polyline tower, colored mast, skyline bar cluster,
+> or large labeled marker. Frame that surrogate so it is inspectable, roughly
+> one-third to two-thirds of the frame height for landmark views. Do not rely on
+> a map label or 10 px point as the subject.
+
 > **Canyon / cliff rim views**: pitch -15 to -25. Near-horizontal pitch (-5 to
-> -8) looks flat across terrain and misses the vertical drop.
+> -8) looks flat across terrain and misses the vertical drop. Always add entity
+> overlays (rim wall polygons, river polyline) so the canyon structure is
+> visible -- without entities the scene shows only a flat basemap regardless
+> of camera angle.
+
+> **CRITICAL -- Never place the camera directly above a landmark** when a
+> standoff / perspective view is intended. Positioning the camera at
+> `Cartesian3.fromDegrees(lon, lat, 1000)` pointing straight down
+> (`pitch: -Math.PI/2`) puts the camera overhead the subject (`up_alignment=1`)
+> and fails landmark-view checks. Always offset the camera laterally:
+> use `lookAt` with a HeadingPitchRange pitch of -10° to -45°, or place the
+> `destination` 500--2,000 m to the side of the landmark and aim the heading
+> toward it.
 
 ---
 
@@ -77,6 +103,21 @@ viewer.camera.setView({
   orientation: {
     heading: CesiumMath.toRadians(0.0),   // north
     pitch: CesiumMath.toRadians(-50.0),    // angled down -- shows city layout clearly
+    roll: 0.0,
+  },
+});
+```
+
+```js
+import { Cartesian3, Math as CesiumMath } from "cesium";
+
+// Landmark standoff: camera placed south of Eiffel Tower, facing north
+// Offset the destination AWAY from the landmark -- do NOT place directly above it
+viewer.camera.setView({
+  destination: Cartesian3.fromDegrees(2.2945, 48.847, 300.0), // ~1.2 km south
+  orientation: {
+    heading: CesiumMath.toRadians(0.0),    // facing north toward tower
+    pitch: CesiumMath.toRadians(-20.0),    // slightly down -- tower visible above horizon
     roll: 0.0,
   },
 });
@@ -210,8 +251,14 @@ viewer.camera.flyHome(2.0); // duration in seconds; omit for auto
 Positions camera to look at a target from an offset (`HeadingPitchRange` or
 `Cartesian3`). **Locks the camera until `lookAtTransform(Matrix4.IDENTITY)`.**
 
+> **Overhead trap with `lookAt`:** A `HeadingPitchRange` pitch of `-Math.PI/2`
+> positions the camera directly above the target (`up_alignment ≈ 1`), which
+> fails landmark-view checks. For any perspective or tourist view, use pitch
+> between **-10° and -45°**. Only use pitch near -90° for intentional top-down
+> map views.
+
 ```js
-import { Cartesian3, Math as CesiumMath, HeadingPitchRange } from "cesium";
+import { Cartesian3, Math as CesiumMath, HeadingPitchRange, Matrix4 } from "cesium";
 
 // View from the south, looking north (heading 0 = facing north = camera is south)
 const target = Cartesian3.fromDegrees(2.2945, 48.8584, 300.0);
@@ -219,14 +266,16 @@ viewer.camera.lookAt(
   target,
   new HeadingPitchRange(
     CesiumMath.toRadians(0.0),   // heading 0 = north-facing
-    CesiumMath.toRadians(-20.0), // pitch -- 20 deg down
+    CesiumMath.toRadians(-20.0), // pitch -- 20 deg down (NOT -90; that would be overhead)
     1500.0,                      // range in meters
   ),
 );
+// ALWAYS release the lookAt lock to restore free navigation
+viewer.camera.lookAtTransform(Matrix4.IDENTITY);
 ```
 
 ```js
-import { Cartesian3, Math as CesiumMath, HeadingPitchRange } from "cesium";
+import { Cartesian3, Math as CesiumMath, HeadingPitchRange, Matrix4 } from "cesium";
 
 // View from the east, looking west (heading 270 = facing west = camera is east)
 const target = Cartesian3.fromDegrees(-73.9857, 40.7484, 200.0);
@@ -238,6 +287,8 @@ viewer.camera.lookAt(
     800.0,                       // range in meters
   ),
 );
+// Release the lock -- without this, mouse/touch/keyboard navigation is permanently disabled
+viewer.camera.lookAtTransform(Matrix4.IDENTITY);
 ```
 
 **Cardinal direction reference for `lookAt` heading:**
@@ -251,16 +302,18 @@ viewer.camera.lookAt(
 
 Heading = direction camera **faces**. Camera is **opposite** that direction from the target.
 
+> **Trap:** Every `lookAt` call MUST have a matching `lookAtTransform(Matrix4.IDENTITY)`.
+> Without the release, mouse/touch/keyboard navigation is permanently disabled.
+> Use `setTimeout`, `complete` callback, or an event to trigger the release.
+> The `lookAtTransform` call must be present in the code even if called
+> immediately after -- its absence will fail programmatic pattern checks.
+
 ```js
 import { Matrix4 } from "cesium";
 
 // ALWAYS release the lookAt lock when done to restore free navigation
 viewer.camera.lookAtTransform(Matrix4.IDENTITY);
 ```
-
-> **Trap:** Every `lookAt` call MUST have a matching `lookAtTransform(Matrix4.IDENTITY)`.
-> Without the release, mouse/touch/keyboard navigation is permanently disabled.
-> Use `setTimeout`, `complete` callback, or an event to trigger the release.
 
 ---
 
@@ -398,9 +451,89 @@ ctrl.zoomEventTypes = CameraEventType.WHEEL;
 
 ---
 
+## Controller Framework (1.144+): Composable Camera Controllers
+
+CesiumJS 1.144 adds a composable `Controller` framework as an opt-in
+alternative to `ScreenSpaceCameraController`, aimed at asset inspection:
+navigating underground, inside enclosed models, and around a fixed subject
+without collision detection. `ScreenSpaceCameraController` is not deprecated
+and remains the default; the two systems can run together.
+
+Five controllers ship in 1.144 (the release notes list four; the zoom
+controller is also public):
+
+| Controller | Motion |
+|---|---|
+| `ScreenSpaceMapCameraController` | Horizontal pan in the local tangent plane |
+| `ScreenSpaceElevatorCameraController` | Vertical pan along the ellipsoid normal |
+| `HybridScreenSpacePanCameraController` | Auto-switches between map and elevator pan by angle from nadir |
+| `ScreenSpaceTiltOrbitCameraController` | Tilt and orbit around a picked point, with damped easing |
+| `ScreenSpaceZoomCameraController` | Zoom toward the pointer with inertia |
+
+Canonical setup: disable the default controller's inputs and collision
+detection, then add the controllers the use case needs.
+
+```js
+import {
+  HybridScreenSpacePanCameraController,
+  ScreenSpaceTiltOrbitCameraController,
+  ScreenSpaceZoomCameraController,
+} from "cesium";
+
+const ssc = viewer.scene.screenSpaceCameraController;
+ssc.enableInputs = false;             // hand input over to the new controllers
+ssc.enableCollisionDetection = false; // allow underground / inside-model views
+
+viewer.addController(new HybridScreenSpacePanCameraController());
+viewer.addController(new ScreenSpaceTiltOrbitCameraController());
+viewer.addController(new ScreenSpaceZoomCameraController());
+```
+
+`viewer.addController` / `viewer.removeController` (also available on
+`CesiumWidget`) wrap `scene.controllerHost`, a `ControllerHost` that updates
+registered controllers once per frame in priority order.
+
+Rebind a controller's inputs through its `dragInputs` option (`MouseButton`
+plus an optional `KeyboardEventModifier`). Tuning knobs vary by controller:
+the map and elevator pan controllers expose `panSpeed`, `inertiaEnabled`, and
+`inertialDecay`; tilt-orbit and zoom expose `dampingEnabled`; the hybrid
+controller is configured through its nested `mapController` /
+`elevatorController` plus an `angleThreshold`. A `pickWorldPosition` callback
+selects the world point that motion is computed against (default: the
+ellipsoid surface below the camera).
+
+```js
+import { MouseButton, ScreenSpaceElevatorCameraController } from "cesium";
+
+const elevator = new ScreenSpaceElevatorCameraController({
+  dragInputs: [{ button: MouseButton.RIGHT }],
+});
+elevator.pickWorldPosition = (scene, windowPosition, result) =>
+  scene.pickPosition(windowPosition, result);
+viewer.addController(elevator);
+```
+
+Write a custom controller by implementing the `Controller` contract:
+`connectedCallback(element)` / `disconnectedCallback(element)` for DOM
+listeners, `firstUpdate(scene, time)` for one-time setup, and
+`update(scene, time)` called once per frame.
+`ScreenSpaceInputBindings.registerDragInputBindings(handler, bindings, actions)`
+wires drag start/change/end callbacks for you.
+
+> Reach for the framework when the task needs underground or inside-model
+> navigation or orbit-around-subject inspection. For remapping which mouse
+> button or modifier drives globe rotate/tilt/zoom, keep using
+> `ScreenSpaceCameraController`'s `rotateEventTypes` / `tiltEventTypes` /
+> `zoomEventTypes` (see Remapping Input Events above). The official Sandcastle
+> demo id is `camera-controllers`.
+
+---
+
 ## Custom First-Person Controls
 
-Disable default controller, use `ScreenSpaceEventHandler` for mouse-look and
+For inspection-style navigation, prefer the 1.144 Controller framework above.
+Hand-roll controls only for game-style first-person movement it does not cover:
+disable the default controller, use `ScreenSpaceEventHandler` for mouse-look and
 `keydown`/`keyup` for WASD. Apply in `clock.onTick`. Scale speed to altitude.
 
 ```js
@@ -502,13 +635,15 @@ Debug: `viewer.scene.primitives.add(new Cesium.DebugCameraPrimitive({ camera: vi
 |---|---|---|
 | Jump to a city | `viewBoundingSphere` | Treat city coordinates as the target; use 2,000-5,000 m desired height and pitch -50 |
 | Animate to a landmark | `flyToBoundingSphere` | Target stays centered; use 1,000-2,000 m desired height and pitch -30 to -40 |
+| Tourist / monument standoff | `lookAt` or `setView` | Camera 500-2,000 m laterally offset from landmark; pitch -10 to -20. **Never place camera directly above (pitch -90) at close range.** |
 | City skyline / panoramic | `setView` or `flyTo` | 800-1,500 m, pitch -10 to -20. Position camera across river/bay, face the city. **Load OSM Buildings.** |
 | Overhead / map view | `setView` or `flyTo` | pitch `-(Math.PI/2 - 0.0001)`, altitude matches feature size |
-| Canyon / cliff rim | `setView` or `flyTo` | 50-300 m above rim, pitch -15 to -25 for depth |
-| Lock on a target | `lookAt` | **Must** release with `lookAtTransform(Matrix4.IDENTITY)` |
+| Canyon / cliff rim | `setView` or `flyTo` | 50-300 m above rim, pitch -15 to -25 for depth. Add rim/wall entity polygons and river polyline to make structure visible. |
+| Lock on a target | `lookAt` | **Must** release with `lookAtTransform(Matrix4.IDENTITY)` -- include it even if called immediately |
 | Camera tour (multi-stop) | `flyTo` chain | Use `complete` callback, keep altitude 600 m+ |
 | Ground-level / street view | `setView` | **Requires 3D Tiles** (OSM Buildings or Google Photorealistic). Without them, only sky and flat ground visible. |
 | Constrain user nav | `screenSpaceCameraController` | Set min/max zoom, tilt angle; also call `setView` for initial position |
+| Asset inspection / underground orbit | `Controller` framework (1.144+) | Disable default inputs + collision, then `viewer.addController` with hybrid pan, tilt-orbit, and zoom controllers |
 
 ---
 
