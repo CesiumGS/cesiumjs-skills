@@ -981,7 +981,8 @@ The July CAD announcement extends the workflow surface beyond newly exported API
 
 The [1.144 release](https://github.com/CesiumGS/cesium/releases/tag/1.144)
 (2026-08-01) has no breaking changes and no deprecations. It adds 12 exported
-symbols and several loader/picking behaviors:
+symbols to the TypeScript declarations (11 of them runtime exports) and
+several loader/picking behaviors:
 
 | 1.144 surface | Canonical skill coverage |
 |---|---|
@@ -991,10 +992,10 @@ symbols and several loader/picking behaviors:
 | Automatic terrain draping of clamped vector tile polylines/polygons, screen-space-constant width, `Cesium3DTileStyle` styling | `cesiumjs-3d-tiles` MVT guidance |
 | WMS/WMTS feature-info picking for imagery draped on 3D Tiles | `cesiumjs-imagery` draping guidance |
 | `BENTLEY_materials_planar_fill` now supported (`wireframeFill` is a no-op) | `cesiumjs-models-particles/REFERENCE.md`; supersedes the 1.143 "unsupported" boundary above |
-| `KHR_mesh_primitive_restart` (ratified successor of the EXT variant) | `cesiumjs-models-particles/REFERENCE.md` |
+| `KHR_mesh_primitive_restart` (multi-vendor KHR successor of the EXT variant; Khronos spec still in review) | `cesiumjs-models-particles/REFERENCE.md` |
 | `EXT_mesh_primitive_edge_visibility` typed-array loading (up to ~19x less JS heap) | `cesiumjs-models-particles/REFERENCE.md` |
 | `Texture.defaultColor` placeholder color (`Texture` is runtime-public, absent from Cesium.d.ts) | `cesiumjs-materials-shaders` note (Domain 8) |
-| `GRID_TARGET_SEGMENTS_PER_CELL` | Accidental top-level export from the vector draping work; not assigned to a domain, do not generate code that uses it |
+| `GRID_TARGET_SEGMENTS_PER_CELL` | Leaked into the 1.144 Cesium.d.ts by the vector draping work but `undefined` at runtime; not assigned to a domain — do not generate code that imports it |
 
 ## Recently Added APIs (v1.120-v1.144)
 

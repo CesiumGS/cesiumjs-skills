@@ -329,6 +329,13 @@ handler.setInputAction((movement) => {
 }, ScreenSpaceEventType.MOUSE_MOVE);
 ```
 
+For **entities**, the picked object is `picked.id`; swap the graphics material
+instead of `picked.color` (e.g. store `picked.id.polygon.material` and set it
+to `Color.YELLOW`, restoring the previous entity's material first). Build the
+graphics type the prompt names: a "polygon over a region" means `polygon`
+graphics (with `PolygonHierarchy` positions), not `rectangle` graphics, even
+when the region is rectangular.
+
 ### 6. Drag-Based Drawing and Measurement
 
 ```js

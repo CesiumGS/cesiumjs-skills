@@ -51,7 +51,7 @@ assets at authoring time; the fallback is resilience, not validation.
 | Extension | CesiumJS 1.144 behavior | Agent action |
 |---|---|---|
 | `EXT_mesh_primitive_restart` | Loads primitive-restart line/index data | No runtime option |
-| `KHR_mesh_primitive_restart` | Supported since 1.144; the ratified successor of the EXT variant | No runtime option |
+| `KHR_mesh_primitive_restart` | Supported since 1.144; the multi-vendor KHR successor of the EXT variant (Khronos spec still in review, not yet ratified) | No runtime option |
 | `EXT_mesh_primitive_edge_visibility` | Reconstructs hidden, hard, silhouette, and repeated-hard edges with stable quad rendering. Since 1.144, edge accessor data loads as typed arrays (up to ~19x less JS heap on edge-heavy CAD assets) | Select `EdgeDisplayMode`; edges are hidden by default |
 | `BENTLEY_materials_line_style` | Honors screen-pixel `width` and 16-bit dash `pattern` for lines and visible edges | Author values in the glTF material |
 | `BENTLEY_materials_point_style` | Honors point `diameter` in CSS pixels; color comes from the material | Author values in the glTF material |

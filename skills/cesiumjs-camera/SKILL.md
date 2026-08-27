@@ -448,7 +448,7 @@ controller is also public):
 | `ScreenSpaceMapCameraController` | Horizontal pan in the local tangent plane |
 | `ScreenSpaceElevatorCameraController` | Vertical pan along the ellipsoid normal |
 | `HybridScreenSpacePanCameraController` | Auto-switches between map and elevator pan by angle from nadir |
-| `ScreenSpaceTiltOrbitCameraController` | Tilt and orbit around a picked point, critically damped |
+| `ScreenSpaceTiltOrbitCameraController` | Tilt and orbit around a picked point, with damped easing |
 | `ScreenSpaceZoomCameraController` | Zoom toward the pointer with inertia |
 
 Canonical setup: disable the default controller's inputs and collision
@@ -474,10 +474,14 @@ viewer.addController(new ScreenSpaceZoomCameraController());
 `CesiumWidget`) wrap `scene.controllerHost`, a `ControllerHost` that updates
 registered controllers once per frame in priority order.
 
-Remap inputs per controller with `MouseButton` plus an optional
-`KeyboardEventModifier`; tune feel with `panSpeed`, `inertiaEnabled`, and
-`inertialDecay`. A `pickWorldPosition` callback selects the world point that
-panning is computed against (default: the ellipsoid surface below the camera).
+Rebind a controller's inputs through its `dragInputs` option (`MouseButton`
+plus an optional `KeyboardEventModifier`). Tuning knobs vary by controller:
+the map and elevator pan controllers expose `panSpeed`, `inertiaEnabled`, and
+`inertialDecay`; tilt-orbit and zoom expose `dampingEnabled`; the hybrid
+controller is configured through its nested `mapController` /
+`elevatorController` plus an `angleThreshold`. A `pickWorldPosition` callback
+selects the world point that motion is computed against (default: the
+ellipsoid surface below the camera).
 
 ```js
 import { MouseButton, ScreenSpaceElevatorCameraController } from "cesium";
@@ -498,9 +502,11 @@ listeners, `firstUpdate(scene, time)` for one-time setup, and
 wires drag start/change/end callbacks for you.
 
 > Reach for the framework when the task needs underground or inside-model
-> navigation, orbit-around-subject inspection, or per-axis input remapping that
-> the `enableRotate`-style flags cannot express. The official Sandcastle demo
-> id is `camera-controllers`.
+> navigation or orbit-around-subject inspection. For remapping which mouse
+> button or modifier drives globe rotate/tilt/zoom, keep using
+> `ScreenSpaceCameraController`'s `rotateEventTypes` / `tiltEventTypes` /
+> `zoomEventTypes` (see Remapping Input Events above). The official Sandcastle
+> demo id is `camera-controllers`.
 
 ---
 
