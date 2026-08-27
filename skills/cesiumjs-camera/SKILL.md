@@ -43,6 +43,12 @@ Choose altitude and pitch to match the **scale of the feature** you want to show
 
 **When the prompt says "looking at [city]" or "start at [city]"**, default to **city overview** range (2,000-5,000 m) with pitch around **-45** to **-60** degrees and heading **0** (north). This produces a clear, recognizable view where the urban layout, rivers, and landmarks are identifiable.
 
+> **Target intent vs. camera position:** In `setView` and `flyTo`, a Cartesian
+> `destination` is the camera's final position, not the point it should look at.
+> For requests such as "fly to Los Angeles" or "show the Eiffel Tower", treat
+> the named coordinates as a target to frame. Prefer `viewBoundingSphere` for
+> an instant view or `flyToBoundingSphere` for an animated flight.
+
 **Top-down views** (`pitch: -90`) are best for geographic features (canyons, coastlines, rivers) where overhead perspective reveals the distinctive shape. For cities, prefer an angled view that shows the 3D skyline.
 
 > **Gimbal lock:** Never use `pitch: -Math.PI/2` exactly. Use
@@ -153,17 +159,28 @@ Smoothly animates the camera. Returns nothing (not a Promise); use `complete`
 callback. Options: `destination`, `orientation`, `duration` (seconds),
 `complete`/`cancel`, `maximumHeight`, `pitchAdjustHeight`, `flyOverLongitude`.
 
-```js
-import { Cartesian3, Math as CesiumMath } from "cesium";
+Use `flyTo` when `destination` intentionally describes the camera's final
+position. For a named city, landmark, entity, or coordinate that must remain
+centered, use `flyToBoundingSphere`.
 
-// Fly to a landmark: 1500 m gives a clear view of the surrounding area
-viewer.camera.flyTo({
-  destination: Cartesian3.fromDegrees(2.2945, 48.8584, 1500.0),
-  orientation: {
-    heading: CesiumMath.toRadians(0.0),
-    pitch: CesiumMath.toRadians(-35.0),
-    roll: 0.0,
-  },
+```js
+import {
+  BoundingSphere,
+  Cartesian3,
+  HeadingPitchRange,
+  Math as CesiumMath,
+} from "cesium";
+
+// Keep the Eiffel Tower centered while approaching from 1500 m altitude
+const target = Cartesian3.fromDegrees(2.2945, 48.8584);
+const pitch = CesiumMath.toRadians(-35.0);
+const desiredHeight = 1500.0;
+
+// HeadingPitchRange.range is the slant distance to the target, not altitude.
+const range = desiredHeight / Math.abs(Math.sin(pitch));
+
+viewer.camera.flyToBoundingSphere(new BoundingSphere(target, 0.0), {
+  offset: new HeadingPitchRange(0.0, pitch, range),
   duration: 3,
 });
 ```
@@ -324,6 +341,8 @@ For ICRF (inertial) frame: use `Transforms.computeIcrfToFixedMatrix(time)` in a
 ## flyToBoundingSphere / viewBoundingSphere
 
 Frame the camera around a `BoundingSphere`. Range is auto-computed when 0.
+Prefer these methods when a prompt names a target that must remain visible.
+The sphere center is the target; the offset places the camera relative to it.
 
 ```js
 import { BoundingSphere, Cartesian3, HeadingPitchRange, Math as CesiumMath } from "cesium";
@@ -614,8 +633,8 @@ Debug: `viewer.scene.primitives.add(new Cesium.DebugCameraPrimitive({ camera: vi
 
 | Task | Method | Key detail |
 |---|---|---|
-| Jump to a city | `setView` | 2,000-5,000 m, pitch -50, heading 0 |
-| Animate to a landmark | `flyTo` | 1,000-2,000 m, pitch -30 to -40, set `duration` |
+| Jump to a city | `viewBoundingSphere` | Treat city coordinates as the target; use 2,000-5,000 m desired height and pitch -50 |
+| Animate to a landmark | `flyToBoundingSphere` | Target stays centered; use 1,000-2,000 m desired height and pitch -30 to -40 |
 | Tourist / monument standoff | `lookAt` or `setView` | Camera 500-2,000 m laterally offset from landmark; pitch -10 to -20. **Never place camera directly above (pitch -90) at close range.** |
 | City skyline / panoramic | `setView` or `flyTo` | 800-1,500 m, pitch -10 to -20. Position camera across river/bay, face the city. **Load OSM Buildings.** |
 | Overhead / map view | `setView` or `flyTo` | pitch `-(Math.PI/2 - 0.0001)`, altitude matches feature size |

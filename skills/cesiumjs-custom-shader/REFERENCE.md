@@ -1,6 +1,6 @@
 # CustomShader Reference
 
-Exhaustive struct/enum tables and built-in uniform catalog for the `cesiumjs-custom-shader` skill. Updated for the CesiumJS 1.143 public API.
+Exhaustive struct/enum tables and built-in uniform catalog for the `cesiumjs-custom-shader` skill. Updated for the CesiumJS 1.144 public API.
 
 ---
 

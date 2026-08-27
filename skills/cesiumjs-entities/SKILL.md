@@ -4,7 +4,7 @@ description: "CesiumJS entities and data sources - Entity, EntityCollection, Dat
 ---
 # CesiumJS Entities & DataSources
 
-> **Version baseline:** CesiumJS 1.143 -- ES module imports: `import { ... } from "cesium";`
+> **Version baseline:** CesiumJS 1.144 -- ES module imports: `import { ... } from "cesium";`
 > **Ownership rule:** `*Graphics` classes belong here; `*Geometry` classes belong in cesiumjs-primitives. Properties (SampledProperty, CallbackProperty, MaterialProperty subtypes) belong in cesiumjs-time-properties.
 
 ## Architecture

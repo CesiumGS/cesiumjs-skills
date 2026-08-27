@@ -4,7 +4,7 @@ description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Ap
 ---
 # CesiumJS Primitives & Geometry
 
-> **Applies to:** CesiumJS v1.143+ (ES module imports, `??` instead of `defaultValue`)
+> **Applies to:** CesiumJS v1.144+ (ES module imports, `??` instead of `defaultValue`)
 
 ## Architecture
 

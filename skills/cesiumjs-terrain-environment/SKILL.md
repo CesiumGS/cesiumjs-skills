@@ -4,7 +4,7 @@ description: "CesiumJS terrain, globe, and environment - TerrainProvider, Globe,
 ---
 # CesiumJS Terrain, Globe & Environment
 
-Version baseline: CesiumJS v1.143 | ES module imports (`import { ... } from "cesium";`)
+Version baseline: CesiumJS v1.144 | ES module imports (`import { ... } from "cesium";`)
 
 ## Terrain Providers
 
