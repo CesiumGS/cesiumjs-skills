@@ -27,6 +27,50 @@ claude plugin marketplace add CesiumGS/cesiumjs-skills
 
 After installing, run `/reload-plugins` to activate the skills in your current session.
 
+### NPM Skills CLI
+
+These skills can also be installed with the `skills` CLI used by the Agent
+Skills ecosystem.
+
+**Install directly from GitHub:**
+
+```bash
+npx skills add CesiumGS/cesiumjs-skills
+```
+
+**List available skills before installing:**
+
+```bash
+npx skills add CesiumGS/cesiumjs-skills --list
+```
+
+**Install selected skills only:**
+
+```bash
+npx skills add CesiumGS/cesiumjs-skills --skill cesiumjs-camera --skill cesiumjs-entities
+```
+
+**Sync from an npm dependency:**
+
+```bash
+npm install --save-dev github:CesiumGS/cesiumjs-skills
+npx skills experimental_sync --agent claude-code -y
+```
+
+The scoped package `@cesium/cesiumjs-skills` is prepared by this repository but
+is not required for the GitHub install path. Once maintainers publish it to npm,
+projects can replace the GitHub dependency with:
+
+```bash
+npm install --save-dev @cesium/cesiumjs-skills
+npx skills experimental_sync --agent claude-code -y
+```
+
+Requirements: Node.js 18 or newer, npm/npx, Git for repository installs, and a
+skills-compatible agent such as Claude Code, Codex, Cursor, or GitHub Copilot.
+See [`docs/INSTALLATION.md`](docs/INSTALLATION.md) for install options,
+publishing notes, safety notes, and local verification commands.
+
 ### Any Agent Skills-Compatible Tool
 
 These skills follow the [Agent Skills](https://agentskills.io/) open standard. Copy or symlink the `skills/` directory into your workspace — skills are discovered automatically from `skills/<name>/SKILL.md`.
@@ -37,6 +81,7 @@ These skills follow the [Agent Skills](https://agentskills.io/) open standard. C
 
 - [Skills Catalog](#skills-catalog)
 - [Domain Mapping](#domain-mapping)
+- [Installation Requirements](docs/INSTALLATION.md)
 - [Compatibility](#compatibility)
 - [Repository Layout](#repository-layout)
 - [License](#license)
@@ -72,6 +117,11 @@ The [Agent Skills](https://agentskills.io/) format is an open standard originall
 
 By popular demand, this repository also ships as a **Claude Code plugin** with a SessionStart hook and Chrome DevTools MCP integration for browser-based verification.
 
+This repository also includes npm package metadata for
+`@cesium/cesiumjs-skills`, so package consumers can install the skills as a
+development dependency and sync the bundled `skills/` directory through the
+`skills` CLI node_modules workflow once the scoped package is published.
+
 ## Repository Layout
 
 ```
@@ -80,6 +130,7 @@ cesiumjs-skills/
 │   ├── cesiumjs-*/SKILL.md          # 14 domain skills (CesiumJS v1.143)
 │   └── using-cesiumjs-skills/       # Bootstrap orientation skill
 ├── docs/
+│   ├── INSTALLATION.md              # Skills CLI, npm, and Claude plugin install paths
 │   ├── DOMAINS.md                   # Symbol ownership map
 │   └── skills-catalog.md            # Skills catalog
 ├── .claude-plugin/
@@ -87,6 +138,8 @@ cesiumjs-skills/
 │   └── marketplace.json             # Plugin marketplace catalog
 ├── .mcp.json                        # Chrome DevTools MCP server
 ├── hooks/                           # SessionStart hook + runner
+├── package.json                     # npm package metadata and validation scripts
+├── scripts/                         # npm package validation and smoke tests
 └── LICENSE
 ```
 
