@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-002",
+  "case_name": "translate-all-objects-x-10",
+  "skill": "cesiumjs-entities",
+  "source": "synthetic-fixture",
+  "expected_result": "pass",
+  "before": {
+    "entities": {
+      "box-a": { "position_ecef": [1, 2, 3] },
+      "box-b": { "position_ecef": [-4, 5, 6] }
+    }
+  },
+  "after": {
+    "entities": {
+      "box-a": { "position_ecef": [11, 2, 3] },
+      "box-b": { "position_ecef": [6, 5, 6] }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "translate-marker-east-6m",
+  "skill": "cesiumjs-entities",
+  "source": "synthetic-fixture",
+  "expected_result": "fail",
+  "before": {
+    "entities": {
+      "marker": {
+        "position_ecef": [1333000.0, -4654000.0, 4138000.0],
+        "position_cartographic": {
+          "longitude_deg": -73.985,
+          "latitude_deg": 40.758,
+          "altitude_m": 0
+        }
+      }
+    }
+  },
+  "after": {
+    "entities": {
+      "marker": {
+        "position_ecef": [1333005.6710180577, -4653998.3722548755, 4138000.0]
+      }
+    }
+  }
+}

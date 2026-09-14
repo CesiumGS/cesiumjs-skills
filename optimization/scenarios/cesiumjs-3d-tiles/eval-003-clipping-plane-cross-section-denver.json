@@ -1,0 +1,69 @@
+{
+  "id": "eval-003",
+  "name": "public-tileset-clipping-plane",
+  "landmark": "Cesium 3D Tiles sample dragon",
+  "perspective": "sample tileset cross-section",
+  "difficulty": "hard",
+  "description": "Load a public URL-backed 3D Tiles sample and apply a ClippingPlaneCollection with visible cut edges. Tests clipping-plane construction and assignment without Cesium ion OSM Buildings.",
+  "prompt": "Create an eval-stable public viewer with an OpenStreetMap base layer and no ion defaults. Load the public Discrete LOD dragon tileset from `https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/main/1.0/TilesetWithDiscreteLOD/tileset.json` using `Cesium.Cesium3DTileset.fromUrl`. Attach a `new Cesium.ClippingPlaneCollection({ planes: [new Cesium.ClippingPlane(new Cesium.Cartesian3(0, 0, -1), 0.0)], edgeColor: Cesium.Color.YELLOW, edgeWidth: 3.0 })` to the tileset before or after adding it to `viewer.scene.primitives`. Frame the tileset close enough that the yellow clipping edge and clipped sample geometry are visible. Do not call createOsmBuildingsAsync(), createGooglePhotorealistic3DTileset(), or ion asset helpers.",
+  "expected_behaviors": [
+    "Calls Cesium3DTileset.fromUrl with a public CesiumGS sample URL",
+    "Constructs a ClippingPlaneCollection with one ClippingPlane oriented horizontally (normal along +Z or -Z in local frame)",
+    "Sets edgeColor and edgeWidth on the ClippingPlaneCollection",
+    "Assigns clippingPlanes to the tileset (constructor option or tileset.clippingPlanes =)",
+    "Frames the public sample tileset close enough to inspect the clipped geometry"
+  ],
+  "visual_expectations": "The public sample 3D Tiles geometry should render with an obvious clipping plane and a yellow edge. The screenshot should not be blank or dominated by failed terrain/ion loading. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cesium3DTileset\\.fromUrl",
+      "description": "Uses URL-backed 3D Tiles factory"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "TilesetWithDiscreteLOD",
+      "description": "Uses public CesiumGS sample tileset"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ClippingPlane(?:Collection)?",
+      "description": "Uses ClippingPlane API"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "edgeWidth",
+      "description": "Sets edgeWidth on clipping"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "edgeColor",
+      "description": "Sets edgeColor on clipping"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "createOsmBuildingsAsync|fromIonAssetId",
+      "description": "Avoids entitlement-backed OSM Buildings"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_tiles_load",
+      "delay_ms": 9000,
+      "description": "Public sample tileset clipped by a yellow-edged plane"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "Clipping Planes"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

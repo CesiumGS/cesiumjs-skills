@@ -1,0 +1,68 @@
+{
+  "id": "eval-006",
+  "name": "split-screen-day-night-europe",
+  "landmark": "Southern Europe",
+  "perspective": "continental split comparison",
+  "section_coverage": [
+    "Split-Screen Comparison"
+  ],
+  "difficulty": "medium",
+  "description": "Create a left-right split comparison between normal public map imagery and NASA GIBS public night-lights imagery over Southern Europe.",
+  "prompt": "Set up a CesiumJS viewer centered on Italy and the surrounding Mediterranean region using OpenStreetMap as the explicit base layer, with no default ion imagery. Add NASA GIBS VIIRS CityLights imagery from `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/default/GoogleMapsCompatible_Level8/{TileMatrix}/{TileRow}/{TileCol}.jpeg` as a split-screen overlay on the left half of the viewport only, using SplitDirection.LEFT or RIGHT. Set the split position to the center so the screenshot clearly shows a day-versus-night comparison across the same geography. Do not use IonImageryProvider or ImageryLayer.fromWorldImagery.",
+  "expected_behaviors": [
+    "Uses SplitDirection.LEFT or RIGHT on an imagery layer",
+    "Sets viewer.scene.splitPosition to 0.5 or similar",
+    "Uses a second public GIBS imagery layer for the split overlay",
+    "Frames Southern Europe"
+  ],
+  "visual_expectations": "The viewer should show a clear vertical split, with Southern Europe visible on both sides. One half should show normal globe imagery and the other half should show the night-lights treatment. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "SplitDirection",
+      "description": "Uses split direction enum"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "splitDirection",
+      "description": "Sets splitDirection on layer"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "splitPosition",
+      "description": "Sets scene split position"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "VIIRS_CityLights_2012|gibs\\.earthdata",
+      "description": "Uses public GIBS night imagery"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "1[23]\\.|4[12]\\.",
+      "description": "Targets Italy region"
+    },
+    {
+      "type": "pattern_absent",
+      "pattern": "IonImageryProvider|fromWorldImagery",
+      "description": "Avoids ion imagery helpers"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 7000,
+      "description": "Split-screen day/night Europe comparison"
+    }
+  ],
+  "regression_critical": false,
+  "screenshot_mode": "cardinal_panorama"
+}

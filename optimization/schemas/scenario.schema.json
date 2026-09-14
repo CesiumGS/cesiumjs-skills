@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/CesiumGS/cesiumjs-skills/optimization/schemas/scenario.schema.json",
+  "title": "CesiumJS Skills Evaluation Scenario",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "difficulty",
+    "description",
+    "prompt",
+    "expected_behaviors",
+    "visual_expectations",
+    "programmatic_checks",
+    "screenshots",
+    "regression_critical"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^eval-[0-9]{3}$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "difficulty": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "expected_behaviors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "visual_expectations": {
+      "type": "string"
+    },
+    "programmatic_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [ "type", "description" ],
+        "properties": {
+          "type": {
+            "enum": [ "no_console_errors", "code_runs", "pattern_present", "pattern_absent", "schema_match", "api_present" ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "object",
+            "description": "JSON schema for schema_match check type"
+          },
+          "api": {
+            "type": "string",
+            "description": "CesiumJS API reference for api_present check type (e.g., 'viewer.camera.flyTo')"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "screenshots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [ "timing", "delay_ms", "description" ],
+        "properties": {
+          "timing": { "type": "string" },
+          "delay_ms": { "type": "integer" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "regression_critical": {
+      "type": "boolean"
+    },
+    "runner_mode": {
+      "type": "string",
+      "enum": [ "global-js", "review-only" ],
+      "description": "global-js scenarios can run with cesium-eval optimize render. review-only scenarios are catalog/coverage scenarios until a compatible execution adapter exists."
+    },
+    "target_skill_sections": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional list of skill section headings or API references this scenario exercises, used by coverage analyzer"
+    },
+    "version": {
+      "type": "string",
+      "description": "Optional schema version for this scenario manifest"
+    }
+  }
+}

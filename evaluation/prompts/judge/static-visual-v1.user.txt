@@ -1,0 +1,37 @@
+You are scoring ONE CesiumJS render against the scenario below. Screenshot PNG file(s) are attached to this prompt, and their artifact path(s) are listed for traceability. Base the qualitative scores primarily on direct inspection of the attached screenshot image(s), using the text evidence below to corroborate loading state, scene state, console errors, and programmatic checks.
+
+# Scenario
+**ID**: {scenario_id}
+**Name**: {scenario_name}
+**Description**: {scenario_description}
+**Prompt (what the user asked for)**:
+{scenario_prompt}
+
+**Expected Behaviors**:
+{expected_behaviors}
+
+**Visual Expectations**:
+{visual_expectations}
+
+# Candidate Render
+**Screenshot Artifact Path(s)**:
+{screenshots}
+
+**Screenshot Quality Evidence**:
+{screenshot_quality}
+
+**Programmatic Check Results**:
+{checks}
+
+**Console Output**:
+{console}
+
+**Scene State**:
+{scene_state}
+
+# Instructions
+1. First, summarize what is directly visible in every attached screenshot image, including the subject, camera framing, visible artifacts, labels, and any obvious loading failures. If there are multiple screenshots, mention whether the render remains coherent across the set.
+2. Check for every CesiumJS failure mode that is supported by any screenshot or corroborating text evidence (black/starfield/gray-unloaded/error frame, wrong/absent subject, tiny speck, off-frame, camera-inside-geometry, nadir-flattened, flat-basemap-no-relief, cluttered labels, render artifacts, wrong viewing geometry). Do not invent visual details that are not present in the screenshot(s) or evidence.
+3. Score each of the six dimensions 0-10 with a specific screenshot-based justification where visually assessable. For multi-screenshot or cardinal-panorama cases, base the dimension score on the whole set, not only the best frame.
+4. Apply the liveness gate (render_liveness<=2 caps overall at 2.0) and subject gate (subject<=2 caps at 3.5), compute the weighted sum and gated overall, assign the band, and set your confidence.
+5. Respond with ONLY the JSON object specified in your instructions.

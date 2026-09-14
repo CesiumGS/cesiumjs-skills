@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "eval-001",
+  "name": "globe-terrain-contract",
+  "skill": "cesiumjs-terrain-environment",
+  "description": "Deterministic terrain/environment contract for globe settings that are otherwise hard to verify from a screenshot.",
+  "category": "asset_and_provider_safety",
+  "critical": true,
+  "prompt": "Configure the globe for a public terrain/environment scene: keep the globe visible, enable depthTestAgainstTerrain, enable lighting, use a public EllipsoidTerrainProvider fallback, and do not use token-backed terrain.",
+  "preflight": {
+    "viewer_setup": "default-globe",
+    "settle_ms": 100
+  },
+  "probe": {
+    "capture": [
+      "globe.show",
+      "globe.depthTestAgainstTerrain",
+      "globe.enableLighting",
+      "terrain.provider",
+      "terrain.requiresIonToken",
+      "execution.success",
+      "errors"
+    ],
+    "snapshot_after": true
+  },
+  "checks": [
+    {
+      "id": "code_completed",
+      "type": "code_runs",
+      "category": "execution_health",
+      "critical": true
+    },
+    {
+      "id": "no_runtime_errors",
+      "type": "no_runtime_errors",
+      "category": "execution_health",
+      "critical": true
+    },
+    {
+      "id": "globe_visible",
+      "type": "json_value_equals",
+      "path": "/after/globe/show",
+      "expected": true,
+      "category": "asset_and_provider_safety",
+      "critical": true
+    },
+    {
+      "id": "depth_test_enabled",
+      "type": "json_value_equals",
+      "path": "/after/globe/depthTestAgainstTerrain",
+      "expected": true,
+      "category": "semantic_scene_state",
+      "critical": true
+    },
+    {
+      "id": "lighting_enabled",
+      "type": "json_value_equals",
+      "path": "/after/globe/enableLighting",
+      "expected": true,
+      "category": "visual_fidelity",
+      "critical": false
+    },
+    {
+      "id": "public_terrain_provider",
+      "type": "json_value_equals",
+      "path": "/after/terrain/provider",
+      "expected": "EllipsoidTerrainProvider",
+      "category": "public_reproducibility",
+      "critical": true
+    },
+    {
+      "id": "no_ion_terrain_required",
+      "type": "json_value_equals",
+      "path": "/after/terrain/requiresIonToken",
+      "expected": false,
+      "category": "public_reproducibility",
+      "critical": true
+    }
+  ],
+  "timeout_ms": 1000,
+  "notes": "This case turns globe/terrain configuration into explicit state assertions so CI can catch token-backed or non-public terrain drift."
+}

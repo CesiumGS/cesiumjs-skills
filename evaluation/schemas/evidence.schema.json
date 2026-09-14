@@ -1,0 +1,174 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvaluationEvidence",
+  "description": "Captured scene-state evidence for a deterministic evaluation case.",
+  "type": "object",
+  "required": ["schema_version", "case_id", "before", "after"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^eval-[0-9]{3}$"
+    },
+    "case_name": {
+      "type": "string"
+    },
+    "skill": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["synthetic-fixture", "browser-capture", "manual"]
+    },
+    "expected_result": {
+      "type": "string",
+      "enum": ["pass", "fail"],
+      "description": "Fixture expectation used by scorecard CLI fixture selection."
+    },
+    "before": {
+      "$ref": "#/definitions/snapshot"
+    },
+    "after": {
+      "$ref": "#/definitions/snapshot"
+    },
+    "errors": {
+      "type": "array",
+      "items": {}
+    }
+  },
+  "definitions": {
+    "snapshot": {
+      "type": "object",
+      "required": ["entities"],
+      "additionalProperties": true,
+      "properties": {
+        "camera": {
+          "$ref": "#/definitions/camera"
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "entities": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/entity"
+          }
+        },
+        "imagery_layers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/imagery_layer" }
+        },
+        "primitives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "tilesets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "data_sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "clock": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "scene": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "globe": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "terrain": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "events": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "click_log": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "position_ecef": {
+          "$ref": "#/definitions/vector3"
+        },
+        "direction_ecef": {
+          "$ref": "#/definitions/vector3"
+        },
+        "up_ecef": {
+          "$ref": "#/definitions/vector3"
+        }
+      }
+    },
+    "imagery_layer": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "provider": { "type": "string" },
+        "alpha": { "type": "number" },
+        "brightness": { "type": "number" },
+        "contrast": { "type": "number" },
+        "hue": { "type": "number" },
+        "saturation": { "type": "number" },
+        "gamma": { "type": "number" },
+        "show": { "type": "boolean" },
+        "splitDirection": { "type": "number" }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "position_ecef": {
+          "$ref": "#/definitions/vector3"
+        },
+        "position_cartographic": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "longitude_deg": { "type": "number" },
+            "latitude_deg": { "type": "number" },
+            "longitude_rad": { "type": "number" },
+            "latitude_rad": { "type": "number" },
+            "altitude_m": { "type": "number" }
+          }
+        }
+      }
+    },
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number" }
+    }
+  }
+}

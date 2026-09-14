@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "id": "eval-001",
+  "name": "public-layer-contract",
+  "skill": "cesiumjs-imagery",
+  "description": "Deterministic imagery-layer contract. The implementation must produce exactly one public OSM imagery layer with the expected opacity and no unsafe artifact text.",
+  "category": "asset_and_provider_safety",
+  "critical": true,
+  "prompt": "Create a Cesium scene with exactly one public OpenStreetMap imagery layer over Paris. Set the layer alpha to 0.65, avoid private tokens or local files, and leave the clock multiplier at 1.",
+  "preflight": {
+    "viewer_setup": "default-globe",
+    "settle_ms": 200,
+    "target": {
+      "longitude_deg": 2.3522,
+      "latitude_deg": 48.8566
+    }
+  },
+  "probe": {
+    "capture": [
+      "imagery_layers[*].provider",
+      "imagery_layers[*].alpha",
+      "clock.multiplier",
+      "generated_code",
+      "screenshots"
+    ],
+    "snapshot_after": true
+  },
+  "checks": [
+    {
+      "id": "code_completed",
+      "type": "code_runs",
+      "category": "execution_health",
+      "critical": true,
+      "description": "Generated code completed successfully"
+    },
+    {
+      "id": "one_imagery_layer",
+      "type": "collection_count",
+      "path": "/after/imagery_layers",
+      "operator": "==",
+      "count": 1,
+      "category": "asset_and_provider_safety",
+      "critical": true,
+      "description": "Exactly one imagery layer is present"
+    },
+    {
+      "id": "provider_is_osm",
+      "type": "json_value_equals",
+      "path": "/after/imagery_layers/0/provider",
+      "expected": "OpenStreetMapImageryProvider",
+      "category": "asset_and_provider_safety",
+      "critical": true,
+      "description": "The imagery provider is public OpenStreetMap"
+    },
+    {
+      "id": "layer_alpha",
+      "type": "json_value_compare",
+      "path": "/after/imagery_layers/0/alpha",
+      "operator": "==",
+      "expected": 0.65,
+      "tolerance": 0.001,
+      "category": "visual_fidelity",
+      "critical": true,
+      "description": "Layer opacity is configured as requested"
+    },
+    {
+      "id": "clock_not_accelerated",
+      "type": "json_value_compare",
+      "path": "/after/clock/multiplier",
+      "operator": "==",
+      "expected": 1,
+      "tolerance": 0,
+      "category": "time_behavior",
+      "critical": false,
+      "description": "The implementation did not unexpectedly alter clock speed"
+    },
+    {
+      "id": "public_artifact_hygiene",
+      "type": "artifact_text_absent",
+      "extra_patterns": ["LOCAL_ONLY_PATH"],
+      "category": "artifact_hygiene",
+      "critical": true,
+      "description": "Evidence and generated code contain no local paths, localhost URLs, or obvious secrets"
+    }
+  ],
+  "timeout_ms": 3000,
+  "notes": "This case exercises the generic probe contract for imagery layers and artifact hygiene. It is intentionally small so future imagery-specific checks can be compared against a simple baseline."
+}

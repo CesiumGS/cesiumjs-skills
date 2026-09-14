@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "public-layer-contract",
+  "skill": "cesiumjs-imagery",
+  "source": "synthetic-fixture",
+  "expected_result": "pass",
+  "generated_code": "const viewer = new Cesium.Viewer('cesiumContainer', { imageryProvider: false });\nconst layer = viewer.imageryLayers.addImageryProvider(new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' }));\nlayer.alpha = 0.65;\nviewer.clock.multiplier = 1;",
+  "execution": {
+    "success": true
+  },
+  "before": {
+    "entities": {},
+    "imagery_layers": [],
+    "clock": {
+      "multiplier": 1
+    }
+  },
+  "after": {
+    "entities": {},
+    "imagery_layers": [
+      {
+        "provider": "OpenStreetMapImageryProvider",
+        "alpha": 0.65
+      }
+    ],
+    "clock": {
+      "multiplier": 1
+    }
+  },
+  "errors": []
+}

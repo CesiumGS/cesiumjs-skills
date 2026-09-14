@@ -1,0 +1,245 @@
+name: Optimization Loop (dispatch only)
+
+# The self-optimization lane: propose -> codegen -> render -> judge -> decide.
+# Expensive (LLM + browser), non-deterministic, and the ONLY workflow permitted
+# to invoke a `cesium-eval optimize` subcommand that writes a tracked file.
+# .github/scripts/workflow-safety.sh rule 1 enforces that exclusivity by
+# filename, which is why this file is named optimization-loop.yml.
+#
+# Dispatch only, deliberately. It previously ran on a nightly cron and on every
+# v* tag, which meant an unattended, unbounded, credential-consuming job that
+# also committed its own output back to the repository. Both automatic triggers
+# and the commit-back step are gone: a human starts this, or it does not run.
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: "Skill to evaluate, or 'all'"
+        required: true
+        default: 'all'
+        # An enum, not a free-form string. This input was interpolated directly
+        # into the shell text of a run block, so any value became shell syntax.
+        # Constraining the input closes the sink at the source; the run block
+        # also passes it through the environment now.
+        type: choice
+        options:
+          - all
+          - cesiumjs-3d-tiles
+          - cesiumjs-camera
+          - cesiumjs-core-utilities
+          - cesiumjs-custom-shader
+          - cesiumjs-entities
+          - cesiumjs-imagery
+          - cesiumjs-interaction
+          - cesiumjs-materials-shaders
+          - cesiumjs-models-particles
+          - cesiumjs-primitives
+          - cesiumjs-spatial-math
+          - cesiumjs-terrain-environment
+          - cesiumjs-time-properties
+          - cesiumjs-viewer-setup
+      max_iterations:
+        description: 'Maximum number of iterations'
+        required: false
+        default: '3'
+        type: string
+      stop_on:
+        description: 'Stop condition'
+        required: false
+        default: 'max'
+        type: choice
+        options:
+          - max
+          - plateau
+          - regression
+      copilot_model:
+        description: 'GitHub Copilot model id'
+        required: false
+        default: 'gpt-5.6-sol'
+        type: string
+permissions:
+  contents: read
+
+concurrency:
+  # One optimization run at a time. Never cancel in progress: a partially
+  # completed loop leaves inconsistent iteration state on disk.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  optimization-loop:
+    if: github.ref == 'refs/heads/main' && vars.COPILOT_INFERENCE_READY == 'true'
+    environment: copilot-inference
+    # Secret-bearing model calls never use the persistent runner pool.
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      # Live progress from the agent CLI. Copilot's silent mode emits assistant
+      # prose rather than structured reasoning/tool events; the shared reporter
+      # still adds dispatch, completion, and heartbeat lines so a long request
+      # is distinguishable from a hang. Set EVAL_HARNESS_STREAM to 'status' for
+      # one-line gists or 'off' to silence it without editing this workflow.
+      EVAL_HARNESS_STREAM: ${{ vars.EVAL_HARNESS_STREAM || 'full' }}
+
+    steps:
+      - name: Check out source repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0  # Full history for baseline lookups
+          # A contents: read installation token otherwise sits in
+          # $GITHUB_WORKSPACE/.git/config for the job's lifetime, readable by the
+          # npm dependency tree and by the agent CLI running in this same job.
+          # Nothing here performs an authenticated git operation.
+          persist-credentials: false
+
+      # The shared setup action caches npm downloads on ephemeral hosted
+      # runners. If RUNNER_LABELS selects a persistent pool, that runner reuses
+      # its local npm cache without an actions/cache upload/download round trip.
+      - uses: ./.github/actions/setup-eval
+
+      - name: Build eval CLI
+        run: |
+          npm run build --workspace @cesiumjs-skills/eval
+          npx playwright install --with-deps chromium
+
+      - name: Check canonical eval surface
+        run: node packages/eval/bin/cesium-eval.js check canonical-surface
+
+      # Install before releasing the credential: npm lifecycle code never sees
+      # COPILOT_GITHUB_TOKEN. The token is injected only into the validation and
+      # model-call steps below.
+      - uses: ./.github/actions/setup-agent-harness
+
+      - name: Validate the Copilot token
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error title=Missing secret::COPILOT_GITHUB_TOKEN is not configured in the copilot-inference Environment."
+            exit 1
+          fi
+          echo "COPILOT_GITHUB_TOKEN is present"
+
+      - uses: ./.github/actions/install-gitleaks
+
+      - name: Validate the Ion token
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+        run: |
+          if [ -z "$CESIUM_ION_TOKEN" ]; then
+            echo "::error title=Missing secret::CESIUM_ION_TOKEN is not configured for this repository."
+            exit 1
+          fi
+          echo "CESIUM_ION_TOKEN is present"
+
+      # Dispatch-only, so the inputs are always present and always from the
+      # choice/string enums declared above. The old "determine skill" step
+      # existed to synthesize defaults for the schedule and tag triggers, which
+      # no longer exist.
+      #
+      # Every input reaches the shell through the environment. Interpolating
+      # ${{ inputs.skill }} into run text made the input a shell-injection sink;
+      # an env var is inert no matter what it contains.
+      - name: Run the optimization loop
+        env:
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          # Model and effort are visible run configuration, not secrets. All
+          # three former Codex roles use the same requested binding.
+          COPILOT_MODEL: ${{ github.event.inputs.copilot_model || 'gpt-5.6-sol' }}
+          COPILOT_VARIANT: low
+          SKILL: ${{ inputs.skill }}
+          MAX_ITERATIONS: ${{ inputs.max_iterations }}
+          STOP_ON: ${{ inputs.stop_on }}
+        run: |
+          set -euo pipefail
+          COMMON=(
+            --proposer-harness copilot
+            --proposer-model "$COPILOT_MODEL"
+            --proposer-variant "$COPILOT_VARIANT"
+            --codegen-harness copilot
+            --codegen-model "$COPILOT_MODEL"
+            --codegen-variant "$COPILOT_VARIANT"
+            --judge-harness copilot
+            --judge-model "$COPILOT_MODEL"
+            --judge-variant "$COPILOT_VARIANT"
+            --max-iterations "$MAX_ITERATIONS"
+            --stop-on "$STOP_ON"
+          )
+          if [ "$SKILL" = "all" ]; then
+            node packages/eval/bin/cesium-eval.js optimize all --skills all "${COMMON[@]}"
+          else
+            node packages/eval/bin/cesium-eval.js optimize loop "$SKILL" "${COMMON[@]}"
+          fi
+
+      # Ordering matters: delete the token-bearing HTML FIRST, then verify the
+      # delete actually worked, and only then upload.
+      #
+      # `check public-artifacts` and `check-secrets.sh` scan git-TRACKED files
+      # only, and optimization/runs/ is gitignored, so neither one inspects any
+      # byte of the bundle being uploaded. They are kept because they still
+      # guard the tracked surface, but the find and the post-check below are the
+      # steps that actually protect the artifact.
+      - name: Sanitize artifacts before upload
+        id: sanitize
+        if: always()
+        run: |
+          # Raw eval.html embeds CESIUM_ION_TOKEN and must never be uploaded.
+          find optimization/runs/ -name '*.html' -delete 2>/dev/null || true
+          node packages/eval/bin/cesium-eval.js check public-artifacts
+          bash optimization/scripts/check-secrets.sh
+          if find optimization/runs/ -name '*.html' 2>/dev/null | grep -q .; then
+            echo "::error title=Sanitization failed::HTML survived the delete pass; refusing to upload."
+            exit 1
+          fi
+
+      - name: Upload evaluation report
+        # Gated on the sanitizer SUCCEEDING, not merely on having run. With
+        # `if: always()` alone, a sanitize step that exits non-zero (a surviving
+        # token-bearing file, a tracked-secret hit) still publishes the bundle it
+        # just failed to clean. Still runs when the loop itself failed, because a
+        # failed run's artifacts are the diagnostic material.
+        if: always() && steps.sanitize.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: optimization-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: optimization/results/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload sanitized evidence bundles
+        # Gated on the sanitizer SUCCEEDING, not merely on having run. With
+        # `if: always()` alone, a sanitize step that exits non-zero (a surviving
+        # token-bearing file, a tracked-secret hit) still publishes the bundle it
+        # just failed to clean. Still runs when the loop itself failed, because a
+        # failed run's artifacts are the diagnostic material.
+        if: always() && steps.sanitize.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: optimization-bundles-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            optimization/runs/
+            !**/*.html
+            !**/raw/
+          retention-days: 30
+          if-no-files-found: warn
+
+      # The "Commit results back to repo" step was DELETED, not disabled.
+      #
+      # It ran on a nightly cron with no human in the loop, created a branch,
+      # committed optimization/results/*.json, pushed, and opened a pull request.
+      # Those files are inputs to `validate --suite optimization`, which is now a
+      # blocking gate step, so an unattended job was writing an input of the gate
+      # that grades the repository. Optimization output reaches main through a
+      # human downloading the artifact and committing deliberately.
+      - name: Explain how results reach the repository
+        if: always()
+        run: |
+          {
+            echo "## Optimization results are NOT auto-committed"
+            echo
+            echo "Download the run artifacts above and commit deliberately if the"
+            echo "results should land on main. optimization/results/*.json are"
+            echo "inputs to the blocking deterministic gate, so they change only"
+            echo "through a reviewed pull request."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -13,7 +13,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this form for feedback on the skills in `main`, the eval and optimization suite on `eval-and-optimization`, the methodology, or the runner. For a likely bug in a specific skill, add the `bug` label.
+        Use this form for feedback on the skills in `main`, the eval and optimization suite on `feat/eval-and-optimization`, the methodology, or the runner. For a likely bug in a specific skill, add the `bug` label.
 
   - type: input
     id: summary
@@ -43,7 +43,7 @@ body:
     attributes:
       label: Area affected
       description: Which skill, file, or branch is this about? Paths welcome.
-      placeholder: e.g. "tuning/cesiumjs-camera/evals/" or "skills/cesiumjs-imagery/SKILL.md"
+      placeholder: e.g. "evaluation/cases/cesiumjs-camera/" or "skills/cesiumjs-imagery/SKILL.md"
     validations:
       required: false
 
@@ -86,5 +86,5 @@ body:
       options:
         - label: I searched existing issues for duplicates.
           required: true
-        - label: If proposing an eval scenario, I followed the schema in `tuning/<skill>/evals/eval-NNN-*.json`.
+        - label: If proposing an eval scenario, I followed the schema in `evaluation/cases/<skill>/eval-NNN-*.json`.
           required: false

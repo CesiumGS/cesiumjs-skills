@@ -8,24 +8,29 @@ workflow surface.
 
 ## Quick Start
 
-### Claude Code
+### GitHub Copilot CLI
 
-**One-Liner from the terminal (recommended):**
+The evaluation and optimization roles default to GitHub Copilot CLI with
+`gpt-5.6-sol` at low reasoning effort:
 
 ```bash
-claude plugin marketplace add CesiumGS/cesiumjs-skills
+npm i -g @github/copilot@1.0.78
+copilot login
 ```
 
-**From inside Claude Code:**
+Run evaluation commands from this checkout; role defaults live in
+[`eval.config.json`](eval.config.json).
 
-1. Type `/plugin` and press Enter
-2. Select **Add Marketplace**
-3. Enter `CesiumGS/cesiumjs-skills`
-4. Once the marketplace is added, type `/plugin` again
-5. Select **Install Plugin**
-6. Choose **cesiumjs-skills** from the list
+### OpenCode
 
-After installing, run `/reload-plugins` to activate the skills in your current session.
+OpenCode remains an optional alternative harness:
+
+```bash
+npm i -g opencode-ai@1.18.15
+opencode
+```
+
+OpenCode discovers Agent Skills from `skills/<name>/SKILL.md` in the project.
 
 ### Any Agent Skills-Compatible Tool
 
@@ -37,8 +42,11 @@ These skills follow the [Agent Skills](https://agentskills.io/) open standard. C
 
 - [Skills Catalog](#skills-catalog)
 - [Domain Mapping](#domain-mapping)
+- [Architecture](#architecture)
+- [Evaluation Framework](#evaluation-framework)
 - [Compatibility](#compatibility)
 - [Repository Layout](#repository-layout)
+- [Contributing](#contributing)
 - [License](#license)
 
 ## Skills Catalog
@@ -64,13 +72,128 @@ These skills follow the [Agent Skills](https://agentskills.io/) open standard. C
 
 ## Domain Mapping
 
-Every public class, function, and enum in CesiumJS is assigned to exactly one skill. Cross-domain ownership rules and the full symbol map are documented in [`docs/DOMAINS.md`](docs/DOMAINS.md).
+Every public class, function, and enum in CesiumJS is assigned to exactly one skill. Cross-domain ownership rules and the full symbol map are documented in the wiki's [Domain Mapping](wiki/Domain-Mapping.md) page.
+
+## Architecture
+
+The AI evaluation framework architecture is documented in the wiki's [Architecture Concept Document](wiki/Architecture-Concept-Document.md), with supporting architecture decision records in [`wiki/`](wiki/). The wiki is source-controlled in this repository and published from `main` by [`.github/workflows/wiki-sync.yml`](.github/workflows/wiki-sync.yml).
+
+## Evaluation Framework
+
+The repository now separates pure evaluation from self-optimization:
+
+- [`evaluation/`](evaluation/) is the new deterministic evaluation surface. It is
+  where unit-test-like scene-state checks and synthetic evaluation cases should
+  be fleshed out.
+- [`optimization/`](optimization/) contains the existing self-optimization loop:
+  candidate generation, browser runs, pairwise judging, keep/reject decisions,
+  promotion metadata, and historical results.
+
+Reproduce the blocking CI checks locally with:
+
+```bash
+npm ci
+npm run gate
+npm run build --workspace @cesiumjs-skills/evaluation-console
+npm test --workspace @cesiumjs-skills/evaluation-console
+bash .github/scripts/workflow-safety.sh
+```
+
+`npm run gate` is the same script CI runs (`.github/scripts/gate.sh`): build,
+both manifest suites, the skill contract, the unit tests, the deterministic
+scorecard, and `verify-fixtures`, which asserts that every tracked fixture still
+produces the result it declares. The three commands after it cover the other two
+blocking jobs, and they are separate on purpose: a TypeScript error under
+`apps/evaluation-console/src/` leaves `npm run gate` at exit 0 while the console
+job goes red.
+
+### Changing a skill
+
+Editing `skills/<id>/SKILL.md` changes agent behaviour, so it gets an additional
+contract check inside the gate above:
+
+- **`cesium-eval check skills`** runs inside the gate on every pull request. It
+  reads the skill file itself — frontmatter, the `Use when ...` activation
+  clause, code fences that must parse, and CesiumJS symbols that must exist in
+  [Domain Mapping](wiki/Domain-Mapping.md). Free, hermetic, works on forks.
+- **[`pr-skill-eval-gate.yml`](.github/workflows/pr-skill-eval-gate.yml)** is the
+  protected pre-merge stage. After the secret-free PR Gate completes, trusted
+  default-branch code fetches only the candidate skill documents as bounded
+  data. Copilot generates with tools disabled; a separate secret-free hosted
+  job executes the generated JavaScript, renders evidence, and applies the
+  deterministic 95%/critical-failure scorecard. It publishes `Skill Eval Gate`
+  on the pull-request head for the repository ruleset to require.
+- **[`skill-eval.yml`](.github/workflows/skill-eval.yml)** repeats the live path
+  after a change reaches `main`, or through an explicit main-branch dispatch,
+  as post-merge evidence.
+
+The pre-merge check is fail-closed until an administrator completes
+[the GitHub guardrail setup](wiki/Configure-Skill-Eval-Gate.md). Workflow code
+alone does not make a check merge-blocking; the protected Environment, readiness
+variable, and required-check ruleset must all be active.
+
+See [ADR-0007](wiki/ADR-0007-Skill-Change-Evaluation.md) for the trust boundary
+and what each tier does not catch.
+
+Three parts of CI are not reproduced by the list above: `actionlint` (needs the
+pinned binary the workflow installs), the full-history `gitleaks` scan, and
+`gate.sh`'s clean-tree assertion, which is skipped outside CI by design because a
+dirty working tree is normal while developing.
+
+For local browser-backed optimization scenario reproduction, place generated JavaScript snippets under `optimization/generated/<skill>/<iteration>/`, set `CESIUM_ION_TOKEN`, and run:
+
+```bash
+node packages/eval/bin/cesium-eval.js optimize render cesiumjs-camera --iteration candidate --only eval-001
+```
+
+For the full autonomous optimization loop across every skill scenario group, use `cesium-eval optimize all --skills all --max-iterations 1` after authenticating GitHub Copilot CLI and setting `CESIUM_ION_TOKEN`. The tracked defaults run proposer, codegen, and judge through `copilot` with `gpt-5.6-sol` at low effort. Role defaults live in [`eval.config.json`](eval.config.json), and the harness/model catalog lives in [`config/harness-registry.json`](config/harness-registry.json); command-line flags and environment variables can override them deliberately.
+Raw generated code, HTML, screenshots, and run traces under `optimization/generated/` and `optimization/runs/` are local-only and gitignored by default.
+
+### Watching an agent run
+
+Agent calls narrate themselves as they happen, locally and in CI: every run reports its dispatch and a heartbeat while the model is in flight, then streams whatever progress detail the selected harness exposes. Structured harnesses can also report reasoning, tool outcomes, and token usage; Copilot reports assistant prose as it is generated.
+
+How much detail arrives depends on what the underlying CLI emits, which differs by harness:
+
+| Harness | Source | Reported |
+| --- | --- | --- |
+| `codex` | `exec --json` | reasoning, tool calls and exit status, token usage |
+| `opencode` | `run --format json` | reasoning, tool calls and status, per-step token usage |
+| `claude-code` | `-p --output-format stream-json` | thinking, tool calls and results, throttling, token usage |
+| `pi` | `-p --mode json` | reasoning, tool execution and outcome, per-turn token usage |
+| `copilot` | `--silent` | assistant prose as it is generated |
+| `hermes` | `-z` | assistant prose as it is generated |
+
+The last two emit no structured event stream in the mode this pipeline uses, so there are no tool or reasoning events to report for them; the answer arriving line by line is the honest signal, and the heartbeat covers the silence before it. Pi emits a *token*-level stream, so it is reported at block boundaries rather than one line per token.
+
+```
+[agent codegen/codex 00:00.0] >> gpt-5.6 · variant=medium prompt=4.2KB tools=Read,Grep timeout=900s
+[agent codegen/codex 00:05.5] ~~ reasoning · I need to inspect the scenario fixture before generating.
+[agent codegen/codex 00:06.4] ** shell · /bin/zsh -lc ls state=running
+[agent codegen/codex 00:06.4] ** shell · /bin/zsh -lc ls state=ok lines=15
+[agent codegen/codex 00:20.0] .. still running · elapsed=20.0s last=shell idle=13.6s
+[agent codegen/codex 00:28.7] << assistant · Here is the viewer setup…
+[agent codegen/codex 00:28.7] ## tokens · in=42.7k cached=31.2k out=240 reasoning=97
+[agent codegen/codex 00:28.9] OK gpt-5.6 · in 28.9s tools=1 messages=2 thinking=1 reply=3.1KB
+```
+
+Two environment variables tune it:
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `EVAL_HARNESS_STREAM` | `status` (`full` in CI) | `off` silences the stream; `status` prints a one-line gist per event; `full` prints reasoning and messages at length |
+| `EVAL_HARNESS_HEARTBEAT_SECONDS` | `20` | How often to report that a silent call is still alive |
+
+In GitHub Actions the level comes from the `EVAL_HARNESS_STREAM` repository variable, defaulting to `full`, so verbosity is tunable without editing a workflow. The same output appears under `act`, which is the only progress signal a local workflow run has.
+The evaluation platform's unit tests live under `packages/eval/tests/`.
+Scenario validation is read-only; update changed scenario hashes explicitly with `cesium-eval optimize rebaseline <skill> <eval-id>`.
+Scenarios marked `runner_mode: "review-only"` are included in the public catalog but skipped by the browser runner until a compatible adapter exists.
+
+The previous local tuning harness has been removed from the active repo surface. New self-optimization scenarios and results belong under `optimization/`; new deterministic, candidate-agnostic evaluation cases belong under `evaluation/`. See [`optimization/docs/source-of-truth.md`](optimization/docs/source-of-truth.md) and [`evaluation/README.md`](evaluation/README.md).
 
 ## Compatibility
 
-The [Agent Skills](https://agentskills.io/) format is an open standard originally developed by Anthropic and adopted by leading AI development tools including Claude Code, GitHub Copilot, and many others.
-
-By popular demand, this repository also ships as a **Claude Code plugin** with a SessionStart hook and Chrome DevTools MCP integration for browser-based verification.
+The [Agent Skills](https://agentskills.io/) format is an open standard adopted by multiple AI development tools. These skills are plain Markdown files under `skills/`, so compatible tools can load them without provider-specific Python SDKs.
 
 ## Repository Layout
 
@@ -79,16 +202,17 @@ cesiumjs-skills/
 ├── skills/                          # The product
 │   ├── cesiumjs-*/SKILL.md          # 14 domain skills (CesiumJS v1.143)
 │   └── using-cesiumjs-skills/       # Bootstrap orientation skill
-├── docs/
-│   ├── DOMAINS.md                   # Symbol ownership map
-│   └── skills-catalog.md            # Skills catalog
-├── .claude-plugin/
-│   ├── plugin.json                  # Claude Code plugin manifest
-│   └── marketplace.json             # Plugin marketplace catalog
+├── evaluation/                      # Pure deterministic evaluation cases, checks, and scripts
+├── optimization/                    # Self-optimization loop, scripts, candidates, decisions, and results
+├── wiki/                            # Source-controlled GitHub Wiki pages and reference docs
+├── .github/workflows/wiki-sync.yml  # Publishes wiki/ to the GitHub Wiki from main
 ├── .mcp.json                        # Chrome DevTools MCP server
-├── hooks/                           # SessionStart hook + runner
 └── LICENSE
 ```
+
+## Contributing
+
+Keep product-facing skill guidance under [`skills/`](skills/), public evaluation scenarios and summaries under [`optimization/`](optimization/), and long-form reference material under [`wiki/`](wiki/). When changing skill coverage or public APIs, update [Domain Mapping](wiki/Domain-Mapping.md) and run the blocking CI checks listed above before opening a PR.
 
 ## License
 

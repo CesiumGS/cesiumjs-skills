@@ -1,0 +1,78 @@
+{
+  "id": "eval-004",
+  "name": "drillpick-stacked-polygons",
+  "landmark": "Three overlapping translucent polygons over Lake Michigan",
+  "perspective": "regional view with stacked semi-transparent polygons",
+  "difficulty": "hard",
+  "description": "Create three overlapping translucent polygon entities centered over Lake Michigan with different colors and stagger their bounds so each pair overlaps. The screenshot must show the three polygons' coloured overlap zones \u2014 the stack is the visual signal. Wire a LEFT_CLICK that calls scene.drillPick (with limit=5) and console.logs every picked entity's name in stacking order.",
+  "prompt": "Add three translucent polygon entities, each named 'Top', 'Middle', 'Bottom', each covering rectangular regions that all overlap a central area over Lake Michigan: Top = polygon at corners (-88.5, 44.5)-(-86.0, 42.5) with material Color.CRIMSON.withAlpha(0.45); Middle = (-87.5, 45.5)-(-85.0, 43.5) with Color.DODGERBLUE.withAlpha(0.45); Bottom = (-88.0, 43.5)-(-85.5, 41.5) with Color.LIMEGREEN.withAlpha(0.45). Then construct a ScreenSpaceEventHandler and register a LEFT_CLICK action that calls const all = viewer.scene.drillPick(event.position, 5); and console.log('drillPick:', all.map(p => p.id && p.id.name).join(', ')). Frame the camera over Lake Michigan: viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(-86.5, 43.5, 1500000) }).",
+  "expected_behaviors": [
+    "Adds 3 polygon entities with names 'Top', 'Middle', 'Bottom'",
+    "Each polygon uses a translucent color (alpha < 1.0)",
+    "Polygons overlap in a central region over Lake Michigan",
+    "Constructs a new ScreenSpaceEventHandler",
+    "Registers LEFT_CLICK action via setInputAction",
+    "Calls viewer.scene.drillPick with a limit (e.g. 5)",
+    "Logs the picked entity names",
+    "Frames the camera over Lake Michigan (around -86.5 W, 43.5 N) at 1-2 million m altitude"
+  ],
+  "visual_expectations": "A regional view of Lake Michigan with three semi-transparent overlapping rectangles visible \u2014 red, blue, and green \u2014 with their overlap zones showing colour mixing (purple where red+blue overlap, yellow where green+red, cyan where green+blue, brownish where all three overlap). The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "drillPick",
+      "description": "Uses scene.drillPick"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?ScreenSpaceEventHandler",
+      "description": "Constructs handler"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ScreenSpaceEventType\\.LEFT_CLICK",
+      "description": "Uses LEFT_CLICK"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.CRIMSON",
+      "description": "Uses CRIMSON"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.DODGERBLUE",
+      "description": "Uses DODGERBLUE"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Color\\.LIMEGREEN",
+      "description": "Uses LIMEGREEN"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "withAlpha",
+      "description": "Polygons are semi-transparent"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Lake Michigan with three overlapping translucent polygons"
+    }
+  ],
+  "regression_critical": false,
+  "target_skill_sections": [
+    "Scene Picking Methods",
+    "Recipes \u2014 Multi-Pick with drillPick"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

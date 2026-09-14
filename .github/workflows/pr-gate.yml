@@ -1,0 +1,250 @@
+name: PR Gate
+
+# NO path filters, deliberately.
+#   1. A path-filtered workflow cannot be a required status check: GitHub never
+#      reports a conclusion for a skipped workflow, so unrelated pull requests
+#      hang at "Expected - Waiting for status" forever.
+#   2. The gate is roughly 8 seconds of compute. Filtering it saves nothing
+#      worth that failure mode.
+#   3. Before this workflow, a package-lock.json-only pull request triggered
+#      NEITHER existing eval workflow.
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:   # SEAM-0: the nightly lane re-runs the gate before spending money
+
+# Least privilege, declared explicitly. The workflows this replaces inherited the
+# repository-default token scope. Nothing here needs more than contents: read,
+# which also keeps the workflow_call contract satisfiable by any caller.
+permissions:
+  contents: read
+
+concurrency:
+  # github.workflow resolves to the CALLER's workflow name under workflow_call,
+  # which keeps a nightly invocation from queueing behind the push:main leg.
+  group: ${{ github.workflow }}-pr-gate-${{ github.event.pull_request.number || github.ref }}
+  # Cancel superseded pull-request pushes; never cancel a main-branch baseline run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deterministic-evals:
+    name: Deterministic evals
+    # FORK-GUARDED routing, not a bare RUNNER_LABELS expression.
+    #
+    # This job runs untrusted fork code (npm lifecycle scripts), and RUNNER_LABELS
+    # is a REPOSITORY variable: pointing it at a self-hosted pool unguarded lands
+    # every job INCLUDING a fork pull request on persistent shared nodes that also
+    # hold checkouts of write-capable workflows. The guard below keeps that
+    # impossible: a pull request whose head repo is a fork is pinned to hosted no
+    # matter what the variable says, so the public-fork path stays continuously
+    # tested rather than discovered broken on launch day.
+    #
+    # merge_group is pinned to hosted UNCONDITIONALLY, and the order of the two
+    # tests is load-bearing. A merge_group payload carries no pull_request object,
+    # so the fork test alone is not merely false there, it is BLIND: the queued
+    # merge commit contains the contributor's code, and a fork contribution and a
+    # maintainer's own branch are indistinguishable at that point. Testing
+    # event_name first is what keeps a queued fork's npm lifecycle scripts off the
+    # pool. skill-eval.yml refuses the same event for the same reason.
+    #
+    # Everything else (same-repo pull requests, push, dispatch) takes
+    # the pool, because hosted concurrency can queue these lanes for a long
+    # time while a configured self-hosted pool sits idle next to them. The
+    # `|| '["ubuntu-latest"]'` tail is the fallback for an unset OR empty variable,
+    # so an unconfigured repository still runs; a MALFORMED variable still fails at
+    # expression-evaluation time, which is why the workflow files carrying this
+    # expression sit under CODEOWNERS.
+    #
+    # workflow-safety.sh rule 5 enforces this exact shape: a blocking lane may name
+    # RUNNER_LABELS only on a line that also carries the head.repo.fork guard.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    # The self-hosted pool may spend 10+ minutes provisioning Node/npm on a
+    # cold ephemeral runner before this gate's ~3 seconds of compute begins.
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # fetch-depth 1 is sufficient: `score` shells out to `git rev-parse
+          # HEAD` and both `check` subcommands use `git ls-files`. Neither needs
+          # history. The full-history scan lives in secret-scan.yml.
+          fetch-depth: 1
+          # A default checkout leaves the token in .git/config, where any
+          # lifecycle script in a fork's dependency tree can read it.
+          persist-credentials: false
+
+      - name: Set up eval workspace
+        uses: ./.github/actions/setup-eval
+
+      # Exported once here rather than in a job-level env: block, because the
+      # `runner` context is NOT available at job level (only `github`, `inputs`,
+      # `matrix`, `needs`, `secrets`, `strategy`, and `vars` are), and a workflow
+      # that references it there is rejected outright, producing a run with zero
+      # jobs. $RUNNER_TEMP is the plain environment variable and is always set.
+      #
+      # An explicit, job-scoped directory: the default lands in gitignored
+      # evaluation/artifacts/scorecards/<run_id>/, which is safe, but an explicit
+      # path makes artifact upload deterministic and keeps run_id-named
+      # directories out of a reused workspace.
+      - name: Resolve scorecard output directory
+        run: echo "SCORECARD_DIR=$RUNNER_TEMP/scorecard" >> "$GITHUB_ENV"
+
+      # One gate definition, shared with `npm run gate`. The script owns the
+      # build, the checks, the 0/1/2 exit contract, and the clean-tree assertion.
+      - name: Run deterministic gate
+        run: bash .github/scripts/gate.sh
+
+      # gate.sh always emits summary.md, including fail-fast paths before the
+      # evaluation scorecard exists. The compact summary is intentionally the
+      # presentation layer; exhaustive scorecard.md/json and skill-contract.json
+      # remain downloadable in the artifact instead of flooding this page.
+      - name: Publish scorecard to job summary
+        if: always()
+        run: |
+          if [ -f "$SCORECARD_DIR/summary.md" ]; then
+            cat "$SCORECARD_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "# ⚠️ Deterministic Gate Summary Unavailable"
+              echo
+              echo "The run stopped before the gate could render its native scorecard. Read the step log above."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Uploaded even on failure: `score` writes the scorecard BEFORE
+      # schema-validating it, so the exit-2 case still produced the file that
+      # explains the failure. 'warn' rather than 'error' because an early failure
+      # (validate) legitimately produces nothing, and a missing artifact must not
+      # manufacture a second confusing red step.
+      - name: Upload scorecard
+        if: always() && github.event_name != 'push'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: scorecard-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/scorecard
+          if-no-files-found: warn
+          retention-days: 14
+
+      # Fixed name, longer retention: the reference scorecard for main. Gated on
+      # success rather than always(), because a baseline produced by a failed run
+      # is not a baseline, and if-no-files-found: error on a run that failed
+      # before scoring would report a second, misleading failure.
+      - name: Upload scorecard (main reference)
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: scorecard-main
+          path: ${{ runner.temp }}/scorecard
+          if-no-files-found: error
+          retention-days: 30
+
+  console:
+    name: Console build + tests
+    # Separate job: the console is roughly half the gate's compute with a
+    # completely independent failure domain. Root `npm run build` and `npm test`
+    # chain eval-then-console and fail fast, so a change that breaks both never
+    # reports the console half. That is why the root scripts are not used in CI.
+    # Fork-guarded pool routing; see the deterministic-evals job for the rationale.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    # Match deterministic-evals: both jobs use setup-eval and can land on a
+    # cold ephemeral runner whose toolchain provisioning exceeds 10 minutes.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-eval
+
+      - name: Build console (tsc --noEmit + vite build)
+        run: npm run build --workspace @cesiumjs-skills/evaluation-console
+
+      # Previously run by NO workflow, despite existing and passing in 0.63 s.
+      - name: Unit tests (console)
+        run: npm test --workspace @cesiumjs-skills/evaluation-console
+
+  workflow-safety:
+    name: Workflow safety
+    # Fork-guarded pool routing; see the deterministic-evals job for the rationale.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # No setup-eval: this job intentionally has zero npm dependencies so it
+      # runs before anything is installed or built, and cannot be broken by a
+      # dependency change.
+      - name: Enforce workflow invariants
+        run: bash .github/scripts/workflow-safety.sh
+
+      - uses: ./.github/actions/install-actionlint
+
+      # Static validation against the real Actions schema, including context
+      # availability. GitHub rejects a workflow that references an unavailable
+      # context by producing a run with ZERO jobs and a bare "workflow file
+      # issue" with no annotation reachable through the API, so without this step
+      # that class of bug is only discoverable by pushing and reading tea leaves.
+      # shellcheck is disabled because every run: block in this repository is
+      # also covered by the scripts the gate executes directly.
+      # No path arguments: actionlint discovers .github/workflows/ itself and
+      # covers BOTH .yml and .yaml, matching how workflow-safety.sh enumerates
+      # the same directory. A `*.yml` glob here would stop seeing any workflow
+      # that was renamed to .yaml, including the zero-jobs "workflow file issue"
+      # class this step exists to catch.
+      #
+      # shellcheck is disabled because the run: blocks worth linting live in the
+      # scripts the gate executes directly.
+      - name: Lint workflow files
+        run: actionlint -shellcheck= -no-color
+
+  gate:
+    name: gate
+    # THE required status check. Branch protection names exactly this job, so
+    # underlying jobs can be added, split, renamed, or filtered forever without
+    # an admin touching branch-protection settings, which is the classic way a
+    # required check silently stops being required.
+    #
+    # The predicate tests every result for success rather than grepping for
+    # 'failure'. The common broken form, contains(needs.*.result, 'failure'),
+    # passes when a job is SKIPPED or CANCELLED, which is exactly the state a
+    # "green check that ran nothing" hides behind.
+    needs: [deterministic-evals, console, workflow-safety]
+    if: always()
+    # Fork-guarded pool routing; see the deterministic-evals job for the rationale.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork) && '["ubuntu-latest"]' || vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 5
+    steps:
+      - name: Aggregate results
+        env:
+          R_EVALS: ${{ needs.deterministic-evals.result }}
+          R_CONSOLE: ${{ needs.console.result }}
+          R_SAFETY: ${{ needs.workflow-safety.result }}
+        run: |
+          fail=0
+          check() {
+            printf '%-24s %s\n' "$1" "$2"
+            if [ "$2" != "success" ]; then
+              echo "::error::required job '$1' did not succeed (got '$2')"
+              fail=1
+            fi
+          }
+          check deterministic-evals "$R_EVALS"
+          check console            "$R_CONSOLE"
+          check workflow-safety    "$R_SAFETY"
+          if [ "$fail" -ne 0 ]; then
+            echo "::error title=PR Gate failed::see the job list above"
+            exit 1
+          fi
+          echo "all required jobs succeeded"

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "id": "eval-001",
+  "name": "clock-contract",
+  "skill": "cesiumjs-time-properties",
+  "description": "Deterministic clock-state contract. The implementation must configure a bounded clock interval and animation multiplier without relying on visual playback.",
+  "category": "time_behavior",
+  "critical": true,
+  "prompt": "Configure the Cesium viewer clock for a 60 second playback window, set currentTime to the start of the interval, set multiplier to 30, and enable shouldAnimate. Do not depend on a screenshot to prove the clock settings.",
+  "preflight": {
+    "viewer_setup": "default-globe",
+    "settle_ms": 100
+  },
+  "probe": {
+    "capture": [
+      "clock.startTime",
+      "clock.stopTime",
+      "clock.currentTime",
+      "clock.multiplier",
+      "clock.shouldAnimate",
+      "execution.success",
+      "errors"
+    ],
+    "snapshot_after": true
+  },
+  "checks": [
+    {
+      "id": "code_completed",
+      "type": "code_runs",
+      "category": "execution_health",
+      "critical": true,
+      "description": "Generated code completed successfully"
+    },
+    {
+      "id": "no_runtime_errors",
+      "type": "no_runtime_errors",
+      "category": "execution_health",
+      "critical": true,
+      "description": "No runtime errors were captured"
+    },
+    {
+      "id": "start_time",
+      "type": "json_value_equals",
+      "path": "/after/clock/startTime",
+      "expected": "2026-01-01T00:00:00Z",
+      "category": "time_behavior",
+      "critical": true,
+      "description": "Clock starts at the requested ISO instant"
+    },
+    {
+      "id": "stop_time",
+      "type": "json_value_equals",
+      "path": "/after/clock/stopTime",
+      "expected": "2026-01-01T00:01:00Z",
+      "category": "time_behavior",
+      "critical": true,
+      "description": "Clock stops exactly 60 seconds later"
+    },
+    {
+      "id": "current_time_at_start",
+      "type": "json_value_equals",
+      "path": "/after/clock/currentTime",
+      "expected": "2026-01-01T00:00:00Z",
+      "category": "time_behavior",
+      "critical": true,
+      "description": "Clock current time starts at the interval start"
+    },
+    {
+      "id": "multiplier_30",
+      "type": "json_value_compare",
+      "path": "/after/clock/multiplier",
+      "operator": "==",
+      "expected": 30,
+      "tolerance": 0,
+      "category": "time_behavior",
+      "critical": true,
+      "description": "Clock multiplier is exactly 30"
+    },
+    {
+      "id": "animates",
+      "type": "json_value_equals",
+      "path": "/after/clock/shouldAnimate",
+      "expected": true,
+      "category": "time_behavior",
+      "critical": true,
+      "description": "Clock animation is enabled"
+    }
+  ],
+  "timeout_ms": 1000,
+  "notes": "This case covers time behavior as structured state rather than source text or a video/screenshot proxy."
+}

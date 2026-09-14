@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvaluationViewerGrades",
+  "description": "Default evaluation grades and human overrides captured by the standalone CesiumJS Evaluation Viewer.",
+  "type": "object",
+  "required": ["schema_version", "run_id", "updated_at", "decisions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "run_id": { "type": "string" },
+    "scorecard_path": { "type": "string" },
+    "reviewer": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/review_decision" }
+    }
+  },
+  "definitions": {
+    "review_decision": {
+      "type": "object",
+      "required": ["skill", "case_id", "decision", "updated_at"],
+      "additionalProperties": false,
+      "properties": {
+        "skill": { "type": "string" },
+        "case_id": { "type": "string" },
+        "decision": { "type": "string", "enum": ["accept", "flag", "defer"] },
+        "note": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "source": { "type": "string", "enum": ["auto", "human", "imported"] }
+      }
+    }
+  }
+}

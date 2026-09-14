@@ -1,0 +1,77 @@
+name: Install actionlint
+description: >-
+  Pinned, checksum-verified actionlint installed into $RUNNER_TEMP/bin.
+  No sudo, no writes outside the runner temp directory, cached across runs.
+
+# actionlint statically validates workflow files against the real GitHub Actions
+# schema, including context availability. That last part is why this exists: a
+# workflow referencing an unavailable context (for example `runner` in a
+# job-level `env:` block) is rejected by GitHub at validation time and produces a
+# run with ZERO jobs, a bare "workflow file issue", and no annotation reachable
+# through the API. The failure is invisible to YAML syntax checks and to every
+# check in the gate, and can only be diagnosed by pushing again.
+#
+# To bump: change `version`, then replace both digests with the output of
+#   curl -fsSL https://github.com/rhysd/actionlint/releases/download/v<version>/actionlint_<version>_checksums.txt \
+#     | grep -E 'linux_(amd64|arm64)\.tar\.gz'
+inputs:
+  version:
+    description: actionlint release version, without a leading v
+    required: false
+    default: '1.7.7'
+  sha256-linux-amd64:
+    description: sha256 of actionlint_<version>_linux_amd64.tar.gz
+    required: false
+    default: '023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757'
+  sha256-linux-arm64:
+    description: sha256 of actionlint_<version>_linux_arm64.tar.gz
+    required: false
+    default: '401942f9c24ed71e4fe71b76c7d638f66d8633575c4016efd2977ce7c28317d0'
+
+runs:
+  using: composite
+  steps:
+    - name: Restore cached binary
+      id: cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ${{ runner.temp }}/bin/actionlint
+        key: actionlint-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}
+
+    - name: Download and verify
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        SHA_AMD64: ${{ inputs.sha256-linux-amd64 }}
+        SHA_ARM64: ${{ inputs.sha256-linux-arm64 }}
+      run: |
+        set -euo pipefail
+        if [ "$(uname -s)" != "Linux" ]; then
+          echo "::error::install-actionlint supports Linux runners only; got $(uname -s)."
+          exit 1
+        fi
+        case "$(uname -m)" in
+          x86_64)        arch=amd64; want="$SHA_AMD64" ;;
+          aarch64|arm64) arch=arm64; want="$SHA_ARM64" ;;
+          *) echo "::error::unsupported architecture $(uname -m)"; exit 1 ;;
+        esac
+        if [ -z "$want" ]; then
+          echo "::error title=Missing actionlint checksum::The ${arch} digest input is empty."
+          exit 1
+        fi
+        asset="actionlint_${VERSION}_linux_${arch}.tar.gz"
+        mkdir -p "$RUNNER_TEMP/bin" "$RUNNER_TEMP/actionlint-dl"
+        cd "$RUNNER_TEMP/actionlint-dl"
+        curl -fsSL --retry 3 --retry-delay 2 -o "$asset" \
+          "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/${asset}"
+        echo "${want}  ${asset}" | sha256sum -c -
+        tar -xzf "$asset" actionlint
+        mv actionlint "$RUNNER_TEMP/bin/actionlint"
+        chmod +x "$RUNNER_TEMP/bin/actionlint"
+
+    - name: Expose on PATH
+      shell: bash
+      run: |
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/bin/actionlint" --version

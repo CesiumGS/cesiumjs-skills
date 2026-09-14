@@ -1,0 +1,78 @@
+{
+  "id": "eval-002",
+  "name": "mouse-coord-readout-label",
+  "landmark": "Eastern Mediterranean \u2014 Greece islands",
+  "perspective": "regional view with on-screen coordinate label",
+  "difficulty": "medium",
+  "description": "Add a fixed-position coordinate readout label entity over the eastern Mediterranean and register a MOUSE_MOVE handler that updates the label text from viewer.camera.pickEllipsoid + Cartographic.fromCartesian. Verifies the wiring of MOUSE_MOVE, pickEllipsoid, and live label updates. To make the screenshot meaningful, initialize the label with a sample coordinate string so it is visible even without a real mouse move.",
+  "prompt": "Create a label entity positioned at 25.0 longitude, 37.5 latitude (over the Aegean Sea) with text initialized to 'Lon: 25.00 Lat: 37.50' so the readout is visible before any pointer interaction. Style the label with showBackground true, font '14px monospace', horizontalOrigin LEFT, verticalOrigin TOP, and a pixelOffset of (15, 0). Construct a ScreenSpaceEventHandler on viewer.scene.canvas, register a MOUSE_MOVE input action that calls viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid), converts to Cartographic, and updates the label text to 'Lon: X.XX Lat: Y.YY'. Frame the camera over the eastern Mediterranean (around 37 N, 25 E, 1,500,000 m altitude).",
+  "expected_behaviors": [
+    "Adds a label entity at (25.0, 37.5) with initial text containing 'Lon:' and 'Lat:'",
+    "Label uses showBackground: true and a monospace font",
+    "Constructs a new ScreenSpaceEventHandler",
+    "Calls handler.setInputAction with ScreenSpaceEventType.MOUSE_MOVE",
+    "Callback uses viewer.camera.pickEllipsoid",
+    "Callback uses Cartographic.fromCartesian and Cesium.Math.toDegrees (or CesiumMath.toDegrees in module-style code)",
+    "Callback updates label.text to a formatted Lon/Lat string",
+    "Frames camera over the eastern Mediterranean at ~37 N, 25 E"
+  ],
+  "visual_expectations": "An eastern-Mediterranean camera view (Greece, Turkey coast, Aegean islands clearly visible) with a labelled text box on the screen showing 'Lon:' and 'Lat:' values, anchored over the Aegean Sea. The visual assessment uses a four-shot cardinal panorama (north, east, south, west) from the settled viewer state; the subject should remain understandable across the panorama, and grading considers all screenshots together.",
+  "programmatic_checks": [
+    {
+      "type": "no_console_errors",
+      "description": "No JS errors"
+    },
+    {
+      "type": "code_runs",
+      "description": "No runtime exceptions"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "new (?:Cesium\\.)?ScreenSpaceEventHandler",
+      "description": "Constructs handler"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "ScreenSpaceEventType\\.MOUSE_MOVE",
+      "description": "Uses MOUSE_MOVE event type"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "pickEllipsoid",
+      "description": "Uses camera.pickEllipsoid"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "Cartographic\\.fromCartesian",
+      "description": "Converts to cartographic"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "(?:CesiumMath|Cesium\\.Math)\\.toDegrees",
+      "description": "Converts radians to degrees"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "showBackground",
+      "description": "Label has showBackground"
+    },
+    {
+      "type": "pattern_present",
+      "pattern": "label",
+      "description": "Uses label graphics"
+    }
+  ],
+  "screenshots": [
+    {
+      "timing": "after_load",
+      "delay_ms": 5000,
+      "description": "Mediterranean view with coordinate readout label visible"
+    }
+  ],
+  "regression_critical": true,
+  "target_skill_sections": [
+    "Recipes \u2014 Coordinate Readout on Mouse Move",
+    "Scene Picking Methods"
+  ],
+  "screenshot_mode": "cardinal_panorama"
+}

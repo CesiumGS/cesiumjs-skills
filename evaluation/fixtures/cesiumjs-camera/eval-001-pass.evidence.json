@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "case_id": "eval-001",
+  "case_name": "target-view-volume",
+  "skill": "cesiumjs-camera",
+  "source": "synthetic-fixture",
+  "expected_result": "pass",
+  "before": {
+    "entities": {}
+  },
+  "after": {
+    "camera": {
+      "position_ecef": [6378237, 1000, 0],
+      "direction_ecef": [-0.09950371902099892, -0.9950371902099892, 0]
+    },
+    "entities": {
+      "target-landmark": {
+        "position_ecef": [6378137, 0, 0],
+        "position_cartographic": {
+          "longitude_deg": 0,
+          "latitude_deg": 0,
+          "altitude_m": 0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvaluationVisualReview",
+  "description": "Human or visual-judge qualitative review inputs attached to an evaluation scorecard.",
+  "type": "object",
+  "required": ["schema_version", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "run_id": { "type": "string" },
+    "reviewer": { "type": "string" },
+    "reviewed_at": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/visual_review_item" }
+    }
+  },
+  "definitions": {
+    "visual_review_item": {
+      "type": "object",
+      "required": ["skill", "case_id", "status", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "skill": { "type": "string" },
+        "case_id": {
+          "type": "string",
+          "pattern": "^eval-[0-9]{3}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "needs_review", "not_reviewed", "not_applicable"]
+        },
+        "required": { "type": "boolean" },
+        "blocking": { "type": "boolean" },
+        "score": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "overall_score": { "type": ["number", "null"], "minimum": 0, "maximum": 10 },
+        "failure_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "judge": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "reviewer": { "type": "string" },
+        "reviewed_at": { "type": ["string", "null"] },
+        "summary": { "type": "string" },
+        "dimensions": {
+          "$ref": "#/definitions/visual_dimensions"
+        },
+        "observations": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "risks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "screenshots": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "artifact_path": { "type": "string" }
+      }
+    },
+    "visual_dimension": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "needs_review", "not_applicable"]
+        },
+        "score": { "type": ["number", "null"], "minimum": 0, "maximum": 10 },
+        "note": { "type": "string" }
+      }
+    },
+    "visual_dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": { "$ref": "#/definitions/visual_dimension" }
+      },
+      "properties": {
+        "nonblank_render": { "$ref": "#/definitions/visual_dimension" },
+        "target_visible": { "$ref": "#/definitions/visual_dimension" },
+        "framing": { "$ref": "#/definitions/visual_dimension" },
+        "occlusion": { "$ref": "#/definitions/visual_dimension" },
+        "clutter": { "$ref": "#/definitions/visual_dimension" },
+        "prompt_match": { "$ref": "#/definitions/visual_dimension" }
+      }
+    }
+  }
+}

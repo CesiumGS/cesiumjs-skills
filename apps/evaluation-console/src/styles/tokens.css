@@ -1,0 +1,171 @@
+/* Skill Evaluation Console design tokens — DESIGN-SPEC §8, rethemed around the
+   Cesium brand (deep space navy + the logomark's blue #6DABE4 / green #709C49).
+   The central legibility law (P3) is unchanged: the deterministic machine speaks
+   STEEL + mono + %; the visual judge speaks AMBER + prose + /10; a human
+   override carries a MAGENTA hairline. Color is never the sole signal — every
+   state also carries a glyph, a unit, or a shape. Brand color is CHROME ONLY
+   (nav, accents, hero); it never encodes a score. */
+
+:root {
+  /* ---- type ---- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* 1.250 modular scale */
+  --fs-50: 11px;
+  --fs-100: 12px;
+  --fs-200: 13px;
+  --fs-300: 15px;
+  --fs-400: 18px;
+  --fs-500: 23px;
+  --fs-600: 29px;
+  --fs-700: 37px;
+  --fw-regular: 430;
+  --fw-medium: 530;
+  --fw-semibold: 620;
+
+  /* ---- spacing (4px grid) ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* ---- radii (modern card system) ---- */
+  --r-1: 6px;   /* chips */
+  --r-2: 10px;  /* cards */
+  --r-3: 14px;  /* panels / dashboard cards */
+  --r-pill: 999px;
+
+  /* ---- layout ---- */
+  --rail-w: 248px;
+  --inspector-w: 340px;
+  --topstrip-h: 52px;
+  --actionbar-h: 46px;
+  --facetbar-h: 44px;
+  --row-h: 46px;
+
+  /* ---- motion ---- */
+  --dur-1: 120ms;  /* verdict / chip confirm */
+  --dur-2: 200ms;  /* altitude flights */
+  --ease: cubic-bezier(0.22, 0.61, 0.21, 1);
+  --pulse: 1.6s;
+}
+
+/* ===================== DARK (default) — Cesium deep-space navy ===================== */
+:root,
+[data-theme="dark"] {
+  --canvas: #0a101c;
+  --surface: #101a2c;
+  --surface-2: #16233a;
+  --surface-3: #1d2d49; /* hover / raised chip */
+  --hairline: #1b2740;
+  --hairline-strong: #2b3d61;
+
+  --text: #e9eef7;
+  --text-2: #aab7cd; /* >= 7:1 */
+  --text-3: #8291ab; /* mono ids / meta, >= 4.5:1 */
+
+  /* provenance inks (P3) */
+  --ink-machine: #5bc8e8; /* steel — deterministic 0-1 / % / checks */
+  --ink-machine-bg: #0d2a3a;
+  --ink-eye: #e8a13b; /* amber — visual judge 0-10 / dimensions */
+  --ink-eye-bg: #2e2312;
+  --ink-human: #e26fb0; /* magenta — human override hairline */
+  --ink-human-bg: #2c1523;
+
+  /* status */
+  --pass: #46b986;
+  --pass-bg: #0f2d22;
+  --fail: #e5534b;
+  --fail-bg: #2c1616;
+  --crit: #ff6b5e;
+  --defer: #d9a13a;
+  --defer-bg: #2c2312;
+  /* not_reviewed / needs_review — dashed slate. AA-verified: ≥ 4.5:1 against
+     canvas, surface, surface-2, surface-3, and unknown-bg (min 4.79:1). */
+  --unknown: #8b99b3;
+  --unknown-bg: #141d2e;
+
+  /* decisions (optimize) */
+  --keep: #46b986;
+  --reject: #e5534b;
+  --tie: #93a1ba; /* AA-verified: min 5.28:1 across used backgrounds */
+
+  /* the ONE reserved accent — "running now". Cesium logomark blue, so the
+     live pulse speaks the same brand language as the rail chrome. AA-verified:
+     ≥ 4.5:1 against canvas, surface, surface-2, surface-3, and live-bg. */
+  --live: #6dabe4;
+  --live-bg: #12233c;
+  --live-contrast: #0a101c; /* text on a solid --live fill (7.79:1) */
+
+  /* harness — one reserved CATEGORICAL hue for the tested-harness dimension. */
+  --harness: #8aa0ff;
+  --harness-bg: #171e38;
+
+  /* Cesium brand (from the official logomark: cesium.com/logos). Chrome only. */
+  --brand-blue: #6dabe4;
+  --brand-green: #709c49;
+  --brand-grad: linear-gradient(120deg, var(--brand-blue), var(--brand-green));
+  --brand-tint: #12203a;
+
+  --scrim: rgba(3, 7, 14, 0.68);
+  --shadow-1: 0 1px 2px rgba(2, 6, 12, 0.5);
+  --shadow-2: 0 16px 44px rgba(2, 6, 12, 0.55);
+  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--brand-blue);
+}
+
+/* ===================== LIGHT — cool Cesium daylight ===================== */
+[data-theme="light"] {
+  --canvas: #f4f8fc;
+  --surface: #ffffff;
+  --surface-2: #edf2f9;
+  --surface-3: #e1e9f4;
+  --hairline: #dde6f1;
+  --hairline-strong: #c3d2e6;
+
+  --text: #101a2c;
+  --text-2: #3b4a63;
+  --text-3: #5d6e8a;
+
+  --ink-machine: #0e7c99;
+  --ink-machine-bg: #dcf1f8;
+  --ink-eye: #b5710a;
+  --ink-eye-bg: #f8edd8;
+  --ink-human: #b23a7e;
+  --ink-human-bg: #f8e3ef;
+
+  --pass: #1e8a5a;
+  --pass-bg: #def0e6;
+  --fail: #c13b33;
+  --fail-bg: #f9e2e0;
+  --crit: #d23a2e;
+  --defer: #9c6b12;
+  --defer-bg: #f6ecd6;
+  /* AA-verified: ≥ 4.5:1 against every used light background (min 4.81:1). */
+  --unknown: #556582;
+  --unknown-bg: #eef2f8;
+
+  --harness: #4a5fd0;
+  --harness-bg: #e7eafb;
+
+  --keep: #1e8a5a;
+  --reject: #c13b33;
+  --tie: #5d6879; /* AA-verified: min 4.61:1 across used backgrounds */
+
+  /* Cesium blue, deepened for AA (≥ 4.5:1) on the light surfaces. */
+  --live: #2b689f;
+  --live-bg: #e3eef9;
+  --live-contrast: #ffffff; /* text on a solid --live fill (5.86:1) */
+
+  --brand-blue: #3e87c9;
+  --brand-green: #5c8639;
+  --brand-grad: linear-gradient(120deg, var(--brand-blue), var(--brand-green));
+  --brand-tint: #e8f1fa;
+
+  --scrim: rgba(16, 26, 44, 0.34);
+  --shadow-1: 0 1px 2px rgba(16, 26, 44, 0.08);
+  --shadow-2: 0 16px 40px rgba(16, 26, 44, 0.16);
+  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--brand-blue);
+}
