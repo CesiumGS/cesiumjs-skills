@@ -4,7 +4,7 @@ description: "CesiumJS spatial math - Cartesian3, Cartographic, Matrix4, Quatern
 ---
 # CesiumJS Spatial Math & Transforms
 
-Version baseline: CesiumJS v1.143 (2026-07-01)
+Version baseline: CesiumJS v1.144 (2026-08-01)
 
 Mathematical foundation for every CesiumJS application: coordinate types, unit conversions, ellipsoid geometry, reference frame transforms, bounding volumes, intersection tests, and projections.
 
@@ -227,7 +227,7 @@ Matrix4.getScale(enuMatrix, new Cartesian3());
 ## Quaternion -- Rotation
 
 ```js
-import { Quaternion, Cartesian3, HeadingPitchRoll, Math as CesiumMath, Matrix3 } from "cesium";
+import { Quaternion, Cartesian3, HeadingPitchRoll, Math as CesiumMath, Matrix3, Matrix4, Transforms } from "cesium";
 
 Quaternion.IDENTITY; // (0, 0, 0, 1)
 const q1 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.toRadians(45.0));
@@ -237,21 +237,83 @@ const mid = Quaternion.slerp(q1, q2, 0.5, new Quaternion());       // interpolat
 const composed = Quaternion.multiply(q1, q2, new Quaternion());     // compose
 ```
 
+### Quaternion → Matrix3 → Matrix4 Composition Pattern
+
+Use this pattern when you need explicit axis-angle control over model orientation, then must compose with an ENU local frame:
+
+```js
+import { Cartesian3, Quaternion, Matrix3, Matrix4, Transforms, Math as CesiumMath } from "cesium";
+
+const origin = Cartesian3.fromDegrees(-115.17, 36.11, 3000.0);
+
+// 1. Build local-to-ECEF frame at origin
+const enuFrame = Transforms.eastNorthUpToFixedFrame(origin);
+
+// 2. Build quaternion for 45-deg yaw about local up axis
+const q = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.toRadians(45.0));
+
+// 3. Convert quaternion → Matrix3 → Matrix4 (zero translation in local frame)
+const rot3 = Matrix3.fromQuaternion(q, new Matrix3());
+const rotMatrix4 = Matrix4.fromRotationTranslation(rot3, Cartesian3.ZERO, new Matrix4());
+
+// 4. Compose: ENU frame * local rotation = final model matrix
+const modelMatrix = Matrix4.multiply(enuFrame, rotMatrix4, new Matrix4());
+```
+
+This is the canonical pattern for placing a model with arbitrary rotation at a geographic position. `Transforms.headingPitchRollToFixedFrame` is a convenience wrapper for HPR rotations; use the manual composition above when you need axis-angle or quaternion control.
+
 ## Geodesic Distance
+
+**Critical:** "Distance between two lon/lat points" almost always means **great-circle surface distance**, not the straight-line chord through the Earth. Using `Cartesian3.distance` on two `fromDegrees` results gives the chord, which is shorter than the surface distance and grows materially wrong over continental scales (e.g., NYC↔London chord is ~100+ km off the ~5,837 km surface distance). Always use `EllipsoidGeodesic.surfaceDistance` for "how far apart are these two places" labels.
 
 ```js
 import { Cartographic, EllipsoidGeodesic, Cartesian3 } from "cesium";
 
-// Surface distance (great-circle via Vincenty)
+// Surface distance (great-circle via Vincenty) -- correct for "distance between cities"
 const geodesic = new EllipsoidGeodesic(
   Cartographic.fromDegrees(-73.985, 40.758),  // New York
   Cartographic.fromDegrees(-0.1276, 51.5074), // London
 );
-const surfaceDist = geodesic.surfaceDistance;              // ~5,570 km
+const surfaceDist = geodesic.surfaceDistance;              // ~5,837,000 m (~5,837 km)
 const midCarto = geodesic.interpolateUsingFraction(0.5);  // midpoint on surface
 
-// Chord (straight-line) distance
-const chord = Cartesian3.distance(Cartesian3.fromDegrees(-105, 40), Cartesian3.fromDegrees(-104, 40));
+// Chord (straight-line through ellipsoid interior) -- rarely what you want for geography
+const chord = Cartesian3.distance(
+  Cartesian3.fromDegrees(-73.985, 40.758),
+  Cartesian3.fromDegrees(-0.1276, 51.5074),
+); // shorter than surfaceDistance; do NOT use for "distance between cities"
+```
+
+When labeling distances, format from `surfaceDistance` (meters) divided by 1000 and rounded to the nearest km. For very short distances (< ~1 km) the chord and surface distance agree to within rounding; for anything continental, prefer `EllipsoidGeodesic`.
+
+### Sampling a Geodesic into Cartesian3 Positions
+
+`interpolateUsingFraction` returns a `Cartographic`. Convert each sample to `Cartesian3` before passing to polylines or other geometry APIs. Use enough samples (>= ~64 for transoceanic arcs) so the polyline visibly curves rather than appearing as a straight rhumb-like line.
+
+```js
+import { Cartographic, EllipsoidGeodesic, Cartesian3 } from "cesium";
+
+const start = Cartographic.fromDegrees(-73.985, 40.758); // NYC
+const end   = Cartographic.fromDegrees(-0.1276, 51.507); // London
+const geodesic = new EllipsoidGeodesic(start, end);
+
+const N = 64;
+const positions = [];
+for (let i = 0; i <= N; i++) {
+  const carto = geodesic.interpolateUsingFraction(i / N);
+  // Convert Cartographic (radians) to Cartesian3
+  positions.push(Cartesian3.fromRadians(carto.longitude, carto.latitude, carto.height));
+}
+// positions is now a Cartesian3[] suitable for polyline entity positions
+
+// Label the midpoint with the great-circle distance, not the chord
+const midCarto = geodesic.interpolateUsingFraction(0.5);
+const midPos = Cartesian3.fromRadians(midCarto.longitude, midCarto.latitude, midCarto.height);
+const km = (geodesic.surfaceDistance / 1000).toFixed(0);
+viewer.entities.add({
+  position: midPos,
+  label: { text: `Distance: ${km} km` },
+});
 ```
 
 ## BoundingSphere
@@ -264,6 +326,22 @@ const sphere = BoundingSphere.fromPoints(
 ); // sphere.center (Cartesian3), sphere.radius (number)
 
 const inside = Cartesian3.distance(sphere.center, Cartesian3.fromDegrees(-102, 37.5)) <= sphere.radius;
+```
+
+`sphere.center` is a `Cartesian3` (ECEF) and can be used directly as an entity position. `sphere.radius` is in meters and can be passed as ellipsoid radii for visualization. **Use a low alpha (≈0.3) so the enclosed points and underlying geography remain visible through the sphere** -- an overly opaque sphere hides exactly the data it is meant to bound:
+
+```js
+import { Color, Cartesian3 } from "cesium";
+
+viewer.entities.add({
+  position: sphere.center,
+  ellipsoid: {
+    radii: new Cartesian3(sphere.radius, sphere.radius, sphere.radius),
+    material: Color.YELLOW.withAlpha(0.3), // translucent so input points stay visible
+    outline: true,
+    outlineColor: Color.YELLOW,
+  },
+});
 ```
 
 ## Ray and Intersection Tests
@@ -349,7 +427,7 @@ if (Cartesian3.distance(a, b) < 10.0) { /* within 10m */ }
 7. **Guard `Cartesian3.normalize`** -- it throws on zero-length vectors. Check magnitude first.
 8. **Use `equalsEpsilon`** for float comparisons. `CesiumMath.EPSILON7` is a good default tolerance.
 9. **Pre-compute HPR** outside render loops. Convert to quaternion/matrix only when orientation changes.
-10. **Choose the right distance.** `Cartesian3.distance` = chord through Earth. `EllipsoidGeodesic.surfaceDistance` = great-circle.
+10. **Choose the right distance.** `Cartesian3.distance` = chord through Earth (rarely what you want for geography). `EllipsoidGeodesic.surfaceDistance` = great-circle surface distance (use this for city-to-city labels).
 
 ## See Also
 

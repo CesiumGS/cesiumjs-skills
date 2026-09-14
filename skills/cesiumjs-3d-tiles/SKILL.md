@@ -1,14 +1,19 @@
 ---
 name: cesiumjs-3d-tiles
-description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when loading 3D Tiles or Mapbox Vector Tiles, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
+description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF content, MVTDataProvider, UrlTemplate3DTilesDataProvider, styling, metadata, feature picking, voxels, point clouds, I3S, Gaussian splats, clipping. Use when a task involves loading 3D Tiles or Mapbox Vector Tiles, draping vector tiles on terrain, rendering KHR meshopt/CAD content, styling or querying features, working with voxels or point clouds, or clipping spatial data."
 ---
 # CesiumJS 3D Tiles
 
-Version baseline: CesiumJS v1.143 (ES module imports, async factory methods).
+Version baseline: CesiumJS v1.144 (ES module imports, async factory methods).
 
 ## Loading a Tileset
 
 Always use async factory methods -- never call the constructor directly.
+For public/no-token examples, prefer URL-backed tilesets such as CesiumGS sample
+tilesets. `fromIonAssetId`, `createOsmBuildingsAsync`, and Google
+Photorealistic 3D Tiles require external entitlements; use them only when the
+caller explicitly asks for those services and the runtime is configured for
+them.
 
 ```js
 import { Cesium3DTileset, HeadingPitchRange, Math as CesiumMath } from "cesium";
@@ -19,7 +24,7 @@ const tileset = await Cesium3DTileset.fromUrl(
   { maximumScreenSpaceError: 16 }, // lower = higher quality
 );
 viewer.scene.primitives.add(tileset);
-viewer.zoomTo(tileset, new HeadingPitchRange(
+await viewer.zoomTo(tileset, new HeadingPitchRange(
   0.0, CesiumMath.toRadians(-25.0), tileset.boundingSphere.radius * 2.0,
 ));
 ```
@@ -129,24 +134,67 @@ Notes:
 - `provider.show` proxies visibility to the generated tileset.
 - Runtime vector glTF content uses draft `EXT_mesh_polygon` and `3DTILES_content_gltf_vector` support; treat this path as experimental.
 
-## Tileset Events
+**Terrain draping (1.144+):** clamped vector tile polylines and polygons drape
+onto terrain automatically, with screen-space-constant line width, and
+per-feature styling stays driven by `Cesium3DTileStyle`. There is no opt-in
+flag; clamped vector content follows the terrain surface beneath it.
+
+**Custom vector tile formats (1.144+):** `MVTDataProvider` now extends
+`UrlTemplate3DTilesDataProvider`, a public base class that turns any
+`{z}/{x}/{y}` URL-template vector source into a runtime-generated
+`Cesium3DTileset`. Its `fromUrl`, `tileset`, `show`, `extent`, and
+`minZoom`/`maxZoom` options behave the same as on `MVTDataProvider`; subclass
+it and implement its protected codec hook to support a tiled vector format
+other than MVT.
+
+## Tileset Events and Render Readiness
+
+`fromUrl` resolves when tileset metadata is usable; it does not mean the tiles
+for the current camera view have rendered. `initialTilesLoaded` fires only for
+the first loaded view, while `allTilesLoaded` and `tilesLoaded` are
+view-dependent. After `zoomTo`, `flyTo`, `setView`, or interactive camera
+movement, check readiness again. Do not substitute a fixed delay for this
+semantic condition.
 
 ```js
-tileset.loadProgress.addEventListener((pending, processing) => {
-  if (pending === 0 && processing === 0) console.log("Loaded");
-});
-tileset.initialTilesLoaded.addEventListener(() => { /* first view ready */ });
-tileset.allTilesLoaded.addEventListener(() => { /* all visible tiles ready */ });
-tileset.tileLoad.addEventListener((tile) => { /* tile content loaded */ });
-tileset.tileUnload.addEventListener((tile) => { /* tile evicted from cache */ });
-tileset.tileFailed.addEventListener(({ url, message }) => {
-  console.error(`Tile ${url}: ${message}`);
-});
+function waitForTilesetView(viewer, tileset, timeoutMs = 30_000) {
+  return new Promise((resolve, reject) => {
+    const scene = viewer.scene;
+    let readyFrames = 0;
+    const remove = scene.postRender.addEventListener(() => {
+      readyFrames = tileset.tilesLoaded ? readyFrames + 1 : 0;
+      if (readyFrames < 2) {
+        scene.requestRender();
+        return;
+      }
+      clearTimeout(timeoutId);
+      remove();
+      resolve(tileset);
+    });
+    const timeoutId = setTimeout(() => {
+      remove();
+      reject(new Error(`Tileset did not load within ${timeoutMs} ms`));
+    }, timeoutMs);
+    scene.requestRender();
+  });
+}
+
+await viewer.zoomTo(tileset);
+await waitForTilesetView(viewer, tileset);
+```
+
+Use `loadProgress` for loading UI, `tileLoad`/`tileUnload` for cache activity,
+and `tileFailed` for diagnostics. Do not treat an individual `tileLoad` event as
+proof that the current view is complete.
+
+```js
+import { Color } from "cesium";
+
 // Per-frame manual styling
 tileset.tileVisible.addEventListener((tile) => {
   const content = tile.content;
   for (let i = 0; i < content.featuresLength; i++) {
-    content.getFeature(i).color = Cesium.Color.fromRandom();
+    content.getFeature(i).color = Color.fromRandom();
   }
 });
 ```
@@ -154,11 +202,11 @@ tileset.tileVisible.addEventListener((tile) => {
 ## Runtime Properties
 
 ```js
+import { Matrix4, Cartesian3 } from "cesium";
+
 tileset.show = false;                     // toggle visibility
 tileset.maximumScreenSpaceError = 8;      // increase quality
 const { center, radius } = tileset.boundingSphere;
-
-import { Matrix4, Cartesian3 } from "cesium";
 tileset.modelMatrix = Matrix4.fromTranslation(new Cartesian3(0, 0, 100));
 ```
 
@@ -167,19 +215,35 @@ tileset.modelMatrix = Matrix4.fromTranslation(new Cartesian3(0, 0, 100));
 Assign a `Cesium3DTileStyle` to `tileset.style`. Expressions reference feature
 properties with `${PropertyName}`.
 
+**Style DSL constraints:**
+- `defined()` is **not supported** in the style expression language; using it causes a render error.
+- Referencing a property that does not exist in the tileset data (e.g., `${Height}` on a tileset with no height attribute) halts style evaluation and triggers a Cesium error panel. Always guard with a `["true", "..."]` catch-all as the last condition.
+- To reset styles, assign `tileset.style = undefined`.
+
 ```js
 import { Cesium3DTileStyle } from "cesium";
 
-// Color by height conditions
+// Color by height conditions -- requires tileset to have a 'Height' property
 tileset.style = new Cesium3DTileStyle({
   color: {
     conditions: [
       ["${Height} >= 100", "color('purple', 0.5)"],
       ["${Height} >= 50",  "color('red')"],
-      ["true",             "color('blue')"],
+      ["true",             "color('blue')"],   // catch-all: always include this
     ],
   },
   show: "${Height} > 0",
+});
+```
+
+```js
+// Safe constant style -- works on any tileset regardless of metadata
+tileset.style = new Cesium3DTileStyle({
+  color: {
+    conditions: [
+      ["true", "color('cyan', 1.0)"],
+    ],
+  },
 });
 ```
 
@@ -365,7 +429,10 @@ tileset.pointCloudShading.eyeDomeLightingStrength = 2.0;
 Shapes: `BOX`, `CYLINDER`, `ELLIPSOID` (see `VoxelShapeType`).
 
 ```js
-import { VoxelPrimitive, Cesium3DTilesVoxelProvider, CustomShader } from "cesium";
+import {
+  VoxelPrimitive, Cesium3DTilesVoxelProvider,
+  CustomShader, viewerVoxelInspectorMixin,
+} from "cesium";
 
 const provider = await Cesium3DTilesVoxelProvider.fromUrl("voxel/tileset.json");
 
@@ -386,7 +453,7 @@ viewer.camera.flyToBoundingSphere(voxelPrimitive.boundingSphere, { duration: 0 }
 // access — see the cesiumjs-custom-shader skill. This skill covers VoxelPrimitive setup.
 
 // Optional inspector widget
-viewer.extend(Cesium.viewerVoxelInspectorMixin);
+viewer.extend(viewerVoxelInspectorMixin);
 viewer.voxelInspector.viewModel.voxelPrimitive = voxelPrimitive;
 ```
 

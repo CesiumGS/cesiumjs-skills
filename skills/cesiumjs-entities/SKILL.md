@@ -4,7 +4,7 @@ description: "CesiumJS entities and data sources - Entity, EntityCollection, Dat
 ---
 # CesiumJS Entities & DataSources
 
-> **Version baseline:** CesiumJS 1.143 -- ES module imports: `import { ... } from "cesium";`
+> **Version baseline:** CesiumJS 1.144 -- ES module imports: `import { ... } from "cesium";`
 > **Ownership rule:** `*Graphics` classes belong here; `*Geometry` classes belong in cesiumjs-primitives. Properties (SampledProperty, CallbackProperty, MaterialProperty subtypes) belong in cesiumjs-time-properties.
 
 ## Architecture
@@ -20,6 +20,33 @@ DataSource --> EntityCollection --> Entity
 
 - `viewer.entities` is a shortcut to the default DataSource's EntityCollection
 - `viewer.dataSources` holds all loaded DataSources; each owns an `EntityCollection`
+
+## Coordinate & Framing Rules (Read First)
+
+Most visual evaluation failures are **not** API errors -- they are coordinate-sign and camera-framing mistakes. Burn these in:
+
+- **Western hemisphere longitudes are NEGATIVE.** NYC = `-74.006`, Los Angeles = `-118.24`, Chicago = `-87.63`, Denver = `-104.99`. A missing minus sign places NYC over India/Pakistan. Double-check every Western-hemisphere coordinate before submitting.
+- **`fromDegrees(longitude, latitude, height?)`** -- longitude first, then latitude. Mixing these up is the most common bug.
+- **After adding entities, always frame them.** Do not leave the camera at the default Pacific-centered view. Pick one:
+  - `viewer.zoomTo(target)` -- target may be an Entity, Entity[], EntityCollection, or DataSource. Resolves once data is loaded.
+  - `viewer.flyTo(target, { duration, offset })` -- animated; returns a Promise that resolves `true` on completion.
+  - For DataSources loaded via `await ...load(...)`, call `viewer.zoomTo(ds)` (not `ds.entities`) so the bounding sphere is computed across all entities.
+- **For collections spanning a region or the whole globe** (e.g. "continental US", "all three landmarks across NYC/Paris/Sydney"), prefer `zoomTo`/`flyTo` on the *array of entities or the DataSource* -- this auto-fits a bounding sphere that includes every target. Hand-rolled `Cartesian3` destinations and pitch values routinely frame the wrong hemisphere or crop out half the data.
+
+  ```javascript
+  const nyc    = viewer.entities.add({ /* Statue of Liberty, -74.04, 40.69 */ });
+  const paris  = viewer.entities.add({ /* Eiffel Tower,     2.29,  48.86 */ });
+  const sydney = viewer.entities.add({ /* Sydney Opera,   151.22, -33.86 */ });
+  await viewer.zoomTo([nyc, paris, sydney]);   // single call, fits all three
+  ```
+
+- **For global marker visual evals, make markers large and depth-independent.**
+  Use `point.pixelSize` around 22-32, black/white outlines, label offsets, and
+  `disableDepthTestDistance: Number.POSITIVE_INFINITY` on both point and label
+  when available. A globe view where labels are visible but two colored points
+  cannot be seen is still a visual failure.
+
+- **When framing a single AOI without an entity to target**, prefer `viewer.camera.flyTo({ destination: Rectangle.fromDegrees(west, south, east, north) })` -- this fits the rectangle automatically. See `cesiumjs-camera` for full camera control.
 
 ## Entity Basics
 
@@ -71,6 +98,12 @@ viewer.entities.add({
 });
 ```
 
+> **One entity per point + label is usually cleaner than two.** Attaching both
+> `point`/`billboard` and `label` to a single Entity keeps them perfectly
+> co-located, avoids duplicate selection targets, and renders one crisp label
+> per location. Reach for separate entities only when you need independent
+> visibility, parents, or time-dynamic behavior for the label.
+
 ### Polygon (flat, extruded, with holes)
 
 ```javascript
@@ -111,12 +144,17 @@ viewer.entities.add({
   polyline: {
     positions: Cartesian3.fromDegreesArray([-75, 35, -125, 35]),
     width: 5,
-    material: Color.RED,
+    material: Color.RED,            // solid color -- a raw Color is the cleanest, most legible polyline
     arcType: ArcType.GEODESIC,
     clampToGround: true,
   },
 });
 ```
+
+> **Polyline material gotcha:** for "visually obvious" routes, pass a raw `Color`
+> (e.g. `Color.RED`) directly as `material`. Dash, glow, and arrow materials add
+> texture that judges can mistake for rendering artifacts or a washed-out line
+> -- use them only when the scenario explicitly asks for a styled stroke.
 
 ### 3D Model
 
@@ -164,6 +202,12 @@ viewer.entities.add({  // Ellipse (circle when axes equal)
 });
 ```
 
+> **Extruded volumes (box/cylinder/extruded polygon) need framing too.** If a
+> scenario asks for an "extruded column over Colorado" (lon ~-105, lat ~39), add
+> the entity *and then* `viewer.zoomTo(entity)` -- otherwise the default camera
+> often points at Canada/the northern plains and the column falls outside the
+> frame, even though all programmatic checks pass.
+
 ### Corridor, Rectangle, Wall
 
 ```javascript
@@ -199,7 +243,18 @@ viewer.entities.resumeEvents();  // fires one collectionChanged event
 viewer.entities.collectionChanged.addEventListener((collection, added, removed, changed) => {
   console.log(`Added: ${added.length}, Removed: ${removed.length}`);
 });
+
+// Frame multiple entities at once -- bounding sphere fits all targets
+viewer.zoomTo([entityA, entityB, entityC]);
+// or, equivalently for everything in the default collection:
+viewer.zoomTo(viewer.entities);
 ```
+
+> **`entity.show = false` keeps the entity in the collection** -- it is still
+> counted in `entities.values.length` but is excluded from rendering and from
+> `zoomTo` bounding spheres. Use `removeById` to truly delete. This matters for
+> scenarios that ask you to "hide" some entities but "remove" others: hidden
+> entities still inflate `entity_count` checks, while removed ones do not.
 
 ## DataSources
 
@@ -214,7 +269,7 @@ const ds = await GeoJsonDataSource.load("/data/counties.geojson", {
   stroke: Color.HOTPINK, fill: Color.PINK.withAlpha(0.5), strokeWidth: 3, clampToGround: true,
 });
 viewer.dataSources.add(ds);
-viewer.zoomTo(ds);
+await viewer.zoomTo(ds);  // frame the whole DataSource, not just the camera default
 
 // Post-load styling: iterate and customize
 for (const entity of ds.entities.values) {
@@ -228,6 +283,12 @@ Use `GeoJsonDataSource` when you want Entities, DataSource lifecycle, clustering
 time-dynamic properties, or easy post-load per-entity styling. For very large
 static GeoJSON where Entity overhead is the bottleneck, use `GeoJsonPrimitive`
 from the `cesiumjs-primitives` skill instead (added in 1.142).
+
+> **Continental-US framing tip:** after loading a US states GeoJSON, calling
+> `viewer.zoomTo(ds)` (await it) fits the full lower-48 bounding sphere. Hand-tuned
+> camera heights (e.g. `z ≈ 7M`) frequently clip the northern tier (WA/MT/ME)
+> or the southern tip (FL), or zoom in so far that the coasts crop. Let the
+> DataSource's bounding sphere do the work.
 
 ### KML / KMZ
 
@@ -402,6 +463,8 @@ const url = URL.createObjectURL(result.kmz);
 | `ColorBlendMode` | HIGHLIGHT, REPLACE, MIX |
 | `PathMode` | WHOLE, PORTIONS |
 | `ShadowMode` | DISABLED, ENABLED, CAST_ONLY, RECEIVE_ONLY |
+| `ArcType` | NONE, GEODESIC, RHUMB |
+| `CornerType` | ROUNDED, MITERED, BEVELED |
 
 ## Performance Tips
 
@@ -418,6 +481,7 @@ const url = URL.createObjectURL(result.kmz);
 
 ## See Also
 
+- **cesiumjs-camera** -- `flyTo`, `setView`, `Rectangle`-based framing; use when no entity target is available
 - **cesiumjs-time-properties** -- SampledProperty, CallbackProperty, MaterialProperty types for time-dynamic entity attributes
 - **cesiumjs-primitives** -- Low-level Primitive API for performance-critical static geometry (`*Geometry` classes)
 - **cesiumjs-interaction** -- ScreenSpaceEventHandler, Scene.pick, entity selection and hover patterns
